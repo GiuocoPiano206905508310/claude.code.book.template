@@ -427,6 +427,7 @@
     transition: background 0.15s ease, color 0.15s ease;
   }
   .export-btn:hover { background: var(--indigo); color: #fff; }
+  .page.is-mobile-view .pc-only { display: none; }
   .export-status {
     margin: 6px 22px 18px;
     font-size: 11.5px;
@@ -435,6 +436,10 @@
   }
   .export-status.error { color: var(--stamp); }
 
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
   @media print {
     body * { visibility: hidden; }
     .print-target, .print-target * { visibility: visible; }
@@ -447,14 +452,18 @@
       box-shadow: none;
     }
     .export-row, .export-status { display: none !important; }
+    .print-target .payslip-head { padding: 0 0 10px; }
     .print-target table {
       border-collapse: collapse;
+      font-size: 12px !important;
     }
     .print-target td {
       border: 1px solid #333 !important;
-      padding: 8px 12px !important;
+      padding: 6px 10px !important;
     }
     .print-target tr.total td { border-top: 2px solid #333 !important; }
+    .print-target .net-block { padding: 12px 0 0; }
+    .print-target .net-value { font-size: 24px !important; }
   }
 </style>
 </head>
@@ -634,9 +643,9 @@
         <div class="net-value" id="netValue">— 円</div>
       </div>
       <div class="export-row">
-        <button type="button" class="export-btn" id="exportPdfBtn">📄 PDF出力</button>
-        <button type="button" class="export-btn" id="exportExcelBtn">📊 Excel出力</button>
-        <button type="button" class="export-btn" id="exportCopyBtn">📋 コピー</button>
+        <button type="button" class="export-btn pc-only" id="exportPdfBtn">🖨 印刷</button>
+        <button type="button" class="export-btn pc-only" id="exportExcelBtn">📊 Excel出力</button>
+        <button type="button" class="export-btn" id="exportCopyBtn">📋 テキスト(.txt)コピー</button>
       </div>
       <p class="export-status" id="exportStatus"></p>
     </section>
@@ -812,9 +821,9 @@
         <div class="net-value" id="bonusNetValue">— 円</div>
       </div>
       <div class="export-row">
-        <button type="button" class="export-btn" id="bonusExportPdfBtn">📄 PDF出力</button>
-        <button type="button" class="export-btn" id="bonusExportExcelBtn">📊 Excel出力</button>
-        <button type="button" class="export-btn" id="bonusExportCopyBtn">📋 コピー</button>
+        <button type="button" class="export-btn pc-only" id="bonusExportPdfBtn">🖨 印刷</button>
+        <button type="button" class="export-btn pc-only" id="bonusExportExcelBtn">📊 Excel出力</button>
+        <button type="button" class="export-btn" id="bonusExportCopyBtn">📋 テキスト(.txt)コピー</button>
       </div>
       <p class="export-status" id="bonusExportStatus"></p>
     </section>
