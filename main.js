@@ -788,13 +788,12 @@ calculate();
 calculateBonus();
 
 // 結果のPDF出力（ブラウザの印刷機能を利用）
+// 印刷対象の内容を専用の印刷用エリアに複製し、他の要素を印刷から完全に除外する
+// （visibility:hiddenだけでは要素が高さを占有したままになり、余分な白紙ページが出るため）
 function printSection(targetId) {
-  document.getElementById(targetId).classList.add('print-target');
+  document.getElementById('printArea').innerHTML = document.getElementById(targetId).innerHTML;
   window.print();
 }
-window.addEventListener('afterprint', () => {
-  document.querySelectorAll('.print-target').forEach((el) => el.classList.remove('print-target'));
-});
 
 function showExportStatus(statusId, message, isError) {
   const el = document.getElementById(statusId);

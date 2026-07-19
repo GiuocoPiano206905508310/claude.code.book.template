@@ -472,34 +472,32 @@
   }
   .export-status.error { color: var(--stamp); }
 
+  #printArea { display: none; }
+
   @page {
     size: A4;
     margin: 12mm;
   }
   @media print {
-    body * { visibility: hidden; }
-    .print-target, .print-target * { visibility: visible; }
-    .print-target {
-      position: absolute !important;
-      left: 0;
-      top: 0;
-      width: 100%;
-      max-width: 100%;
+    body > *:not(#printArea) { display: none !important; }
+    #printArea {
+      display: block !important;
       box-shadow: none;
+      border: none;
     }
-    .export-row, .export-status { display: none !important; }
-    .print-target .payslip-head { padding: 0 0 10px; }
-    .print-target table {
+    #printArea .export-row, #printArea .export-status { display: none !important; }
+    #printArea .payslip-head { padding: 0 0 10px; }
+    #printArea table {
       border-collapse: collapse;
-      font-size: 12px !important;
+      font-size: 12px;
     }
-    .print-target td {
-      border: 1px solid #333 !important;
-      padding: 6px 10px !important;
+    #printArea td {
+      border: 1px solid #333;
+      padding: 6px 10px;
     }
-    .print-target tr.total td { border-top: 2px solid #333 !important; }
-    .print-target .net-block { padding: 12px 0 0; }
-    .print-target .net-value { font-size: 24px !important; }
+    #printArea tr.total td { border-top: 2px solid #333; }
+    #printArea .net-block { padding: 12px 0 0; }
+    #printArea .net-value { font-size: 24px; }
   }
 </style>
 </head>
@@ -890,6 +888,8 @@
     </div>
   </details>
 </div>
+
+<section class="card payslip" id="printArea" aria-hidden="true"></section>
 
 <script src="main.js?v=1784433636"></script>
 </body>
