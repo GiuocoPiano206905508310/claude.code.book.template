@@ -403,6 +403,42 @@
     color: var(--ink-faint);
   }
 
+  .terms-note {
+    max-width: 640px;
+    margin: 14px auto 0;
+    text-align: center;
+  }
+  .terms-note summary {
+    display: inline-block;
+    font-size: 11.5px;
+    color: var(--indigo);
+    cursor: pointer;
+    user-select: none;
+  }
+  .terms-note summary:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .terms-note .terms-body {
+    margin-top: 12px;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    text-align: left;
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: var(--ink-soft);
+  }
+  .terms-body h3 {
+    margin: 14px 0 4px;
+    font-size: 12px;
+    color: var(--ink);
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  }
+  .terms-body h3:first-child { margin-top: 0; }
+  .terms-body p { margin: 4px 0; }
+
   @media (prefers-reduced-motion: no-preference) {
     .net-value { transition: opacity 0.2s ease; }
   }
@@ -831,6 +867,28 @@
   </div>
 
   <footer>個人利用を目的とした概算ツールです。正式な給与計算には給与計算ソフトまたは専門家をご利用ください。</footer>
+  <details class="terms-note">
+    <summary>利用規約</summary>
+    <div class="terms-body">
+      <h3>第1条（本ツールの位置付け）</h3>
+      <p>本ツール（以下「本ツール」）は、給与・賞与の手取り額を概算するための個人利用向けの簡易計算ツールです。表示される金額はあくまで参考値・概算であり、法令上の正式な給与計算・源泉徴収税額の算定結果を保証するものではありません。</p>
+
+      <h3>第2条（免責事項）</h3>
+      <p>本ツールの計算結果の正確性・完全性・最新性について、作成者はいかなる保証も行いません。本ツールの利用、または利用できなかったことにより生じたいかなる損害についても、作成者は一切の責任を負いません。実際の給与計算・税務手続きにあたっては、給与計算ソフトまたは社会保険労務士・税理士等の専門家にご確認ください。</p>
+
+      <h3>第3条（データの取り扱い）</h3>
+      <p>入力していただいた情報は、お使いのブラウザ内でのみ計算処理に使用され、外部のサーバーへ送信・保存されることはありません。</p>
+
+      <h3>第4条（利用条件）</h3>
+      <p>本ツールは個人利用の範囲でご自由にお使いいただけます。商用利用（有償サービスへの組み込み等）や、本ツールの内容を改変した上での再配布を行う場合は、事前に作成者の許諾を得てください。</p>
+
+      <h3>第5条（内容の変更）</h3>
+      <p>本ツールの内容、料率、税額表等の情報は、法改正等に伴い予告なく変更・更新される場合があります。</p>
+
+      <h3>第6条（規約の改定）</h3>
+      <p>本規約は予告なく改定される場合があります。改定後の規約は、本ページに掲載された時点から効力を生じるものとします。</p>
+    </div>
+  </details>
 </div>
 
 <script src="main.js?v=1784433636"></script>
