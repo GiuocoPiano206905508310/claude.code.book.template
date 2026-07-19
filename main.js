@@ -54,6 +54,24 @@ function applyHealthInsuranceType(typeId, prefectureRowId, prefectureSelectId, h
   }
 }
 
+// 雇用形態による保険料率欄の表示切り替え
+// アルバイト・パート（雇用保険のみ対象）：健康保険・厚生年金関連の欄を非表示にし、雇用保険関連の欄のみ表示
+// アルバイト・パート（雇用保険対象外）：健康保険・厚生年金・雇用保険関連の欄をすべて非表示
+function updateInsuranceFieldVisibility(o) {
+  const employmentType = document.getElementById(o.employmentTypeId).value;
+  const hideHealthGroup = employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）';
+  const hideEmploymentGroup = employmentType === 'アルバイト・パート（雇用保険対象外）';
+
+  o.healthGroupIds.forEach(id => { document.getElementById(id).style.display = hideHealthGroup ? 'none' : ''; });
+  o.employmentGroupIds.forEach(id => { document.getElementById(id).style.display = hideEmploymentGroup ? 'none' : ''; });
+
+  if (hideHealthGroup) {
+    document.getElementById(o.prefectureRowId).style.display = 'none';
+  } else {
+    applyHealthInsuranceType(o.healthTypeId, o.prefectureRowId, o.prefectureSelectId, o.healthRateId, o.careRateId, o.healthRateLabelId, o.careRateLabelId);
+  }
+}
+
 function populateIndustrySelect(selectId, rateId) {
   const select = document.getElementById(selectId);
   for (const name of Object.keys(EMPLOYMENT_RATES_BY_INDUSTRY)) {
@@ -703,6 +721,31 @@ function renderResult(r) {
   document.getElementById('netValue').textContent = yen(r.netPay);
 }
 
+const MONTHLY_INSURANCE_VISIBILITY_CONFIG = {
+  employmentTypeId: 'employmentType',
+  healthGroupIds: ['rateSectionHeader', 'healthTypeFieldRow', 'rateGrid'],
+  employmentGroupIds: ['industryFieldRow', 'employmentRateFieldRow'],
+  prefectureRowId: 'prefectureFieldRow',
+  healthTypeId: 'healthInsuranceType',
+  prefectureSelectId: 'prefecture',
+  healthRateId: 'healthRate',
+  careRateId: 'careRate',
+  healthRateLabelId: 'healthRateLabel',
+  careRateLabelId: 'careRateLabel',
+};
+const BONUS_INSURANCE_VISIBILITY_CONFIG = {
+  employmentTypeId: 'bonusEmploymentType',
+  healthGroupIds: ['bonusRateSectionHeader', 'bonusHealthTypeFieldRow', 'bonusRateGrid', 'bonusHealthCumulativeRow', 'bonusPensionCumulativeRow'],
+  employmentGroupIds: ['bonusIndustryFieldRow', 'bonusEmploymentRateFieldRow'],
+  prefectureRowId: 'bonusPrefectureFieldRow',
+  healthTypeId: 'bonusHealthInsuranceType',
+  prefectureSelectId: 'bonusPrefecture',
+  healthRateId: 'bonusHealthRate',
+  careRateId: 'bonusCareRate',
+  healthRateLabelId: 'bonusHealthRateLabel',
+  careRateLabelId: 'bonusCareRateLabel',
+};
+
 document.getElementById('prefecture').addEventListener('change', () => {
   applyPrefectureRate('prefecture', 'healthRate', 'careRate');
   calculate();
@@ -717,6 +760,7 @@ document.getElementById('industryType').addEventListener('change', () => {
 });
 document.getElementById('employmentType').addEventListener('change', () => {
   applyEmploymentTypeLabel();
+  updateInsuranceFieldVisibility(MONTHLY_INSURANCE_VISIBILITY_CONFIG);
   calculate();
 });
 document.getElementById('ageGroup').addEventListener('change', calculate);
@@ -736,7 +780,10 @@ document.getElementById('bonusIndustryType').addEventListener('change', () => {
   applyIndustryRate('bonusIndustryType', 'bonusEmploymentRate');
   calculateBonus();
 });
-document.getElementById('bonusEmploymentType').addEventListener('change', calculateBonus);
+document.getElementById('bonusEmploymentType').addEventListener('change', () => {
+  updateInsuranceFieldVisibility(BONUS_INSURANCE_VISIBILITY_CONFIG);
+  calculateBonus();
+});
 document.getElementById('bonusAgeGroup').addEventListener('change', calculateBonus);
 document.getElementById('bonusTaxTable').addEventListener('change', calculateBonus);
 document.getElementById('bonusCalcMethod').addEventListener('change', calculateBonus);
@@ -808,6 +855,8 @@ populateIndustrySelect('bonusIndustryType', 'bonusEmploymentRate');
 applyEmploymentTypeLabel();
 applyHealthInsuranceType('healthInsuranceType', 'prefectureFieldRow', 'prefecture', 'healthRate', 'careRate', 'healthRateLabel', 'careRateLabel');
 applyHealthInsuranceType('bonusHealthInsuranceType', 'bonusPrefectureFieldRow', 'bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusHealthRateLabel', 'bonusCareRateLabel');
+updateInsuranceFieldVisibility(MONTHLY_INSURANCE_VISIBILITY_CONFIG);
+updateInsuranceFieldVisibility(BONUS_INSURANCE_VISIBILITY_CONFIG);
 calculate();
 calculateBonus();
 

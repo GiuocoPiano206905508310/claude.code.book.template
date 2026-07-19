@@ -609,8 +609,8 @@
         </div>
       </div>
 
-      <h2 class="section-2">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
-      <div class="field-row">
+      <h2 class="section-2" id="rateSectionHeader">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
+      <div class="field-row" id="healthTypeFieldRow">
         <label for="healthInsuranceType">健康保険の種類</label>
         <div class="field-input">
           <select id="healthInsuranceType">
@@ -625,7 +625,7 @@
           <select id="prefecture"></select>
         </div>
       </div>
-      <div class="rate-grid">
+      <div class="rate-grid" id="rateGrid">
         <div class="field-row">
           <label for="healthRate" id="healthRateLabel">健康保険料率（自動入力・編集可）</label>
           <div class="field-input">
@@ -649,13 +649,13 @@
         </div>
       </div>
 
-      <div class="field-row">
+      <div class="field-row" id="industryFieldRow">
         <label for="industryType">事業の種類（雇用保険）</label>
         <div class="field-input">
           <select id="industryType"></select>
         </div>
       </div>
-      <div class="field-row">
+      <div class="field-row" id="employmentRateFieldRow">
         <label for="employmentRate">雇用保険料率（従業員負担分、自動入力）</label>
         <div class="field-input">
           <input type="number" id="employmentRate" value="0.50" min="0" step="0.01" readonly>
@@ -782,8 +782,8 @@
         <p class="field-note">※「前月の給与の10倍を超える賞与を支払う場合」「前月に給与の支払がない場合」の計算で使用する倍数（6・12）です。</p>
       </div>
 
-      <h2 class="section-2">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
-      <div class="field-row">
+      <h2 class="section-2" id="bonusRateSectionHeader">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
+      <div class="field-row" id="bonusHealthTypeFieldRow">
         <label for="bonusHealthInsuranceType">健康保険の種類</label>
         <div class="field-input">
           <select id="bonusHealthInsuranceType">
@@ -798,7 +798,7 @@
           <select id="bonusPrefecture"></select>
         </div>
       </div>
-      <div class="rate-grid">
+      <div class="rate-grid" id="bonusRateGrid">
         <div class="field-row">
           <label for="bonusHealthRate" id="bonusHealthRateLabel">健康保険料率（自動入力・編集可）</label>
           <div class="field-input">
@@ -822,14 +822,14 @@
         </div>
       </div>
 
-      <div class="field-row">
+      <div class="field-row" id="bonusHealthCumulativeRow">
         <label for="bonusHealthCumulative">健康保険：本年度の標準賞与額累計（今回分を除く）</label>
         <div class="field-input">
           <input type="text" inputmode="numeric" id="bonusHealthCumulative" value="0">
           <span class="unit">円</span>
         </div>
       </div>
-      <div class="field-row">
+      <div class="field-row" id="bonusPensionCumulativeRow">
         <label for="bonusPensionCumulative">厚生年金：当月の標準賞与額累計（今回分を除く）</label>
         <div class="field-input">
           <input type="text" inputmode="numeric" id="bonusPensionCumulative" value="0">
@@ -837,13 +837,13 @@
         </div>
       </div>
 
-      <div class="field-row">
+      <div class="field-row" id="bonusIndustryFieldRow">
         <label for="bonusIndustryType">事業の種類（雇用保険）</label>
         <div class="field-input">
           <select id="bonusIndustryType"></select>
         </div>
       </div>
-      <div class="field-row">
+      <div class="field-row" id="bonusEmploymentRateFieldRow">
         <label for="bonusEmploymentRate">雇用保険料率（従業員負担分、自動入力）</label>
         <div class="field-input">
           <input type="number" id="bonusEmploymentRate" value="0.50" min="0" step="0.01" readonly>
@@ -901,6 +901,6 @@
 
 <section class="card payslip" id="printArea" aria-hidden="true"></section>
 
-<script src="main.js?v=1784467457"></script>
+<script src="main.js?v=1784468304"></script>
 </body>
 </html>
