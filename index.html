@@ -496,11 +496,13 @@
       font-size: 12px;
     }
     #printArea td {
-      border: 2px solid #000 !important;
+      border: 3px solid #000 !important;
       padding: 6px 10px;
     }
     #printArea table tr:first-child td { border-top: none !important; }
-    #printArea tr.total td { border-top: 3px solid #000 !important; }
+    #printArea table td:first-child { border-left: none !important; }
+    #printArea table td:last-child { border-right: none !important; }
+    #printArea table tr:last-child td { border-bottom: none !important; }
     #printArea .net-block { padding: 12px 0 0; }
     #printArea .net-value { font-size: 24px; }
   }
