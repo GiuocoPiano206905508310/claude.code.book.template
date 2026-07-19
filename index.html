@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>給与計算ツール（概算）</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    margin: 0;
+    padding: 24px;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .notice {
+    background: #fff7e6;
+    border: 1px solid #ffcc66;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    max-width: 720px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .notice p { margin: 4px 0; }
+  .notice p:first-child { margin-top: 0; }
+  .notice p:last-child { margin-bottom: 0; }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    background: #e6e9ef;
+    color: #555;
+    border: none;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+  }
+  .tab-btn.active {
+    background: #2f6fed;
+    color: #fff;
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .view-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .view-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    background: #fff;
+    color: #555;
+    border: 1px solid #ccc;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .view-btn.active {
+    background: #222;
+    color: #fff;
+    border-color: #222;
+  }
+  .layout {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  body.view-mobile {
+    max-width: 375px;
+    margin: 0 auto;
+    padding: 16px 12px;
+  }
+  body.view-mobile .layout {
+    flex-direction: column;
+  }
+  body.view-mobile fieldset,
+  body.view-mobile #result,
+  body.view-mobile #bonusResult {
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+  body.view-mobile .tabs,
+  body.view-mobile .view-toggle {
+    flex-wrap: wrap;
+  }
+  body.view-mobile .tab-btn {
+    flex: 1 1 auto;
+  }
+  fieldset {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px 20px;
+    max-width: 380px;
+    flex: 1 1 340px;
+  }
+  legend { font-weight: bold; padding: 0 6px; }
+  label {
+    display: block;
+    font-size: 13px;
+    margin-top: 10px;
+    margin-bottom: 2px;
+    color: #444;
+  }
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  input[readonly] {
+    background: #f0f0f0;
+    color: #555;
+  }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .checkbox-row input { width: auto; }
+  .dependents-note {
+    margin-top: 6px;
+    margin-bottom: 4px;
+  }
+  .dependents-note summary {
+    font-size: 12px;
+    color: #2f6fed;
+    cursor: pointer;
+    user-select: none;
+  }
+  .dependents-note img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  .hint {
+    font-size: 12px;
+    color: #666;
+    margin: 4px 0 0;
+    line-height: 1.5;
+  }
+  button {
+    margin-top: 18px;
+    width: 100%;
+    padding: 10px;
+    font-size: 15px;
+    background: #2f6fed;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:hover { background: #255bcc; }
+  #result, #bonusResult {
+    flex: 1 1 340px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px 20px;
+    max-width: 380px;
+  }
+  #result h2, #bonusResult h2 { font-size: 16px; margin-top: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 6px 4px; border-bottom: 1px solid #eee; }
+  td.label { color: #555; }
+  td.value { text-align: right; font-variant-numeric: tabular-nums; }
+  td.value.na { color: #999; font-style: italic; }
+  tr.total td { font-weight: bold; border-top: 2px solid #333; border-bottom: none; padding-top: 10px; }
+  tr.net td { font-size: 17px; color: #1a7f37; }
+  .export-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .export-btn {
+    flex: 1 1 90px;
+    margin-top: 0;
+    padding: 8px;
+    font-size: 13px;
+    background: #fff;
+    color: #2f6fed;
+    border: 1px solid #2f6fed;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .export-btn:hover { background: #eef3ff; }
+  .export-status {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: #666;
+    min-height: 1.4em;
+  }
+  .export-status.error { color: #c0392b; }
+  @media print {
+    body * { visibility: hidden; }
+    .print-target, .print-target * { visibility: visible; }
+    .print-target {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      max-width: 100%;
+      border: none;
+      padding: 0;
+    }
+    .export-row, .export-status { display: none !important; }
+    .print-target table {
+      border-collapse: collapse;
+    }
+    .print-target td {
+      border: 1px solid #333 !important;
+      padding: 6px 8px !important;
+    }
+    .print-target tr.total td { border-top: 2px solid #333 !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="view-toggle">
+    <button type="button" class="view-btn active" id="viewPcBtn">🖥 PC版</button>
+    <button type="button" class="view-btn" id="viewMobileBtn">📱 スマホ版</button>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" id="tabMonthlyBtn">給与計算</button>
+    <button type="button" class="tab-btn" id="tabBonusBtn">賞与計算</button>
+  </div>
+
+  <div id="tabMonthly" class="tab-panel active">
+    <h1>給与計算シミュレーション（令和8年度）</h1>
+    <div class="notice">
+      <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
+      <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「給与所得の源泉徴収税額表（令和8年分）」に基づき計算しますが、標準報酬月額表とは一致しないなど概算の範囲にとどまります。</p>
+      <p>※ 子ども・子育て支援金は令和8年4月分（5月納付分）から適用されます。</p>
+      <p>※ 昇給・降給により固定的賃金が変動し、変動後3ヶ月の報酬平均が現在の標準報酬月額と2等級以上の差がある場合は、月額変更届の提出が必要です。</p>
+    </div>
+
+    <div class="layout">
+      <fieldset>
+        <legend>支給項目</legend>
+        <label for="employmentType">雇用形態</label>
+        <select id="employmentType">
+          <option value="正社員">正社員（雇用保険・社会保険対象）</option>
+          <option value="役員">役員（社会保険のみ対象）</option>
+          <option value="アルバイト・パート">アルバイト・パート（雇用保険のみ対象）</option>
+        </select>
+
+        <label for="ageGroup">年齢区分</label>
+        <select id="ageGroup">
+          <option value="under40">40歳未満</option>
+          <option value="40to64">40〜64歳</option>
+          <option value="65to69">65〜69歳</option>
+          <option value="70to74">70〜74歳</option>
+          <option value="75plus">75歳以上</option>
+        </select>
+
+        <label for="baseSalary" id="baseSalaryLabel">基本給（円）</label>
+        <input type="text" inputmode="numeric" id="baseSalary" value="280,000">
+
+        <label for="overtimePay">残業手当（円）</label>
+        <input type="text" inputmode="numeric" id="overtimePay" value="20,000">
+
+        <label for="taxableAllowance">その他手当（課税・円）</label>
+        <input type="text" inputmode="numeric" id="taxableAllowance" value="10,000">
+
+        <label for="commuteAllowance">通勤手当（非課税・円）</label>
+        <input type="text" inputmode="numeric" id="commuteAllowance" value="10,000">
+
+        <label for="dependents">扶養親族等の数（人）</label>
+        <input type="number" id="dependents" value="0" min="0" step="1">
+        <details class="dependents-note">
+          <summary>※扶養親族等の数の算定方法</summary>
+          <img src="fuyou-santei.jpg" alt="扶養親族等の数の算定方法（国税庁）">
+        </details>
+
+        <label for="calcMethod">源泉所得税の計算方法</label>
+        <select id="calcMethod">
+          <option value="table">月額表</option>
+          <option value="machine">機械計算（甲欄のみ）</option>
+        </select>
+
+        <label for="taxTable">甲欄・乙欄</label>
+        <select id="taxTable">
+          <option value="甲">甲欄（扶養控除等申告書あり）</option>
+          <option value="乙">乙欄（扶養控除等申告書なし）</option>
+        </select>
+
+        <label for="residentTax">住民税（月額・円、わかれば入力）</label>
+        <input type="text" inputmode="numeric" id="residentTax" value="0">
+      </fieldset>
+
+      <fieldset>
+        <legend>保険料率設定（令和8年度・協会けんぽ準拠）</legend>
+        <label for="prefecture">都道府県（協会けんぽ支部）</label>
+        <select id="prefecture"></select>
+
+        <label for="healthRate">健康保険料率（%・全体、都道府県選択で自動入力）</label>
+        <input type="number" id="healthRate" value="9.85" min="0" step="0.01">
+
+        <label for="careRate">介護保険料率（%・全体、全国一律）</label>
+        <input type="number" id="careRate" value="1.62" min="0" step="0.01" readonly>
+
+        <label for="pensionRate">厚生年金保険料率（%・全体）</label>
+        <input type="number" id="pensionRate" value="18.30" min="0" step="0.01" readonly>
+
+        <label for="industryType">事業の種類（雇用保険）</label>
+        <select id="industryType"></select>
+
+        <label for="employmentRate">雇用保険料率（%・従業員負担分、自動入力）</label>
+        <input type="number" id="employmentRate" value="0.50" min="0" step="0.01" readonly>
+
+        <button id="calcBtn" type="button">給与を計算する</button>
+      </fieldset>
+
+      <div id="result">
+        <h2>給与計算シミュレーション結果</h2>
+        <table id="resultTable">
+          <tbody></tbody>
+        </table>
+        <div class="export-row">
+          <button type="button" class="export-btn" id="exportPdfBtn">📄 PDF出力</button>
+          <button type="button" class="export-btn" id="exportExcelBtn">📊 Excel出力</button>
+          <button type="button" class="export-btn" id="exportCopyBtn">📋 コピー</button>
+        </div>
+        <p class="export-status" id="exportStatus"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabBonus" class="tab-panel">
+    <h1>賞与計算シミュレーション（令和8年度）</h1>
+    <div class="notice">
+      <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
+      <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「給与所得の源泉徴収税額表（令和8年分）」「賞与に対する源泉徴収税額の算出率の表（令和8年分）」に基づき計算しますが、標準報酬月額表とは一致しないなど概算の範囲にとどまります。</p>
+      <p>※ 子ども・子育て支援金は令和8年4月分（5月納付分）から適用されます。</p>
+      <p>※ 昇給・降給により固定的賃金が変動し、変動後3ヶ月の報酬平均が現在の標準報酬月額と2等級以上の差がある場合は、月額変更届の提出が必要です。</p>
+    </div>
+
+    <div class="layout">
+      <fieldset>
+        <legend>賞与支給項目</legend>
+        <label for="bonusEmploymentType">雇用形態</label>
+        <select id="bonusEmploymentType">
+          <option value="正社員">正社員（雇用保険・社会保険対象）</option>
+          <option value="役員">役員（社会保険のみ対象）</option>
+          <option value="アルバイト・パート">アルバイト・パート（雇用保険のみ対象）</option>
+        </select>
+
+        <label for="bonusAgeGroup">年齢区分</label>
+        <select id="bonusAgeGroup">
+          <option value="under40">40歳未満</option>
+          <option value="40to64">40〜64歳</option>
+          <option value="65to69">65〜69歳</option>
+          <option value="70to74">70〜74歳</option>
+          <option value="75plus">75歳以上</option>
+        </select>
+
+        <label for="bonusDependents">扶養親族等の数（人）</label>
+        <input type="number" id="bonusDependents" value="0" min="0" step="1">
+        <details class="dependents-note">
+          <summary>※扶養親族等の数の算定方法</summary>
+          <img src="fuyou-santei.jpg" alt="扶養親族等の数の算定方法（国税庁）">
+        </details>
+
+        <label for="bonusCalcMethod">源泉所得税の計算方法</label>
+        <select id="bonusCalcMethod">
+          <option value="table">月額表</option>
+          <option value="machine">機械計算（甲欄のみ）</option>
+        </select>
+
+        <label for="bonusTaxTable">甲欄・乙欄</label>
+        <select id="bonusTaxTable">
+          <option value="甲">甲欄（扶養控除等申告書あり）</option>
+          <option value="乙">乙欄（扶養控除等申告書なし）</option>
+        </select>
+
+        <label for="bonusAmount">賞与額（円）</label>
+        <input type="text" inputmode="numeric" id="bonusAmount" value="500,000">
+
+        <label for="prevMonthSalary">前月の給与の金額（社会保険料等控除後・円）</label>
+        <input type="text" inputmode="numeric" id="prevMonthSalary" value="250,000">
+        <p class="hint">※支払い状況（通常の場合／前月の給与の10倍を超える賞与を支払う場合／前月に給与の支払がない場合）は、上記「賞与額」と「前月の給与の金額」から自動判定されます。</p>
+
+        <label for="bonusCalcPeriod">賞与の計算期間</label>
+        <select id="bonusCalcPeriod">
+          <option value="6">6か月以内</option>
+          <option value="12">6か月超</option>
+        </select>
+        <p class="hint">※「前月の給与の10倍を超える賞与を支払う場合」「前月に給与の支払がない場合」の計算で使用する倍数（6・12）です。</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>保険料率設定（令和8年度・協会けんぽ準拠）</legend>
+        <label for="bonusPrefecture">都道府県（協会けんぽ支部）</label>
+        <select id="bonusPrefecture"></select>
+
+        <label for="bonusHealthRate">健康保険料率（%・全体、都道府県選択で自動入力）</label>
+        <input type="number" id="bonusHealthRate" value="9.85" min="0" step="0.01">
+
+        <label for="bonusCareRate">介護保険料率（%・全体、全国一律）</label>
+        <input type="number" id="bonusCareRate" value="1.62" min="0" step="0.01" readonly>
+
+        <label for="bonusPensionRate">厚生年金保険料率（%・全体）</label>
+        <input type="number" id="bonusPensionRate" value="18.30" min="0" step="0.01" readonly>
+
+        <label for="bonusHealthCumulative">健康保険：本年度の標準賞与額累計（今回分を除く・円）</label>
+        <input type="text" inputmode="numeric" id="bonusHealthCumulative" value="0">
+
+        <label for="bonusPensionCumulative">厚生年金：当月の標準賞与額累計（今回分を除く・円）</label>
+        <input type="text" inputmode="numeric" id="bonusPensionCumulative" value="0">
+
+        <label for="bonusIndustryType">事業の種類（雇用保険）</label>
+        <select id="bonusIndustryType"></select>
+
+        <label for="bonusEmploymentRate">雇用保険料率（%・従業員負担分、自動入力）</label>
+        <input type="number" id="bonusEmploymentRate" value="0.50" min="0" step="0.01" readonly>
+
+        <button id="calcBonusBtn" type="button">賞与を計算する</button>
+      </fieldset>
+
+      <div id="bonusResult">
+        <h2>賞与計算シミュレーション結果</h2>
+        <table id="bonusResultTable">
+          <tbody></tbody>
+        </table>
+        <div class="export-row">
+          <button type="button" class="export-btn" id="bonusExportPdfBtn">📄 PDF出力</button>
+          <button type="button" class="export-btn" id="bonusExportExcelBtn">📊 Excel出力</button>
+          <button type="button" class="export-btn" id="bonusExportCopyBtn">📋 コピー</button>
+        </div>
+        <p class="export-status" id="bonusExportStatus"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
