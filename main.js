@@ -525,8 +525,8 @@ function calculateBonus() {
   const pensionRate = Number(document.getElementById('bonusPensionRate').value) / 100;
   const employmentRate = Number(document.getElementById('bonusEmploymentRate').value) / 100;
 
-  const subjectSocialInsurance = employmentType !== 'アルバイト・パート';
-  const subjectEmploymentInsurance = employmentType !== '役員';
+  const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
+  const subjectEmploymentInsurance = employmentType !== '役員' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
   const ageRule = AGE_RULES[ageGroup];
   const hasHealth = subjectSocialInsurance && ageRule.health;
   const hasCare = subjectSocialInsurance && ageRule.care;
@@ -626,9 +626,9 @@ function calculate() {
   const pensionRate = Number(document.getElementById('pensionRate').value) / 100;
   const employmentRate = Number(document.getElementById('employmentRate').value) / 100;
 
-  // 雇用形態による加入区分（役員=社会保険のみ、アルバイト・パート=雇用保険のみ）
-  const subjectSocialInsurance = employmentType !== 'アルバイト・パート';
-  const subjectEmploymentInsurance = employmentType !== '役員';
+  // 雇用形態による加入区分（役員=社会保険のみ、アルバイト・パート=雇用保険のみ、アルバイト・パート（雇用保険対象外）=いずれも対象外）
+  const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
+  const subjectEmploymentInsurance = employmentType !== '役員' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
   const ageRule = AGE_RULES[ageGroup];
 
   const hasHealth = subjectSocialInsurance && ageRule.health;
@@ -650,7 +650,7 @@ function calculate() {
 
   // 源泉所得税（給与所得の源泉徴収税額表 令和8年分 月額表）
   const monthlyTaxableIncome = grossPay - commuteAllowance; // 通勤手当は非課税
-  const isTaxExempt = employmentType === 'アルバイト・パート' && monthlyTaxableIncome < PART_TIME_TAX_EXEMPT_THRESHOLD;
+  const isTaxExempt = (employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）') && monthlyTaxableIncome < PART_TIME_TAX_EXEMPT_THRESHOLD;
 
   let monthlyIncomeTax = 0;
   if (!isTaxExempt) {
