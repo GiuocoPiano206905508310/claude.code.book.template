@@ -610,6 +610,15 @@
 
       <h2 class="section-2">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
       <div class="field-row">
+        <label for="healthInsuranceType">健康保険の種類</label>
+        <div class="field-input">
+          <select id="healthInsuranceType">
+            <option value="kyoukai">協会けんぽ（都道府県単位保険料率）</option>
+            <option value="kumiai">健康保険組合（保険料率手動入力）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row" id="prefectureFieldRow">
         <label for="prefecture">都道府県（協会けんぽ支部）</label>
         <div class="field-input">
           <select id="prefecture"></select>
@@ -617,14 +626,14 @@
       </div>
       <div class="rate-grid">
         <div class="field-row">
-          <label for="healthRate">健康保険料率（自動入力・編集可）</label>
+          <label for="healthRate" id="healthRateLabel">健康保険料率（自動入力・編集可）</label>
           <div class="field-input">
             <input type="number" id="healthRate" value="9.85" min="0" step="0.01">
             <span class="unit">%</span>
           </div>
         </div>
         <div class="field-row">
-          <label for="careRate">介護保険料率（全国一律）</label>
+          <label for="careRate" id="careRateLabel">介護保険料率（全国一律）</label>
           <div class="field-input">
             <input type="number" id="careRate" value="1.62" min="0" step="0.01" readonly>
             <span class="unit">%</span>
@@ -773,6 +782,15 @@
 
       <h2 class="section-2">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
       <div class="field-row">
+        <label for="bonusHealthInsuranceType">健康保険の種類</label>
+        <div class="field-input">
+          <select id="bonusHealthInsuranceType">
+            <option value="kyoukai">協会けんぽ（都道府県単位保険料率）</option>
+            <option value="kumiai">健康保険組合（保険料率手動入力）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row" id="bonusPrefectureFieldRow">
         <label for="bonusPrefecture">都道府県（協会けんぽ支部）</label>
         <div class="field-input">
           <select id="bonusPrefecture"></select>
@@ -780,14 +798,14 @@
       </div>
       <div class="rate-grid">
         <div class="field-row">
-          <label for="bonusHealthRate">健康保険料率（自動入力・編集可）</label>
+          <label for="bonusHealthRate" id="bonusHealthRateLabel">健康保険料率（自動入力・編集可）</label>
           <div class="field-input">
             <input type="number" id="bonusHealthRate" value="9.85" min="0" step="0.01">
             <span class="unit">%</span>
           </div>
         </div>
         <div class="field-row">
-          <label for="bonusCareRate">介護保険料率（全国一律）</label>
+          <label for="bonusCareRate" id="bonusCareRateLabel">介護保険料率（全国一律）</label>
           <div class="field-input">
             <input type="number" id="bonusCareRate" value="1.62" min="0" step="0.01" readonly>
             <span class="unit">%</span>
@@ -881,6 +899,6 @@
 
 <section class="card payslip" id="printArea" aria-hidden="true"></section>
 
-<script src="main.js?v=1784441433"></script>
+<script src="main.js?v=1784461920"></script>
 </body>
 </html>

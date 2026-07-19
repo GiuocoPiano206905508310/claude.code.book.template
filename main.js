@@ -40,6 +40,20 @@ function applyPrefectureRate(selectId, healthId, careId) {
   document.getElementById(careId).value = CARE_RATE_DEFAULT.toFixed(2);
 }
 
+// 健康保険の種類（協会けんぽ／健康保険組合）の切り替え
+// 協会けんぽ：都道府県選択欄を表示し、健康保険料率・介護保険料率は都道府県から自動入力（介護保険料率は編集不可）
+// 健康保険組合：都道府県選択欄を隠し、健康保険料率・介護保険料率とも手動入力（厚生年金保険料率は影響を受けない）
+function applyHealthInsuranceType(typeId, prefectureRowId, prefectureSelectId, healthId, careId, healthLabelId, careLabelId) {
+  const isKumiai = document.getElementById(typeId).value === 'kumiai';
+  document.getElementById(prefectureRowId).style.display = isKumiai ? 'none' : '';
+  document.getElementById(careId).readOnly = !isKumiai;
+  document.getElementById(healthLabelId).textContent = isKumiai ? '健康保険料率（手動入力）' : '健康保険料率（自動入力・編集可）';
+  document.getElementById(careLabelId).textContent = isKumiai ? '介護保険料率（手動入力）' : '介護保険料率（全国一律）';
+  if (!isKumiai) {
+    applyPrefectureRate(prefectureSelectId, healthId, careId);
+  }
+}
+
 function populateIndustrySelect(selectId, rateId) {
   const select = document.getElementById(selectId);
   for (const name of Object.keys(EMPLOYMENT_RATES_BY_INDUSTRY)) {
@@ -573,10 +587,10 @@ function renderBonusResult(r) {
     ['支払い状況（自動判定）', BONUS_SITUATION_LABELS[r.situation], 'text', true],
     ['賞与額', r.bonusAmount, 'plain', true],
     ['健康保険料', -r.healthInsurance, 'deduction', r.hasHealth],
+    ['子ども・子育て支援金', -r.childSupportLevy, 'deduction', r.hasHealth],
     ['介護保険料', -r.careInsurance, 'deduction', r.hasCare],
     ['厚生年金保険料', -r.pensionInsurance, 'deduction', r.hasPension],
     ['雇用保険料', -r.employmentInsurance, 'deduction', r.subjectEmploymentInsurance],
-    ['子ども・子育て支援金', -r.childSupportLevy, 'deduction', r.hasHealth],
     ['社会保険料合計', -r.socialInsuranceTotal, 'total', true],
     ['源泉所得税（概算）', -r.incomeTax, 'deduction', true],
   ];
@@ -666,10 +680,10 @@ function renderResult(r) {
   const rows = [
     ['総支給額', r.grossPay, 'plain', true],
     ['健康保険料', -r.healthInsurance, 'deduction', r.hasHealth],
+    ['子ども・子育て支援金', -r.childSupportLevy, 'deduction', r.hasHealth],
     ['介護保険料', -r.careInsurance, 'deduction', r.hasCare],
     ['厚生年金保険料', -r.pensionInsurance, 'deduction', r.hasPension],
     ['雇用保険料', -r.employmentInsurance, 'deduction', r.subjectEmploymentInsurance],
-    ['子ども・子育て支援金', -r.childSupportLevy, 'deduction', r.hasHealth],
     ['社会保険料合計', -r.socialInsuranceTotal, 'total', true],
     ['源泉所得税（概算）', -r.monthlyIncomeTax, 'deduction', !r.isTaxExempt],
     ['住民税', -r.residentTax, 'deduction', true],
@@ -693,6 +707,10 @@ document.getElementById('prefecture').addEventListener('change', () => {
   applyPrefectureRate('prefecture', 'healthRate', 'careRate');
   calculate();
 });
+document.getElementById('healthInsuranceType').addEventListener('change', () => {
+  applyHealthInsuranceType('healthInsuranceType', 'prefectureFieldRow', 'prefecture', 'healthRate', 'careRate', 'healthRateLabel', 'careRateLabel');
+  calculate();
+});
 document.getElementById('industryType').addEventListener('change', () => {
   applyIndustryRate('industryType', 'employmentRate');
   calculate();
@@ -708,6 +726,10 @@ document.getElementById('calcBtn').addEventListener('click', calculate);
 
 document.getElementById('bonusPrefecture').addEventListener('change', () => {
   applyPrefectureRate('bonusPrefecture', 'bonusHealthRate', 'bonusCareRate');
+  calculateBonus();
+});
+document.getElementById('bonusHealthInsuranceType').addEventListener('change', () => {
+  applyHealthInsuranceType('bonusHealthInsuranceType', 'bonusPrefectureFieldRow', 'bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusHealthRateLabel', 'bonusCareRateLabel');
   calculateBonus();
 });
 document.getElementById('bonusIndustryType').addEventListener('change', () => {
@@ -784,6 +806,8 @@ populateIndustrySelect('industryType', 'employmentRate');
 populatePrefectureSelect('bonusPrefecture', 'bonusHealthRate', 'bonusCareRate');
 populateIndustrySelect('bonusIndustryType', 'bonusEmploymentRate');
 applyEmploymentTypeLabel();
+applyHealthInsuranceType('healthInsuranceType', 'prefectureFieldRow', 'prefecture', 'healthRate', 'careRate', 'healthRateLabel', 'careRateLabel');
+applyHealthInsuranceType('bonusHealthInsuranceType', 'bonusPrefectureFieldRow', 'bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusHealthRateLabel', 'bonusCareRateLabel');
 calculate();
 calculateBonus();
 
