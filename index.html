@@ -2,219 +2,448 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>給与計算ツール（概算）</title>
+<title>給与計算シミュレーション（令和8年度）</title>
 <style>
+  :root {
+    color-scheme: light;
+    --bg: #efeadf;
+    --surface: #fffdf8;
+    --surface-line: #e4ddc9;
+    --ink: #23282a;
+    --ink-soft: #63685f;
+    --ink-faint: #93968a;
+    --indigo: #1f4e79;
+    --indigo-ink: #163a5c;
+    --stamp: #b23c2c;
+    --stamp-bg: rgba(178, 60, 44, 0.09);
+    --success: #2f7d5b;
+    --success-bg: rgba(47, 125, 91, 0.1);
+    --border: #d8d2c0;
+    --focus: #1f4e79;
+    --shadow: rgba(35, 40, 42, 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #14181a;
+      --surface: #1c2224;
+      --surface-line: #2c3436;
+      --ink: #ece7da;
+      --ink-soft: #a8ac9f;
+      --ink-faint: #767b70;
+      --indigo: #7fb0dd;
+      --indigo-ink: #a8cced;
+      --stamp: #e2765f;
+      --stamp-bg: rgba(226, 118, 95, 0.14);
+      --success: #74c79a;
+      --success-bg: rgba(116, 199, 154, 0.14);
+      --border: #333c3a;
+      --focus: #7fb0dd;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+  }
+
   * { box-sizing: border-box; }
+
   body {
-    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-    background: #f4f5f7;
-    color: #222;
     margin: 0;
-    padding: 24px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    padding: 40px 20px 64px;
   }
-  h1 { font-size: 22px; margin-bottom: 4px; }
-  .notice {
-    background: #fff7e6;
-    border: 1px solid #ffcc66;
-    border-radius: 6px;
-    padding: 10px 14px;
-    font-size: 13px;
-    max-width: 720px;
-    margin-bottom: 20px;
-    line-height: 1.6;
+
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
   }
-  .notice p { margin: 4px 0; }
-  .notice p:first-child { margin-top: 0; }
-  .notice p:last-child { margin-bottom: 0; }
+
   .tabs {
     display: flex;
+    justify-content: center;
     gap: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 32px;
   }
   .tab-btn {
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: bold;
-    background: #e6e9ef;
-    color: #555;
-    border: none;
-    border-radius: 6px 6px 0 0;
+    padding: 10px 28px;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--border);
+    border-radius: 999px;
     cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
   }
+  .tab-btn:hover { color: var(--ink); }
   .tab-btn.active {
-    background: #2f6fed;
+    background: var(--indigo);
     color: #fff;
+    border-color: var(--indigo);
   }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
+
   .view-toggle {
     display: flex;
+    justify-content: center;
     gap: 6px;
     margin-bottom: 14px;
   }
   .view-btn {
-    padding: 6px 14px;
-    font-size: 12px;
-    background: #fff;
-    color: #555;
-    border: 1px solid #ccc;
+    padding: 5px 16px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    background: transparent;
+    color: var(--ink-faint);
+    border: 1px solid var(--border);
     border-radius: 999px;
     cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
   }
+  .view-btn:hover { color: var(--ink-soft); }
   .view-btn.active {
-    background: #222;
-    color: #fff;
-    border-color: #222;
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
   }
-  .layout {
-    display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
+
+  .page.is-mobile-view { max-width: 375px !important; }
+  .page.is-mobile-view .grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .page.is-mobile-view .payslip { position: static !important; }
+  .page.is-mobile-view .masthead .sub { max-width: 100% !important; }
+
+  .masthead {
+    text-align: center;
+    margin-bottom: 28px;
   }
-  body.view-mobile {
-    max-width: 375px;
+
+  .eyebrow {
+    margin: 0 0 6px;
+    font-size: 12px;
+    letter-spacing: 0.28em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-weight: 600;
+    font-size: clamp(26px, 4vw, 34px);
+    margin: 0 0 10px;
+    text-wrap: balance;
+    letter-spacing: 0.04em;
+  }
+
+  .masthead .sub {
     margin: 0 auto;
-    padding: 16px 12px;
-  }
-  body.view-mobile .layout {
-    flex-direction: column;
-  }
-  body.view-mobile fieldset,
-  body.view-mobile #result,
-  body.view-mobile #bonusResult {
-    max-width: 100%;
-    flex: 1 1 auto;
-  }
-  body.view-mobile .tabs,
-  body.view-mobile .view-toggle {
-    flex-wrap: wrap;
-  }
-  body.view-mobile .tab-btn {
-    flex: 1 1 auto;
-  }
-  fieldset {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 16px 20px;
-    max-width: 380px;
-    flex: 1 1 340px;
-  }
-  legend { font-weight: bold; padding: 0 6px; }
-  label {
-    display: block;
-    font-size: 13px;
-    margin-top: 10px;
-    margin-bottom: 2px;
-    color: #444;
-  }
-  input[type="number"], input[type="text"], select {
-    width: 100%;
-    padding: 6px 8px;
+    max-width: 46em;
+    color: var(--ink-soft);
     font-size: 14px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    line-height: 1.7;
+  }
+
+  .rule {
+    height: 5px;
+    max-width: 220px;
+    margin: 18px auto 0;
+    border-top: 2px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .notice {
+    background: var(--stamp-bg);
+    border: 1px solid var(--stamp);
+    color: var(--ink);
+    border-radius: 3px;
+    padding: 12px 16px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    max-width: 760px;
+    margin: 26px auto 30px;
+  }
+  .notice strong { color: var(--stamp); }
+  .notice p { margin: 4px 0; }
+  .notice p:first-child { margin-top: 0; }
+  .notice p:last-child { margin-bottom: 0; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+  }
+
+  @media (max-width: 780px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+
+  .form-card { padding: 22px 24px 26px; }
+
+  h2 {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin: 0 0 4px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--surface-line);
+  }
+  h2.section-2 { margin-top: 26px; }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--surface-line);
+  }
+  .field-row:last-of-type { border-bottom: none; }
+
+  label {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  .field-input {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  input[type="number"], input[type="text"], select {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    font-size: 17px;
     font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    padding: 4px 2px;
+    font-family: inherit;
+    min-width: 0;
+  }
+  input[type="number"]:focus, input[type="text"]:focus, select:focus {
+    outline: none;
+    border-bottom: 2px solid var(--focus);
   }
   input[readonly] {
-    background: #f0f0f0;
-    color: #555;
+    color: var(--ink-soft);
   }
+  select {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+    background-position: calc(100% - 6px) 12px, calc(100% - 1px) 12px;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+    cursor: pointer;
+  }
+  select option {
+    color: var(--ink);
+    background: var(--surface);
+  }
+  .unit {
+    font-size: 12px;
+    color: var(--ink-faint);
+    white-space: nowrap;
+  }
+
   .checkbox-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 12px;
+    gap: 8px;
+    padding: 12px 0;
   }
-  .checkbox-row input { width: auto; }
+  .checkbox-row input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--indigo);
+  }
+  .checkbox-row label { font-size: 13px; color: var(--ink); }
+  .field-note {
+    font-size: 11px;
+    color: var(--ink-faint);
+    line-height: 1.6;
+    margin: 6px 0 0;
+  }
+
   .dependents-note {
     margin-top: 6px;
-    margin-bottom: 4px;
   }
   .dependents-note summary {
     font-size: 12px;
-    color: #2f6fed;
+    color: var(--indigo);
     cursor: pointer;
     user-select: none;
+  }
+  .dependents-note summary:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
   }
   .dependents-note img {
     display: block;
     width: 100%;
     max-width: 100%;
-    margin-top: 8px;
-    border: 1px solid #ddd;
+    margin-top: 10px;
+    border: 1px solid var(--border);
     border-radius: 4px;
+    background: #fff;
   }
-  .hint {
-    font-size: 12px;
-    color: #666;
-    margin: 4px 0 0;
-    line-height: 1.5;
+
+  .rate-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 20px;
   }
-  button {
-    margin-top: 18px;
+
+  button#calcBtn, button#calcBonusBtn {
+    margin-top: 22px;
     width: 100%;
-    padding: 10px;
-    font-size: 15px;
-    background: #2f6fed;
+    padding: 13px;
+    font-size: 14.5px;
+    letter-spacing: 0.06em;
+    background: var(--indigo);
     color: #fff;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    transition: background 0.15s ease;
   }
-  button:hover { background: #255bcc; }
-  #result, #bonusResult {
-    flex: 1 1 340px;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 16px 20px;
-    max-width: 380px;
+  button#calcBtn:hover, button#calcBonusBtn:hover { background: var(--indigo-ink); }
+  button#calcBtn:focus-visible, button#calcBonusBtn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .payslip { padding: 0; overflow: hidden; position: sticky; top: 20px; }
+
+  .payslip-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 22px;
+    border-bottom: 2px solid var(--ink);
   }
-  #result h2, #bonusResult h2 { font-size: 16px; margin-top: 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  td { padding: 6px 4px; border-bottom: 1px solid #eee; }
-  td.label { color: #555; }
-  td.value { text-align: right; font-variant-numeric: tabular-nums; }
-  td.value.na { color: #999; font-style: italic; }
-  tr.total td { font-weight: bold; border-top: 2px solid #333; border-bottom: none; padding-top: 10px; }
-  tr.net td { font-size: 17px; color: #1a7f37; }
+  .payslip-head .title {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+  }
+  .payslip-head .stamp-badge {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 12px;
+    color: var(--stamp);
+    border: 2px solid var(--stamp);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-8deg);
+    letter-spacing: 0.05em;
+  }
+
+  table#resultTable, table#bonusResultTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  table#resultTable td, table#bonusResultTable td {
+    padding: 10px 22px;
+    border-bottom: 1px solid var(--surface-line);
+  }
+  td.label { color: var(--ink-soft); }
+  td.value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+  }
+  td.value.deduction { color: var(--stamp); }
+  td.value.na { color: var(--ink-faint); font-style: italic; font-size: 13px; }
+  tr.total td {
+    font-weight: 600;
+    background: rgba(0,0,0,0.015);
+  }
+
+  .net-block {
+    padding: 20px 22px 26px;
+    text-align: right;
+  }
+  .net-block .net-label {
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  .net-block .net-value {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 34px;
+    color: var(--success);
+    font-variant-numeric: tabular-nums;
+    margin-top: 4px;
+    background: var(--success-bg);
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 4px;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .net-value { transition: opacity 0.2s ease; }
+  }
+
   .export-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 14px;
+    gap: 10px;
+    padding: 0 22px 22px;
   }
   .export-btn {
     flex: 1 1 90px;
-    margin-top: 0;
-    padding: 8px;
-    font-size: 13px;
-    background: #fff;
-    color: #2f6fed;
-    border: 1px solid #2f6fed;
-    border-radius: 6px;
+    padding: 9px;
+    font-size: 12.5px;
+    letter-spacing: 0.05em;
+    background: transparent;
+    color: var(--indigo);
+    border: 1px solid var(--indigo);
+    border-radius: 4px;
     cursor: pointer;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    transition: background 0.15s ease, color 0.15s ease;
   }
-  .export-btn:hover { background: #eef3ff; }
+  .export-btn:hover { background: var(--indigo); color: #fff; }
   .export-status {
-    margin: 6px 0 0;
-    font-size: 12px;
-    color: #666;
+    margin: 6px 22px 18px;
+    font-size: 11.5px;
+    color: var(--ink-faint);
     min-height: 1.4em;
   }
-  .export-status.error { color: #c0392b; }
+  .export-status.error { color: var(--stamp); }
+
   @media print {
     body * { visibility: hidden; }
     .print-target, .print-target * { visibility: visible; }
     .print-target {
-      position: absolute;
+      position: absolute !important;
       left: 0;
       top: 0;
       width: 100%;
       max-width: 100%;
-      border: none;
-      padding: 0;
+      box-shadow: none;
     }
     .export-row, .export-status { display: none !important; }
     .print-target table {
@@ -222,13 +451,14 @@
     }
     .print-target td {
       border: 1px solid #333 !important;
-      padding: 6px 8px !important;
+      padding: 8px 12px !important;
     }
     .print-target tr.total td { border-top: 2px solid #333 !important; }
   }
 </style>
 </head>
 <body>
+<div class="page">
   <div class="view-toggle">
     <button type="button" class="view-btn active" id="viewPcBtn">🖥 PC版</button>
     <button type="button" class="view-btn" id="viewMobileBtn">📱 スマホ版</button>
@@ -240,212 +470,359 @@
   </div>
 
   <div id="tabMonthly" class="tab-panel active">
+  <header class="masthead">
+    <p class="eyebrow">Salary Estimator</p>
     <h1>給与計算シミュレーション（令和8年度）</h1>
-    <div class="notice">
-      <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
-      <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「給与所得の源泉徴収税額表（令和8年分）」に基づき計算しますが、標準報酬月額表とは一致しないなど概算の範囲にとどまります。</p>
-      <p>※ 子ども・子育て支援金は令和8年4月分（5月納付分）から適用されます。</p>
-      <p>※ 昇給・降給により固定的賃金が変動し、変動後3ヶ月の報酬平均が現在の標準報酬月額と2等級以上の差がある場合は、月額変更届の提出が必要です。</p>
-    </div>
+    <div class="rule"></div>
+  </header>
 
-    <div class="layout">
-      <fieldset>
-        <legend>支給項目</legend>
+  <div class="notice">
+    <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
+    <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「給与所得の源泉徴収税額表（令和8年分）」に基づき計算しますが、標準報酬月額表とは一致しないなど概算の範囲にとどまります。</p>
+    <p>※ 子ども・子育て支援金は令和8年4月分（5月納付分）から適用されます。</p>
+    <p>※ 昇給・降給により固定的賃金が変動し、変動後3ヶ月の報酬平均が現在の標準報酬月額と2等級以上の差がある場合は、月額変更届の提出が必要です。</p>
+  </div>
+
+  <div class="grid">
+    <section class="card form-card" aria-label="支給項目の入力">
+      <h2>支給項目</h2>
+
+      <div class="field-row">
         <label for="employmentType">雇用形態</label>
-        <select id="employmentType">
-          <option value="正社員">正社員（雇用保険・社会保険対象）</option>
-          <option value="役員">役員（社会保険のみ対象）</option>
-          <option value="アルバイト・パート">アルバイト・パート（雇用保険のみ対象）</option>
-        </select>
-
+        <div class="field-input">
+          <select id="employmentType">
+            <option value="正社員">正社員（雇用保険・社会保険対象）</option>
+            <option value="役員">役員（社会保険のみ対象）</option>
+            <option value="アルバイト・パート">アルバイト・パート（雇用保険のみ対象）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
         <label for="ageGroup">年齢区分</label>
-        <select id="ageGroup">
-          <option value="under40">40歳未満</option>
-          <option value="40to64">40〜64歳</option>
-          <option value="65to69">65〜69歳</option>
-          <option value="70to74">70〜74歳</option>
-          <option value="75plus">75歳以上</option>
-        </select>
-
-        <label for="baseSalary" id="baseSalaryLabel">基本給（円）</label>
-        <input type="text" inputmode="numeric" id="baseSalary" value="280,000">
-
-        <label for="overtimePay">残業手当（円）</label>
-        <input type="text" inputmode="numeric" id="overtimePay" value="20,000">
-
-        <label for="taxableAllowance">その他手当（課税・円）</label>
-        <input type="text" inputmode="numeric" id="taxableAllowance" value="10,000">
-
-        <label for="commuteAllowance">通勤手当（非課税・円）</label>
-        <input type="text" inputmode="numeric" id="commuteAllowance" value="10,000">
-
-        <label for="dependents">扶養親族等の数（人）</label>
-        <input type="number" id="dependents" value="0" min="0" step="1">
+        <div class="field-input">
+          <select id="ageGroup">
+            <option value="under40">40歳未満</option>
+            <option value="40to64">40〜64歳</option>
+            <option value="65to69">65〜69歳</option>
+            <option value="70to74">70〜74歳</option>
+            <option value="75plus">75歳以上</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="baseSalary" id="baseSalaryLabel">基本給</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="baseSalary" value="280,000">
+          <span class="unit">円</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="overtimePay">残業手当</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="overtimePay" value="20,000">
+          <span class="unit">円</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="taxableAllowance">その他手当（課税）</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="taxableAllowance" value="10,000">
+          <span class="unit">円</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="commuteAllowance">通勤手当（非課税）</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="commuteAllowance" value="10,000">
+          <span class="unit">円</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="dependents">扶養親族等の数</label>
+        <div class="field-input">
+          <input type="number" id="dependents" value="0" min="0" step="1">
+          <span class="unit">人</span>
+        </div>
         <details class="dependents-note">
           <summary>※扶養親族等の数の算定方法</summary>
           <img src="fuyou-santei.jpg" alt="扶養親族等の数の算定方法（国税庁）">
         </details>
-
-        <label for="calcMethod">源泉所得税の計算方法</label>
-        <select id="calcMethod">
-          <option value="table">月額表</option>
-          <option value="machine">機械計算（甲欄のみ）</option>
-        </select>
-
-        <label for="taxTable">甲欄・乙欄</label>
-        <select id="taxTable">
-          <option value="甲">甲欄（扶養控除等申告書あり）</option>
-          <option value="乙">乙欄（扶養控除等申告書なし）</option>
-        </select>
-
-        <label for="residentTax">住民税（月額・円、わかれば入力）</label>
-        <input type="text" inputmode="numeric" id="residentTax" value="0">
-      </fieldset>
-
-      <fieldset>
-        <legend>保険料率設定（令和8年度・協会けんぽ準拠）</legend>
-        <label for="prefecture">都道府県（協会けんぽ支部）</label>
-        <select id="prefecture"></select>
-
-        <label for="healthRate">健康保険料率（%・全体、都道府県選択で自動入力）</label>
-        <input type="number" id="healthRate" value="9.85" min="0" step="0.01">
-
-        <label for="careRate">介護保険料率（%・全体、全国一律）</label>
-        <input type="number" id="careRate" value="1.62" min="0" step="0.01" readonly>
-
-        <label for="pensionRate">厚生年金保険料率（%・全体）</label>
-        <input type="number" id="pensionRate" value="18.30" min="0" step="0.01" readonly>
-
-        <label for="industryType">事業の種類（雇用保険）</label>
-        <select id="industryType"></select>
-
-        <label for="employmentRate">雇用保険料率（%・従業員負担分、自動入力）</label>
-        <input type="number" id="employmentRate" value="0.50" min="0" step="0.01" readonly>
-
-        <button id="calcBtn" type="button">給与を計算する</button>
-      </fieldset>
-
-      <div id="result">
-        <h2>給与計算シミュレーション結果</h2>
-        <table id="resultTable">
-          <tbody></tbody>
-        </table>
-        <div class="export-row">
-          <button type="button" class="export-btn" id="exportPdfBtn">📄 PDF出力</button>
-          <button type="button" class="export-btn" id="exportExcelBtn">📊 Excel出力</button>
-          <button type="button" class="export-btn" id="exportCopyBtn">📋 コピー</button>
-        </div>
-        <p class="export-status" id="exportStatus"></p>
       </div>
-    </div>
+      <div class="field-row">
+        <label for="calcMethod">源泉所得税の計算方法</label>
+        <div class="field-input">
+          <select id="calcMethod">
+            <option value="table">月額表</option>
+            <option value="machine">機械計算（甲欄のみ）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="taxTable">甲欄・乙欄</label>
+        <div class="field-input">
+          <select id="taxTable">
+            <option value="甲">甲欄（扶養控除等申告書あり）</option>
+            <option value="乙">乙欄（扶養控除等申告書なし）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="residentTax">住民税（月額・わかれば入力）</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="residentTax" value="0">
+          <span class="unit">円</span>
+        </div>
+      </div>
+
+      <h2 class="section-2">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
+      <div class="field-row">
+        <label for="prefecture">都道府県（協会けんぽ支部）</label>
+        <div class="field-input">
+          <select id="prefecture"></select>
+        </div>
+      </div>
+      <div class="rate-grid">
+        <div class="field-row">
+          <label for="healthRate">健康保険料率（自動入力・編集可）</label>
+          <div class="field-input">
+            <input type="number" id="healthRate" value="9.85" min="0" step="0.01">
+            <span class="unit">%</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="careRate">介護保険料率（全国一律）</label>
+          <div class="field-input">
+            <input type="number" id="careRate" value="1.62" min="0" step="0.01" readonly>
+            <span class="unit">%</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="pensionRate">厚生年金保険料率</label>
+          <div class="field-input">
+            <input type="number" id="pensionRate" value="18.30" min="0" step="0.01" readonly>
+            <span class="unit">%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label for="industryType">事業の種類（雇用保険）</label>
+        <div class="field-input">
+          <select id="industryType"></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="employmentRate">雇用保険料率（従業員負担分、自動入力）</label>
+        <div class="field-input">
+          <input type="number" id="employmentRate" value="0.50" min="0" step="0.01" readonly>
+          <span class="unit">%</span>
+        </div>
+      </div>
+
+      <button id="calcBtn" type="button">給与を計算する</button>
+    </section>
+
+    <section class="card payslip" id="resultCard" aria-label="計算結果">
+      <div class="payslip-head">
+        <span class="title">給与計算シミュレーション結果</span>
+        <span class="stamp-badge">試算</span>
+      </div>
+      <table id="resultTable"><tbody></tbody></table>
+      <div class="net-block">
+        <div class="net-label">差引支給額（手取り）</div>
+        <div class="net-value" id="netValue">— 円</div>
+      </div>
+      <div class="export-row">
+        <button type="button" class="export-btn" id="exportPdfBtn">📄 PDF出力</button>
+        <button type="button" class="export-btn" id="exportExcelBtn">📊 Excel出力</button>
+        <button type="button" class="export-btn" id="exportCopyBtn">📋 コピー</button>
+      </div>
+      <p class="export-status" id="exportStatus"></p>
+    </section>
+  </div>
   </div>
 
   <div id="tabBonus" class="tab-panel">
+  <header class="masthead">
+    <p class="eyebrow">Bonus Estimator</p>
     <h1>賞与計算シミュレーション（令和8年度）</h1>
-    <div class="notice">
-      <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
-      <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「給与所得の源泉徴収税額表（令和8年分）」「賞与に対する源泉徴収税額の算出率の表（令和8年分）」に基づき計算しますが、標準報酬月額表とは一致しないなど概算の範囲にとどまります。</p>
-      <p>※ 子ども・子育て支援金は令和8年4月分（5月納付分）から適用されます。</p>
-      <p>※ 昇給・降給により固定的賃金が変動し、変動後3ヶ月の報酬平均が現在の標準報酬月額と2等級以上の差がある場合は、月額変更届の提出が必要です。</p>
-    </div>
+    <div class="rule"></div>
+  </header>
 
-    <div class="layout">
-      <fieldset>
-        <legend>賞与支給項目</legend>
+  <div class="notice">
+    <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
+    <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「給与所得の源泉徴収税額表（令和8年分）」「賞与に対する源泉徴収税額の算出率の表（令和8年分）」に基づき計算しますが、標準報酬月額表とは一致しないなど概算の範囲にとどまります。</p>
+    <p>※ 子ども・子育て支援金は令和8年4月分（5月納付分）から適用されます。</p>
+    <p>※ 昇給・降給により固定的賃金が変動し、変動後3ヶ月の報酬平均が現在の標準報酬月額と2等級以上の差がある場合は、月額変更届の提出が必要です。</p>
+  </div>
+
+  <div class="grid">
+    <section class="card form-card" aria-label="賞与支給項目の入力">
+      <h2>賞与支給項目</h2>
+
+      <div class="field-row">
         <label for="bonusEmploymentType">雇用形態</label>
-        <select id="bonusEmploymentType">
-          <option value="正社員">正社員（雇用保険・社会保険対象）</option>
-          <option value="役員">役員（社会保険のみ対象）</option>
-          <option value="アルバイト・パート">アルバイト・パート（雇用保険のみ対象）</option>
-        </select>
-
+        <div class="field-input">
+          <select id="bonusEmploymentType">
+            <option value="正社員">正社員（雇用保険・社会保険対象）</option>
+            <option value="役員">役員（社会保険のみ対象）</option>
+            <option value="アルバイト・パート">アルバイト・パート（雇用保険のみ対象）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
         <label for="bonusAgeGroup">年齢区分</label>
-        <select id="bonusAgeGroup">
-          <option value="under40">40歳未満</option>
-          <option value="40to64">40〜64歳</option>
-          <option value="65to69">65〜69歳</option>
-          <option value="70to74">70〜74歳</option>
-          <option value="75plus">75歳以上</option>
-        </select>
-
-        <label for="bonusDependents">扶養親族等の数（人）</label>
-        <input type="number" id="bonusDependents" value="0" min="0" step="1">
+        <div class="field-input">
+          <select id="bonusAgeGroup">
+            <option value="under40">40歳未満</option>
+            <option value="40to64">40〜64歳</option>
+            <option value="65to69">65〜69歳</option>
+            <option value="70to74">70〜74歳</option>
+            <option value="75plus">75歳以上</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="bonusDependents">扶養親族等の数</label>
+        <div class="field-input">
+          <input type="number" id="bonusDependents" value="0" min="0" step="1">
+          <span class="unit">人</span>
+        </div>
         <details class="dependents-note">
           <summary>※扶養親族等の数の算定方法</summary>
           <img src="fuyou-santei.jpg" alt="扶養親族等の数の算定方法（国税庁）">
         </details>
-
-        <label for="bonusCalcMethod">源泉所得税の計算方法</label>
-        <select id="bonusCalcMethod">
-          <option value="table">月額表</option>
-          <option value="machine">機械計算（甲欄のみ）</option>
-        </select>
-
-        <label for="bonusTaxTable">甲欄・乙欄</label>
-        <select id="bonusTaxTable">
-          <option value="甲">甲欄（扶養控除等申告書あり）</option>
-          <option value="乙">乙欄（扶養控除等申告書なし）</option>
-        </select>
-
-        <label for="bonusAmount">賞与額（円）</label>
-        <input type="text" inputmode="numeric" id="bonusAmount" value="500,000">
-
-        <label for="prevMonthSalary">前月の給与の金額（社会保険料等控除後・円）</label>
-        <input type="text" inputmode="numeric" id="prevMonthSalary" value="250,000">
-        <p class="hint">※支払い状況（通常の場合／前月の給与の10倍を超える賞与を支払う場合／前月に給与の支払がない場合）は、上記「賞与額」と「前月の給与の金額」から自動判定されます。</p>
-
-        <label for="bonusCalcPeriod">賞与の計算期間</label>
-        <select id="bonusCalcPeriod">
-          <option value="6">6か月以内</option>
-          <option value="12">6か月超</option>
-        </select>
-        <p class="hint">※「前月の給与の10倍を超える賞与を支払う場合」「前月に給与の支払がない場合」の計算で使用する倍数（6・12）です。</p>
-      </fieldset>
-
-      <fieldset>
-        <legend>保険料率設定（令和8年度・協会けんぽ準拠）</legend>
-        <label for="bonusPrefecture">都道府県（協会けんぽ支部）</label>
-        <select id="bonusPrefecture"></select>
-
-        <label for="bonusHealthRate">健康保険料率（%・全体、都道府県選択で自動入力）</label>
-        <input type="number" id="bonusHealthRate" value="9.85" min="0" step="0.01">
-
-        <label for="bonusCareRate">介護保険料率（%・全体、全国一律）</label>
-        <input type="number" id="bonusCareRate" value="1.62" min="0" step="0.01" readonly>
-
-        <label for="bonusPensionRate">厚生年金保険料率（%・全体）</label>
-        <input type="number" id="bonusPensionRate" value="18.30" min="0" step="0.01" readonly>
-
-        <label for="bonusHealthCumulative">健康保険：本年度の標準賞与額累計（今回分を除く・円）</label>
-        <input type="text" inputmode="numeric" id="bonusHealthCumulative" value="0">
-
-        <label for="bonusPensionCumulative">厚生年金：当月の標準賞与額累計（今回分を除く・円）</label>
-        <input type="text" inputmode="numeric" id="bonusPensionCumulative" value="0">
-
-        <label for="bonusIndustryType">事業の種類（雇用保険）</label>
-        <select id="bonusIndustryType"></select>
-
-        <label for="bonusEmploymentRate">雇用保険料率（%・従業員負担分、自動入力）</label>
-        <input type="number" id="bonusEmploymentRate" value="0.50" min="0" step="0.01" readonly>
-
-        <button id="calcBonusBtn" type="button">賞与を計算する</button>
-      </fieldset>
-
-      <div id="bonusResult">
-        <h2>賞与計算シミュレーション結果</h2>
-        <table id="bonusResultTable">
-          <tbody></tbody>
-        </table>
-        <div class="export-row">
-          <button type="button" class="export-btn" id="bonusExportPdfBtn">📄 PDF出力</button>
-          <button type="button" class="export-btn" id="bonusExportExcelBtn">📊 Excel出力</button>
-          <button type="button" class="export-btn" id="bonusExportCopyBtn">📋 コピー</button>
-        </div>
-        <p class="export-status" id="bonusExportStatus"></p>
       </div>
-    </div>
+      <div class="field-row">
+        <label for="bonusCalcMethod">源泉所得税の計算方法</label>
+        <div class="field-input">
+          <select id="bonusCalcMethod">
+            <option value="table">月額表</option>
+            <option value="machine">機械計算（甲欄のみ）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="bonusTaxTable">甲欄・乙欄</label>
+        <div class="field-input">
+          <select id="bonusTaxTable">
+            <option value="甲">甲欄（扶養控除等申告書あり）</option>
+            <option value="乙">乙欄（扶養控除等申告書なし）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="bonusAmount">賞与額</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="bonusAmount" value="500,000">
+          <span class="unit">円</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="prevMonthSalary">前月の給与の金額（社会保険料等控除後）</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="prevMonthSalary" value="250,000">
+          <span class="unit">円</span>
+        </div>
+        <p class="field-note">※支払い状況（通常の場合／前月の給与の10倍を超える賞与を支払う場合／前月に給与の支払がない場合）は、「賞与額」と「前月の給与の金額」から自動判定されます。</p>
+      </div>
+      <div class="field-row">
+        <label for="bonusCalcPeriod">賞与の計算期間</label>
+        <div class="field-input">
+          <select id="bonusCalcPeriod">
+            <option value="6">6か月以内</option>
+            <option value="12">6か月超</option>
+          </select>
+        </div>
+        <p class="field-note">※「前月の給与の10倍を超える賞与を支払う場合」「前月に給与の支払がない場合」の計算で使用する倍数（6・12）です。</p>
+      </div>
+
+      <h2 class="section-2">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
+      <div class="field-row">
+        <label for="bonusPrefecture">都道府県（協会けんぽ支部）</label>
+        <div class="field-input">
+          <select id="bonusPrefecture"></select>
+        </div>
+      </div>
+      <div class="rate-grid">
+        <div class="field-row">
+          <label for="bonusHealthRate">健康保険料率（自動入力・編集可）</label>
+          <div class="field-input">
+            <input type="number" id="bonusHealthRate" value="9.85" min="0" step="0.01">
+            <span class="unit">%</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="bonusCareRate">介護保険料率（全国一律）</label>
+          <div class="field-input">
+            <input type="number" id="bonusCareRate" value="1.62" min="0" step="0.01" readonly>
+            <span class="unit">%</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="bonusPensionRate">厚生年金保険料率</label>
+          <div class="field-input">
+            <input type="number" id="bonusPensionRate" value="18.30" min="0" step="0.01" readonly>
+            <span class="unit">%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label for="bonusHealthCumulative">健康保険：本年度の標準賞与額累計（今回分を除く）</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="bonusHealthCumulative" value="0">
+          <span class="unit">円</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="bonusPensionCumulative">厚生年金：当月の標準賞与額累計（今回分を除く）</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="bonusPensionCumulative" value="0">
+          <span class="unit">円</span>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label for="bonusIndustryType">事業の種類（雇用保険）</label>
+        <div class="field-input">
+          <select id="bonusIndustryType"></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="bonusEmploymentRate">雇用保険料率（従業員負担分、自動入力）</label>
+        <div class="field-input">
+          <input type="number" id="bonusEmploymentRate" value="0.50" min="0" step="0.01" readonly>
+          <span class="unit">%</span>
+        </div>
+      </div>
+
+      <button id="calcBonusBtn" type="button">賞与を計算する</button>
+    </section>
+
+    <section class="card payslip" id="bonusResultCard" aria-label="賞与計算結果">
+      <div class="payslip-head">
+        <span class="title">賞与計算シミュレーション結果</span>
+        <span class="stamp-badge">試算</span>
+      </div>
+      <table id="bonusResultTable"><tbody></tbody></table>
+      <div class="net-block">
+        <div class="net-label">差引支給額（手取り）</div>
+        <div class="net-value" id="bonusNetValue">— 円</div>
+      </div>
+      <div class="export-row">
+        <button type="button" class="export-btn" id="bonusExportPdfBtn">📄 PDF出力</button>
+        <button type="button" class="export-btn" id="bonusExportExcelBtn">📊 Excel出力</button>
+        <button type="button" class="export-btn" id="bonusExportCopyBtn">📋 コピー</button>
+      </div>
+      <p class="export-status" id="bonusExportStatus"></p>
+    </section>
+  </div>
   </div>
 
-  <script src="main.js"></script>
+  <footer>個人利用を目的とした概算ツールです。正式な給与計算には給与計算ソフトまたは専門家をご利用ください。</footer>
+</div>
+
+<script src="main.js"></script>
 </body>
 </html>

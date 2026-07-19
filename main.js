@@ -9,11 +9,11 @@ const PREFECTURE_HEALTH_RATES = {
   '鳥取': 9.86, '島根': 9.94, '岡山': 10.05, '広島': 9.78, '山口': 10.15,
   '徳島': 10.24, '香川': 10.02, '愛媛': 9.98, '高知': 10.05, '福岡': 10.11,
   '佐賀': 10.55, '長崎': 10.06, '熊本': 10.08, '大分': 10.08, '宮崎': 9.77,
-  '鹿児島': 10.13, '沧縄': 9.44,
+  '鹿児島': 10.13, '沖縄': 9.44,
 };
 // 介護保険料率・子ども子育て支援金率は全国一律（令和8年度）
 const CARE_RATE_DEFAULT = 1.62;
-const CHILD_SUPPORT_LEVY_RATE = 0.23; // 全体率。令和8年4月分（5月納付分）から徴収、劳使折半
+const CHILD_SUPPORT_LEVY_RATE = 0.23; // 全体率。令和8年4月分（5月納付分）から徴収、労使折半
 
 // 厚生労働省「令和8年度雇用保険料率」（労働者負担分・失業等給付等の保険料率のみ、令和8年4月～令和9年3月）
 const EMPLOYMENT_RATES_BY_INDUSTRY = {
@@ -92,7 +92,7 @@ const PART_TIME_TAX_EXEMPT_THRESHOLD = 88000; // 月額88,000円未満は源泉�
 function applyEmploymentTypeLabel() {
   const employmentType = document.getElementById('employmentType').value;
   const label = document.getElementById('baseSalaryLabel');
-  label.textContent = employmentType === '役員' ? '役員報酷（円）' : '基本給（円）';
+  label.textContent = employmentType === '役員' ? '役員報酬（円）' : '基本給（円）';
 }
 
 // 給与所得の源泉徴収税額表（令和8年分）月額表
@@ -571,28 +571,28 @@ const BONUS_SITUATION_LABELS = {
 function renderBonusResult(r) {
   const rows = [
     ['支払い状況（自動判定）', BONUS_SITUATION_LABELS[r.situation], 'text', true],
-    ['賞与額', r.bonusAmount, false, true],
-    ['健康保険料', -r.healthInsurance, false, r.hasHealth],
-    ['介護保険料', -r.careInsurance, false, r.hasCare],
-    ['厚生年金保険料', -r.pensionInsurance, false, r.hasPension],
-    ['雇用保険料', -r.employmentInsurance, false, r.subjectEmploymentInsurance],
-    ['子ども・子育て支援金', -r.childSupportLevy, false, r.hasHealth],
-    ['社会保険料合計', -r.socialInsuranceTotal, true, true],
-    ['源泉所得税（概算）', -r.incomeTax, false, true],
-    ['差引支給額（手取り）', r.netPay, 'net', true],
+    ['賞与額', r.bonusAmount, 'plain', true],
+    ['健康保険料', -r.healthInsurance, 'deduction', r.hasHealth],
+    ['介護保険料', -r.careInsurance, 'deduction', r.hasCare],
+    ['厚生年金保険料', -r.pensionInsurance, 'deduction', r.hasPension],
+    ['雇用保険料', -r.employmentInsurance, 'deduction', r.subjectEmploymentInsurance],
+    ['子ども・子育て支援金', -r.childSupportLevy, 'deduction', r.hasHealth],
+    ['社会保険料合計', -r.socialInsuranceTotal, 'total', true],
+    ['源泉所得税（概算）', -r.incomeTax, 'deduction', true],
   ];
 
   const tbody = document.querySelector('#bonusResultTable tbody');
   tbody.innerHTML = '';
   for (const [label, value, kind, applicable] of rows) {
     const tr = document.createElement('tr');
-    if (kind === true) tr.className = 'total';
-    if (kind === 'net') tr.className = 'total net';
+    if (kind === 'total') tr.className = 'total';
+    const valueClass = !applicable ? 'value na' : (kind === 'deduction' ? 'value deduction' : 'value');
     const valueHtml = !applicable ? '対象外' : (kind === 'text' ? value : yen(value));
-    const valueClass = applicable ? 'value' : 'value na';
     tr.innerHTML = `<td class="label">${label}</td><td class="${valueClass}">${valueHtml}</td>`;
     tbody.appendChild(tr);
   }
+
+  document.getElementById('bonusNetValue').textContent = yen(r.netPay);
 }
 
 function calculate() {
@@ -612,7 +612,7 @@ function calculate() {
   const pensionRate = Number(document.getElementById('pensionRate').value) / 100;
   const employmentRate = Number(document.getElementById('employmentRate').value) / 100;
 
-  // 雇用形態による加入区分（役員＝社会保険のみ、アルバイト・パート＝雇用保険のみ）
+  // 雇用形態による加入区分（役員=社会保険のみ、アルバイト・パート=雇用保険のみ）
   const subjectSocialInsurance = employmentType !== 'アルバイト・パート';
   const subjectEmploymentInsurance = employmentType !== '役員';
   const ageRule = AGE_RULES[ageGroup];
@@ -664,29 +664,29 @@ function calculate() {
 
 function renderResult(r) {
   const rows = [
-    ['総支給額', r.grossPay, false, true],
-    ['健康保険料', -r.healthInsurance, false, r.hasHealth],
-    ['介護保険料', -r.careInsurance, false, r.hasCare],
-    ['厚生年金保険料', -r.pensionInsurance, false, r.hasPension],
-    ['雇用保険料', -r.employmentInsurance, false, r.subjectEmploymentInsurance],
-    ['子ども・子育て支援金', -r.childSupportLevy, false, r.hasHealth],
-    ['社会保険料合計', -r.socialInsuranceTotal, true, true],
-    ['源泉所得税（概算）', -r.monthlyIncomeTax, false, !r.isTaxExempt],
-    ['住民税', -r.residentTax, false, true],
-    ['差引支給額（手取り）', r.netPay, 'net', true],
+    ['総支給額', r.grossPay, 'plain', true],
+    ['健康保険料', -r.healthInsurance, 'deduction', r.hasHealth],
+    ['介護保険料', -r.careInsurance, 'deduction', r.hasCare],
+    ['厚生年金保険料', -r.pensionInsurance, 'deduction', r.hasPension],
+    ['雇用保険料', -r.employmentInsurance, 'deduction', r.subjectEmploymentInsurance],
+    ['子ども・子育て支援金', -r.childSupportLevy, 'deduction', r.hasHealth],
+    ['社会保険料合計', -r.socialInsuranceTotal, 'total', true],
+    ['源泉所得税（概算）', -r.monthlyIncomeTax, 'deduction', !r.isTaxExempt],
+    ['住民税', -r.residentTax, 'deduction', true],
   ];
 
   const tbody = document.querySelector('#resultTable tbody');
   tbody.innerHTML = '';
   for (const [label, value, kind, applicable] of rows) {
     const tr = document.createElement('tr');
-    if (kind === true) tr.className = 'total';
-    if (kind === 'net') tr.className = 'total net';
+    if (kind === 'total') tr.className = 'total';
+    const valueClass = !applicable ? 'value na' : (kind === 'deduction' ? 'value deduction' : 'value');
     const valueHtml = applicable ? yen(value) : '対象外';
-    const valueClass = applicable ? 'value' : 'value na';
     tr.innerHTML = `<td class="label">${label}</td><td class="${valueClass}">${valueHtml}</td>`;
     tbody.appendChild(tr);
   }
+
+  document.getElementById('netValue').textContent = yen(r.netPay);
 }
 
 document.getElementById('prefecture').addEventListener('change', () => {
@@ -739,18 +739,23 @@ document.getElementById('tabBonusBtn').addEventListener('click', () => {
   document.getElementById('tabMonthly').classList.remove('active');
 });
 
-// PC版は実際の画面幅に関わらず幅1100pxを強制（スマホで見た場合は横スクロールになる＝実機の「PCサイト表示」と同じ挙動）
-// スマホ版は375px幅を上限に強制
+// 固定幅ではなく、画面幅いっぱいに広がりつつ上限（max-width）で収まるようにする
 function setMobileView(isMobile) {
-  document.body.classList.toggle('view-mobile', isMobile);
-  // 固定幅ではなく、画面幅いっぱいに広がりつつ上限（max-width）で収まるようにする
-document.body.style.width = '100%';
-  document.body.style.maxWidth = isMobile ? '375px' : '1100px';
-  document.body.style.minWidth = '';
-  document.body.style.margin = isMobile ? '0 auto' : '0';
-  document.body.style.boxSizing = 'border-box';
-  document.querySelectorAll('.layout').forEach((l) => {
-    l.style.flexDirection = isMobile ? 'column' : 'row';
+  const pageEl = document.querySelector('.page');
+  pageEl.classList.toggle('is-mobile-view', isMobile);
+  pageEl.style.width = '100%';
+  pageEl.style.maxWidth = isMobile ? '375px' : '900px';
+  pageEl.style.minWidth = '';
+  // グリッドは @media (max-width:780px) で自動的に1カラム化される仕様のため、
+  // PC版強制時はインラインで明示的にデスクトップ用の値を指定してメディアクエリに勝たせる
+  document.querySelectorAll('.grid').forEach((g) => {
+    g.style.gridTemplateColumns = isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 1.15fr) minmax(0, 1fr)';
+  });
+  document.querySelectorAll('.payslip').forEach((p) => {
+    p.style.position = isMobile ? 'static' : 'sticky';
+  });
+  document.querySelectorAll('.masthead .sub').forEach((s) => {
+    s.style.maxWidth = isMobile ? '100%' : '46em';
   });
 }
 
@@ -797,8 +802,8 @@ function showExportStatus(statusId, message, isError) {
   el.classList.toggle('error', !!isError);
 }
 
-// 結果のExcel出力（Excelで開けるHTMLテーブル形式の.xlsを生成、格子状の罰線付き）
-function exportTableToExcel(tableId, filename, statusId) {
+// 結果のExcel出力（Excelで開けるHTMLテーブル形式の.xlsを生成、格子状の罫線付き）
+function exportTableToExcel(tableId, filename, extraRow, statusId) {
   const cellStyle = 'border:1px solid #000;padding:5px 10px;';
   const headStyle = cellStyle + 'background:#eee;font-weight:bold;';
   let rows = '';
@@ -806,6 +811,9 @@ function exportTableToExcel(tableId, filename, statusId) {
     const cells = Array.from(tr.querySelectorAll('td')).map((td) => `<td style="${cellStyle}">${td.textContent.trim()}</td>`).join('');
     rows += `<tr>${cells}</tr>`;
   });
+  if (extraRow) {
+    rows += `<tr><td style="${cellStyle}font-weight:bold;">${extraRow[0]}</td><td style="${cellStyle}font-weight:bold;">${extraRow[1]}</td></tr>`;
+  }
   const html = `<html><head><meta charset="UTF-8"></head><body><table style="border-collapse:collapse;"><thead><tr><th style="${headStyle}">項目</th><th style="${headStyle}">金額</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
   const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -820,12 +828,15 @@ function exportTableToExcel(tableId, filename, statusId) {
 }
 
 // 結果をタブ区切りテキストとしてクリップボードにコピー
-async function copyResultToClipboard(tableId, statusId) {
+async function copyResultToClipboard(tableId, extraRow, statusId) {
   let text = '';
   document.querySelectorAll(`#${tableId} tbody tr`).forEach((tr) => {
     const cells = Array.from(tr.querySelectorAll('td')).map((td) => td.textContent.trim());
     text += cells.join('\t') + '\n';
   });
+  if (extraRow) {
+    text += extraRow.join('\t') + '\n';
+  }
   try {
     await navigator.clipboard.writeText(text);
     showExportStatus(statusId, 'コピーしました。Excelなどに貼り付けてください。', false);
@@ -834,9 +845,25 @@ async function copyResultToClipboard(tableId, statusId) {
   }
 }
 
-document.getElementById('exportPdfBtn').addEventListener('click', () => printSection('result'));
-document.getElementById('exportExcelBtn').addEventListener('click', () => exportTableToExcel('resultTable', '給与計算シミュレーション結果.xls', 'exportStatus'));
-document.getElementById('exportCopyBtn').addEventListener('click', () => copyResultToClipboard('resultTable', 'exportStatus'));
-document.getElementById('bonusExportPdfBtn').addEventListener('click', () => printSection('bonusResult'));
-document.getElementById('bonusExportExcelBtn').addEventListener('click', () => exportTableToExcel('bonusResultTable', '賞与計算シミュレーション結果.xls', 'bonusExportStatus'));
-document.getElementById('bonusExportCopyBtn').addEventListener('click', () => copyResultToClipboard('bonusResultTable', 'bonusExportStatus'));
+document.getElementById('exportPdfBtn').addEventListener('click', () => printSection('resultCard'));
+document.getElementById('exportExcelBtn').addEventListener('click', () => exportTableToExcel(
+  'resultTable', '給与計算シミュレーション結果.xls',
+  ['差引支給額（手取り）', document.getElementById('netValue').textContent.trim()],
+  'exportStatus'
+));
+document.getElementById('exportCopyBtn').addEventListener('click', () => copyResultToClipboard(
+  'resultTable',
+  ['差引支給額（手取り）', document.getElementById('netValue').textContent.trim()],
+  'exportStatus'
+));
+document.getElementById('bonusExportPdfBtn').addEventListener('click', () => printSection('bonusResultCard'));
+document.getElementById('bonusExportExcelBtn').addEventListener('click', () => exportTableToExcel(
+  'bonusResultTable', '賞与計算シミュレーション結果.xls',
+  ['差引支給額（手取り）', document.getElementById('bonusNetValue').textContent.trim()],
+  'bonusExportStatus'
+));
+document.getElementById('bonusExportCopyBtn').addEventListener('click', () => copyResultToClipboard(
+  'bonusResultTable',
+  ['差引支給額（手取り）', document.getElementById('bonusNetValue').textContent.trim()],
+  'bonusExportStatus'
+));
