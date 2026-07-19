@@ -791,7 +791,10 @@ calculateBonus();
 // 印刷対象の内容を専用の印刷用エリアに複製し、他の要素を印刷から完全に除外する
 // （visibility:hiddenだけでは要素が高さを占有したままになり、余分な白紙ページが出るため）
 function printSection(targetId) {
-  document.getElementById('printArea').innerHTML = document.getElementById(targetId).innerHTML;
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = document.getElementById(targetId).innerHTML;
+  // 複製した要素のidを取り除き、元の要素とのid重複（Excel出力・コピーが二重に取得してしまう不具合）を防ぐ
+  printArea.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
   window.print();
 }
 
@@ -806,7 +809,7 @@ function exportTableToExcel(tableId, filename, extraRow, statusId) {
   const cellStyle = 'border:1px solid #000;padding:5px 10px;';
   const headStyle = cellStyle + 'background:#eee;font-weight:bold;';
   let rows = '';
-  document.querySelectorAll(`#${tableId} tbody tr`).forEach((tr) => {
+  document.getElementById(tableId).querySelectorAll('tbody tr').forEach((tr) => {
     const cells = Array.from(tr.querySelectorAll('td')).map((td) => `<td style="${cellStyle}">${td.textContent.trim()}</td>`).join('');
     rows += `<tr>${cells}</tr>`;
   });
@@ -829,7 +832,7 @@ function exportTableToExcel(tableId, filename, extraRow, statusId) {
 // 結果をタブ区切りテキストとしてクリップボードにコピー
 async function copyResultToClipboard(tableId, extraRow, statusId) {
   let text = '';
-  document.querySelectorAll(`#${tableId} tbody tr`).forEach((tr) => {
+  document.getElementById(tableId).querySelectorAll('tbody tr').forEach((tr) => {
     const cells = Array.from(tr.querySelectorAll('td')).map((td) => td.textContent.trim());
     text += cells.join('\t') + '\n';
   });
