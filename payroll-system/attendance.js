@@ -74,15 +74,23 @@ async function renderDayTable() {
       <td><input type="number" min="0" step="5" data-field="breakMinutes" value="${rec.breakMinutes ?? 60}" ${isTimeless ? 'disabled' : ''}></td>
       <td class="computed" data-role="worked">${fmtHm(display.worked)}</td>
       <td class="computed" data-role="overtime">${fmtHm(display.overtime)}</td>
+      <td><button type="button" class="btn btn-sm" data-action="complete">完了</button></td>
     `;
     tr.dataset.day = d;
     tbody.appendChild(tr);
   }
 
+  // ステータスを「欠勤・有給休暇」に切り替えたときは、保存前でも時刻欄を
+  // 見た目上すぐに無効化する（実際の保存は「完了」ボタン押下時のみ行う）
   tbody.querySelectorAll('tr').forEach((tr) => {
+    const statusSelect = tr.querySelector('[data-field="status"]');
+    statusSelect.addEventListener('change', () => {
+      const timeless = statusSelect.value === 'absence' || statusSelect.value === 'paid_leave';
+      tr.querySelectorAll('[data-field="clockIn"], [data-field="clockOut"], [data-field="breakMinutes"]')
+        .forEach((el) => { el.disabled = timeless; });
+    });
     const day = tr.dataset.day;
-    const onChange = () => saveRow(employee, ym, day, tr);
-    tr.querySelectorAll('select, input').forEach((el) => el.addEventListener('change', onChange));
+    tr.querySelector('[data-action="complete"]').addEventListener('click', () => saveRow(employee, ym, day, tr));
   });
 }
 
