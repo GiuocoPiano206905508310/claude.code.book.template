@@ -39,6 +39,22 @@ function fmtHm(minutes) {
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
+// 「法定外60内」の直後に「週残業」を挿入した表示順
+const OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY = (() => {
+  const idx = OVERTIME_MINUTE_COLUMNS.indexOf('overtimeWithin60');
+  const cols = OVERTIME_MINUTE_COLUMNS.slice();
+  cols.splice(idx + 1, 0, 'weeklyOvertime');
+  return cols;
+})();
+
+function renderMonthTotalRow(rowId, totals) {
+  const row = document.getElementById(rowId);
+  OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY.concat('worked').forEach((key) => {
+    const cell = row.querySelector(`[data-role="${key}"]`);
+    if (cell) cell.textContent = fmtHm(totals[key]);
+  });
+}
+
 async function renderDayTable() {
   const employee = await currentEmployee();
   const ym = document.getElementById('monthInput').value;
@@ -49,7 +65,11 @@ async function renderDayTable() {
   const records = await getMonthAttendance(employee.id, ym);
   const [y, m] = ym.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
-  const { perDay: overtimeByDay } = computeOvertimeCategoryBreakdown(records, daysInMonth);
+  const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, daysInMonth);
+  const company = await getCompany();
+  const weeklyByDay = computeWeeklyOvertimeByDay(records, overtimeByDay, daysInMonth, y, m, company.weekStartDay);
+  let workedTotal = 0;
+  let weeklyOvertimeTotal = 0;
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(y, m - 1, d);
@@ -58,8 +78,11 @@ async function renderDayTable() {
     const scheduledStart = rec.scheduledStart || employee.workStart || '';
     const scheduledEnd = rec.scheduledEnd || employee.workEnd || '';
     const worked = computeWorkedMinutes(rec);
-    const categoryCells = OVERTIME_MINUTE_COLUMNS
-      .map((key) => `<td class="computed" data-role="${key}">${fmtHm(overtimeByDay[d][key])}</td>`)
+    workedTotal += worked || 0;
+    weeklyOvertimeTotal += weeklyByDay[d];
+    const dayValues = Object.assign({ weeklyOvertime: weeklyByDay[d] }, overtimeByDay[d]);
+    const categoryCells = OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY
+      .map((key) => `<td class="computed" data-role="${key}">${fmtHm(dayValues[key])}</td>`)
       .join('');
 
     const tr = document.createElement('tr');
@@ -87,6 +110,10 @@ async function renderDayTable() {
     tr.dataset.day = d;
     tbody.appendChild(tr);
   }
+
+  const monthTotalsWithWeekly = Object.assign({ weeklyOvertime: weeklyOvertimeTotal, worked: workedTotal }, monthTotals);
+  renderMonthTotalRow('monthTotalTopRow', monthTotalsWithWeekly);
+  renderMonthTotalRow('monthTotalBottomRow', monthTotalsWithWeekly);
 
   // 出勤・退勤の両方が入力されている（または時刻不要なステータスの）行のみ、
   // 変更のたびに自動保存する。片方の時刻しか入っていない途中段階では保存

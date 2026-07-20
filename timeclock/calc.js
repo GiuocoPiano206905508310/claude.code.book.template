@@ -759,6 +759,49 @@ function computeOvertimeCategoryBreakdown(records, daysInMonth) {
   return { perDay, monthTotals };
 }
 
+const WEEKLY_LEGAL_LIMIT_MIN = 40 * 60;
+
+// 会社の「週の起算日」を基準とした週ごとに、週40時間を超える労働時間（分）を、
+// その週の最終日（起算日の前日にあたる曜日）に計上する。1日8時間超の分は既に
+// computeOvertimeCategoryBreakdownの法定外区分でカウント済みのため、その週分
+// を差し引いた「週40時間超過のみに起因する分」だけを返す（二重計上を避けるため）。
+// 月をまたぐ週は、その月に含まれる日数分のみで計算する概算（前月分は参照しない）。
+// records/perDay: computeOvertimeCategoryBreakdownの引数・戻り値のperDayと同じもの
+function computeWeeklyOvertimeByDay(records, perDay, daysInMonth, year, month, weekStartDay) {
+  const result = {};
+  let weekWorkedMin = 0;
+  let weekDailyOvertimeMin = 0;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dow = new Date(year, month - 1, d).getDay();
+    const rec = records[String(d)];
+    if (rec && rec.status === 'normal') {
+      const inMin = timeToMinutes(rec.clockIn);
+      const outMin = timeToMinutes(rec.clockOut);
+      if (inMin !== null && outMin !== null) {
+        const rawEnd = outMin <= inMin ? outMin + 24 * 60 : outMin;
+        const breakMin = Number(rec.breakMinutes) || 0;
+        weekWorkedMin += Math.max(0, (rawEnd - inMin) - breakMin);
+        const day = perDay[d];
+        weekDailyOvertimeMin += day.overtimeWithin60 + day.overtimeWithin60Night
+          + day.overtimeOver60 + day.overtimeOver60Night;
+      }
+    }
+
+    const isLastDayOfWeek = dow === (weekStartDay + 6) % 7;
+    if (isLastDayOfWeek || d === daysInMonth) {
+      const weeklyOvertimeMin = Math.max(0, weekWorkedMin - WEEKLY_LEGAL_LIMIT_MIN);
+      result[d] = Math.max(0, weeklyOvertimeMin - weekDailyOvertimeMin);
+      weekWorkedMin = 0;
+      weekDailyOvertimeMin = 0;
+    } else {
+      result[d] = 0;
+    }
+  }
+
+  return result;
+}
+
 // ----------------------------------------------------------------------
 // 手当（複数行）の集計ヘルパー
 // allowance: { name, amount, excludeFromOvertimeBase }
