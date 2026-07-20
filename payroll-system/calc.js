@@ -629,7 +629,7 @@ const OVERTIME_RATE_CATEGORIES = [
   { key: 'lateNightRate', label: '深夜労働時間', defaultRate: 0.25 },
   { key: 'overtimeWithin60NightRate', label: '法定外労働時間(月60時間以内) + 深夜労働時間', defaultRate: 1.50 },
   { key: 'overtimeOver60NightRate', label: '法定外労働時間(月60時間超) + 深夜労働時間', defaultRate: 1.75 },
-  { key: 'statutoryHolidayNightRate', label: '法定休日労働時間 + 深夜労働時間', defaultRate: 1.50 },
+  { key: 'statutoryHolidayNightRate', label: '法定休日労働時間 + 深夜労働時間', defaultRate: 1.60 },
 ];
 
 function defaultOvertimeRates() {
