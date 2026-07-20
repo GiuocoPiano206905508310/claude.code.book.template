@@ -33,39 +33,74 @@ function startAgeAutoUpdate() {
 
 // ---------------------------------------------------------------------------
 // フリガナの自動入力
-// IME変換で漢字に確定した後は「読み」を取得する標準APIが無いため、
-// 変換前（＝入力中の文字がまだ全てかなの間）の値を随時保持しておき、
-// 漢字に変換された時点でその直前のかな表記を読みとして採用する。
+// IME変換で漢字に確定した後は「読み」を取得する標準APIが無いため、変換前
+// （＝まだ全てかなの間）の入力内容を随時保持しておき、漢字に変換された
+// 瞬間にその直前のかな表記を読みとして確定・蓄積していく。
+// 「山田」→変換→「太郎」→変換のように姓と名を別々に変換する入力にも
+// 対応するため、既に確定した部分（committedRawLen）より後ろの差分だけを
+// 都度判定し、確定済みの読み（kanaBuffer）に追記していく。
 // ---------------------------------------------------------------------------
 const KANA_ONLY_PATTERN = /^[ぁ-ゖァ-ヺー\s]*$/;
 
 function setupFuriganaAutoFill() {
   const nameInput = document.getElementById('empName');
   const kanaInput = document.getElementById('empNameKana');
+
   let composing = false;
-  let reading = '';
+  let kanaBuffer = '';
+  let committedRawLen = 0;
+  let segmentReading = '';
+
+  function commitSegment(rawLen) {
+    if (segmentReading) {
+      kanaBuffer += hiraganaToKatakana(segmentReading);
+      segmentReading = '';
+    }
+    committedRawLen = rawLen;
+  }
 
   nameInput.addEventListener('compositionstart', () => {
     composing = true;
-    reading = '';
+    const value = nameInput.value;
+    // 手動削除等で確定済み位置とずれている場合は追跡をリセットする
+    if (value === '' || value.length < committedRawLen) {
+      kanaBuffer = '';
+      committedRawLen = 0;
+    }
+    segmentReading = '';
   });
 
   nameInput.addEventListener('input', (e) => {
-    if (!(composing || e.isComposing)) return;
     const value = nameInput.value;
-    if (KANA_ONLY_PATTERN.test(value) && value.trim()) {
-      reading = value;
+    if (!(composing || e.isComposing)) {
+      // IME変換を伴わない手動編集（姓名の区切りスペース等）：
+      // 追記分が空白のみであればそのまま読みにも反映し、それ以外は追跡位置だけ同期する
+      const manualTail = value.slice(committedRawLen);
+      if (manualTail && /^\s+$/.test(manualTail)) {
+        kanaBuffer += manualTail;
+        kanaInput.value = kanaBuffer;
+      }
+      committedRawLen = value.length;
+      segmentReading = '';
+      return;
+    }
+    const tail = value.slice(committedRawLen);
+    if (tail && KANA_ONLY_PATTERN.test(tail)) {
+      segmentReading = tail;
+      kanaInput.value = hiraganaToKatakana(kanaBuffer + segmentReading);
+    } else if (segmentReading) {
+      // かな表記から漢字に変換された：直前のかな表記をその区間の読みとして確定
+      commitSegment(value.length);
+      kanaInput.value = kanaBuffer;
     }
   });
 
-  nameInput.addEventListener('compositionend', (e) => {
+  nameInput.addEventListener('compositionend', () => {
     composing = false;
-    const finalData = e.data || '';
-    const source = KANA_ONLY_PATTERN.test(finalData) && finalData ? finalData : reading;
-    if (source) {
-      kanaInput.value = hiraganaToKatakana(source);
+    commitSegment(nameInput.value.length);
+    if (kanaBuffer) {
+      kanaInput.value = kanaBuffer;
     }
-    reading = '';
   });
 }
 
