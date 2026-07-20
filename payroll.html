@@ -57,6 +57,10 @@
           </div>
           <p class="field-note" id="overtimeNote"></p>
         </div>
+        <div class="field-row">
+          <label>住民税（月額・特別徴収の場合入力）</label>
+          <div class="field-input"><span id="residentTaxDisplay">— 円</span></div>
+        </div>
         <div class="checkbox-row">
           <input type="checkbox" id="applyAbsenceDeduction">
           <label for="applyAbsenceDeduction">欠勤控除を適用する（<span id="absenceDeductionPreview">0 円</span>）</label>
@@ -83,6 +87,27 @@
         </div>
         <p class="export-status" id="exportStatus"></p>
       </section>
+
+      <section class="card form-card" id="fixedOvertimeCard" style="display:none;">
+        <h2 id="fixedOvertimeCardTitle">固定残業代（みなし残業代）</h2>
+        <div class="field-row">
+          <label>手当名称</label>
+          <div class="field-input"><span id="fixedOvertimeNameDisplay">—</span></div>
+        </div>
+        <div class="field-row">
+          <label>月固定残業時間数</label>
+          <div class="field-input"><span id="fixedOvertimeHoursDisplay">—</span></div>
+        </div>
+        <div class="field-row">
+          <label>金額</label>
+          <div class="field-input"><span id="fixedOvertimeAmountDisplay">—</span></div>
+        </div>
+        <div class="field-row">
+          <label>超過残業代（自動計算）</label>
+          <div class="field-input"><span id="excessOvertimePayDisplay">—</span></div>
+          <p class="field-note" id="excessOvertimeNote"></p>
+        </div>
+      </section>
     </div>
 
     <section class="card form-card" style="margin-top:24px;">
@@ -107,9 +132,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
-<script src="calc.js?v=6"></script>
-<script src="data.js?v=7"></script>
+<script src="calc.js?v=7"></script>
+<script src="data.js?v=8"></script>
 <script src="common.js?v=6"></script>
-<script src="payroll.js?v=7"></script>
+<script src="payroll.js?v=8"></script>
 </body>
 </html>
