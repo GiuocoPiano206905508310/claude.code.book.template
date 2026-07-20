@@ -3,23 +3,87 @@
 // 出勤・退勤ボタンを押すと、その場でJST現在時刻を勤怠記録に反映する。
 // 給与・勤怠管理システムと同じSupabaseプロジェクト（同一会社アカウント）の
 // データを共有するため、ここで打刻した内容はそのまま勤怠管理画面・
-// 給与計算に連動する。この端末で先に給与・勤怠管理システムにログインして
-// おく必要がある（セッションは同一オリジンで共有される）。
+// 給与計算に連動する。
+//
+// この端末（ブラウザ）自体は、会社アカウント（給与・勤怠管理システムと同じ
+// ログイン）で一度ログインしておく必要がある。日々の打刻では、その上に
+// さらに従業員ごとの「勤怠打刻用ユーザーID・パスワード」でログインする
+// （会社ログインとは別物・従業員マスタ管理で設定）。ログインしたブラウザの
+// タブを閉じるとログアウトされ、次の人がログインし直せるようにしている。
 // ============================================================================
 
-async function currentEmployee() {
-  const id = document.getElementById('employeeSelect').value;
-  return id ? await getEmployee(id) : null;
+const TIMECLOCK_SESSION_KEY = 'timeclockLoggedInEmployee';
+
+let loggedInEmployeeId = null;
+
+function getStoredEmployeeLogin() {
+  try {
+    const raw = sessionStorage.getItem(TIMECLOCK_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
 }
 
-async function populateEmployeeSelect() {
-  const employees = await listEmployees();
-  const select = document.getElementById('employeeSelect');
-  select.innerHTML = employees.map((e) => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
-  const hasEmployees = employees.length > 0;
-  document.getElementById('noEmployeeState').style.display = hasEmployees ? 'none' : '';
-  document.getElementById('clockContent').style.display = hasEmployees ? '' : 'none';
-  return hasEmployees;
+function storeEmployeeLogin(employee) {
+  sessionStorage.setItem(TIMECLOCK_SESSION_KEY, JSON.stringify({ id: employee.id, name: employee.name }));
+}
+
+function clearEmployeeLogin() {
+  sessionStorage.removeItem(TIMECLOCK_SESSION_KEY);
+}
+
+async function currentEmployee() {
+  return loggedInEmployeeId ? await getEmployee(loggedInEmployeeId) : null;
+}
+
+function showLoginSection() {
+  document.getElementById('employeeLoginSection').style.display = '';
+  document.getElementById('clockContent').style.display = 'none';
+  document.getElementById('loginEmpName').value = '';
+  document.getElementById('loginEmpCode').value = '';
+  document.getElementById('loginEmpPassword').value = '';
+  document.getElementById('empLoginError').textContent = '';
+}
+
+async function enterAsEmployee(employee) {
+  loggedInEmployeeId = employee.id;
+  storeEmployeeLogin(employee);
+  document.getElementById('employeeLoginSection').style.display = 'none';
+  document.getElementById('clockContent').style.display = '';
+  document.getElementById('loggedInEmpLabel').textContent = `${employee.name} さんとしてログイン中`;
+  await renderTodayStatus();
+}
+
+async function tryEmployeeLogin() {
+  const name = document.getElementById('loginEmpName').value.trim();
+  const code = document.getElementById('loginEmpCode').value.trim();
+  const password = document.getElementById('loginEmpPassword').value;
+  const errorEl = document.getElementById('empLoginError');
+  errorEl.textContent = '';
+
+  if (!name || !code || !password) {
+    errorEl.textContent = '従業員名・ユーザーID・パスワードをすべて入力してください。';
+    return;
+  }
+  try {
+    const employee = await getEmployeeByCode(code);
+    const ok = employee && employee.loginPassword && employee.name.trim() === name && employee.loginPassword === password;
+    if (!ok) {
+      errorEl.textContent = '従業員名・ユーザーID・パスワードの組み合わせが正しくありません。';
+      return;
+    }
+    await enterAsEmployee(employee);
+  } catch (e) {
+    errorEl.textContent = '通信に失敗しました。しばらくしてから再度お試しください。';
+  }
+}
+
+function logoutEmployee() {
+  loggedInEmployeeId = null;
+  clearEmployeeLogin();
+  document.getElementById('punchStatus').innerHTML = '';
+  showLoginSection();
 }
 
 function pad2(n) {
@@ -105,7 +169,8 @@ async function punch(kind) {
   }
 }
 
-document.getElementById('employeeSelect').addEventListener('change', renderTodayStatus);
+document.getElementById('empLoginBtn').addEventListener('click', tryEmployeeLogin);
+document.getElementById('empLogoutLink').addEventListener('click', (e) => { e.preventDefault(); logoutEmployee(); });
 document.getElementById('clockInBtn').addEventListener('click', () => punch('in'));
 document.getElementById('clockOutBtn').addEventListener('click', () => punch('out'));
 
@@ -114,17 +179,27 @@ document.getElementById('clockOutBtn').addEventListener('click', () => punch('ou
   if (!user) return;
   renderNavbarUser(user);
 
-  // 時計表示は従業員一覧・勤怠データの通信状況に関わらず即座に動かし始める
+  // 時計表示は通信状況に関わらず即座に動かし始める
   updateClockDisplay();
   setInterval(updateClockDisplay, 1000);
 
   try {
-    const hasEmployees = await populateEmployeeSelect();
-    if (hasEmployees) {
-      await renderTodayStatus();
+    const hasEmployees = await hasAnyEmployees();
+    document.getElementById('noEmployeeState').style.display = hasEmployees ? 'none' : '';
+    if (!hasEmployees) return;
+
+    const stored = getStoredEmployeeLogin();
+    if (stored) {
+      const employee = await getEmployee(stored.id);
+      if (employee) {
+        await enterAsEmployee(employee);
+        return;
+      }
+      clearEmployeeLogin();
     }
+    showLoginSection();
   } catch (e) {
     document.getElementById('punchStatus').innerHTML =
-      '<span style="color:#e57373;">従業員情報の読み込みに失敗しました。通信状況を確認し、画面を再読み込みしてください。</span>';
+      '<span style="color:#e57373;">読み込みに失敗しました。通信状況を確認し、画面を再読み込みしてください。</span>';
   }
 })();

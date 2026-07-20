@@ -236,6 +236,8 @@ function resetForm() {
   document.getElementById('cancelEditBtn').style.display = 'none';
   document.getElementById('empName').value = '';
   document.getElementById('empNameKana').value = '';
+  document.getElementById('employeeCode').value = '';
+  document.getElementById('employeeLoginPassword').value = '';
   document.getElementById('employmentType').value = '正社員';
   document.getElementById('birthDate').value = '1990-01-01';
   document.getElementById('baseSalary').value = '280,000';
@@ -261,6 +263,8 @@ function loadFormFromEmployee(emp) {
   document.getElementById('cancelEditBtn').style.display = '';
   document.getElementById('empName').value = emp.name;
   document.getElementById('empNameKana').value = emp.nameKana || '';
+  document.getElementById('employeeCode').value = emp.employeeCode || '';
+  document.getElementById('employeeLoginPassword').value = emp.loginPassword || '';
   document.getElementById('employmentType').value = emp.employmentType;
   document.getElementById('birthDate').value = emp.birthDate || '1990-01-01';
   document.getElementById('baseSalary').value = formatThousands(emp.baseSalary);
@@ -295,6 +299,8 @@ function collectFormAsEmployee() {
     id: editingId,
     name: name || '(氏名未入力)',
     nameKana: document.getElementById('empNameKana').value.trim(),
+    employeeCode: document.getElementById('employeeCode').value.trim(),
+    loginPassword: document.getElementById('employeeLoginPassword').value,
     employmentType: document.getElementById('employmentType').value,
     birthDate: document.getElementById('birthDate').value || null,
     baseSalary: getNumInputValue('baseSalary'),
