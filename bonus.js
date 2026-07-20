@@ -69,7 +69,7 @@ function resetFormToNewBonus() {
   document.getElementById('bonusLabel').value = '';
   document.getElementById('bonusDate').value = new Date().toISOString().slice(0, 10);
   document.getElementById('employmentType').value = employee.employmentType;
-  document.getElementById('ageGroup').value = employee.ageGroup;
+  document.getElementById('ageGroup').value = ageGroupFromAge(calcAge(employee.birthDate));
   document.getElementById('dependents').value = employee.dependents;
   document.getElementById('calcMethod').value = employee.calcMethod;
   document.getElementById('taxTable').value = employee.taxTable;

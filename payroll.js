@@ -74,19 +74,21 @@ function loadFormForEmployeeMonth() {
   if (!employee || !ym) return;
 
   currentAttendanceSummary = computeMonthSummary(employee, ym);
+  const overtimeBaseWage = employee.baseSalary + sumNonExcludedAllowances(employee.allowances);
   currentAutoOvertimePay = calcOvertimePayFromHours(
-    employee.baseSalary, employee.monthlyStandardHours, currentAttendanceSummary.overtimeHours, employee.overtimeRate
+    overtimeBaseWage, employee.monthlyStandardHours, currentAttendanceSummary.overtimeHours, employee.overtimeWithin60Rate
   );
   const absenceDeduction = calcAbsenceDeduction(employee.baseSalary, employee.monthlyStandardDays, currentAttendanceSummary.absenceDays);
+  const employeeAgeGroup = ageGroupFromAge(calcAge(employee.birthDate));
 
   const saved = getPayslip(employee.id, ym);
   const input = saved ? saved.input : null;
 
   document.getElementById('employmentType').value = input ? input.employmentType : employee.employmentType;
-  document.getElementById('ageGroup').value = input ? input.ageGroup : employee.ageGroup;
+  document.getElementById('ageGroup').value = input ? input.ageGroup : employeeAgeGroup;
   document.getElementById('baseSalary').value = formatThousands(input ? input.baseSalary : employee.baseSalary);
   document.getElementById('overtimePay').value = formatThousands(input ? input.overtimePay : currentAutoOvertimePay);
-  document.getElementById('taxableAllowance').value = formatThousands(input ? input.taxableAllowance : employee.taxableAllowance);
+  document.getElementById('taxableAllowance').value = formatThousands(input ? input.taxableAllowance : sumAllowances(employee.allowances));
   document.getElementById('commuteAllowance').value = formatThousands(input ? input.commuteAllowance : employee.commuteAllowance);
   document.getElementById('dependents').value = input ? input.dependents : employee.dependents;
   document.getElementById('calcMethod').value = input ? input.calcMethod : employee.calcMethod;
@@ -106,7 +108,7 @@ function loadFormForEmployeeMonth() {
   document.getElementById('employmentRate').value = Number(input ? input.employmentRate : employee.employmentRate).toFixed(2);
 
   document.getElementById('overtimeNote').textContent =
-    `勤怠集計：残業 ${currentAttendanceSummary.overtimeHours.toFixed(1)}h → 自動計算額 ${formatThousands(currentAutoOvertimePay)} 円（編集可。値を戻すには右の「勤怠管理」で確認）`;
+    `勤怠集計：残業 ${currentAttendanceSummary.overtimeHours.toFixed(1)}h ×「法定外労働時間(月60時間以内)」の割増率(${Number(employee.overtimeWithin60Rate).toFixed(2)}倍) → 自動計算額 ${formatThousands(currentAutoOvertimePay)} 円（編集可。深夜・休日等の割増区分は従業員マスタで設定・手動反映してください）`;
   document.getElementById('absenceDeductionPreview').textContent = `${formatThousands(absenceDeduction)} 円 / 欠勤 ${currentAttendanceSummary.absenceDays} 日`;
 
   renderAttendanceSummaryTiles(currentAttendanceSummary);

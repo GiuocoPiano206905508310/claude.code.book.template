@@ -53,6 +53,11 @@ function formatThousands(n) {
   return Math.round(Number(n) || 0).toLocaleString('en-US');
 }
 
+// ひらがな→カタカナ変換（IME変換中の読みからフリガナを自動生成する用途）
+function hiraganaToKatakana(str) {
+  return String(str || '').replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60));
+}
+
 function escapeHtml(str) {
   return String(str == null ? '' : str).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
