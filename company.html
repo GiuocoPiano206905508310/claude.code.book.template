@@ -22,7 +22,23 @@
   </div>
 
   <section class="card form-card" aria-label="会社の保険料率・源泉徴収設定">
-    <h2 id="rateSectionHeader">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
+    <h2>休日設定</h2>
+    <div class="field-row">
+      <label for="statutoryHolidayWeekday">法定休日</label>
+      <div class="field-input">
+        <select id="statutoryHolidayWeekday">
+          <option value="0">日曜日</option>
+          <option value="1">月曜日</option>
+          <option value="2">火曜日</option>
+          <option value="3">水曜日</option>
+          <option value="4">木曜日</option>
+          <option value="5">金曜日</option>
+          <option value="6">土曜日</option>
+        </select>
+      </div>
+    </div>
+
+    <h2 class="section-2" id="rateSectionHeader">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
     <div class="field-row" id="healthTypeFieldRow">
       <label for="healthInsuranceType">健康保険の種類</label>
       <div class="field-input">

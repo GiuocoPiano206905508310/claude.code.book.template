@@ -334,6 +334,7 @@ async function deleteBonusRecord(employeeId, bonusId) {
 function defaultCompany() {
   return {
     companyName: '',
+    statutoryHolidayWeekday: 0, // 0=日曜日 〜 6=土曜日
     healthInsuranceType: 'kyoukai',
     prefecture: '東京',
     healthRate: PREFECTURE_HEALTH_RATES['東京'],
@@ -351,6 +352,8 @@ async function getCompany() {
   if (!data) return defaultCompany();
   return {
     companyName: data.company_name || '',
+    statutoryHolidayWeekday: data.statutory_holiday_weekday !== null && data.statutory_holiday_weekday !== undefined
+      ? Number(data.statutory_holiday_weekday) : 0,
     healthInsuranceType: data.health_insurance_type,
     prefecture: data.prefecture,
     healthRate: Number(data.health_rate),
@@ -367,6 +370,7 @@ async function saveCompany(company) {
   const { error } = await supabaseClient.from('company_settings').upsert({
     user_id: userId,
     company_name: company.companyName || null,
+    statutory_holiday_weekday: company.statutoryHolidayWeekday,
     health_insurance_type: company.healthInsuranceType,
     prefecture: company.prefecture,
     health_rate: company.healthRate,
