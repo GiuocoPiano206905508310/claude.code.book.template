@@ -72,7 +72,7 @@ function resetFormToNewBonus() {
   document.getElementById('employmentType').value = employee.employmentType;
   document.getElementById('ageGroup').value = ageGroupFromAge(calcAge(employee.birthDate));
   document.getElementById('dependents').value = employee.dependents;
-  document.getElementById('calcMethod').value = employee.calcMethod;
+  document.getElementById('calcMethod').value = company.calcMethod;
   document.getElementById('taxTable').value = employee.taxTable;
   document.getElementById('bonusAmount').value = '500,000';
   document.getElementById('prevMonthSalary').value = '250,000';

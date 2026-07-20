@@ -235,6 +235,7 @@ function defaultCompany() {
     pensionRate: PENSION_RATE_DEFAULT,
     industryType: '一般の事業',
     employmentRate: EMPLOYMENT_RATES_BY_INDUSTRY['一般の事業'],
+    calcMethod: 'table',
   };
 }
 

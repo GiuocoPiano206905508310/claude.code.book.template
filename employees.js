@@ -210,7 +210,6 @@ function resetForm() {
   document.getElementById('commuteAllowance').value = '10,000';
   document.getElementById('commuteAllowanceExclude').checked = true;
   document.getElementById('dependents').value = '0';
-  document.getElementById('calcMethod').value = 'table';
   document.getElementById('taxTable').value = '甲';
   document.getElementById('residentTax').value = '0';
   document.getElementById('workStart').value = '09:00';
@@ -239,7 +238,6 @@ function loadFormFromEmployee(emp) {
   document.getElementById('commuteAllowance').value = formatThousands(emp.commuteAllowance);
   document.getElementById('commuteAllowanceExclude').checked = emp.commuteAllowanceExcludeFromOvertimeBase !== false;
   document.getElementById('dependents').value = emp.dependents;
-  document.getElementById('calcMethod').value = emp.calcMethod;
   document.getElementById('taxTable').value = emp.taxTable;
   document.getElementById('residentTax').value = formatThousands(emp.residentTax);
   document.getElementById('workStart').value = emp.workStart || '09:00';
@@ -271,7 +269,6 @@ function collectFormAsEmployee() {
     commuteAllowance: getNumInputValue('commuteAllowance'),
     commuteAllowanceExcludeFromOvertimeBase: document.getElementById('commuteAllowanceExclude').checked,
     dependents: Number(document.getElementById('dependents').value) || 0,
-    calcMethod: document.getElementById('calcMethod').value,
     taxTable: document.getElementById('taxTable').value,
     residentTax: getNumInputValue('residentTax'),
     workStart: document.getElementById('workStart').value || '09:00',

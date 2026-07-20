@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>会社マスタ管理 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -17,11 +17,11 @@
   </header>
 
   <div class="notice">
-    <p>※ ここで設定した保険料率は、全従業員に共通の会社設定として給与計算・賞与計算で自動的に使用されます。</p>
+    <p>※ ここで設定した保険料率・源泉所得税の計算方法は、全従業員に共通の会社設定として給与計算・賞与計算で自動的に使用されます。</p>
     <p>※ 入力していただいた情報は、お使いのブラウザ内（localStorage）にのみ保存され、外部のサーバーへ送信・保存されることはありません。</p>
   </div>
 
-  <section class="card form-card" aria-label="会社の保険料率設定">
+  <section class="card form-card" aria-label="会社の保険料率・源泉徴収設定">
     <h2 id="rateSectionHeader">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
     <div class="field-row" id="healthTypeFieldRow">
       <label for="healthInsuranceType">健康保険の種類</label>
@@ -76,6 +76,17 @@
       </div>
     </div>
 
+    <h2 class="section-2">源泉徴収設定</h2>
+    <div class="field-row">
+      <label for="calcMethod">源泉所得税の計算方法</label>
+      <div class="field-input">
+        <select id="calcMethod">
+          <option value="table">月額表</option>
+          <option value="machine">機械計算（甲欄のみ）</option>
+        </select>
+      </div>
+    </div>
+
     <button id="saveBtn" type="button" class="btn btn-block">保存する</button>
     <p class="export-status" id="saveStatus"></p>
   </section>
@@ -83,9 +94,9 @@
   <footer>個人・小規模事業向けの概算ツールです。正式な保険料率の適用には専門家・社会保険労務士にご確認ください。</footer>
 </div>
 
-<script src="calc.js?v=4"></script>
-<script src="data.js?v=4"></script>
-<script src="common.js?v=4"></script>
-<script src="company.js?v=4"></script>
+<script src="calc.js?v=5"></script>
+<script src="data.js?v=5"></script>
+<script src="common.js?v=5"></script>
+<script src="company.js?v=5"></script>
 </body>
 </html>
