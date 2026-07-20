@@ -86,7 +86,9 @@ async function renderDayTable() {
 
   // 出勤・退勤の両方が入力されている（または時刻不要なステータスの）行のみ、
   // 変更のたびに自動保存する。片方の時刻しか入っていない途中段階では保存
-  // しない（スマホの時刻ピッカー操作中に保存されて入力が中断されるのを防ぐ）。
+  // しない。時刻欄はスマホのピッカー操作中にも'change'が発火しうるため、
+  // ピッカーを閉じた（フォーカスが外れた）タイミングである'blur'で判定する
+  // （'change'で判定すると、退勤時刻を選び終える前に保存されてしまう）。
   tbody.querySelectorAll('tr').forEach((tr) => {
     const day = tr.dataset.day;
     const statusSelect = tr.querySelector('[data-field="status"]');
@@ -102,8 +104,11 @@ async function renderDayTable() {
         .forEach((el) => { el.disabled = timeless; });
       if (isReadyToSave()) saveRow(employee, ym, day, tr);
     });
-    tr.querySelectorAll('[data-field="clockIn"], [data-field="clockOut"], [data-field="breakMinutes"]').forEach((el) => {
-      el.addEventListener('change', () => { if (isReadyToSave()) saveRow(employee, ym, day, tr); });
+    [clockInEl, clockOutEl].forEach((el) => {
+      el.addEventListener('blur', () => { if (isReadyToSave()) saveRow(employee, ym, day, tr); });
+    });
+    tr.querySelector('[data-field="breakMinutes"]').addEventListener('change', () => {
+      if (isReadyToSave()) saveRow(employee, ym, day, tr);
     });
   });
 }
