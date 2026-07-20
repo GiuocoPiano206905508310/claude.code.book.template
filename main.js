@@ -1,8 +1,3 @@
-// ============================================================================
-// 給与計算エンジン（DOM非依存の純粋関数群）。employees.js / payroll.js / bonus.js /
-// attendance.js から共通で読み込んで使用する。
-// ============================================================================
-
 // 協会けんぽ「令和8年度都道府県単位保険料率」（都道府県名 → 健康保険料率(%)、全体）
 const PREFECTURE_HEALTH_RATES = {
   '北海道': 10.28, '青森': 9.85, '岩手': 9.51, '宮城': 10.10, '秋田': 10.01,
@@ -18,7 +13,6 @@ const PREFECTURE_HEALTH_RATES = {
 };
 // 介護保険料率・子ども子育て支援金率は全国一律（令和8年度）
 const CARE_RATE_DEFAULT = 1.62;
-const PENSION_RATE_DEFAULT = 18.30;
 const CHILD_SUPPORT_LEVY_RATE = 0.23; // 全体率。令和8年4月分（5月納付分）から徴収、労使折半
 
 // 厚生労働省「令和8年度雇用保険料率」（労働者負担分・失業等給付等の保険料率のみ、令和8年4月～令和9年3月）
@@ -27,6 +21,94 @@ const EMPLOYMENT_RATES_BY_INDUSTRY = {
   '農林水産・清酒製造の事業': 0.6,
   '建設の事業': 0.6,
 };
+
+function populatePrefectureSelect(selectId, healthId, careId) {
+  const select = document.getElementById(selectId);
+  for (const name of Object.keys(PREFECTURE_HEALTH_RATES)) {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    if (name === '東京') option.selected = true;
+    select.appendChild(option);
+  }
+  applyPrefectureRate(selectId, healthId, careId);
+}
+
+function applyPrefectureRate(selectId, healthId, careId) {
+  const prefecture = document.getElementById(selectId).value;
+  document.getElementById(healthId).value = PREFECTURE_HEALTH_RATES[prefecture].toFixed(2);
+  document.getElementById(careId).value = CARE_RATE_DEFAULT.toFixed(2);
+}
+
+// 健康保険の種類（協会けんぽ／健康保険組合）の切り替え
+// 協会けんぽ：都道府県選択欄を表示し、健康保険料率・介護保険料率は都道府県から自動入力（介護保険料率は編集不可）
+// 健康保険組合：都道府県選択欄を隠し、健康保険料率・介護保険料率とも手動入力（厚生年金保険料率は影響を受けない）
+function applyHealthInsuranceType(typeId, prefectureRowId, prefectureSelectId, healthId, careId, healthLabelId, careLabelId) {
+  const isKumiai = document.getElementById(typeId).value === 'kumiai';
+  document.getElementById(prefectureRowId).style.display = isKumiai ? 'none' : '';
+  document.getElementById(careId).readOnly = !isKumiai;
+  document.getElementById(healthLabelId).textContent = isKumiai ? '健康保険料率（手動入力）' : '健康保険料率（自動入力・編集可）';
+  document.getElementById(careLabelId).textContent = isKumiai ? '介護保険料率（手動入力）' : '介護保険料率（全国一律）';
+  if (!isKumiai) {
+    applyPrefectureRate(prefectureSelectId, healthId, careId);
+  }
+}
+
+// 雇用形態による保険料率欄の表示切り替え
+// アルバイト・パート（雇用保険のみ対象）：健康保険・厚生年金関連の欄を非表示にし、雇用保険関連の欄のみ表示
+// アルバイト・パート（雇用保険対象外）：健康保険・厚生年金・雇用保険関連の欄をすべて非表示
+function updateInsuranceFieldVisibility(o) {
+  const employmentType = document.getElementById(o.employmentTypeId).value;
+  const hideHealthGroup = employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）';
+  const hideEmploymentGroup = employmentType === 'アルバイト・パート（雇用保険対象外）';
+
+  o.healthGroupIds.forEach(id => { document.getElementById(id).style.display = hideHealthGroup ? 'none' : ''; });
+  o.employmentGroupIds.forEach(id => { document.getElementById(id).style.display = hideEmploymentGroup ? 'none' : ''; });
+
+  if (hideHealthGroup) {
+    document.getElementById(o.prefectureRowId).style.display = 'none';
+  } else {
+    applyHealthInsuranceType(o.healthTypeId, o.prefectureRowId, o.prefectureSelectId, o.healthRateId, o.careRateId, o.healthRateLabelId, o.careRateLabelId);
+  }
+}
+
+function populateIndustrySelect(selectId, rateId) {
+  const select = document.getElementById(selectId);
+  for (const name of Object.keys(EMPLOYMENT_RATES_BY_INDUSTRY)) {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+  }
+  applyIndustryRate(selectId, rateId);
+}
+
+function applyIndustryRate(selectId, rateId) {
+  const industry = document.getElementById(selectId).value;
+  document.getElementById(rateId).value = EMPLOYMENT_RATES_BY_INDUSTRY[industry].toFixed(2);
+}
+
+// 数字にカンマを付けて表示する入力欄
+function attachThousandsFormatting(id) {
+  const input = document.getElementById(id);
+  input.addEventListener('input', () => {
+    const cursorPos = input.selectionStart;
+    const digitsBeforeCursor = input.value.slice(0, cursorPos).replace(/[^\d]/g, '').length;
+    const raw = input.value.replace(/[^\d]/g, '');
+    input.value = raw === '' ? '' : Number(raw).toLocaleString('en-US');
+    let count = 0, pos = input.value.length;
+    for (let i = 0; i < input.value.length; i++) {
+      if (/\d/.test(input.value[i])) count++;
+      if (count === digitsBeforeCursor) { pos = i + 1; break; }
+    }
+    input.setSelectionRange(pos, pos);
+  });
+}
+
+function getNumValue(id) {
+  const raw = document.getElementById(id).value.replace(/,/g, '');
+  return Number(raw) || 0;
+}
 
 // 年齢区分ごとの社会保険加入ルール
 const AGE_RULES = {
@@ -38,6 +120,12 @@ const AGE_RULES = {
 };
 
 const PART_TIME_TAX_EXEMPT_THRESHOLD = 88000; // 月額88,000円未満は源泉所得税を計算対象外（アルバイト・パートのみ）
+
+function applyEmploymentTypeLabel() {
+  const employmentType = document.getElementById('employmentType').value;
+  const label = document.getElementById('baseSalaryLabel');
+  label.textContent = employmentType === '役員' ? '役員報酬（円）' : '基本給（円）';
+}
 
 // 給与所得の源泉徴収税額表（令和8年分）月額表
 // 各行: [以上, 未満, 甲欄0人, 1人, 2人, 3人, 4人, 5人, 6人, 7人, 乙欄]
@@ -436,87 +524,24 @@ function calcBonusWithholdingTax(bonusBase, prevMonthBase, dependents, taxTable,
   return Math.max(0, (taxOnCombined - taxOnPrevMonth) * n);
 }
 
-const BONUS_HEALTH_ANNUAL_CAP = 5730000; // 健康保険：標準賞与額の年度累計上限
-const BONUS_PENSION_MONTHLY_CAP = 1500000; // 厚生年金：標準賞与額の月間上限
-
 function yen(n) {
   return Math.round(n).toLocaleString('ja-JP') + ' 円';
 }
 
-// ----------------------------------------------------------------------
-// 月給計算（純粋関数版）
-// input: { employmentType, ageGroup, taxTable, calcMethod, baseSalary, overtimePay,
-//          taxableAllowance, commuteAllowance, dependents, residentTax,
-//          healthRate, careRate, pensionRate, employmentRate }
-// ----------------------------------------------------------------------
-function calculateMonthlyPayroll(input) {
-  const {
-    employmentType, ageGroup, taxTable, calcMethod,
-    baseSalary, overtimePay, taxableAllowance, commuteAllowance,
-    dependents, residentTax,
-    healthRate, careRate, pensionRate, employmentRate,
-  } = input;
+const BONUS_HEALTH_ANNUAL_CAP = 5730000; // 健康保険：標準賞与額の年度累計上限
+const BONUS_PENSION_MONTHLY_CAP = 1500000; // 厚生年金：標準賞与額の月間上限
 
-  const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
-  const subjectEmploymentInsurance = employmentType !== '役員' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
-  const ageRule = AGE_RULES[ageGroup];
+function calculateBonus() {
+  const employmentType = document.getElementById('bonusEmploymentType').value;
+  const ageGroup = document.getElementById('bonusAgeGroup').value;
+  const taxTable = document.getElementById('bonusTaxTable').value;
+  const calcMethod = document.getElementById('bonusCalcMethod').value;
+  const dependents = Number(document.getElementById('bonusDependents').value) || 0;
 
-  const hasHealth = subjectSocialInsurance && ageRule.health;
-  const hasCare = subjectSocialInsurance && ageRule.care;
-  const hasPension = subjectSocialInsurance && ageRule.pension;
-
-  const grossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
-  const socialInsuranceBase = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
-
-  const healthInsurance = hasHealth ? Math.round(socialInsuranceBase * healthRate / 2) : 0;
-  const careInsurance = hasCare ? Math.round(socialInsuranceBase * careRate / 2) : 0;
-  const pensionInsurance = hasPension ? Math.round(socialInsuranceBase * pensionRate / 2) : 0;
-  const employmentInsurance = subjectEmploymentInsurance ? grossPay * employmentRate : 0;
-  const childSupportLevy = hasHealth ? Math.round(socialInsuranceBase * (CHILD_SUPPORT_LEVY_RATE / 100) / 2) : 0;
-
-  const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
-
-  const monthlyTaxableIncome = grossPay - commuteAllowance;
-  const isTaxExempt = (employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）') && monthlyTaxableIncome < PART_TIME_TAX_EXEMPT_THRESHOLD;
-
-  let monthlyIncomeTax = 0;
-  if (!isTaxExempt) {
-    const taxBase = grossPay - commuteAllowance - socialInsuranceTotal;
-    monthlyIncomeTax = (calcMethod === 'machine' && taxTable === '甲')
-      ? calcMachineWithholdingTax(taxBase, dependents)
-      : calcWithholdingTax(taxBase, dependents, taxTable);
-  }
-
-  const netPay = grossPay - socialInsuranceTotal - monthlyIncomeTax - residentTax;
-
-  return {
-    grossPay,
-    healthInsurance, hasHealth,
-    careInsurance, hasCare,
-    pensionInsurance, hasPension,
-    employmentInsurance, subjectEmploymentInsurance,
-    childSupportLevy,
-    socialInsuranceTotal,
-    monthlyIncomeTax, isTaxExempt,
-    residentTax,
-    netPay,
-  };
-}
-
-// ----------------------------------------------------------------------
-// 賞与計算（純粋関数版）
-// input: { employmentType, ageGroup, taxTable, calcMethod, dependents,
-//          healthRate, careRate, pensionRate, employmentRate,
-//          bonusAmount, prevMonthSalary, calcPeriodMonths,
-//          healthCumulative, pensionCumulative }
-// ----------------------------------------------------------------------
-function calculateBonusPayroll(input) {
-  const {
-    employmentType, ageGroup, taxTable, calcMethod, dependents,
-    healthRate, careRate, pensionRate, employmentRate,
-    bonusAmount, prevMonthSalary, calcPeriodMonths,
-    healthCumulative, pensionCumulative,
-  } = input;
+  const healthRate = Number(document.getElementById('bonusHealthRate').value) / 100;
+  const careRate = Number(document.getElementById('bonusCareRate').value) / 100;
+  const pensionRate = Number(document.getElementById('bonusPensionRate').value) / 100;
+  const employmentRate = Number(document.getElementById('bonusEmploymentRate').value) / 100;
 
   const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
   const subjectEmploymentInsurance = employmentType !== '役員' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
@@ -525,8 +550,17 @@ function calculateBonusPayroll(input) {
   const hasCare = subjectSocialInsurance && ageRule.care;
   const hasPension = subjectSocialInsurance && ageRule.pension;
 
+  const bonusAmount = getNumValue('bonusAmount');
+  const prevMonthSalary = getNumValue('prevMonthSalary');
+  const calcPeriodMonths = Number(document.getElementById('bonusCalcPeriod').value) || 6;
+  const healthCumulative = getNumValue('bonusHealthCumulative');
+  const pensionCumulative = getNumValue('bonusPensionCumulative');
+
+  // 標準賞与額：実際の賞与額（税引き前）から1,000円未満を切り捨てた額
   const standardBonus = Math.floor(bonusAmount / 1000) * 1000;
+  // 健康保険・子ども子育て支援金：年度累計573万円が上限
   const healthStandardBonus = Math.max(0, Math.min(standardBonus, BONUS_HEALTH_ANNUAL_CAP - healthCumulative));
+  // 厚生年金：同月内の累計150万円が上限
   const pensionStandardBonus = Math.max(0, Math.min(standardBonus, BONUS_PENSION_MONTHLY_CAP - pensionCumulative));
 
   const healthInsurance = hasHealth ? Math.round(healthStandardBonus * healthRate / 2) : 0;
@@ -538,6 +572,7 @@ function calculateBonusPayroll(input) {
 
   const bonusBase = Math.max(0, bonusAmount - socialInsuranceTotal);
 
+  // 支払い状況の自動判定（賞与額・前月給与額から判定、「賞与額」は社会保険料等控除後の金額で比較）
   const situation = prevMonthSalary <= 0
     ? 'noPrevSalary'
     : (bonusBase > prevMonthSalary * 10 ? 'over10x' : 'normal');
@@ -545,7 +580,7 @@ function calculateBonusPayroll(input) {
 
   const netPay = bonusAmount - socialInsuranceTotal - incomeTax;
 
-  return {
+  renderBonusResult({
     situation,
     bonusAmount,
     healthInsurance, hasHealth,
@@ -556,7 +591,7 @@ function calculateBonusPayroll(input) {
     socialInsuranceTotal,
     incomeTax,
     netPay,
-  };
+  });
 }
 
 const BONUS_SITUATION_LABELS = {
@@ -565,23 +600,345 @@ const BONUS_SITUATION_LABELS = {
   noPrevSalary: '前月に給与の支払がない場合',
 };
 
-// ----------------------------------------------------------------------
-// 勤怠連携ヘルパー
-// ----------------------------------------------------------------------
-// 時給換算 = 基本給 ÷ 月平均所定労働時間
-function calcHourlyWage(baseSalary, monthlyStandardHours) {
-  return baseSalary / (monthlyStandardHours || 160);
+function renderBonusResult(r) {
+  const rows = [
+    ['支払い状況（自動判定）', BONUS_SITUATION_LABELS[r.situation], 'text', true],
+    ['賞与額', r.bonusAmount, 'plain', true],
+    ['健康保険料', -r.healthInsurance, 'deduction', r.hasHealth],
+    ['子ども・子育て支援金', -r.childSupportLevy, 'deduction', r.hasHealth],
+    ['介護保険料', -r.careInsurance, 'deduction', r.hasCare],
+    ['厚生年金保険料', -r.pensionInsurance, 'deduction', r.hasPension],
+    ['雇用保険料', -r.employmentInsurance, 'deduction', r.subjectEmploymentInsurance],
+    ['社会保険料合計', -r.socialInsuranceTotal, 'total', true],
+    ['源泉所得税（概算）', -r.incomeTax, 'deduction', true],
+  ];
+
+  const tbody = document.querySelector('#bonusResultTable tbody');
+  tbody.innerHTML = '';
+  for (const [label, value, kind, applicable] of rows) {
+    const tr = document.createElement('tr');
+    if (kind === 'total') tr.className = 'total';
+    const valueClass = !applicable ? 'value na' : (kind === 'deduction' ? 'value deduction' : 'value');
+    const valueHtml = !applicable ? '対象外' : (kind === 'text' ? value : yen(value));
+    tr.innerHTML = `<td class="label">${label}</td><td class="${valueClass}">${valueHtml}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('bonusNetValue').textContent = yen(r.netPay);
 }
 
-// 残業手当 = 時給換算 × 割増率 × 残業時間
-function calcOvertimePayFromHours(baseSalary, monthlyStandardHours, overtimeHours, overtimeRate) {
-  const hourly = calcHourlyWage(baseSalary, monthlyStandardHours);
-  return Math.round(hourly * (overtimeRate || 1.25) * overtimeHours);
+function calculate() {
+  const employmentType = document.getElementById('employmentType').value;
+  const ageGroup = document.getElementById('ageGroup').value;
+  const taxTable = document.getElementById('taxTable').value;
+  const calcMethod = document.getElementById('calcMethod').value;
+  const baseSalary = getNumValue('baseSalary');
+  const overtimePay = getNumValue('overtimePay');
+  const taxableAllowance = getNumValue('taxableAllowance');
+  const commuteAllowance = getNumValue('commuteAllowance');
+  const dependents = Number(document.getElementById('dependents').value) || 0;
+  const residentTax = getNumValue('residentTax');
+
+  const healthRate = Number(document.getElementById('healthRate').value) / 100;
+  const careRate = Number(document.getElementById('careRate').value) / 100;
+  const pensionRate = Number(document.getElementById('pensionRate').value) / 100;
+  const employmentRate = Number(document.getElementById('employmentRate').value) / 100;
+
+  // 雇用形態による加入区分（役員=社会保険のみ、アルバイト・パート=雇用保険のみ、アルバイト・パート（雇用保険対象外）=いずれも対象外）
+  const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
+  const subjectEmploymentInsurance = employmentType !== '役員' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
+  const ageRule = AGE_RULES[ageGroup];
+
+  const hasHealth = subjectSocialInsurance && ageRule.health;
+  const hasCare = subjectSocialInsurance && ageRule.care;
+  const hasPension = subjectSocialInsurance && ageRule.pension;
+
+  const grossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
+
+  // 社会保険算定基礎額（通勤手当も含む）
+  const socialInsuranceBase = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
+
+  const healthInsurance = hasHealth ? Math.round(socialInsuranceBase * healthRate / 2) : 0;
+  const careInsurance = hasCare ? Math.round(socialInsuranceBase * careRate / 2) : 0;
+  const pensionInsurance = hasPension ? Math.round(socialInsuranceBase * pensionRate / 2) : 0;
+  const employmentInsurance = subjectEmploymentInsurance ? grossPay * employmentRate : 0;
+  const childSupportLevy = hasHealth ? Math.round(socialInsuranceBase * (CHILD_SUPPORT_LEVY_RATE / 100) / 2) : 0;
+
+  const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
+
+  // 源泉所得税（給与所得の源泉徴収税額表 令和8年分 月額表）
+  const monthlyTaxableIncome = grossPay - commuteAllowance; // 通勤手当は非課税
+  const isTaxExempt = (employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）') && monthlyTaxableIncome < PART_TIME_TAX_EXEMPT_THRESHOLD;
+
+  let monthlyIncomeTax = 0;
+  if (!isTaxExempt) {
+    const taxBase = grossPay - commuteAllowance - socialInsuranceTotal; // その月の社会保険料等控除後の給与等の金額
+    monthlyIncomeTax = (calcMethod === 'machine' && taxTable === '甲')
+      ? calcMachineWithholdingTax(taxBase, dependents)
+      : calcWithholdingTax(taxBase, dependents, taxTable);
+  }
+
+  const netPay = grossPay - socialInsuranceTotal - monthlyIncomeTax - residentTax;
+
+  renderResult({
+    grossPay,
+    healthInsurance, hasHealth,
+    careInsurance, hasCare,
+    pensionInsurance, hasPension,
+    employmentInsurance, subjectEmploymentInsurance,
+    childSupportLevy,
+    socialInsuranceTotal,
+    monthlyIncomeTax, isTaxExempt,
+    residentTax,
+    netPay,
+  });
 }
 
-// 欠勤控除 = 日給換算（基本給 ÷ 月平均所定労働日数） × 欠勤日数
-function calcAbsenceDeduction(baseSalary, monthlyStandardDays, absenceDays) {
-  if (!absenceDays) return 0;
-  const daily = baseSalary / (monthlyStandardDays || 20);
-  return Math.round(daily * absenceDays);
+function renderResult(r) {
+  const rows = [
+    ['総支給額', r.grossPay, 'plain', true],
+    ['健康保険料', -r.healthInsurance, 'deduction', r.hasHealth],
+    ['子ども・子育て支援金', -r.childSupportLevy, 'deduction', r.hasHealth],
+    ['介護保険料', -r.careInsurance, 'deduction', r.hasCare],
+    ['厚生年金保険料', -r.pensionInsurance, 'deduction', r.hasPension],
+    ['雇用保険料', -r.employmentInsurance, 'deduction', r.subjectEmploymentInsurance],
+    ['社会保険料合計', -r.socialInsuranceTotal, 'total', true],
+    ['源泉所得税（概算）', -r.monthlyIncomeTax, 'deduction', !r.isTaxExempt],
+    ['住民税', -r.residentTax, 'deduction', true],
+  ];
+
+  const tbody = document.querySelector('#resultTable tbody');
+  tbody.innerHTML = '';
+  for (const [label, value, kind, applicable] of rows) {
+    const tr = document.createElement('tr');
+    if (kind === 'total') tr.className = 'total';
+    const valueClass = !applicable ? 'value na' : (kind === 'deduction' ? 'value deduction' : 'value');
+    const valueHtml = applicable ? yen(value) : '対象外';
+    tr.innerHTML = `<td class="label">${label}</td><td class="${valueClass}">${valueHtml}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('netValue').textContent = yen(r.netPay);
 }
+
+const MONTHLY_INSURANCE_VISIBILITY_CONFIG = {
+  employmentTypeId: 'employmentType',
+  healthGroupIds: ['rateSectionHeader', 'healthTypeFieldRow', 'rateGrid'],
+  employmentGroupIds: ['industryFieldRow', 'employmentRateFieldRow'],
+  prefectureRowId: 'prefectureFieldRow',
+  healthTypeId: 'healthInsuranceType',
+  prefectureSelectId: 'prefecture',
+  healthRateId: 'healthRate',
+  careRateId: 'careRate',
+  healthRateLabelId: 'healthRateLabel',
+  careRateLabelId: 'careRateLabel',
+};
+const BONUS_INSURANCE_VISIBILITY_CONFIG = {
+  employmentTypeId: 'bonusEmploymentType',
+  healthGroupIds: ['bonusRateSectionHeader', 'bonusHealthTypeFieldRow', 'bonusRateGrid', 'bonusHealthCumulativeRow', 'bonusPensionCumulativeRow'],
+  employmentGroupIds: ['bonusIndustryFieldRow', 'bonusEmploymentRateFieldRow'],
+  prefectureRowId: 'bonusPrefectureFieldRow',
+  healthTypeId: 'bonusHealthInsuranceType',
+  prefectureSelectId: 'bonusPrefecture',
+  healthRateId: 'bonusHealthRate',
+  careRateId: 'bonusCareRate',
+  healthRateLabelId: 'bonusHealthRateLabel',
+  careRateLabelId: 'bonusCareRateLabel',
+};
+
+document.getElementById('prefecture').addEventListener('change', () => {
+  applyPrefectureRate('prefecture', 'healthRate', 'careRate');
+  calculate();
+});
+document.getElementById('healthInsuranceType').addEventListener('change', () => {
+  applyHealthInsuranceType('healthInsuranceType', 'prefectureFieldRow', 'prefecture', 'healthRate', 'careRate', 'healthRateLabel', 'careRateLabel');
+  calculate();
+});
+document.getElementById('industryType').addEventListener('change', () => {
+  applyIndustryRate('industryType', 'employmentRate');
+  calculate();
+});
+document.getElementById('employmentType').addEventListener('change', () => {
+  applyEmploymentTypeLabel();
+  updateInsuranceFieldVisibility(MONTHLY_INSURANCE_VISIBILITY_CONFIG);
+  calculate();
+});
+document.getElementById('ageGroup').addEventListener('change', calculate);
+document.getElementById('taxTable').addEventListener('change', calculate);
+document.getElementById('calcMethod').addEventListener('change', calculate);
+document.getElementById('calcBtn').addEventListener('click', calculate);
+
+document.getElementById('bonusPrefecture').addEventListener('change', () => {
+  applyPrefectureRate('bonusPrefecture', 'bonusHealthRate', 'bonusCareRate');
+  calculateBonus();
+});
+document.getElementById('bonusHealthInsuranceType').addEventListener('change', () => {
+  applyHealthInsuranceType('bonusHealthInsuranceType', 'bonusPrefectureFieldRow', 'bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusHealthRateLabel', 'bonusCareRateLabel');
+  calculateBonus();
+});
+document.getElementById('bonusIndustryType').addEventListener('change', () => {
+  applyIndustryRate('bonusIndustryType', 'bonusEmploymentRate');
+  calculateBonus();
+});
+document.getElementById('bonusEmploymentType').addEventListener('change', () => {
+  updateInsuranceFieldVisibility(BONUS_INSURANCE_VISIBILITY_CONFIG);
+  calculateBonus();
+});
+document.getElementById('bonusAgeGroup').addEventListener('change', calculateBonus);
+document.getElementById('bonusTaxTable').addEventListener('change', calculateBonus);
+document.getElementById('bonusCalcMethod').addEventListener('change', calculateBonus);
+document.getElementById('bonusCalcPeriod').addEventListener('change', calculateBonus);
+document.getElementById('bonusHealthCumulative').addEventListener('change', calculateBonus);
+document.getElementById('bonusPensionCumulative').addEventListener('change', calculateBonus);
+document.getElementById('calcBonusBtn').addEventListener('click', calculateBonus);
+
+['baseSalary', 'overtimePay', 'taxableAllowance', 'commuteAllowance', 'residentTax', 'bonusAmount', 'prevMonthSalary', 'bonusHealthCumulative', 'bonusPensionCumulative']
+  .forEach(attachThousandsFormatting);
+
+document.getElementById('tabMonthlyBtn').addEventListener('click', () => {
+  document.getElementById('tabMonthlyBtn').classList.add('active');
+  document.getElementById('tabBonusBtn').classList.remove('active');
+  document.getElementById('tabMonthly').classList.add('active');
+  document.getElementById('tabBonus').classList.remove('active');
+});
+document.getElementById('tabBonusBtn').addEventListener('click', () => {
+  document.getElementById('tabBonusBtn').classList.add('active');
+  document.getElementById('tabMonthlyBtn').classList.remove('active');
+  document.getElementById('tabBonus').classList.add('active');
+  document.getElementById('tabMonthly').classList.remove('active');
+});
+
+// 固定幅ではなく、画面幅いっぱいに広がりつつ上限（max-width）で収まるようにする
+function setMobileView(isMobile) {
+  const pageEl = document.querySelector('.page');
+  pageEl.classList.toggle('is-mobile-view', isMobile);
+  pageEl.style.width = '100%';
+  pageEl.style.maxWidth = isMobile ? '375px' : '900px';
+  pageEl.style.minWidth = '';
+  // グリッドは @media (max-width:780px) で自動的に1カラム化される仕様のため、
+  // PC版強制時はインラインで明示的にデスクトップ用の値を指定してメディアクエリに勝たせる
+  document.querySelectorAll('.grid').forEach((g) => {
+    g.style.gridTemplateColumns = isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 1.15fr) minmax(0, 1fr)';
+  });
+  document.querySelectorAll('.payslip').forEach((p) => {
+    p.style.position = isMobile ? 'static' : 'sticky';
+  });
+  document.querySelectorAll('.masthead .sub').forEach((s) => {
+    s.style.maxWidth = isMobile ? '100%' : '46em';
+  });
+}
+
+document.getElementById('viewPcBtn').addEventListener('click', () => {
+  setMobileView(false);
+  document.getElementById('viewPcBtn').classList.add('active');
+  document.getElementById('viewMobileBtn').classList.remove('active');
+});
+document.getElementById('viewMobileBtn').addEventListener('click', () => {
+  setMobileView(true);
+  document.getElementById('viewMobileBtn').classList.add('active');
+  document.getElementById('viewPcBtn').classList.remove('active');
+});
+
+// 実際の画面幅に応じて初期表示モードを自動判定（スマホなら最初からスマホ版に）
+if (window.innerWidth < 700) {
+  setMobileView(true);
+  document.getElementById('viewMobileBtn').classList.add('active');
+  document.getElementById('viewPcBtn').classList.remove('active');
+} else {
+  setMobileView(false);
+}
+
+populatePrefectureSelect('prefecture', 'healthRate', 'careRate');
+populateIndustrySelect('industryType', 'employmentRate');
+populatePrefectureSelect('bonusPrefecture', 'bonusHealthRate', 'bonusCareRate');
+populateIndustrySelect('bonusIndustryType', 'bonusEmploymentRate');
+applyEmploymentTypeLabel();
+applyHealthInsuranceType('healthInsuranceType', 'prefectureFieldRow', 'prefecture', 'healthRate', 'careRate', 'healthRateLabel', 'careRateLabel');
+applyHealthInsuranceType('bonusHealthInsuranceType', 'bonusPrefectureFieldRow', 'bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusHealthRateLabel', 'bonusCareRateLabel');
+updateInsuranceFieldVisibility(MONTHLY_INSURANCE_VISIBILITY_CONFIG);
+updateInsuranceFieldVisibility(BONUS_INSURANCE_VISIBILITY_CONFIG);
+calculate();
+calculateBonus();
+
+// 結果のPDF出力（ブラウザの印刷機能を利用）
+// 印刷対象の内容を専用の印刷用エリアに複製し、他の要素を印刷から完全に除外する
+// （visibility:hiddenだけでは要素が高さを占有したままになり、余分な白紙ページが出るため）
+function printSection(targetId) {
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = document.getElementById(targetId).innerHTML;
+  // 複製した要素のidを取り除き、元の要素とのid重複（Excel出力・コピーが二重に取得してしまう不具合）を防ぐ
+  printArea.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+  window.print();
+}
+
+function showExportStatus(statusId, message, isError) {
+  const el = document.getElementById(statusId);
+  el.textContent = message;
+  el.classList.toggle('error', !!isError);
+}
+
+// 結果のExcel出力（Excelで開けるHTMLテーブル形式の.xlsを生成、格子状の罫線付き）
+function exportTableToExcel(tableId, filename, extraRow, statusId) {
+  const cellStyle = 'border:1px solid #000;padding:5px 10px;';
+  const headStyle = cellStyle + 'background:#eee;font-weight:bold;';
+  let rows = '';
+  document.getElementById(tableId).querySelectorAll('tbody tr').forEach((tr) => {
+    const cells = Array.from(tr.querySelectorAll('td')).map((td) => `<td style="${cellStyle}">${td.textContent.trim()}</td>`).join('');
+    rows += `<tr>${cells}</tr>`;
+  });
+  if (extraRow) {
+    rows += `<tr><td style="${cellStyle}font-weight:bold;">${extraRow[0]}</td><td style="${cellStyle}font-weight:bold;">${extraRow[1]}</td></tr>`;
+  }
+  const html = `<html><head><meta charset="UTF-8"></head><body><table style="border-collapse:collapse;"><thead><tr><th style="${headStyle}">項目</th><th style="${headStyle}">金額</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+  const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showExportStatus(statusId, '保存しました。');
+}
+
+// 結果をタブ区切りテキストとしてクリップボードにコピー
+async function copyResultToClipboard(tableId, extraRow, statusId) {
+  let text = '';
+  document.getElementById(tableId).querySelectorAll('tbody tr').forEach((tr) => {
+    const cells = Array.from(tr.querySelectorAll('td')).map((td) => td.textContent.trim());
+    text += cells.join('\t') + '\n';
+  });
+  if (extraRow) {
+    text += extraRow.join('\t') + '\n';
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showExportStatus(statusId, 'コピーしました。Excelなどに貼り付けてください。', false);
+  } catch (e) {
+    showExportStatus(statusId, 'コピーに失敗しました：' + (e && e.message ? e.message : e), true);
+  }
+}
+
+document.getElementById('exportPdfBtn').addEventListener('click', () => printSection('resultCard'));
+document.getElementById('exportExcelBtn').addEventListener('click', () => exportTableToExcel(
+  'resultTable', '給与計算シミュレーション結果.xls',
+  ['差引支給額（手取り）', document.getElementById('netValue').textContent.trim()],
+  'exportStatus'
+));
+document.getElementById('exportCopyBtn').addEventListener('click', () => copyResultToClipboard(
+  'resultTable',
+  ['差引支給額（手取り）', document.getElementById('netValue').textContent.trim()],
+  'exportStatus'
+));
+document.getElementById('bonusExportPdfBtn').addEventListener('click', () => printSection('bonusResultCard'));
+document.getElementById('bonusExportExcelBtn').addEventListener('click', () => exportTableToExcel(
+  'bonusResultTable', '賞与計算シミュレーション結果.xls',
+  ['差引支給額（手取り）', document.getElementById('bonusNetValue').textContent.trim()],
+  'bonusExportStatus'
+));
+document.getElementById('bonusExportCopyBtn').addEventListener('click', () => copyResultToClipboard(
+  'bonusResultTable',
+  ['差引支給額（手取り）', document.getElementById('bonusNetValue').textContent.trim()],
+  'bonusExportStatus'
+));
