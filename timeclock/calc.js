@@ -654,6 +654,111 @@ function defaultOvertimeRates() {
   return rates;
 }
 
+// rateキー（末尾Rate）に対応する、分数を積み上げる集計キー
+function overtimeMinuteKey(rateKey) {
+  return rateKey.replace(/Rate$/, '');
+}
+
+function emptyOvertimeMinutes() {
+  const obj = {};
+  OVERTIME_RATE_CATEGORIES.forEach((c) => { obj[overtimeMinuteKey(c.key)] = 0; });
+  return obj;
+}
+
+// ----------------------------------------------------------------------
+// 日次勤怠 → 割増区分別の労働時間（分）への按分
+// 休憩は「取得した時間帯」までは記録していないため、通常勤務日については
+// 「休憩は法定内労働時間（8時間）に達するまでの間に取得した」と仮定して
+// 区分の境界となる時刻を概算する（実際の残業中に休憩を取ることは通常ない
+// ため、妥当な近似）。月60時間の判定は、当月の対象日より前の「法定外
+// 労働時間（通常勤務日の8時間超過分）」の累計をもとに行う概算方式（休憩の
+// 正確な時刻まで反映した厳密計算には対応していません）。
+// ----------------------------------------------------------------------
+const NIGHT_WINDOWS_MIN = [[0, 5 * 60], [22 * 60, 24 * 60], [24 * 60, 24 * 60 + 5 * 60]];
+const LEGAL_DAILY_LIMIT_MIN = 8 * 60;
+const MONTHLY_OVERTIME_THRESHOLD_MIN = 60 * 60;
+
+function overlapMinutesWithWindows(start, end, windows) {
+  let total = 0;
+  for (const [wStart, wEnd] of windows) {
+    total += Math.max(0, Math.min(end, wEnd) - Math.max(start, wStart));
+  }
+  return total;
+}
+
+function isScheduledHolidayStatus(status) {
+  return status === 'scheduled_holiday_work' || status === 'holiday_work'; // holiday_workは旧データ互換
+}
+function isStatutoryHolidayStatus(status) {
+  return status === 'statutory_holiday_work';
+}
+
+// records: getMonthAttendanceの戻り値（{日: {clockIn, clockOut, breakMinutes, status}}）
+// 戻り値: { perDay: {日: {区分キー: 分}}, monthTotals: {区分キー: 分} }
+function computeOvertimeCategoryBreakdown(records, daysInMonth) {
+  const perDay = {};
+  const monthTotals = emptyOvertimeMinutes();
+  let cumulativeOvertimeMin = 0;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const rec = records[String(d)];
+    const dayMinutes = emptyOvertimeMinutes();
+
+    if (rec && rec.status !== 'absence' && rec.status !== 'paid_leave') {
+      const inMin = timeToMinutes(rec.clockIn);
+      const outMin = timeToMinutes(rec.clockOut);
+      if (inMin !== null && outMin !== null) {
+        const rawStart = inMin;
+        const rawEnd = outMin <= inMin ? outMin + 24 * 60 : outMin;
+        const breakMin = Number(rec.breakMinutes) || 0;
+        const workedTotal = Math.max(0, (rawEnd - rawStart) - breakMin);
+
+        if (isStatutoryHolidayStatus(rec.status)) {
+          const nightMin = Math.min(workedTotal, overlapMinutesWithWindows(rawStart, rawEnd, NIGHT_WINDOWS_MIN));
+          dayMinutes.statutoryHolidayNight = nightMin;
+          dayMinutes.statutoryHoliday = workedTotal - nightMin;
+        } else if (isScheduledHolidayStatus(rec.status)) {
+          const nightMin = Math.min(workedTotal, overlapMinutesWithWindows(rawStart, rawEnd, NIGHT_WINDOWS_MIN));
+          // 所定休日出勤には「深夜との組み合わせ」区分がないため、深夜分は深夜労働時間に計上する
+          dayMinutes.lateNight = nightMin;
+          dayMinutes.scheduledHoliday = workedTotal - nightMin;
+        } else {
+          // 通常勤務日：法定内（8時間まで）／法定外（8時間超）にちょうど分かれるよう、
+          // 休憩は法定内時間帯の中で取得したものと仮定して境界の時刻を概算する
+          const workedWithin = Math.min(workedTotal, LEGAL_DAILY_LIMIT_MIN);
+          const workedOvertime = Math.max(0, workedTotal - LEGAL_DAILY_LIMIT_MIN);
+          const boundaryClock = rawStart + workedWithin + breakMin;
+
+          const nightInWithin = Math.min(workedWithin, overlapMinutesWithWindows(rawStart, boundaryClock, NIGHT_WINDOWS_MIN));
+          const nightInOvertime = Math.min(workedOvertime, overlapMinutesWithWindows(boundaryClock, rawEnd, NIGHT_WINDOWS_MIN));
+
+          dayMinutes.legalWithin = workedWithin - nightInWithin;
+          dayMinutes.lateNight = nightInWithin;
+
+          const within60Capacity = Math.max(0, MONTHLY_OVERTIME_THRESHOLD_MIN - cumulativeOvertimeMin);
+          const dayWithin60Total = Math.min(workedOvertime, within60Capacity);
+          cumulativeOvertimeMin += workedOvertime;
+
+          // 深夜分・深夜以外分を、当日の法定外時間に占める割合に応じて60時間ラインで按分する
+          const nightShare = workedOvertime > 0 ? nightInOvertime / workedOvertime : 0;
+          const within60NightMin = Math.min(nightInOvertime, Math.round(dayWithin60Total * nightShare));
+          const within60NonNightMin = dayWithin60Total - within60NightMin;
+
+          dayMinutes.overtimeWithin60 = within60NonNightMin;
+          dayMinutes.overtimeWithin60Night = within60NightMin;
+          dayMinutes.overtimeOver60 = Math.max(0, (workedOvertime - nightInOvertime) - within60NonNightMin);
+          dayMinutes.overtimeOver60Night = Math.max(0, nightInOvertime - within60NightMin);
+        }
+      }
+    }
+
+    perDay[d] = dayMinutes;
+    Object.keys(monthTotals).forEach((k) => { monthTotals[k] += dayMinutes[k]; });
+  }
+
+  return { perDay, monthTotals };
+}
+
 // ----------------------------------------------------------------------
 // 手当（複数行）の集計ヘルパー
 // allowance: { name, amount, excludeFromOvertimeBase }

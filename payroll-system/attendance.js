@@ -20,16 +20,16 @@ async function populateEmployeeSelect() {
   return hasEmployees;
 }
 
-function computeDayDisplay(employee, rec) {
-  if (!rec || rec.status === 'absence' || rec.status === 'paid_leave') return { worked: null, overtime: null };
+const OVERTIME_MINUTE_COLUMNS = OVERTIME_RATE_CATEGORIES.map((c) => overtimeMinuteKey(c.key));
+
+function computeWorkedMinutes(rec) {
+  if (!rec || rec.status === 'absence' || rec.status === 'paid_leave') return null;
   const inMin = timeToMinutes(rec.clockIn);
   const outMin = timeToMinutes(rec.clockOut);
-  if (inMin === null || outMin === null) return { worked: null, overtime: null };
+  if (inMin === null || outMin === null) return null;
   const breakMin = Number(rec.breakMinutes) || 0;
-  const worked = Math.max(0, outMin - inMin - breakMin);
-  const standardDailyMinutes = (employee.standardDailyHours || 8) * 60;
-  const overtime = rec.status === 'holiday_work' ? worked : Math.max(0, worked - standardDailyMinutes);
-  return { worked, overtime };
+  const rawEnd = outMin <= inMin ? outMin + 24 * 60 : outMin;
+  return Math.max(0, (rawEnd - inMin) - breakMin);
 }
 
 function fmtHm(minutes) {
@@ -49,12 +49,16 @@ async function renderDayTable() {
   const records = await getMonthAttendance(employee.id, ym);
   const [y, m] = ym.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
+  const { perDay: overtimeByDay } = computeOvertimeCategoryBreakdown(records, daysInMonth);
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(y, m - 1, d);
     const weekday = WEEKDAY_LABELS[date.getDay()];
     const rec = records[String(d)] || { clockIn: '', clockOut: '', breakMinutes: 60, status: 'normal' };
-    const display = computeDayDisplay(employee, rec);
+    const worked = computeWorkedMinutes(rec);
+    const categoryCells = OVERTIME_MINUTE_COLUMNS
+      .map((key) => `<td class="computed" data-role="${key}">${fmtHm(overtimeByDay[d][key])}</td>`)
+      .join('');
 
     const tr = document.createElement('tr');
     tr.className = rec.status && rec.status !== 'normal' ? `row-${rec.status}` : '';
@@ -66,14 +70,15 @@ async function renderDayTable() {
           <option value="normal" ${rec.status === 'normal' ? 'selected' : ''}>通常</option>
           <option value="paid_leave" ${rec.status === 'paid_leave' ? 'selected' : ''}>有給休暇</option>
           <option value="absence" ${rec.status === 'absence' ? 'selected' : ''}>欠勤</option>
-          <option value="holiday_work" ${rec.status === 'holiday_work' ? 'selected' : ''}>休日出勤</option>
+          <option value="scheduled_holiday_work" ${rec.status === 'scheduled_holiday_work' || rec.status === 'holiday_work' ? 'selected' : ''}>所定休日出勤</option>
+          <option value="statutory_holiday_work" ${rec.status === 'statutory_holiday_work' ? 'selected' : ''}>法定休日出勤</option>
         </select>
       </td>
       <td><input type="time" data-field="clockIn" value="${rec.clockIn || ''}" ${isTimeless ? 'disabled' : ''}></td>
       <td><input type="time" data-field="clockOut" value="${rec.clockOut || ''}" ${isTimeless ? 'disabled' : ''}></td>
       <td><input type="number" min="0" step="5" data-field="breakMinutes" value="${rec.breakMinutes ?? 60}" ${isTimeless ? 'disabled' : ''}></td>
-      <td class="computed" data-role="worked">${fmtHm(display.worked)}</td>
-      <td class="computed" data-role="overtime">${fmtHm(display.overtime)}</td>
+      <td class="computed" data-role="worked">${fmtHm(worked)}</td>
+      ${categoryCells}
       <td><button type="button" class="btn btn-sm" data-action="complete">完了</button></td>
     `;
     tr.dataset.day = d;

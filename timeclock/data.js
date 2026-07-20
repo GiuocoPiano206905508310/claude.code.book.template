@@ -178,7 +178,9 @@ const ATTENDANCE_STATUS_LABELS = {
   normal: '通常',
   paid_leave: '有給休暇',
   absence: '欠勤',
-  holiday_work: '休日出勤',
+  scheduled_holiday_work: '所定休日出勤',
+  statutory_holiday_work: '法定休日出勤',
+  holiday_work: '休日出勤（旧）', // 旧データ互換用。以後は所定／法定休日出勤のいずれかで記録される
 };
 
 // 従業員の所定労働設定をもとに、1か月分の勤怠から集計値を計算する
@@ -216,7 +218,7 @@ async function computeMonthSummary(employee, ym) {
     workedMinutesTotal += worked;
     workDays++;
 
-    if (rec.status === 'holiday_work') {
+    if (isScheduledHolidayStatus(rec.status) || isStatutoryHolidayStatus(rec.status)) {
       holidayWorkDays++;
       overtimeMinutesTotal += worked; // 休日出勤分は全時間を割増対象の残業として扱う
       continue;
@@ -226,6 +228,9 @@ async function computeMonthSummary(employee, ym) {
     if (outMin < stdEndMin && worked < standardDailyMinutes) { earlyLeaveMinutesTotal += (stdEndMin - outMin); earlyLeaveCount++; }
     if (worked > standardDailyMinutes) overtimeMinutesTotal += (worked - standardDailyMinutes);
   }
+
+  const { perDay: overtimeCategoryPerDay, monthTotals: overtimeCategoryMonthTotals } =
+    computeOvertimeCategoryBreakdown(records, daysInMonth);
 
   return {
     ym,
@@ -239,6 +244,8 @@ async function computeMonthSummary(employee, ym) {
     absenceDays,
     paidLeaveDays,
     holidayWorkDays,
+    overtimeCategoryPerDay,
+    overtimeCategoryMonthTotals,
   };
 }
 
