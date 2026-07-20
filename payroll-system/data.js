@@ -6,7 +6,7 @@
 const STORAGE_KEY = 'payrollAttendanceApp.v1';
 
 function defaultDB() {
-  return { employees: [], attendance: {}, payslips: {}, bonuses: {} };
+  return { employees: [], attendance: {}, payslips: {}, bonuses: {}, company: null };
 }
 
 function loadDB() {
@@ -19,6 +19,7 @@ function loadDB() {
       attendance: parsed.attendance || {},
       payslips: parsed.payslips || {},
       bonuses: parsed.bonuses || {},
+      company: parsed.company || null,
     };
   } catch (e) {
     return defaultDB();
@@ -219,6 +220,32 @@ function saveBonusRecord(empId, bonusRecord) {
 function deleteBonusRecord(empId, bonusId) {
   const db = loadDB();
   if (db.bonuses[empId]) db.bonuses[empId] = db.bonuses[empId].filter((b) => b.id !== bonusId);
+  saveDB(db);
+}
+
+// ---------------------------------------------------------------------------
+// 会社マスタ（保険料率設定。全従業員で共通の単一レコード）
+// ---------------------------------------------------------------------------
+function defaultCompany() {
+  return {
+    healthInsuranceType: 'kyoukai',
+    prefecture: '東京',
+    healthRate: PREFECTURE_HEALTH_RATES['東京'],
+    careRate: CARE_RATE_DEFAULT,
+    pensionRate: PENSION_RATE_DEFAULT,
+    industryType: '一般の事業',
+    employmentRate: EMPLOYMENT_RATES_BY_INDUSTRY['一般の事業'],
+  };
+}
+
+function getCompany() {
+  const db = loadDB();
+  return Object.assign(defaultCompany(), db.company || {});
+}
+
+function saveCompany(company) {
+  const db = loadDB();
+  db.company = company;
   saveDB(db);
 }
 

@@ -4,6 +4,7 @@
 
 const NAV_ITEMS = [
   { href: 'index.html', label: 'ダッシュボード' },
+  { href: 'company.html', label: '会社' },
   { href: 'employees.html', label: '従業員' },
   { href: 'attendance.html', label: '勤怠' },
   { href: 'payroll.html', label: '給与計算' },

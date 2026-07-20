@@ -73,6 +73,7 @@ function loadFormForEmployeeMonth() {
   const ym = document.getElementById('monthInput').value;
   if (!employee || !ym) return;
 
+  const company = getCompany();
   currentAttendanceSummary = computeMonthSummary(employee, ym);
   const commuteAllowanceForOvertimeBase = employee.commuteAllowanceExcludeFromOvertimeBase === false ? (employee.commuteAllowance || 0) : 0;
   const overtimeBaseWage = employee.baseSalary + sumNonExcludedAllowances(employee.allowances) + commuteAllowanceForOvertimeBase;
@@ -95,18 +96,18 @@ function loadFormForEmployeeMonth() {
   document.getElementById('calcMethod').value = input ? input.calcMethod : employee.calcMethod;
   document.getElementById('taxTable').value = input ? input.taxTable : employee.taxTable;
   document.getElementById('residentTax').value = formatThousands(input ? input.residentTax : employee.residentTax);
-  document.getElementById('healthInsuranceType').value = employee.healthInsuranceType;
-  populatePrefectureSelect('prefecture', employee.prefecture);
-  populateIndustrySelect('industryType', employee.industryType);
+  document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
+  populatePrefectureSelect('prefecture', company.prefecture);
+  populateIndustrySelect('industryType', company.industryType);
   document.getElementById('applyAbsenceDeduction').checked = input ? !!input.applyAbsenceDeduction : currentAttendanceSummary.absenceDays > 0;
 
   applyEmploymentTypeLabelToForm();
   updateInsuranceFieldVisibilityInForm();
   applyIndustryRateToForm();
-  document.getElementById('healthRate').value = Number(input ? input.healthRate : employee.healthRate).toFixed(2);
-  document.getElementById('careRate').value = Number(input ? input.careRate : employee.careRate).toFixed(2);
-  document.getElementById('pensionRate').value = Number(input ? input.pensionRate : employee.pensionRate).toFixed(2);
-  document.getElementById('employmentRate').value = Number(input ? input.employmentRate : employee.employmentRate).toFixed(2);
+  document.getElementById('healthRate').value = Number(input ? input.healthRate : company.healthRate).toFixed(2);
+  document.getElementById('careRate').value = Number(input ? input.careRate : company.careRate).toFixed(2);
+  document.getElementById('pensionRate').value = Number(input ? input.pensionRate : company.pensionRate).toFixed(2);
+  document.getElementById('employmentRate').value = Number(input ? input.employmentRate : company.employmentRate).toFixed(2);
 
   document.getElementById('overtimeNote').textContent =
     `勤怠集計：残業 ${currentAttendanceSummary.overtimeHours.toFixed(1)}h ×「法定外労働時間(月60時間以内)」の割増率(${Number(employee.overtimeWithin60Rate).toFixed(2)}倍) → 自動計算額 ${formatThousands(currentAutoOvertimePay)} 円（編集可。深夜・休日等の割増区分は従業員マスタで設定・手動反映してください）`;

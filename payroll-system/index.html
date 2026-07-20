@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ダッシュボード | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -24,9 +24,13 @@
   <div class="summary-grid" id="summaryGrid"></div>
 
   <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 28px;">
+    <a class="card form-card" style="text-decoration:none; color:inherit; display:block;" href="company.html">
+      <h2>会社マスタ管理</h2>
+      <p class="field-note" style="margin-top:10px;">全従業員共通の健康保険・介護保険・厚生年金・雇用保険の保険料率を設定します。</p>
+    </a>
     <a class="card form-card" style="text-decoration:none; color:inherit; display:block;" href="employees.html">
       <h2>従業員マスタ管理</h2>
-      <p class="field-note" style="margin-top:10px;">従業員の登録・編集。雇用形態・保険料率・扶養人数・所定労働時間などを設定します。</p>
+      <p class="field-note" style="margin-top:10px;">従業員の登録・編集。雇用形態・扶養人数・所定労働時間・割増率などを設定します。</p>
     </a>
     <a class="card form-card" style="text-decoration:none; color:inherit; display:block;" href="attendance.html">
       <h2>勤怠管理</h2>
@@ -61,9 +65,9 @@
   <footer>個人・小規模事業向けの概算ツールです。正式な給与計算・勤怠管理には専門家にご確認ください。</footer>
 </div>
 
-<script src="calc.js?v=3"></script>
-<script src="data.js?v=3"></script>
-<script src="common.js?v=3"></script>
-<script src="dashboard.js?v=3"></script>
+<script src="calc.js?v=4"></script>
+<script src="data.js?v=4"></script>
+<script src="common.js?v=4"></script>
+<script src="dashboard.js?v=4"></script>
 </body>
 </html>
