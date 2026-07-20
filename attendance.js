@@ -47,6 +47,14 @@ const OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY = (() => {
   return cols;
 })();
 
+// まだ記録のない日について、会社マスタ管理で設定した曜日に応じてステータスの
+// 初期値を決める（法定休日を優先。既存の記録がある日はこれで上書きしない）
+function defaultStatusForWeekday(dow, company) {
+  if (dow === company.statutoryHolidayWeekday) return 'statutory_holiday_work';
+  if (dow === company.scheduledHolidayWeekday) return 'scheduled_holiday_work';
+  return 'normal';
+}
+
 function renderMonthTotalRow(rowId, totals) {
   const row = document.getElementById(rowId);
   OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY.concat('worked').forEach((key) => {
@@ -74,7 +82,7 @@ async function renderDayTable() {
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(y, m - 1, d);
     const weekday = WEEKDAY_LABELS[date.getDay()];
-    const rec = records[String(d)] || { clockIn: '', clockOut: '', breakMinutes: 60, status: 'normal' };
+    const rec = records[String(d)] || { clockIn: '', clockOut: '', breakMinutes: 60, status: defaultStatusForWeekday(date.getDay(), company) };
     const scheduledStart = rec.scheduledStart || employee.workStart || '';
     const scheduledEnd = rec.scheduledEnd || employee.workEnd || '';
     const worked = computeWorkedMinutes(rec);
