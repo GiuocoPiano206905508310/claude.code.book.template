@@ -63,6 +63,27 @@ function renderMonthTotalRow(rowId, totals) {
   });
 }
 
+function ymKey(y, m) {
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+// 期間内の各日について実際の(ym, day)に対応する勤怠レコードを取得し、
+// 1始まりの連番でまとめ直す（月をまたぐ期間の場合は関係する月の分だけ
+// getMonthAttendanceを呼び出してマージする）
+async function fetchPeriodRecords(employeeId, periodDates) {
+  const yms = [...new Set(periodDates.map((date) => ymKey(date.y, date.m)))];
+  const byYm = {};
+  for (const ym of yms) {
+    byYm[ym] = await getMonthAttendance(employeeId, ym);
+  }
+  const records = {};
+  periodDates.forEach((date, i) => {
+    const rec = byYm[ymKey(date.y, date.m)][String(date.d)];
+    if (rec) records[String(i + 1)] = rec;
+  });
+  return records;
+}
+
 async function renderDayTable() {
   const employee = await currentEmployee();
   const ym = document.getElementById('monthInput').value;
@@ -70,25 +91,31 @@ async function renderDayTable() {
   tbody.innerHTML = '';
   if (!employee || !ym) return;
 
-  const records = await getMonthAttendance(employee.id, ym);
-  const [y, m] = ym.split('-').map(Number);
-  const daysInMonth = new Date(y, m, 0).getDate();
-  const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, daysInMonth);
   const company = await getCompany();
-  const weeklyByDay = computeWeeklyOvertimeByDay(records, overtimeByDay, daysInMonth, y, m, company.weekStartDay);
+  const [y, m] = ym.split('-').map(Number);
+  const periodDates = buildPayPeriodDates(y, m, company.paycheckClosingDay);
+  const first = periodDates[0];
+  const last = periodDates[periodDates.length - 1];
+  document.getElementById('periodRangeLabel').textContent =
+    `※ 対象期間：${first.y}/${first.m}/${first.d} 〜 ${last.y}/${last.m}/${last.d}（会社マスタ管理の賃金締日に基づく）`;
+  const records = await fetchPeriodRecords(employee.id, periodDates);
+  const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, periodDates.length);
+  const weeklyByDay = computeWeeklyOvertimeByDay(records, overtimeByDay, periodDates, company.weekStartDay);
   let workedTotal = 0;
   let weeklyOvertimeTotal = 0;
 
-  for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(y, m - 1, d);
-    const weekday = WEEKDAY_LABELS[date.getDay()];
-    const rec = records[String(d)] || { clockIn: '', clockOut: '', breakMinutes: 60, status: defaultStatusForWeekday(date.getDay(), company) };
+  periodDates.forEach((date, i) => {
+    const idx = i + 1;
+    const jsDate = new Date(date.y, date.m - 1, date.d);
+    const dow = jsDate.getDay();
+    const weekday = WEEKDAY_LABELS[dow];
+    const rec = records[String(idx)] || { clockIn: '', clockOut: '', breakMinutes: 60, status: defaultStatusForWeekday(dow, company) };
     const scheduledStart = rec.scheduledStart || employee.workStart || '';
     const scheduledEnd = rec.scheduledEnd || employee.workEnd || '';
     const worked = computeWorkedMinutes(rec);
     workedTotal += worked || 0;
-    weeklyOvertimeTotal += weeklyByDay[d];
-    const dayValues = Object.assign({ weeklyOvertime: weeklyByDay[d] }, overtimeByDay[d]);
+    weeklyOvertimeTotal += weeklyByDay[idx];
+    const dayValues = Object.assign({ weeklyOvertime: weeklyByDay[idx] }, overtimeByDay[idx]);
     const categoryCells = OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY
       .map((key) => `<td class="computed" data-role="${key}">${fmtHm(dayValues[key])}</td>`)
       .join('');
@@ -97,7 +124,7 @@ async function renderDayTable() {
     tr.className = rec.status && rec.status !== 'normal' ? `row-${rec.status}` : '';
     const isTimeless = rec.status === 'absence' || rec.status === 'paid_leave';
     tr.innerHTML = `
-      <td class="date-cell ${date.getDay() === 0 ? 'is-weekend' : ''} ${date.getDay() === 6 ? 'is-saturday' : ''}">${m}/${d} (${weekday})</td>
+      <td class="date-cell ${dow === 0 ? 'is-weekend' : ''} ${dow === 6 ? 'is-saturday' : ''}">${date.m}/${date.d} (${weekday})</td>
       <td>
         <select data-field="status">
           <option value="normal" ${rec.status === 'normal' ? 'selected' : ''}>通常</option>
@@ -115,9 +142,10 @@ async function renderDayTable() {
       <td class="computed" data-role="worked">${fmtHm(worked)}</td>
       ${categoryCells}
     `;
-    tr.dataset.day = d;
+    tr.dataset.actualYm = ymKey(date.y, date.m);
+    tr.dataset.actualDay = date.d;
     tbody.appendChild(tr);
-  }
+  });
 
   const monthTotalsWithWeekly = Object.assign({ weeklyOvertime: weeklyOvertimeTotal, worked: workedTotal }, monthTotals);
   renderMonthTotalRow('monthTotalTopRow', monthTotalsWithWeekly);
@@ -129,7 +157,8 @@ async function renderDayTable() {
   // ピッカーを閉じた（フォーカスが外れた）タイミングである'blur'で判定する
   // （'change'で判定すると、退勤時刻を選び終える前に保存されてしまう）。
   tbody.querySelectorAll('tr').forEach((tr) => {
-    const day = tr.dataset.day;
+    const actualYm = tr.dataset.actualYm;
+    const actualDay = tr.dataset.actualDay;
     const statusSelect = tr.querySelector('[data-field="status"]');
     const clockInEl = tr.querySelector('[data-field="clockIn"]');
     const clockOutEl = tr.querySelector('[data-field="clockOut"]');
@@ -143,18 +172,18 @@ async function renderDayTable() {
       const timeless = statusSelect.value === 'absence' || statusSelect.value === 'paid_leave';
       tr.querySelectorAll('[data-field="clockIn"], [data-field="clockOut"], [data-field="scheduledStart"], [data-field="scheduledEnd"], [data-field="breakMinutes"]')
         .forEach((el) => { el.disabled = timeless; });
-      if (isReadyToSave()) saveRow(employee, ym, day, tr);
+      if (isReadyToSave()) saveRow(employee, actualYm, actualDay, tr);
     });
     [clockInEl, clockOutEl, scheduledStartEl, scheduledEndEl].forEach((el) => {
-      el.addEventListener('blur', () => { if (isReadyToSave()) saveRow(employee, ym, day, tr); });
+      el.addEventListener('blur', () => { if (isReadyToSave()) saveRow(employee, actualYm, actualDay, tr); });
     });
     tr.querySelector('[data-field="breakMinutes"]').addEventListener('change', () => {
-      if (isReadyToSave()) saveRow(employee, ym, day, tr);
+      if (isReadyToSave()) saveRow(employee, actualYm, actualDay, tr);
     });
   });
 }
 
-async function saveRow(employee, ym, day, tr) {
+async function saveRow(employee, actualYm, actualDay, tr) {
   const status = tr.querySelector('[data-field="status"]').value;
   const record = {
     status,
@@ -164,7 +193,7 @@ async function saveRow(employee, ym, day, tr) {
     scheduledEnd: tr.querySelector('[data-field="scheduledEnd"]').value,
     breakMinutes: Number(tr.querySelector('[data-field="breakMinutes"]').value) || 0,
   };
-  await setDayAttendance(employee.id, ym, day, record);
+  await setDayAttendance(employee.id, actualYm, actualDay, record);
   await renderDayTable();
   await renderSummary();
 }

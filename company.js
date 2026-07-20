@@ -27,6 +27,8 @@ async function loadFormFromCompany() {
   document.getElementById('statutoryHolidayWeekday').value = String(company.statutoryHolidayWeekday);
   document.getElementById('scheduledHolidayWeekday').value = String(company.scheduledHolidayWeekday);
   document.getElementById('weekStartDay').value = String(company.weekStartDay);
+  populateDayOfMonthSelect('paycheckClosingDay', String(company.paycheckClosingDay));
+  populateDayOfMonthSelect('paycheckPaymentDay', String(company.paycheckPaymentDay));
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
   populatePrefectureSelect('prefecture', company.prefecture);
   populateIndustrySelect('industryType', company.industryType);
@@ -43,6 +45,8 @@ function collectFormAsCompany() {
     statutoryHolidayWeekday: Number(document.getElementById('statutoryHolidayWeekday').value),
     scheduledHolidayWeekday: Number(document.getElementById('scheduledHolidayWeekday').value),
     weekStartDay: Number(document.getElementById('weekStartDay').value),
+    paycheckClosingDay: document.getElementById('paycheckClosingDay').value,
+    paycheckPaymentDay: document.getElementById('paycheckPaymentDay').value,
     healthInsuranceType: document.getElementById('healthInsuranceType').value,
     prefecture: document.getElementById('prefecture').value,
     healthRate: Number(document.getElementById('healthRate').value) || 0,

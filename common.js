@@ -118,6 +118,24 @@ function populateIndustrySelect(selectId, selected) {
   }
 }
 
+// 賃金締日・賃金支払日など「月の日付（1〜31日、または末日）」を選ぶ選択肢を生成する
+function populateDayOfMonthSelect(selectId, selected) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  select.innerHTML = '';
+  const endOption = document.createElement('option');
+  endOption.value = 'end';
+  endOption.textContent = '末日';
+  select.appendChild(endOption);
+  for (let d = 1; d <= 31; d++) {
+    const option = document.createElement('option');
+    option.value = String(d);
+    option.textContent = `${d}日`;
+    select.appendChild(option);
+  }
+  select.value = selected || 'end';
+}
+
 // ---------------------------------------------------------------------------
 // 明細の印刷・Excel出力・コピー（給与計算画面・賞与計算画面で共用）
 // ---------------------------------------------------------------------------

@@ -765,41 +765,90 @@ const WEEKLY_LEGAL_LIMIT_MIN = 40 * 60;
 // その週の最終日（起算日の前日にあたる曜日）に計上する。1日8時間超の分は既に
 // computeOvertimeCategoryBreakdownの法定外区分でカウント済みのため、その週分
 // を差し引いた「週40時間超過のみに起因する分」だけを返す（二重計上を避けるため）。
-// 月をまたぐ週は、その月に含まれる日数分のみで計算する概算（前月分は参照しない）。
-// records/perDay: computeOvertimeCategoryBreakdownの引数・戻り値のperDayと同じもの
-function computeWeeklyOvertimeByDay(records, perDay, daysInMonth, year, month, weekStartDay) {
+// 法定休日出勤（週1回の法定休日）は週40時間の算定対象から除外するが、所定休日
+// 出勤は対象に含める（法定休日以外の労働は通常どおり週40時間の枠内として扱う
+// ため）。所定休日の時間は日次の法定外区分に計上されないため、この時間を含めて
+// もweekDailyOvertimeMin側との二重計上にはならない。
+// 対象期間の外の週データは参照しない概算（前月・前期間分までは遡らない）。
+// records/perDay: computeOvertimeCategoryBreakdownの引数・戻り値のperDayと同じ
+// （キーは1始まりの連番。periodDatesとインデックスが対応する）
+// periodDates: buildCalendarMonthDates/buildPayPeriodDatesの戻り値（日付昇順の配列）
+function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay) {
   const result = {};
   let weekWorkedMin = 0;
   let weekDailyOvertimeMin = 0;
 
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dow = new Date(year, month - 1, d).getDay();
-    const rec = records[String(d)];
-    if (rec && rec.status === 'normal') {
+  for (let i = 0; i < periodDates.length; i++) {
+    const idx = i + 1;
+    const { y, m, d } = periodDates[i];
+    const dow = new Date(y, m - 1, d).getDay();
+    const rec = records[String(idx)];
+    if (rec && (rec.status === 'normal' || isScheduledHolidayStatus(rec.status))) {
       const inMin = timeToMinutes(rec.clockIn);
       const outMin = timeToMinutes(rec.clockOut);
       if (inMin !== null && outMin !== null) {
         const rawEnd = outMin <= inMin ? outMin + 24 * 60 : outMin;
         const breakMin = Number(rec.breakMinutes) || 0;
         weekWorkedMin += Math.max(0, (rawEnd - inMin) - breakMin);
-        const day = perDay[d];
+        const day = perDay[idx];
         weekDailyOvertimeMin += day.overtimeWithin60 + day.overtimeWithin60Night
           + day.overtimeOver60 + day.overtimeOver60Night;
       }
     }
 
     const isLastDayOfWeek = dow === (weekStartDay + 6) % 7;
-    if (isLastDayOfWeek || d === daysInMonth) {
+    if (isLastDayOfWeek || i === periodDates.length - 1) {
       const weeklyOvertimeMin = Math.max(0, weekWorkedMin - WEEKLY_LEGAL_LIMIT_MIN);
-      result[d] = Math.max(0, weeklyOvertimeMin - weekDailyOvertimeMin);
+      result[idx] = Math.max(0, weeklyOvertimeMin - weekDailyOvertimeMin);
       weekWorkedMin = 0;
       weekDailyOvertimeMin = 0;
     } else {
-      result[d] = 0;
+      result[idx] = 0;
     }
   }
 
   return result;
+}
+
+// ----------------------------------------------------------------------
+// 給与計算期間（賃金締日）ヘルパー
+// ----------------------------------------------------------------------
+// カレンダー月そのものを1始まりの連番付き日付リストにする
+function buildCalendarMonthDates(year, month) {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const dates = [];
+  for (let d = 1; d <= daysInMonth; d++) dates.push({ y: year, m: month, d });
+  return dates;
+}
+
+// year年month月における実質的な締日（その月の日数を超える場合はその月の末日に丸める）
+function effectiveClosingDate(year, month, closingDay) {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const day = Math.min(Number(closingDay), daysInMonth);
+  return new Date(year, month - 1, day);
+}
+
+// 「year年month月に締める給与計算期間」の日付リストを構築する。
+// closingDayが'end'（末日）または未設定ならカレンダー月そのもの。
+// 数値（1〜31）の場合は「前月の実質締日の翌日 〜 当月の実質締日」を返す
+// （締日が31日等でその月に存在しない場合はその月の末日に丸められる）。
+function buildPayPeriodDates(year, month, closingDay) {
+  if (!closingDay || closingDay === 'end') return buildCalendarMonthDates(year, month);
+
+  const endDate = effectiveClosingDate(year, month, closingDay);
+  let prevYear = year;
+  let prevMonth = month - 1;
+  if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
+  const startDate = effectiveClosingDate(prevYear, prevMonth, closingDay);
+  startDate.setDate(startDate.getDate() + 1);
+
+  const dates = [];
+  const cur = new Date(startDate);
+  while (cur <= endDate) {
+    dates.push({ y: cur.getFullYear(), m: cur.getMonth() + 1, d: cur.getDate() });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
 }
 
 // ----------------------------------------------------------------------
