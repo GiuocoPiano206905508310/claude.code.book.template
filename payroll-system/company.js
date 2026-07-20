@@ -25,6 +25,7 @@ function applyIndustryRateToForm() {
 async function loadFormFromCompany() {
   const company = await getCompany();
   document.getElementById('statutoryHolidayWeekday').value = String(company.statutoryHolidayWeekday);
+  document.getElementById('scheduledHolidayWeekday').value = String(company.scheduledHolidayWeekday);
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
   populatePrefectureSelect('prefecture', company.prefecture);
   populateIndustrySelect('industryType', company.industryType);
@@ -39,6 +40,7 @@ async function loadFormFromCompany() {
 function collectFormAsCompany() {
   return {
     statutoryHolidayWeekday: Number(document.getElementById('statutoryHolidayWeekday').value),
+    scheduledHolidayWeekday: Number(document.getElementById('scheduledHolidayWeekday').value),
     healthInsuranceType: document.getElementById('healthInsuranceType').value,
     prefecture: document.getElementById('prefecture').value,
     healthRate: Number(document.getElementById('healthRate').value) || 0,
