@@ -74,7 +74,8 @@ function loadFormForEmployeeMonth() {
   if (!employee || !ym) return;
 
   currentAttendanceSummary = computeMonthSummary(employee, ym);
-  const overtimeBaseWage = employee.baseSalary + sumNonExcludedAllowances(employee.allowances);
+  const commuteAllowanceForOvertimeBase = employee.commuteAllowanceExcludeFromOvertimeBase === false ? (employee.commuteAllowance || 0) : 0;
+  const overtimeBaseWage = employee.baseSalary + sumNonExcludedAllowances(employee.allowances) + commuteAllowanceForOvertimeBase;
   currentAutoOvertimePay = calcOvertimePayFromHours(
     overtimeBaseWage, employee.monthlyStandardHours, currentAttendanceSummary.overtimeHours, employee.overtimeWithin60Rate
   );
