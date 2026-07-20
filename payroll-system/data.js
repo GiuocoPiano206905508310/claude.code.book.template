@@ -139,6 +139,8 @@ async function getMonthAttendance(employeeId, ym) {
     result[String(row.day)] = {
       clockIn: row.clock_in || '',
       clockOut: row.clock_out || '',
+      scheduledStart: row.scheduled_start || '',
+      scheduledEnd: row.scheduled_end || '',
       breakMinutes: row.break_minutes,
       status: row.status,
     };
@@ -161,6 +163,8 @@ async function setDayAttendance(employeeId, ym, day, record) {
     day: Number(day),
     clock_in: record.clockIn || null,
     clock_out: record.clockOut || null,
+    scheduled_start: record.scheduledStart || null,
+    scheduled_end: record.scheduledEnd || null,
     break_minutes: Number(record.breakMinutes) || 0,
     status: record.status || 'normal',
   }, { onConflict: 'employee_id,ym,day' });
@@ -189,8 +193,8 @@ async function computeMonthSummary(employee, ym) {
   const [y, m] = ym.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
   const standardDailyMinutes = (employee.standardDailyHours || 8) * 60;
-  const stdStartMin = timeToMinutes(employee.workStart || '09:00');
-  const stdEndMin = timeToMinutes(employee.workEnd || '18:00');
+  const defaultStdStartMin = timeToMinutes(employee.workStart || '09:00');
+  const defaultStdEndMin = timeToMinutes(employee.workEnd || '18:00');
 
   let workedMinutesTotal = 0;
   let overtimeMinutesTotal = 0;
@@ -224,6 +228,8 @@ async function computeMonthSummary(employee, ym) {
       continue;
     }
 
+    const stdStartMin = timeToMinutes(rec.scheduledStart) ?? defaultStdStartMin;
+    const stdEndMin = timeToMinutes(rec.scheduledEnd) ?? defaultStdEndMin;
     if (inMin > stdStartMin) { lateMinutesTotal += (inMin - stdStartMin); lateCount++; }
     if (outMin < stdEndMin && worked < standardDailyMinutes) { earlyLeaveMinutesTotal += (stdEndMin - outMin); earlyLeaveCount++; }
     if (worked > standardDailyMinutes) overtimeMinutesTotal += (worked - standardDailyMinutes);
