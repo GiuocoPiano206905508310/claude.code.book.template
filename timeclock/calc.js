@@ -455,6 +455,7 @@ function calculateMonthlyPayroll(input) {
     baseSalary, overtimePay, taxableAllowance, commuteAllowance,
     dependents, residentTax,
     healthRate, careRate, pensionRate, employmentRate,
+    fixedOvertimePay, excessOvertimePay,
   } = input;
 
   const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
@@ -465,8 +466,8 @@ function calculateMonthlyPayroll(input) {
   const hasCare = subjectSocialInsurance && ageRule.care;
   const hasPension = subjectSocialInsurance && ageRule.pension;
 
-  const grossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
-  const socialInsuranceBase = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
+  const grossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance + (fixedOvertimePay || 0) + (excessOvertimePay || 0);
+  const socialInsuranceBase = grossPay;
 
   const healthInsurance = hasHealth ? Math.round(socialInsuranceBase * healthRate / 2) : 0;
   const careInsurance = hasCare ? Math.round(socialInsuranceBase * careRate / 2) : 0;
@@ -652,6 +653,53 @@ function defaultOvertimeRates() {
   const rates = {};
   OVERTIME_RATE_CATEGORIES.forEach((c) => { rates[c.key] = c.defaultRate; });
   return rates;
+}
+
+// ----------------------------------------------------------------------
+// 固定残業代（みなし残業代）の計算基礎として選択可能な割増区分
+// minuteKeys: 当月の集計値（overtimeCategoryMonthTotals）における分数キー。
+// 「週残業」「週深夜残業時間」は日次区分（法定外60内・深夜）とは別に集計されて
+// いるが、同じ割増率で計算される時間のため、対応する日次区分と合算して
+// 1つの選択肢として扱う。
+// rateKey: 従業員マスタの割増率（OVERTIME_RATE_CATEGORIESのkey）のうち、
+// この区分の実際の計算に使用するもの。
+// ----------------------------------------------------------------------
+const FIXED_OVERTIME_BASE_CATEGORIES = [
+  { key: 'within60Combined', label: '法定外60内+週残業(1.25倍)', minuteKeys: ['overtimeWithin60', 'weeklyOvertime'], rateKey: 'overtimeWithin60Rate' },
+  { key: 'over60', label: '法定外60超(1.50倍)', minuteKeys: ['overtimeOver60'], rateKey: 'overtimeOver60Rate' },
+  { key: 'statutoryHoliday', label: '法定休日(1.35倍)', minuteKeys: ['statutoryHoliday'], rateKey: 'statutoryHolidayRate' },
+  { key: 'lateNightCombined', label: '深夜+ 週深夜残業時間(0.25倍)', minuteKeys: ['lateNight', 'weeklyOvertimeNight'], rateKey: 'lateNightRate' },
+  { key: 'within60Night', label: '法定外60内+深夜(1.50倍)', minuteKeys: ['overtimeWithin60Night'], rateKey: 'overtimeWithin60NightRate' },
+  { key: 'over60Night', label: '法定外60超+深夜(1.75倍)', minuteKeys: ['overtimeOver60Night'], rateKey: 'overtimeOver60NightRate' },
+  { key: 'statutoryHolidayNight', label: '法定休日+深夜(1.60倍)', minuteKeys: ['statutoryHolidayNight'], rateKey: 'statutoryHolidayNightRate' },
+];
+const DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES = ['within60Combined'];
+
+// 固定残業代の対象時間に対する実際の残業代と、それを超過した分（超過残業代）を計算する。
+// 「固定残業代の計算の基礎」で選択された区分の当月の実労働時間を合算し、従業員マスタの
+// 「月固定残業時間数」と比較する。超過分の金額は、選択された各区分の実際の内訳に応じた
+// 加重平均割増率（＝選択区分の実際の割増賃金合計 ÷ 実際の合計時間）で按分して算出する
+// （区分を1つだけ選択している通常のケースでは、単純に「時給×超過時間×その区分の割増率」
+// と一致する）。
+// hourlyWage: 1時間あたりの賃金（基本給＋割増賃金の基礎に含む手当を月平均所定労働時間で除したもの）
+// fixedHours: 従業員マスタの「月固定残業時間数」
+// selectedKeys: 従業員マスタの「固定残業代の計算の基礎」で選択されたキーの配列
+// monthlyMinutesByKey: 当月の日次勤怠から集計した区分別の分数（法定外60内・週残業等を含む）
+// employeeRates: 従業員マスタの割増率（OVERTIME_RATE_CATEGORIESのkeyをプロパティ名とする）
+function calcFixedOvertimeExcess(hourlyWage, fixedHours, selectedKeys, monthlyMinutesByKey, employeeRates) {
+  let actualMinutes = 0;
+  let actualPay = 0;
+  FIXED_OVERTIME_BASE_CATEGORIES.forEach((cat) => {
+    if (!selectedKeys || !selectedKeys.includes(cat.key)) return;
+    const minutes = cat.minuteKeys.reduce((sum, k) => sum + (Number(monthlyMinutesByKey[k]) || 0), 0);
+    const rate = Number(employeeRates[cat.rateKey]) || 0;
+    actualMinutes += minutes;
+    actualPay += (minutes / 60) * hourlyWage * rate;
+  });
+  const actualHours = actualMinutes / 60;
+  const excessHours = Math.max(0, actualHours - (Number(fixedHours) || 0));
+  const excessPay = actualHours > 0 ? Math.round(excessHours * (actualPay / actualHours)) : 0;
+  return { actualHours, actualPay: Math.round(actualPay), excessHours, excessPay };
 }
 
 // rateキー（末尾Rate）に対応する、分数を積み上げる集計キー

@@ -12,6 +12,32 @@ function applyEmploymentTypeLabelToForm() {
 }
 
 // ---------------------------------------------------------------------------
+// 固定残業代（みなし残業代）
+// ---------------------------------------------------------------------------
+function applyFixedOvertimeVisibility() {
+  const enabled = document.getElementById('fixedOvertimeEnabled').value === 'yes';
+  document.getElementById('fixedOvertimeFields').style.display = enabled ? '' : 'none';
+}
+
+function renderFixedOvertimeBaseList(selectedKeys) {
+  const selected = selectedKeys && selectedKeys.length ? selectedKeys : DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES;
+  const container = document.getElementById('fixedOvertimeBaseList');
+  container.innerHTML = FIXED_OVERTIME_BASE_CATEGORIES.map((c) => `
+    <div class="checkbox-row">
+      <input type="checkbox" id="fixedOvertimeBase_${c.key}" ${selected.includes(c.key) ? 'checked' : ''}>
+      <label for="fixedOvertimeBase_${c.key}">${c.label}</label>
+    </div>
+  `).join('');
+}
+
+function collectFixedOvertimeBaseFromForm() {
+  const keys = FIXED_OVERTIME_BASE_CATEGORIES
+    .filter((c) => document.getElementById(`fixedOvertimeBase_${c.key}`).checked)
+    .map((c) => c.key);
+  return keys.length ? keys : DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES.slice();
+}
+
+// ---------------------------------------------------------------------------
 // 生年月日 → 現在の年齢（日本時間でリアルタイムに更新）
 // ---------------------------------------------------------------------------
 function updateAgeDisplay() {
@@ -241,6 +267,12 @@ function resetForm() {
   document.getElementById('employmentType').value = '正社員';
   document.getElementById('birthDate').value = '1990-01-01';
   document.getElementById('baseSalary').value = '280,000';
+  document.getElementById('fixedOvertimeEnabled').value = 'no';
+  document.getElementById('fixedOvertimeAllowanceName').value = '固定残業手当';
+  document.getElementById('fixedOvertimeMonthlyHours').value = '30';
+  document.getElementById('fixedOvertimeAmount').value = '50,000';
+  renderFixedOvertimeBaseList(DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES);
+  applyFixedOvertimeVisibility();
   renderAllowanceRows([{ name: 'その他手当', amount: 10000, excludeFromOvertimeBase: false }]);
   document.getElementById('commuteAllowance').value = '10,000';
   document.getElementById('commuteAllowanceExclude').checked = true;
@@ -268,6 +300,12 @@ function loadFormFromEmployee(emp) {
   document.getElementById('employmentType').value = emp.employmentType;
   document.getElementById('birthDate').value = emp.birthDate || '1990-01-01';
   document.getElementById('baseSalary').value = formatThousands(emp.baseSalary);
+  document.getElementById('fixedOvertimeEnabled').value = emp.fixedOvertimeEnabled ? 'yes' : 'no';
+  document.getElementById('fixedOvertimeAllowanceName').value = emp.fixedOvertimeAllowanceName || '固定残業手当';
+  document.getElementById('fixedOvertimeMonthlyHours').value = emp.fixedOvertimeMonthlyHours || 0;
+  document.getElementById('fixedOvertimeAmount').value = formatThousands(emp.fixedOvertimeAmount || 0);
+  renderFixedOvertimeBaseList(emp.fixedOvertimeBaseCategories);
+  applyFixedOvertimeVisibility();
   const allowances = emp.allowances && emp.allowances.length
     ? emp.allowances
     : (emp.taxableAllowance ? [{ name: 'その他手当', amount: emp.taxableAllowance, excludeFromOvertimeBase: false }] : []);
@@ -304,6 +342,11 @@ function collectFormAsEmployee() {
     employmentType: document.getElementById('employmentType').value,
     birthDate: document.getElementById('birthDate').value || null,
     baseSalary: getNumInputValue('baseSalary'),
+    fixedOvertimeEnabled: document.getElementById('fixedOvertimeEnabled').value === 'yes',
+    fixedOvertimeAllowanceName: document.getElementById('fixedOvertimeAllowanceName').value.trim(),
+    fixedOvertimeMonthlyHours: Number(document.getElementById('fixedOvertimeMonthlyHours').value) || 0,
+    fixedOvertimeAmount: getNumInputValue('fixedOvertimeAmount'),
+    fixedOvertimeBaseCategories: collectFixedOvertimeBaseFromForm(),
     allowances: collectAllowancesFromForm(),
     commuteAllowance: getNumInputValue('commuteAllowance'),
     commuteAllowanceExcludeFromOvertimeBase: document.getElementById('commuteAllowanceExclude').checked,
@@ -360,6 +403,7 @@ async function renderEmployeeTable() {
 
 document.getElementById('employmentType').addEventListener('change', applyEmploymentTypeLabelToForm);
 document.getElementById('birthDate').addEventListener('change', updateAgeDisplay);
+document.getElementById('fixedOvertimeEnabled').addEventListener('change', applyFixedOvertimeVisibility);
 document.getElementById('addAllowanceBtn').addEventListener('click', addAllowanceRow);
 
 document.getElementById('saveBtn').addEventListener('click', async () => {
@@ -386,7 +430,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 });
 document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
 
-['baseSalary', 'commuteAllowance', 'residentTax'].forEach(attachThousandsFormatting);
+['baseSalary', 'fixedOvertimeAmount', 'commuteAllowance', 'residentTax'].forEach(attachThousandsFormatting);
 setupFuriganaAutoFill();
 startAgeAutoUpdate();
 

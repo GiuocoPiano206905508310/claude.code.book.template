@@ -44,6 +44,13 @@ function employeeRowToObj(row) {
   OVERTIME_RATE_CATEGORIES.forEach((c) => {
     obj[c.key] = rates[c.key] !== undefined ? rates[c.key] : c.defaultRate;
   });
+  const fixedOT = row.fixed_overtime || {};
+  obj.fixedOvertimeEnabled = !!fixedOT.enabled;
+  obj.fixedOvertimeAllowanceName = fixedOT.allowanceName || '';
+  obj.fixedOvertimeMonthlyHours = Number(fixedOT.monthlyHours) || 0;
+  obj.fixedOvertimeAmount = Number(fixedOT.amount) || 0;
+  obj.fixedOvertimeBaseCategories = Array.isArray(fixedOT.baseCategories) && fixedOT.baseCategories.length
+    ? fixedOT.baseCategories : DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES.slice();
   return obj;
 }
 
@@ -71,6 +78,14 @@ function employeeObjToRow(emp, userId) {
     monthly_standard_hours: emp.monthlyStandardHours,
     monthly_standard_days: emp.monthlyStandardDays,
     overtime_rates: rates,
+    fixed_overtime: {
+      enabled: !!emp.fixedOvertimeEnabled,
+      allowanceName: emp.fixedOvertimeAllowanceName || '',
+      monthlyHours: Number(emp.fixedOvertimeMonthlyHours) || 0,
+      amount: Number(emp.fixedOvertimeAmount) || 0,
+      baseCategories: (emp.fixedOvertimeBaseCategories && emp.fixedOvertimeBaseCategories.length)
+        ? emp.fixedOvertimeBaseCategories : DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES.slice(),
+    },
     updated_at: new Date().toISOString(),
   };
 }
@@ -187,8 +202,11 @@ const ATTENDANCE_STATUS_LABELS = {
   holiday_work: '休日出勤（旧）', // 旧データ互換用。以後は所定／法定休日出勤のいずれかで記録される
 };
 
-// 従業員の所定労働設定をもとに、1か月分の勤怠から集計値を計算する
-async function computeMonthSummary(employee, ym) {
+// 従業員の所定労働設定をもとに、1か月分の勤怠から集計値を計算する。
+// companyを渡すと、会社マスタ管理の「週の起算日」「週法定外労働時間」に基づく
+// 週残業・週深夜残業時間の当月合計もoventimeCategoryMonthTotalsに含める
+// （固定残業代の計算等、週残業分も含めた区分別合計が必要な場面で使用する）。
+async function computeMonthSummary(employee, ym, company) {
   const records = await getMonthAttendance(employee.id, ym);
   const [y, m] = ym.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
@@ -237,6 +255,21 @@ async function computeMonthSummary(employee, ym) {
 
   const { perDay: overtimeCategoryPerDay, monthTotals: overtimeCategoryMonthTotals } =
     computeOvertimeCategoryBreakdown(records, daysInMonth);
+
+  if (company) {
+    const periodDates = buildCalendarMonthDates(y, m);
+    const weeklyByDay = computeWeeklyOvertimeByDay(
+      records, overtimeCategoryPerDay, periodDates, company.weekStartDay, company.weeklyOvertimeThreshold
+    );
+    let weeklyOvertimeMonthTotal = 0;
+    let weeklyOvertimeNightMonthTotal = 0;
+    Object.values(weeklyByDay).forEach((w) => {
+      weeklyOvertimeMonthTotal += w.weeklyOvertime;
+      weeklyOvertimeNightMonthTotal += w.weeklyOvertimeNight;
+    });
+    overtimeCategoryMonthTotals.weeklyOvertime = weeklyOvertimeMonthTotal;
+    overtimeCategoryMonthTotals.weeklyOvertimeNight = weeklyOvertimeNightMonthTotal;
+  }
 
   return {
     ym,

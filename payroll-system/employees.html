@@ -77,6 +77,42 @@
           <span class="unit">円</span>
         </div>
       </div>
+      <div class="field-row">
+        <label for="fixedOvertimeEnabled">固定残業代（みなし残業代）の有無</label>
+        <div class="field-input">
+          <select id="fixedOvertimeEnabled">
+            <option value="no">無</option>
+            <option value="yes">有</option>
+          </select>
+        </div>
+      </div>
+      <div id="fixedOvertimeFields" style="display:none;">
+        <div class="field-row">
+          <label for="fixedOvertimeAllowanceName">手当名称</label>
+          <div class="field-input">
+            <input type="text" id="fixedOvertimeAllowanceName" placeholder="例：固定残業手当" value="固定残業手当">
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="fixedOvertimeMonthlyHours">月固定残業時間数</label>
+          <div class="field-input">
+            <input type="number" id="fixedOvertimeMonthlyHours" min="0" step="0.5" value="30">
+            <span class="unit">時間</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="fixedOvertimeAmount">金額</label>
+          <div class="field-input">
+            <input type="text" inputmode="numeric" id="fixedOvertimeAmount" value="50,000">
+            <span class="unit">円</span>
+          </div>
+        </div>
+        <div class="field-row" style="border-bottom: none; padding-bottom: 4px;">
+          <label>固定残業代の計算の基礎</label>
+        </div>
+        <div id="fixedOvertimeBaseList"></div>
+        <p class="field-note">※ 固定残業代＝1時間あたりの賃金（基本給＋割増賃金の基礎となる賃金から除外していない手当）×月固定残業時間数×選択した割増率（複数選択した場合は各区分の合計）。日次勤怠管理の実際の残業代がこの金額を超えた分は、給与計算画面で「超過残業代」として別途自動計算されます。</p>
+      </div>
       <div class="field-row" style="border-bottom: none; padding-bottom: 4px;">
         <label>その他手当（課税）</label>
       </div>
@@ -204,9 +240,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
-<script src="calc.js?v=6"></script>
-<script src="data.js?v=7"></script>
+<script src="calc.js?v=7"></script>
+<script src="data.js?v=8"></script>
 <script src="common.js?v=6"></script>
-<script src="employees.js?v=5"></script>
+<script src="employees.js?v=6"></script>
 </body>
 </html>
