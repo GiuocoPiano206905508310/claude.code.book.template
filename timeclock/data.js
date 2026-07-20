@@ -110,7 +110,7 @@ async function deleteEmployee(id) {
 // status: 'normal' | 'paid_leave' | 'absence' | 'holiday_work'
 // ---------------------------------------------------------------------------
 async function getMonthAttendance(employeeId, ym) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('attendance_records').select('*').eq('employee_id', employeeId).eq('ym', ym);
   if (error) throw error;
   const result = {};
