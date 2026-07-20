@@ -18,7 +18,7 @@
 
   <div class="notice">
     <p>※ ここで登録した情報（雇用形態・扶養人数・基本給・所定労働時間など）は、勤怠集計と給与・賞与計算で自動的に使用されます。健康保険・厚生年金・雇用保険の保険料率は<a href="company.html">会社マスタ管理</a>で設定します。</p>
-    <p>※ 入力していただいた情報は、お使いのブラウザ内（localStorage）にのみ保存され、外部のサーバーへ送信・保存されることはありません。</p>
+    <p>※ 入力していただいた情報は、あなたの会社アカウントにのみ保存され、他の会社アカウントからは見えません。</p>
   </div>
 
   <div class="grid">
@@ -37,6 +37,20 @@
           <input type="text" id="empNameKana" placeholder="例：ヤマダ タロウ">
         </div>
         <p class="field-note">※ 氏名を日本語入力（IME）で変換すると自動でフリガナが入力されます。正しく入らない場合は直接修正してください。</p>
+      </div>
+      <div class="field-row">
+        <label for="employeeCode">勤怠打刻用ユーザーID</label>
+        <div class="field-input">
+          <input type="text" id="employeeCode" placeholder="例：yamada01">
+        </div>
+        <p class="field-note">※ 勤怠打刻システムに、この従業員本人がログインする際に使用するIDです（他の従業員と重複しないIDにしてください）。</p>
+      </div>
+      <div class="field-row">
+        <label for="employeeLoginPassword">勤怠打刻用パスワード</label>
+        <div class="field-input">
+          <input type="text" id="employeeLoginPassword" placeholder="例：任意のパスワード">
+        </div>
+        <p class="field-note">※ 勤怠打刻用ユーザーIDと組み合わせてログインに使用します。給与・勤怠管理システム自体のログインパスワードとは別物です。</p>
       </div>
       <div class="field-row">
         <label for="employmentType">雇用形態</label>

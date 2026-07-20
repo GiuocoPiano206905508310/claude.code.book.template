@@ -23,6 +23,8 @@ function employeeRowToObj(row) {
     id: row.id,
     name: row.name,
     nameKana: row.name_kana || '',
+    employeeCode: row.employee_code || '',
+    loginPassword: row.login_password || '',
     employmentType: row.employment_type,
     birthDate: row.birth_date,
     baseSalary: row.base_salary,
@@ -52,6 +54,8 @@ function employeeObjToRow(emp, userId) {
     user_id: userId,
     name: emp.name,
     name_kana: emp.nameKana || null,
+    employee_code: emp.employeeCode || null,
+    login_password: emp.loginPassword || null,
     employment_type: emp.employmentType,
     birth_date: emp.birthDate || null,
     base_salary: emp.baseSalary,
@@ -77,8 +81,25 @@ async function listEmployees() {
   return data.map(employeeRowToObj);
 }
 
+// 従業員が1人でも登録されているか（打刻ログイン前の画面表示用。
+// パスワード等を含む全件データを読み込まずに済むよう件数のみ取得する）
+async function hasAnyEmployees() {
+  const { count, error } = await supabaseClient.from('employees').select('id', { count: 'exact', head: true });
+  if (error) throw error;
+  return (count || 0) > 0;
+}
+
 async function getEmployee(id) {
   const { data, error } = await supabaseClient.from('employees').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data ? employeeRowToObj(data) : null;
+}
+
+// 勤怠打刻システムの従業員ログイン用。ユーザーIDで1件だけを取得する
+// （全従業員のパスワードを一括で端末に読み込まないようにするため）
+async function getEmployeeByCode(employeeCode) {
+  const { data, error } = await supabaseClient.from('employees').select('*')
+    .eq('employee_code', employeeCode).maybeSingle();
   if (error) throw error;
   return data ? employeeRowToObj(data) : null;
 }
