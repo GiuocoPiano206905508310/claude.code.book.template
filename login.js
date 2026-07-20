@@ -73,7 +73,7 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
       return;
     }
     // 会社設定の初期レコードを作成
-    await supabase.from('company_settings').upsert({ user_id: result.user.id });
+    await supabaseClient.from('company_settings').upsert({ user_id: result.user.id });
     location.href = getNextPage();
   } catch (e) {
     errorEl.textContent = friendlyAuthError(e);

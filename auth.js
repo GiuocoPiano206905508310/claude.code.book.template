@@ -12,7 +12,7 @@ function usernameToEmail(username) {
 
 async function signUpWithUsername(username, password) {
   const email = usernameToEmail(username);
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await supabaseClient.auth.signUp({
     email,
     password,
     options: { data: { username: username.trim() } },
@@ -23,17 +23,17 @@ async function signUpWithUsername(username, password) {
 
 async function signInWithUsername(username, password) {
   const email = usernameToEmail(username);
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 }
 
 async function signOut() {
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
 }
 
 async function getCurrentUser() {
-  const { data } = await supabase.auth.getSession();
+  const { data } = await supabaseClient.auth.getSession();
   return data.session ? data.session.user : null;
 }
 

@@ -72,13 +72,13 @@ function employeeObjToRow(emp, userId) {
 }
 
 async function listEmployees() {
-  const { data, error } = await supabase.from('employees').select('*').order('name');
+  const { data, error } = await supabaseClient.from('employees').select('*').order('name');
   if (error) throw error;
   return data.map(employeeRowToObj);
 }
 
 async function getEmployee(id) {
-  const { data, error } = await supabase.from('employees').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await supabaseClient.from('employees').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   return data ? employeeRowToObj(data) : null;
 }
@@ -88,18 +88,18 @@ async function saveEmployee(emp) {
   const userId = await getCurrentUserId();
   const row = employeeObjToRow(emp, userId);
   if (emp.id) {
-    const { data, error } = await supabase.from('employees').update(row).eq('id', emp.id).select().single();
+    const { data, error } = await supabaseClient.from('employees').update(row).eq('id', emp.id).select().single();
     if (error) throw error;
     return employeeRowToObj(data);
   }
-  const { data, error } = await supabase.from('employees').insert(row).select().single();
+  const { data, error } = await supabaseClient.from('employees').insert(row).select().single();
   if (error) throw error;
   return employeeRowToObj(data);
 }
 
 // 従業員を削除すると、紐づく勤怠・給与明細・賞与明細もDBの外部キー制約により自動削除される
 async function deleteEmployee(id) {
-  const { error } = await supabase.from('employees').delete().eq('id', id);
+  const { error } = await supabaseClient.from('employees').delete().eq('id', id);
   if (error) throw error;
 }
 
@@ -127,13 +127,13 @@ async function getMonthAttendance(employeeId, ym) {
 
 async function setDayAttendance(employeeId, ym, day, record) {
   if (record === null) {
-    const { error } = await supabase.from('attendance_records').delete()
+    const { error } = await supabaseClient.from('attendance_records').delete()
       .eq('employee_id', employeeId).eq('ym', ym).eq('day', day);
     if (error) throw error;
     return;
   }
   const userId = await getCurrentUserId();
-  const { error } = await supabase.from('attendance_records').upsert({
+  const { error } = await supabaseClient.from('attendance_records').upsert({
     user_id: userId,
     employee_id: employeeId,
     ym,
@@ -226,7 +226,7 @@ async function computeMonthSummary(employee, ym) {
 // ---------------------------------------------------------------------------
 async function savePayslip(employeeId, ym, data) {
   const userId = await getCurrentUserId();
-  const { error } = await supabase.from('payslips').upsert({
+  const { error } = await supabaseClient.from('payslips').upsert({
     user_id: userId,
     employee_id: employeeId,
     ym,
@@ -238,14 +238,14 @@ async function savePayslip(employeeId, ym, data) {
 }
 
 async function getPayslip(employeeId, ym) {
-  const { data, error } = await supabase.from('payslips').select('*')
+  const { data, error } = await supabaseClient.from('payslips').select('*')
     .eq('employee_id', employeeId).eq('ym', ym).maybeSingle();
   if (error) throw error;
   return data ? { input: data.input, result: data.result, savedAt: data.saved_at } : null;
 }
 
 async function listPayslips(employeeId) {
-  const { data, error } = await supabase.from('payslips').select('*').eq('employee_id', employeeId);
+  const { data, error } = await supabaseClient.from('payslips').select('*').eq('employee_id', employeeId);
   if (error) throw error;
   const result = {};
   for (const row of data) result[row.ym] = { input: row.input, result: row.result, savedAt: row.saved_at };
@@ -253,7 +253,7 @@ async function listPayslips(employeeId) {
 }
 
 async function deletePayslip(employeeId, ym) {
-  const { error } = await supabase.from('payslips').delete().eq('employee_id', employeeId).eq('ym', ym);
+  const { error } = await supabaseClient.from('payslips').delete().eq('employee_id', employeeId).eq('ym', ym);
   if (error) throw error;
 }
 
@@ -265,7 +265,7 @@ function bonusRowToObj(row) {
 }
 
 async function listBonuses(employeeId) {
-  const { data, error } = await supabase.from('bonuses').select('*')
+  const { data, error } = await supabaseClient.from('bonuses').select('*')
     .eq('employee_id', employeeId).order('bonus_date', { ascending: true });
   if (error) throw error;
   return data.map(bonusRowToObj);
@@ -273,7 +273,7 @@ async function listBonuses(employeeId) {
 
 async function saveBonusRecord(employeeId, bonusRecord) {
   if (bonusRecord.id) {
-    const { data, error } = await supabase.from('bonuses').update({
+    const { data, error } = await supabaseClient.from('bonuses').update({
       label: bonusRecord.label || null,
       bonus_date: bonusRecord.date || null,
       input: bonusRecord.input,
@@ -283,7 +283,7 @@ async function saveBonusRecord(employeeId, bonusRecord) {
     return bonusRowToObj(data);
   }
   const userId = await getCurrentUserId();
-  const { data, error } = await supabase.from('bonuses').insert({
+  const { data, error } = await supabaseClient.from('bonuses').insert({
     user_id: userId,
     employee_id: employeeId,
     label: bonusRecord.label || null,
@@ -296,7 +296,7 @@ async function saveBonusRecord(employeeId, bonusRecord) {
 }
 
 async function deleteBonusRecord(employeeId, bonusId) {
-  const { error } = await supabase.from('bonuses').delete().eq('id', bonusId).eq('employee_id', employeeId);
+  const { error } = await supabaseClient.from('bonuses').delete().eq('id', bonusId).eq('employee_id', employeeId);
   if (error) throw error;
 }
 
@@ -318,7 +318,7 @@ function defaultCompany() {
 }
 
 async function getCompany() {
-  const { data, error } = await supabase.from('company_settings').select('*').maybeSingle();
+  const { data, error } = await supabaseClient.from('company_settings').select('*').maybeSingle();
   if (error) throw error;
   if (!data) return defaultCompany();
   return {
@@ -336,7 +336,7 @@ async function getCompany() {
 
 async function saveCompany(company) {
   const userId = await getCurrentUserId();
-  const { error } = await supabase.from('company_settings').upsert({
+  const { error } = await supabaseClient.from('company_settings').upsert({
     user_id: userId,
     company_name: company.companyName || null,
     health_insurance_type: company.healthInsuranceType,
