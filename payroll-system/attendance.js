@@ -113,7 +113,8 @@ async function renderDayTable() {
   const records = await fetchPeriodRecords(employee.id, periodDates);
   const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, periodDates.length);
   const weeklyByDay = computeWeeklyOvertimeByDay(records, overtimeByDay, periodDates, company.weekStartDay);
-  const midHeaderInsertAt = computeMidHeaderInsertIndex(periodDates);
+  const showMidHeader = document.getElementById('showMidHeaderCheckbox').checked;
+  const midHeaderInsertAt = showMidHeader ? computeMidHeaderInsertIndex(periodDates) : -1;
   const headerRowTemplate = document.getElementById('dayTableHeaderRow');
   let workedTotal = 0;
   let weeklyOvertimeTotal = 0;
@@ -254,6 +255,7 @@ async function refreshAll() {
 
 document.getElementById('employeeSelect').addEventListener('change', refreshAll);
 document.getElementById('monthInput').addEventListener('change', refreshAll);
+document.getElementById('showMidHeaderCheckbox').addEventListener('change', renderDayTable);
 
 (async () => {
   const user = await requireAuth();
