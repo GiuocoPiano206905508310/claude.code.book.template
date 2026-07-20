@@ -589,9 +589,25 @@ function calcAbsenceDeduction(baseSalary, monthlyStandardDays, absenceDays) {
 // ----------------------------------------------------------------------
 // 年齢・年齢区分ヘルパー（日本時間基準でリアルタイムに算定）
 // ----------------------------------------------------------------------
-// 実行環境のタイムゾーンに関わらず「日本時間の現在日時」を取得する
+// 実行環境のタイムゾーンに関わらず「日本時間の現在日時」を取得する。
+// toLocaleString()の出力を再度Dateに文字列パースさせる方式は、パース結果が
+// 実装依存（ブラウザ間で非互換）でSafari等では正しく動かないことがあるため、
+// Intl.DateTimeFormatで日本時間の各フィールドを取得し、数値から組み立てる。
 function getJstNow() {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date());
+  const get = (type) => Number(parts.find((p) => p.type === type).value);
+  const year = get('year');
+  const month = get('month');
+  const day = get('day');
+  const hour = get('hour') % 24; // 一部の実装で深夜0時が"24"として返るための補正
+  const minute = get('minute');
+  const second = get('second');
+  return new Date(year, month - 1, day, hour, minute, second);
 }
 
 // birthDate: 'YYYY-MM-DD' / asOfDate: 基準日（省略時は日本時間の現在日時）
