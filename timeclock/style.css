@@ -448,6 +448,9 @@ table.day-table td.computed { font-variant-numeric: tabular-nums; color: var(--i
 table.day-table tr.row-absence { background: var(--stamp-bg); }
 table.day-table tr.row-paid_leave { background: var(--warn-bg); }
 table.day-table tr.row-holiday_work { background: rgba(31,78,121,0.06); }
+table.day-table tr.month-total-row { background: var(--surface-line); font-weight: 600; }
+table.day-table tr.month-total-row td.computed { color: var(--ink); }
+table.day-table tr.month-total-row td:first-child { text-align: left; }
 
 /* ---------- payslip ---------- */
 .payslip { padding: 0; overflow: hidden; }
