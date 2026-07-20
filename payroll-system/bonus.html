@@ -20,6 +20,7 @@
     <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
     <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「賞与に対する源泉徴収税額の算出率の表（令和8年分）」に基づき計算しますが、概算の範囲にとどまります。</p>
     <p>※ 雇用形態・年齢区分・扶養親族等の数・甲欄乙欄は、<a href="employees.html">従業員マスタ管理</a>で登録した内容がそのまま使用されます。変更する場合は従業員マスタ管理で編集してください。</p>
+    <p>※ 源泉所得税の計算方法・保険料率（健康保険・介護保険・厚生年金・雇用保険）は、<a href="company.html">会社マスタ管理</a>で設定した内容がそのまま使用されます。変更する場合は会社マスタ管理で編集してください。</p>
   </div>
 
   <div class="toolbar">
@@ -35,6 +36,7 @@
 
   <div id="bonusContent">
     <div class="summary-grid" id="employeeInfoGrid"></div>
+    <div class="summary-grid" id="companyInfoGrid"></div>
     <div class="grid">
       <section class="card form-card" aria-label="賞与支給項目の入力">
         <h2>賞与支給項目</h2>
@@ -49,15 +51,6 @@
           <label for="bonusDate">支給日</label>
           <div class="field-input">
             <input type="date" id="bonusDate">
-          </div>
-        </div>
-        <div class="field-row">
-          <label for="calcMethod">源泉所得税の計算方法</label>
-          <div class="field-input">
-            <select id="calcMethod">
-              <option value="table">月額表</option>
-              <option value="machine">機械計算（甲欄のみ）</option>
-            </select>
           </div>
         </div>
         <div class="field-row">
@@ -85,70 +78,18 @@
           </div>
         </div>
 
-        <h2 class="section-2" id="rateSectionHeader">保険料率設定</h2>
-        <div class="field-row" id="healthTypeFieldRow">
-          <label for="healthInsuranceType">健康保険の種類</label>
-          <div class="field-input">
-            <select id="healthInsuranceType">
-              <option value="kyoukai">協会けんぽ（都道府県単位保険料率）</option>
-              <option value="kumiai">健康保険組合（保険料率手動入力）</option>
-            </select>
-          </div>
-        </div>
-        <div class="field-row" id="prefectureFieldRow">
-          <label for="prefecture">都道府県（協会けんぽ支部）</label>
-          <div class="field-input">
-            <select id="prefecture"></select>
-          </div>
-        </div>
-        <div class="rate-grid" id="rateGrid">
-          <div class="field-row">
-            <label for="healthRate" id="healthRateLabel">健康保険料率</label>
-            <div class="field-input">
-              <input type="number" id="healthRate" min="0" step="0.01">
-              <span class="unit">%</span>
-            </div>
-          </div>
-          <div class="field-row">
-            <label for="careRate" id="careRateLabel">介護保険料率</label>
-            <div class="field-input">
-              <input type="number" id="careRate" min="0" step="0.01" readonly>
-              <span class="unit">%</span>
-            </div>
-          </div>
-          <div class="field-row">
-            <label for="pensionRate">厚生年金保険料率</label>
-            <div class="field-input">
-              <input type="number" id="pensionRate" min="0" step="0.01" readonly>
-              <span class="unit">%</span>
-            </div>
-          </div>
-        </div>
-        <div class="field-row" id="healthCumulativeRow">
+        <div class="field-row">
           <label for="healthCumulative">健康保険：本年度の標準賞与額累計（今回分を除く）</label>
           <div class="field-input">
             <input type="text" inputmode="numeric" id="healthCumulative" value="0">
             <span class="unit">円</span>
           </div>
         </div>
-        <div class="field-row" id="pensionCumulativeRow">
+        <div class="field-row">
           <label for="pensionCumulative">厚生年金：当月の標準賞与額累計（今回分を除く）</label>
           <div class="field-input">
             <input type="text" inputmode="numeric" id="pensionCumulative" value="0">
             <span class="unit">円</span>
-          </div>
-        </div>
-        <div class="field-row" id="industryFieldRow">
-          <label for="industryType">事業の種類（雇用保険）</label>
-          <div class="field-input">
-            <select id="industryType"></select>
-          </div>
-        </div>
-        <div class="field-row" id="employmentRateFieldRow">
-          <label for="employmentRate">雇用保険料率（従業員負担分）</label>
-          <div class="field-input">
-            <input type="number" id="employmentRate" min="0" step="0.01" readonly>
-            <span class="unit">%</span>
           </div>
         </div>
 
@@ -198,8 +139,8 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
 <script src="calc.js?v=6"></script>
-<script src="data.js?v=6"></script>
+<script src="data.js?v=7"></script>
 <script src="common.js?v=6"></script>
-<script src="bonus.js?v=6"></script>
+<script src="bonus.js?v=7"></script>
 </body>
 </html>
