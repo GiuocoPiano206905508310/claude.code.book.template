@@ -80,24 +80,29 @@ async function punch(kind) {
   const employee = await currentEmployee();
   if (!employee) return;
 
-  const { ym, day, hm } = todayParts();
-  const records = await getMonthAttendance(employee.id, ym);
-  const existing = records[String(day)] || {
-    status: 'normal', clockIn: '', clockOut: '', breakMinutes: 60,
-  };
-  // 欠勤・有給休暇として記録されていた日に打刻した場合は、出勤扱いに戻す
-  const status = (existing.status === 'absence' || existing.status === 'paid_leave') ? 'normal' : existing.status;
-  const record = Object.assign({}, existing, { status });
-  if (kind === 'in') {
-    record.clockIn = hm;
-  } else {
-    record.clockOut = hm;
-  }
-  await setDayAttendance(employee.id, ym, day, record);
-
   const label = kind === 'in' ? '出勤' : '退勤';
-  document.getElementById('punchStatus').innerHTML = `<strong>${escapeHtml(employee.name)}</strong> さん：${hm} に${label}を記録しました。`;
-  await renderTodayStatus();
+  const statusEl = document.getElementById('punchStatus');
+  try {
+    const { ym, day, hm } = todayParts();
+    const records = await getMonthAttendance(employee.id, ym);
+    const existing = records[String(day)] || {
+      status: 'normal', clockIn: '', clockOut: '', breakMinutes: 60,
+    };
+    // 欠勤・有給休暇として記録されていた日に打刻した場合は、出勤扱いに戻す
+    const status = (existing.status === 'absence' || existing.status === 'paid_leave') ? 'normal' : existing.status;
+    const record = Object.assign({}, existing, { status });
+    if (kind === 'in') {
+      record.clockIn = hm;
+    } else {
+      record.clockOut = hm;
+    }
+    await setDayAttendance(employee.id, ym, day, record);
+
+    statusEl.innerHTML = `<strong>${escapeHtml(employee.name)}</strong> さん：${hm} に${label}を記録しました。`;
+    await renderTodayStatus();
+  } catch (e) {
+    statusEl.innerHTML = `<span style="color:#e57373;">${label}の記録に失敗しました。通信状況を確認し、もう一度お試しください。</span>`;
+  }
 }
 
 document.getElementById('employeeSelect').addEventListener('change', renderTodayStatus);
@@ -109,10 +114,17 @@ document.getElementById('clockOutBtn').addEventListener('click', () => punch('ou
   if (!user) return;
   renderNavbarUser(user);
 
-  const hasEmployees = await populateEmployeeSelect();
-  if (hasEmployees) {
-    await renderTodayStatus();
-  }
+  // 時計表示は従業員一覧・勤怠データの通信状況に関わらず即座に動かし始める
   updateClockDisplay();
   setInterval(updateClockDisplay, 1000);
+
+  try {
+    const hasEmployees = await populateEmployeeSelect();
+    if (hasEmployees) {
+      await renderTodayStatus();
+    }
+  } catch (e) {
+    document.getElementById('punchStatus').innerHTML =
+      '<span style="color:#e57373;">従業員情報の読み込みに失敗しました。通信状況を確認し、画面を再読み込みしてください。</span>';
+  }
 })();
