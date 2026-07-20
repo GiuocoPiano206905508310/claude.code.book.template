@@ -27,6 +27,7 @@ async function loadFormFromCompany() {
   document.getElementById('statutoryHolidayWeekday').value = String(company.statutoryHolidayWeekday);
   document.getElementById('scheduledHolidayWeekday').value = String(company.scheduledHolidayWeekday);
   document.getElementById('weekStartDay').value = String(company.weekStartDay);
+  document.getElementById('weeklyOvertimeThreshold').value = String(company.weeklyOvertimeThreshold);
   populateDayOfMonthSelect('paycheckClosingDay', String(company.paycheckClosingDay));
   populateDayOfMonthSelect('paycheckPaymentDay', String(company.paycheckPaymentDay));
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
@@ -45,6 +46,7 @@ function collectFormAsCompany() {
     statutoryHolidayWeekday: Number(document.getElementById('statutoryHolidayWeekday').value),
     scheduledHolidayWeekday: Number(document.getElementById('scheduledHolidayWeekday').value),
     weekStartDay: Number(document.getElementById('weekStartDay').value),
+    weeklyOvertimeThreshold: Number(document.getElementById('weeklyOvertimeThreshold').value),
     paycheckClosingDay: document.getElementById('paycheckClosingDay').value,
     paycheckPaymentDay: document.getElementById('paycheckPaymentDay').value,
     healthInsuranceType: document.getElementById('healthInsuranceType').value,

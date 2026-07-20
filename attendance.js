@@ -39,11 +39,11 @@ function fmtHm(minutes) {
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
-// 「法定外60内」の直後に「週残業」を挿入した表示順
+// 「法定外60内」の直後に「週残業」、「深夜」の直後に「週深夜残業時間」を挿入した表示順
 const OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY = (() => {
-  const idx = OVERTIME_MINUTE_COLUMNS.indexOf('overtimeWithin60');
   const cols = OVERTIME_MINUTE_COLUMNS.slice();
-  cols.splice(idx + 1, 0, 'weeklyOvertime');
+  cols.splice(cols.indexOf('overtimeWithin60') + 1, 0, 'weeklyOvertime');
+  cols.splice(cols.indexOf('lateNight') + 1, 0, 'weeklyOvertimeNight');
   return cols;
 })();
 
@@ -112,12 +112,13 @@ async function renderDayTable() {
     `※ 対象期間：${first.y}/${first.m}/${first.d} 〜 ${last.y}/${last.m}/${last.d}（会社マスタ管理の賃金締日に基づく）`;
   const records = await fetchPeriodRecords(employee.id, periodDates);
   const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, periodDates.length);
-  const weeklyByDay = computeWeeklyOvertimeByDay(records, overtimeByDay, periodDates, company.weekStartDay);
+  const weeklyByDay = computeWeeklyOvertimeByDay(records, overtimeByDay, periodDates, company.weekStartDay, company.weeklyOvertimeThreshold);
   const showMidHeader = document.getElementById('showMidHeaderCheckbox').checked;
   const midHeaderInsertAt = showMidHeader ? computeMidHeaderInsertIndex(periodDates) : -1;
   const headerRowTemplate = document.getElementById('dayTableHeaderRow');
   let workedTotal = 0;
   let weeklyOvertimeTotal = 0;
+  let weeklyOvertimeNightTotal = 0;
 
   periodDates.forEach((date, i) => {
     if (i === midHeaderInsertAt) {
@@ -135,8 +136,9 @@ async function renderDayTable() {
     const scheduledEnd = rec.scheduledEnd || employee.workEnd || '';
     const worked = computeWorkedMinutes(rec);
     workedTotal += worked || 0;
-    weeklyOvertimeTotal += weeklyByDay[idx];
-    const dayValues = Object.assign({ weeklyOvertime: weeklyByDay[idx] }, overtimeByDay[idx]);
+    weeklyOvertimeTotal += weeklyByDay[idx].weeklyOvertime;
+    weeklyOvertimeNightTotal += weeklyByDay[idx].weeklyOvertimeNight;
+    const dayValues = Object.assign({}, overtimeByDay[idx], weeklyByDay[idx]);
     const categoryCells = OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY
       .map((key) => `<td class="computed" data-role="${key}">${fmtHm(dayValues[key])}</td>`)
       .join('');
@@ -168,7 +170,7 @@ async function renderDayTable() {
     tbody.appendChild(tr);
   });
 
-  const monthTotalsWithWeekly = Object.assign({ weeklyOvertime: weeklyOvertimeTotal, worked: workedTotal }, monthTotals);
+  const monthTotalsWithWeekly = Object.assign({ weeklyOvertime: weeklyOvertimeTotal, weeklyOvertimeNight: weeklyOvertimeNightTotal, worked: workedTotal }, monthTotals);
   renderMonthTotalRow('monthTotalTopRow', monthTotalsWithWeekly);
   renderMonthTotalRow('monthTotalBottomRow', monthTotalsWithWeekly);
 

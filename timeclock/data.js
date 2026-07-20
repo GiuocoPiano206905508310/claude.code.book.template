@@ -342,7 +342,8 @@ function defaultCompany() {
     companyName: '',
     statutoryHolidayWeekday: 0, // 0=日曜日 〜 6=土曜日
     scheduledHolidayWeekday: 6, // 0=日曜日 〜 6=土曜日
-    weekStartDay: 0, // 0=日曜日 〜 6=土曜日（週40時間の起算日）
+    weekStartDay: 0, // 0=日曜日 〜 6=土曜日（週の起算日）
+    weeklyOvertimeThreshold: 40, // 週法定外労働時間の基準（40 または 44。特例措置対象事業場のみ44）
     paycheckClosingDay: 'end', // 1〜31 または 'end'（末日）
     paycheckPaymentDay: '25', // 1〜31 または 'end'（末日）
     healthInsuranceType: 'kyoukai',
@@ -368,6 +369,8 @@ async function getCompany() {
       ? Number(data.scheduled_holiday_weekday) : 6,
     weekStartDay: data.week_start_day !== null && data.week_start_day !== undefined
       ? Number(data.week_start_day) : 0,
+    weeklyOvertimeThreshold: data.weekly_overtime_threshold !== null && data.weekly_overtime_threshold !== undefined
+      ? Number(data.weekly_overtime_threshold) : 40,
     paycheckClosingDay: data.paycheck_closing_day || 'end',
     paycheckPaymentDay: data.paycheck_payment_day || '25',
     healthInsuranceType: data.health_insurance_type,
@@ -389,6 +392,7 @@ async function saveCompany(company) {
     statutory_holiday_weekday: company.statutoryHolidayWeekday,
     scheduled_holiday_weekday: company.scheduledHolidayWeekday,
     week_start_day: company.weekStartDay,
+    weekly_overtime_threshold: company.weeklyOvertimeThreshold,
     paycheck_closing_day: String(company.paycheckClosingDay || 'end'),
     paycheck_payment_day: String(company.paycheckPaymentDay || 'end'),
     health_insurance_type: company.healthInsuranceType,
