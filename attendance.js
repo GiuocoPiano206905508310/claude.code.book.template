@@ -79,23 +79,32 @@ async function renderDayTable() {
       <td><input type="number" min="0" step="5" data-field="breakMinutes" value="${rec.breakMinutes ?? 60}" ${isTimeless ? 'disabled' : ''}></td>
       <td class="computed" data-role="worked">${fmtHm(worked)}</td>
       ${categoryCells}
-      <td><button type="button" class="btn btn-sm" data-action="complete">完了</button></td>
     `;
     tr.dataset.day = d;
     tbody.appendChild(tr);
   }
 
-  // ステータスを「欠勤・有給休暇」に切り替えたときは、保存前でも時刻欄を
-  // 見た目上すぐに無効化する（実際の保存は「完了」ボタン押下時のみ行う）
+  // 出勤・退勤の両方が入力されている（または時刻不要なステータスの）行のみ、
+  // 変更のたびに自動保存する。片方の時刻しか入っていない途中段階では保存
+  // しない（スマホの時刻ピッカー操作中に保存されて入力が中断されるのを防ぐ）。
   tbody.querySelectorAll('tr').forEach((tr) => {
+    const day = tr.dataset.day;
     const statusSelect = tr.querySelector('[data-field="status"]');
+    const clockInEl = tr.querySelector('[data-field="clockIn"]');
+    const clockOutEl = tr.querySelector('[data-field="clockOut"]');
+    const isReadyToSave = () => {
+      const timeless = statusSelect.value === 'absence' || statusSelect.value === 'paid_leave';
+      return timeless || (clockInEl.value && clockOutEl.value);
+    };
     statusSelect.addEventListener('change', () => {
       const timeless = statusSelect.value === 'absence' || statusSelect.value === 'paid_leave';
       tr.querySelectorAll('[data-field="clockIn"], [data-field="clockOut"], [data-field="breakMinutes"]')
         .forEach((el) => { el.disabled = timeless; });
+      if (isReadyToSave()) saveRow(employee, ym, day, tr);
     });
-    const day = tr.dataset.day;
-    tr.querySelector('[data-action="complete"]').addEventListener('click', () => saveRow(employee, ym, day, tr));
+    tr.querySelectorAll('[data-field="clockIn"], [data-field="clockOut"], [data-field="breakMinutes"]').forEach((el) => {
+      el.addEventListener('change', () => { if (isReadyToSave()) saveRow(employee, ym, day, tr); });
+    });
   });
 }
 
