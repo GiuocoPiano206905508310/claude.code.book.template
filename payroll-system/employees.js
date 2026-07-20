@@ -71,20 +71,40 @@ function startAgeAutoUpdate() {
 }
 
 // ---------------------------------------------------------------------------
-// フリガナの自動入力（IME変換中の読みをカタカナ化してフリガナ欄へ反映）
+// フリガナの自動入力
+// IME変換で漢字に確定した後は「読み」を取得する標準APIが無いため、
+// 変換前（＝入力中の文字がまだ全てかなの間）の値を随時保持しておき、
+// 漢字に変換された時点でその直前のかな表記を読みとして採用する。
 // ---------------------------------------------------------------------------
+const KANA_ONLY_PATTERN = /^[ぁ-ゖァ-ヺー\s]*$/;
+
 function setupFuriganaAutoFill() {
   const nameInput = document.getElementById('empName');
   const kanaInput = document.getElementById('empNameKana');
-  let lastReading = '';
-  nameInput.addEventListener('compositionupdate', (e) => {
-    lastReading = e.data || lastReading;
+  let composing = false;
+  let reading = '';
+
+  nameInput.addEventListener('compositionstart', () => {
+    composing = true;
+    reading = '';
   });
-  nameInput.addEventListener('compositionend', () => {
-    if (lastReading) {
-      kanaInput.value = hiraganaToKatakana(lastReading);
+
+  nameInput.addEventListener('input', (e) => {
+    if (!(composing || e.isComposing)) return;
+    const value = nameInput.value;
+    if (KANA_ONLY_PATTERN.test(value) && value.trim()) {
+      reading = value;
     }
-    lastReading = '';
+  });
+
+  nameInput.addEventListener('compositionend', (e) => {
+    composing = false;
+    const finalData = e.data || '';
+    const source = KANA_ONLY_PATTERN.test(finalData) && finalData ? finalData : reading;
+    if (source) {
+      kanaInput.value = hiraganaToKatakana(source);
+    }
+    reading = '';
   });
 }
 
@@ -227,6 +247,7 @@ function resetForm() {
   document.getElementById('baseSalary').value = '280,000';
   renderAllowanceRows([{ name: 'その他手当', amount: 10000, excludeFromOvertimeBase: false }]);
   document.getElementById('commuteAllowance').value = '10,000';
+  document.getElementById('commuteAllowanceExclude').checked = true;
   document.getElementById('dependents').value = '0';
   document.getElementById('calcMethod').value = 'table';
   document.getElementById('taxTable').value = '甲';
@@ -261,6 +282,7 @@ function loadFormFromEmployee(emp) {
     : (emp.taxableAllowance ? [{ name: 'その他手当', amount: emp.taxableAllowance, excludeFromOvertimeBase: false }] : []);
   renderAllowanceRows(allowances);
   document.getElementById('commuteAllowance').value = formatThousands(emp.commuteAllowance);
+  document.getElementById('commuteAllowanceExclude').checked = emp.commuteAllowanceExcludeFromOvertimeBase !== false;
   document.getElementById('dependents').value = emp.dependents;
   document.getElementById('calcMethod').value = emp.calcMethod;
   document.getElementById('taxTable').value = emp.taxTable;
@@ -301,6 +323,7 @@ function collectFormAsEmployee() {
     baseSalary: getNumInputValue('baseSalary'),
     allowances: collectAllowancesFromForm(),
     commuteAllowance: getNumInputValue('commuteAllowance'),
+    commuteAllowanceExcludeFromOvertimeBase: document.getElementById('commuteAllowanceExclude').checked,
     dependents: Number(document.getElementById('dependents').value) || 0,
     calcMethod: document.getElementById('calcMethod').value,
     taxTable: document.getElementById('taxTable').value,
