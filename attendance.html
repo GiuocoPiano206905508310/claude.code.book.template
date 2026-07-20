@@ -43,6 +43,10 @@
 
     <section class="card form-card">
       <h2>日次勤怠入力</h2>
+      <div class="checkbox-row">
+        <input type="checkbox" id="showMidHeaderCheckbox" checked>
+        <label for="showMidHeaderCheckbox">列見出しを期間の中間にも表示する</label>
+      </div>
       <div class="data-table-wrap">
         <table class="day-table" id="dayTable">
           <thead>
@@ -101,10 +105,6 @@
         </table>
       </div>
       <p class="field-note">※ 出勤・退勤の時刻が両方入力されると自動的に保存されます（有給休暇・欠勤はステータス選択のみで保存されます）。</p>
-      <div class="checkbox-row">
-        <input type="checkbox" id="showMidHeaderCheckbox" checked>
-        <label for="showMidHeaderCheckbox">列見出しを期間の中間にも表示する</label>
-      </div>
     </section>
   </div>
 
