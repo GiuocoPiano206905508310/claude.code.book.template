@@ -34,6 +34,7 @@ function loadFormFromCompany() {
   document.getElementById('careRate').value = Number(company.careRate).toFixed(2);
   document.getElementById('pensionRate').value = Number(company.pensionRate).toFixed(2);
   document.getElementById('employmentRate').value = Number(company.employmentRate).toFixed(2);
+  document.getElementById('calcMethod').value = company.calcMethod;
 }
 
 function collectFormAsCompany() {
@@ -45,6 +46,7 @@ function collectFormAsCompany() {
     pensionRate: Number(document.getElementById('pensionRate').value) || 0,
     industryType: document.getElementById('industryType').value,
     employmentRate: Number(document.getElementById('employmentRate').value) || 0,
+    calcMethod: document.getElementById('calcMethod').value,
   };
 }
 

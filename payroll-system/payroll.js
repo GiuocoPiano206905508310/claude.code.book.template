@@ -93,7 +93,7 @@ function loadFormForEmployeeMonth() {
   document.getElementById('taxableAllowance').value = formatThousands(input ? input.taxableAllowance : sumAllowances(employee.allowances));
   document.getElementById('commuteAllowance').value = formatThousands(input ? input.commuteAllowance : employee.commuteAllowance);
   document.getElementById('dependents').value = input ? input.dependents : employee.dependents;
-  document.getElementById('calcMethod').value = input ? input.calcMethod : employee.calcMethod;
+  document.getElementById('calcMethod').value = input ? input.calcMethod : company.calcMethod;
   document.getElementById('taxTable').value = input ? input.taxTable : employee.taxTable;
   document.getElementById('residentTax').value = formatThousands(input ? input.residentTax : employee.residentTax);
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
