@@ -759,24 +759,33 @@ function computeOvertimeCategoryBreakdown(records, daysInMonth) {
   return { perDay, monthTotals };
 }
 
-const WEEKLY_LEGAL_LIMIT_MIN = 40 * 60;
-
-// 会社の「週の起算日」を基準とした週ごとに、週40時間を超える労働時間（分）を、
-// その週の最終日（起算日の前日にあたる曜日）に計上する。1日8時間超の分は既に
+// 会社の「週の起算日」を基準とした週ごとに、週法定外労働時間（週40時間または
+// 特例措置対象事業場の週44時間）を超える労働時間（分）を、その週の最終日
+// （起算日の前日にあたる曜日）に計上する。1日8時間超の分は既に
 // computeOvertimeCategoryBreakdownの法定外区分でカウント済みのため、その週分
-// を差し引いた「週40時間超過のみに起因する分」だけを返す（二重計上を避けるため）。
-// 法定休日出勤（週1回の法定休日）は週40時間の算定対象から除外するが、所定休日
-// 出勤は対象に含める（法定休日以外の労働は通常どおり週40時間の枠内として扱う
-// ため）。所定休日の時間は日次の法定外区分に計上されないため、この時間を含めて
-// もweekDailyOvertimeMin側との二重計上にはならない。
+// を差し引いた「週の基準を超過したことのみに起因する分」だけを返す（二重計上
+// を避けるため）。さらにそのうち深夜時間帯（22:00〜5:00）に該当する分を
+// 「週深夜残業時間」として分離する。深夜分の算定は、日次の法定内（lateNight）
+// ・所定休日（そのうちの深夜部分）としてカウント済みの深夜時間の週合計を
+// 「週の基準超過分に転用できる深夜時間の候補」とみなし、超過分の合計を上限に
+// 割り当てる概算方式（日次の法定外区分の深夜分と重複しないよう、そちらは
+// 候補から除外している）。
+// 法定休日出勤（週1回の法定休日）は週の基準時間の算定対象から除外するが、所定
+// 休日出勤は対象に含める（法定休日以外の労働は通常どおり週の基準の枠内として
+// 扱うため）。所定休日の時間は日次の法定外区分に計上されないため、この時間を
+// 含めてもweekDailyOvertimeMin側との二重計上にはならない。
 // 対象期間の外の週データは参照しない概算（前月・前期間分までは遡らない）。
 // records/perDay: computeOvertimeCategoryBreakdownの引数・戻り値のperDayと同じ
 // （キーは1始まりの連番。periodDatesとインデックスが対応する）
 // periodDates: buildCalendarMonthDates/buildPayPeriodDatesの戻り値（日付昇順の配列）
-function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay) {
+// weeklyThresholdHours: 40 または 44（会社マスタ管理の「週法定外労働時間」設定）
+// 戻り値: { [連番]: { weeklyOvertime: 分, weeklyOvertimeNight: 分 } }
+function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay, weeklyThresholdHours) {
+  const thresholdMin = (Number(weeklyThresholdHours) || 40) * 60;
   const result = {};
   let weekWorkedMin = 0;
   let weekDailyOvertimeMin = 0;
+  let weekLateNightMin = 0;
 
   for (let i = 0; i < periodDates.length; i++) {
     const idx = i + 1;
@@ -793,17 +802,21 @@ function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay) 
         const day = perDay[idx];
         weekDailyOvertimeMin += day.overtimeWithin60 + day.overtimeWithin60Night
           + day.overtimeOver60 + day.overtimeOver60Night;
+        weekLateNightMin += day.lateNight;
       }
     }
 
     const isLastDayOfWeek = dow === (weekStartDay + 6) % 7;
     if (isLastDayOfWeek || i === periodDates.length - 1) {
-      const weeklyOvertimeMin = Math.max(0, weekWorkedMin - WEEKLY_LEGAL_LIMIT_MIN);
-      result[idx] = Math.max(0, weeklyOvertimeMin - weekDailyOvertimeMin);
+      const weeklyOvertimeMin = Math.max(0, weekWorkedMin - thresholdMin);
+      const weekOnlyOvertimeMin = Math.max(0, weeklyOvertimeMin - weekDailyOvertimeMin);
+      const nightMin = Math.min(weekLateNightMin, weekOnlyOvertimeMin);
+      result[idx] = { weeklyOvertime: weekOnlyOvertimeMin - nightMin, weeklyOvertimeNight: nightMin };
       weekWorkedMin = 0;
       weekDailyOvertimeMin = 0;
+      weekLateNightMin = 0;
     } else {
-      result[idx] = 0;
+      result[idx] = { weeklyOvertime: 0, weeklyOvertimeNight: 0 };
     }
   }
 
