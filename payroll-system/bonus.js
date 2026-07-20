@@ -3,6 +3,9 @@
 // ============================================================================
 
 let editingBonusId = null;
+// 従業員マスタ管理（保存済み賞与を表示中の場合はその当時の値）から取り込む、
+// 賞与計算画面では編集不可の項目
+let currentEmployeeFields = null;
 
 async function currentEmployee() {
   const id = document.getElementById('employeeSelect').value;
@@ -39,8 +42,16 @@ function applyIndustryRateToForm() {
   document.getElementById('employmentRate').value = EMPLOYMENT_RATES_BY_INDUSTRY[industry].toFixed(2);
 }
 
-function updateInsuranceFieldVisibilityInForm() {
-  const employmentType = document.getElementById('employmentType').value;
+function renderEmployeeInfoGrid(fields) {
+  renderInfoTiles('employeeInfoGrid', [
+    ['雇用形態', fields.employmentType],
+    ['年齢区分', AGE_GROUP_LABELS[fields.ageGroup] || fields.ageGroup],
+    ['扶養親族等の数', `${fields.dependents} 人`],
+    ['甲欄・乙欄', fields.taxTable === '甲' ? '甲欄' : '乙欄'],
+  ]);
+}
+
+function updateInsuranceFieldVisibilityInForm(employmentType) {
   const hideHealthGroup = employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）';
   const hideEmploymentGroup = employmentType === 'アルバイト・パート（雇用保険対象外）';
 
@@ -67,11 +78,14 @@ async function resetFormToNewBonus() {
 
   document.getElementById('bonusLabel').value = '';
   document.getElementById('bonusDate').value = new Date().toISOString().slice(0, 10);
-  document.getElementById('employmentType').value = employee.employmentType;
-  document.getElementById('ageGroup').value = ageGroupFromAge(calcAge(employee.birthDate));
-  document.getElementById('dependents').value = employee.dependents;
+  currentEmployeeFields = {
+    employmentType: employee.employmentType,
+    ageGroup: ageGroupFromAge(calcAge(employee.birthDate)),
+    dependents: employee.dependents,
+    taxTable: employee.taxTable,
+  };
+  renderEmployeeInfoGrid(currentEmployeeFields);
   document.getElementById('calcMethod').value = company.calcMethod;
-  document.getElementById('taxTable').value = employee.taxTable;
   document.getElementById('bonusAmount').value = '500,000';
   document.getElementById('prevMonthSalary').value = '250,000';
   document.getElementById('bonusCalcPeriod').value = '6';
@@ -81,7 +95,7 @@ async function resetFormToNewBonus() {
   document.getElementById('healthCumulative').value = '0';
   document.getElementById('pensionCumulative').value = '0';
 
-  updateInsuranceFieldVisibilityInForm();
+  updateInsuranceFieldVisibilityInForm(currentEmployeeFields.employmentType);
   applyIndustryRateToForm();
   document.getElementById('healthRate').value = Number(company.healthRate).toFixed(2);
   document.getElementById('careRate').value = Number(company.careRate).toFixed(2);
@@ -97,11 +111,14 @@ async function loadFormFromBonusRecord(record) {
   document.getElementById('bonusLabel').value = record.label || '';
   document.getElementById('bonusDate').value = record.date || '';
   const input = record.input;
-  document.getElementById('employmentType').value = input.employmentType;
-  document.getElementById('ageGroup').value = input.ageGroup;
-  document.getElementById('dependents').value = input.dependents;
+  currentEmployeeFields = {
+    employmentType: input.employmentType,
+    ageGroup: input.ageGroup,
+    dependents: input.dependents,
+    taxTable: input.taxTable,
+  };
+  renderEmployeeInfoGrid(currentEmployeeFields);
   document.getElementById('calcMethod').value = input.calcMethod;
-  document.getElementById('taxTable').value = input.taxTable;
   document.getElementById('bonusAmount').value = formatThousands(input.bonusAmount);
   document.getElementById('prevMonthSalary').value = formatThousands(input.prevMonthSalary);
   document.getElementById('bonusCalcPeriod').value = String(input.calcPeriodMonths);
@@ -110,7 +127,7 @@ async function loadFormFromBonusRecord(record) {
   document.getElementById('healthCumulative').value = formatThousands(input.healthCumulative);
   document.getElementById('pensionCumulative').value = formatThousands(input.pensionCumulative);
 
-  updateInsuranceFieldVisibilityInForm();
+  updateInsuranceFieldVisibilityInForm(currentEmployeeFields.employmentType);
   document.getElementById('healthRate').value = (input.healthRate * 100).toFixed(2);
   document.getElementById('careRate').value = (input.careRate * 100).toFixed(2);
   document.getElementById('pensionRate').value = (input.pensionRate * 100).toFixed(2);
@@ -122,11 +139,8 @@ async function loadFormFromBonusRecord(record) {
 
 function collectInput() {
   return {
-    employmentType: document.getElementById('employmentType').value,
-    ageGroup: document.getElementById('ageGroup').value,
-    taxTable: document.getElementById('taxTable').value,
+    ...currentEmployeeFields,
     calcMethod: document.getElementById('calcMethod').value,
-    dependents: Number(document.getElementById('dependents').value) || 0,
     healthRate: Number(document.getElementById('healthRate').value) / 100,
     careRate: Number(document.getElementById('careRate').value) / 100,
     pensionRate: Number(document.getElementById('pensionRate').value) / 100,
@@ -221,7 +235,6 @@ document.getElementById('employeeSelect').addEventListener('change', async () =>
 document.getElementById('prefecture').addEventListener('change', applyPrefectureRateToForm);
 document.getElementById('healthInsuranceType').addEventListener('change', applyHealthInsuranceTypeToForm);
 document.getElementById('industryType').addEventListener('change', applyIndustryRateToForm);
-document.getElementById('employmentType').addEventListener('change', updateInsuranceFieldVisibilityInForm);
 document.getElementById('calcBonusBtn').addEventListener('click', calculate);
 
 document.getElementById('saveBtn').addEventListener('click', async () => {

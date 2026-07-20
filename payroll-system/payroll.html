@@ -20,6 +20,7 @@
     <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
     <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「給与所得の源泉徴収税額表（令和8年分）」に基づき計算しますが、標準報酬月額表とは一致しないなど概算の範囲にとどまります。</p>
     <p>※ 残業手当・欠勤控除は、勤怠管理画面の月次集計と従業員マスタの所定労働設定から自動算出した概算値です。</p>
+    <p>※ 雇用形態・年齢区分・基本給・その他手当・通勤手当・扶養親族等の数・甲欄乙欄・住民税は、<a href="employees.html">従業員マスタ管理</a>で登録した内容がそのまま使用されます。変更する場合は従業員マスタ管理で編集してください。</p>
   </div>
 
   <div class="toolbar">
@@ -39,42 +40,13 @@
   </div>
 
   <div id="payrollContent">
+    <div class="summary-grid" id="employeeInfoGrid"></div>
     <div class="summary-grid" id="attendanceSummaryGrid"></div>
 
     <div class="grid">
       <section class="card form-card" aria-label="支給項目の入力">
-        <h2>支給項目（当月分・上書き可）</h2>
+        <h2>支給項目（当月分）</h2>
 
-        <div class="field-row">
-          <label for="employmentType">雇用形態</label>
-          <div class="field-input">
-            <select id="employmentType">
-              <option value="正社員">正社員（雇用保険・社会保険対象）</option>
-              <option value="役員">役員（社会保険のみ対象）</option>
-              <option value="アルバイト・パート">アルバイト・パート（雇用保険のみ対象）</option>
-              <option value="アルバイト・パート（雇用保険対象外）">アルバイト・パート（雇用保険対象外）</option>
-            </select>
-          </div>
-        </div>
-        <div class="field-row">
-          <label for="ageGroup">年齢区分</label>
-          <div class="field-input">
-            <select id="ageGroup">
-              <option value="under40">40歳未満</option>
-              <option value="40to64">40〜64歳</option>
-              <option value="65to69">65〜69歳</option>
-              <option value="70to74">70〜74歳</option>
-              <option value="75plus">75歳以上</option>
-            </select>
-          </div>
-        </div>
-        <div class="field-row">
-          <label for="baseSalary" id="baseSalaryLabel">基本給</label>
-          <div class="field-input">
-            <input type="text" inputmode="numeric" id="baseSalary">
-            <span class="unit">円</span>
-          </div>
-        </div>
         <div class="field-row">
           <label for="overtimePay">残業手当（勤怠集計から自動計算）</label>
           <div class="field-input">
@@ -83,30 +55,9 @@
           </div>
           <p class="field-note" id="overtimeNote"></p>
         </div>
-        <div class="field-row">
-          <label for="taxableAllowance">その他手当（課税）</label>
-          <div class="field-input">
-            <input type="text" inputmode="numeric" id="taxableAllowance">
-            <span class="unit">円</span>
-          </div>
-        </div>
-        <div class="field-row">
-          <label for="commuteAllowance">通勤手当（非課税）</label>
-          <div class="field-input">
-            <input type="text" inputmode="numeric" id="commuteAllowance">
-            <span class="unit">円</span>
-          </div>
-        </div>
         <div class="checkbox-row">
           <input type="checkbox" id="applyAbsenceDeduction">
           <label for="applyAbsenceDeduction">欠勤控除を適用する（<span id="absenceDeductionPreview">0 円</span>）</label>
-        </div>
-        <div class="field-row">
-          <label for="dependents">扶養親族等の数</label>
-          <div class="field-input">
-            <input type="number" id="dependents" min="0" step="1">
-            <span class="unit">人</span>
-          </div>
         </div>
         <div class="field-row">
           <label for="calcMethod">源泉所得税の計算方法</label>
@@ -115,22 +66,6 @@
               <option value="table">月額表</option>
               <option value="machine">機械計算（甲欄のみ）</option>
             </select>
-          </div>
-        </div>
-        <div class="field-row">
-          <label for="taxTable">甲欄・乙欄</label>
-          <div class="field-input">
-            <select id="taxTable">
-              <option value="甲">甲欄（扶養控除等申告書あり）</option>
-              <option value="乙">乙欄（扶養控除等申告書なし）</option>
-            </select>
-          </div>
-        </div>
-        <div class="field-row">
-          <label for="residentTax">住民税（月額）</label>
-          <div class="field-input">
-            <input type="text" inputmode="numeric" id="residentTax">
-            <span class="unit">円</span>
           </div>
         </div>
 

@@ -4,6 +4,9 @@
 
 let currentAttendanceSummary = null;
 let currentAutoOvertimePay = 0;
+// 従業員マスタ管理（保存済み明細を表示中の場合はその当時の値）から取り込む、
+// 給与計算画面では編集不可の項目
+let currentEmployeeFields = null;
 
 async function currentEmployee() {
   const id = document.getElementById('employeeSelect').value;
@@ -40,8 +43,7 @@ function applyIndustryRateToForm() {
   document.getElementById('employmentRate').value = EMPLOYMENT_RATES_BY_INDUSTRY[industry].toFixed(2);
 }
 
-function updateInsuranceFieldVisibilityInForm() {
-  const employmentType = document.getElementById('employmentType').value;
+function updateInsuranceFieldVisibilityInForm(employmentType) {
   const hideHealthGroup = employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）';
   const hideEmploymentGroup = employmentType === 'アルバイト・パート（雇用保険対象外）';
 
@@ -60,9 +62,17 @@ function updateInsuranceFieldVisibilityInForm() {
   }
 }
 
-function applyEmploymentTypeLabelToForm() {
-  const employmentType = document.getElementById('employmentType').value;
-  document.getElementById('baseSalaryLabel').textContent = employmentType === '役員' ? '役員報酬' : '基本給';
+function renderEmployeeInfoGrid(fields) {
+  renderInfoTiles('employeeInfoGrid', [
+    ['雇用形態', fields.employmentType],
+    ['年齢区分', AGE_GROUP_LABELS[fields.ageGroup] || fields.ageGroup],
+    [fields.employmentType === '役員' ? '役員報酬' : '基本給', `${formatThousands(fields.baseSalary)} 円`],
+    ['その他手当（課税）', `${formatThousands(fields.taxableAllowance)} 円`],
+    ['通勤手当（非課税）', `${formatThousands(fields.commuteAllowance)} 円`],
+    ['扶養親族等の数', `${fields.dependents} 人`],
+    ['甲欄・乙欄', fields.taxTable === '甲' ? '甲欄' : '乙欄'],
+    ['住民税（月額）', `${formatThousands(fields.residentTax)} 円`],
+  ]);
 }
 
 // 従業員マスタ・勤怠集計をもとに、フォームへ初期値を流し込む
@@ -84,23 +94,26 @@ async function loadFormForEmployeeMonth() {
   const saved = await getPayslip(employee.id, ym);
   const input = saved ? saved.input : null;
 
-  document.getElementById('employmentType').value = input ? input.employmentType : employee.employmentType;
-  document.getElementById('ageGroup').value = input ? input.ageGroup : employeeAgeGroup;
-  document.getElementById('baseSalary').value = formatThousands(input ? input.baseSalary : employee.baseSalary);
+  currentEmployeeFields = {
+    employmentType: input ? input.employmentType : employee.employmentType,
+    ageGroup: input ? input.ageGroup : employeeAgeGroup,
+    baseSalary: input ? input.baseSalary : employee.baseSalary,
+    taxableAllowance: input ? input.taxableAllowance : sumAllowances(employee.allowances),
+    commuteAllowance: input ? input.commuteAllowance : employee.commuteAllowance,
+    dependents: input ? input.dependents : employee.dependents,
+    taxTable: input ? input.taxTable : employee.taxTable,
+    residentTax: input ? input.residentTax : employee.residentTax,
+  };
+  renderEmployeeInfoGrid(currentEmployeeFields);
+
   document.getElementById('overtimePay').value = formatThousands(input ? input.overtimePay : currentAutoOvertimePay);
-  document.getElementById('taxableAllowance').value = formatThousands(input ? input.taxableAllowance : sumAllowances(employee.allowances));
-  document.getElementById('commuteAllowance').value = formatThousands(input ? input.commuteAllowance : employee.commuteAllowance);
-  document.getElementById('dependents').value = input ? input.dependents : employee.dependents;
   document.getElementById('calcMethod').value = input ? input.calcMethod : company.calcMethod;
-  document.getElementById('taxTable').value = input ? input.taxTable : employee.taxTable;
-  document.getElementById('residentTax').value = formatThousands(input ? input.residentTax : employee.residentTax);
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
   populatePrefectureSelect('prefecture', company.prefecture);
   populateIndustrySelect('industryType', company.industryType);
   document.getElementById('applyAbsenceDeduction').checked = input ? !!input.applyAbsenceDeduction : currentAttendanceSummary.absenceDays > 0;
 
-  applyEmploymentTypeLabelToForm();
-  updateInsuranceFieldVisibilityInForm();
+  updateInsuranceFieldVisibilityInForm(currentEmployeeFields.employmentType);
   applyIndustryRateToForm();
   document.getElementById('healthRate').value = Number(input ? input.healthRate : company.healthRate).toFixed(2);
   document.getElementById('careRate').value = Number(input ? input.careRate : company.careRate).toFixed(2);
@@ -138,16 +151,9 @@ function renderAttendanceSummaryTiles(s) {
 
 function collectInput() {
   return {
-    employmentType: document.getElementById('employmentType').value,
-    ageGroup: document.getElementById('ageGroup').value,
-    taxTable: document.getElementById('taxTable').value,
+    ...currentEmployeeFields,
     calcMethod: document.getElementById('calcMethod').value,
-    baseSalary: getNumInputValue('baseSalary'),
     overtimePay: getNumInputValue('overtimePay'),
-    taxableAllowance: getNumInputValue('taxableAllowance'),
-    commuteAllowance: getNumInputValue('commuteAllowance'),
-    dependents: Number(document.getElementById('dependents').value) || 0,
-    residentTax: getNumInputValue('residentTax'),
     healthRate: Number(document.getElementById('healthRate').value) / 100,
     careRate: Number(document.getElementById('careRate').value) / 100,
     pensionRate: Number(document.getElementById('pensionRate').value) / 100,
@@ -256,10 +262,6 @@ document.getElementById('monthInput').addEventListener('change', refreshAll);
 document.getElementById('prefecture').addEventListener('change', applyPrefectureRateToForm);
 document.getElementById('healthInsuranceType').addEventListener('change', applyHealthInsuranceTypeToForm);
 document.getElementById('industryType').addEventListener('change', applyIndustryRateToForm);
-document.getElementById('employmentType').addEventListener('change', () => {
-  applyEmploymentTypeLabelToForm();
-  updateInsuranceFieldVisibilityInForm();
-});
 document.getElementById('calcBtn').addEventListener('click', calculate);
 
 document.getElementById('saveBtn').addEventListener('click', async () => {
@@ -292,7 +294,7 @@ document.getElementById('exportCopyBtn').addEventListener('click', () => copyRes
   'exportStatus'
 ));
 
-['baseSalary', 'overtimePay', 'taxableAllowance', 'commuteAllowance', 'residentTax'].forEach(attachThousandsFormatting);
+['overtimePay'].forEach(attachThousandsFormatting);
 
 (async () => {
   const user = await requireAuth();
