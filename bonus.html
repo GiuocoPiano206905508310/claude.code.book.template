@@ -19,6 +19,7 @@
   <div class="notice">
     <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
     <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「賞与に対する源泉徴収税額の算出率の表（令和8年分）」に基づき計算しますが、概算の範囲にとどまります。</p>
+    <p>※ 雇用形態・年齢区分・扶養親族等の数・甲欄乙欄は、<a href="employees.html">従業員マスタ管理</a>で登録した内容がそのまま使用されます。変更する場合は従業員マスタ管理で編集してください。</p>
   </div>
 
   <div class="toolbar">
@@ -33,6 +34,7 @@
   </div>
 
   <div id="bonusContent">
+    <div class="summary-grid" id="employeeInfoGrid"></div>
     <div class="grid">
       <section class="card form-card" aria-label="賞与支給項目の入力">
         <h2>賞与支給項目</h2>
@@ -50,50 +52,11 @@
           </div>
         </div>
         <div class="field-row">
-          <label for="employmentType">雇用形態</label>
-          <div class="field-input">
-            <select id="employmentType">
-              <option value="正社員">正社員（雇用保険・社会保険対象）</option>
-              <option value="役員">役員（社会保険のみ対象）</option>
-              <option value="アルバイト・パート">アルバイト・パート（雇用保険のみ対象）</option>
-              <option value="アルバイト・パート（雇用保険対象外）">アルバイト・パート（雇用保険対象外）</option>
-            </select>
-          </div>
-        </div>
-        <div class="field-row">
-          <label for="ageGroup">年齢区分</label>
-          <div class="field-input">
-            <select id="ageGroup">
-              <option value="under40">40歳未満</option>
-              <option value="40to64">40〜64歳</option>
-              <option value="65to69">65〜69歳</option>
-              <option value="70to74">70〜74歳</option>
-              <option value="75plus">75歳以上</option>
-            </select>
-          </div>
-        </div>
-        <div class="field-row">
-          <label for="dependents">扶養親族等の数</label>
-          <div class="field-input">
-            <input type="number" id="dependents" min="0" step="1">
-            <span class="unit">人</span>
-          </div>
-        </div>
-        <div class="field-row">
           <label for="calcMethod">源泉所得税の計算方法</label>
           <div class="field-input">
             <select id="calcMethod">
               <option value="table">月額表</option>
               <option value="machine">機械計算（甲欄のみ）</option>
-            </select>
-          </div>
-        </div>
-        <div class="field-row">
-          <label for="taxTable">甲欄・乙欄</label>
-          <div class="field-input">
-            <select id="taxTable">
-              <option value="甲">甲欄（扶養控除等申告書あり）</option>
-              <option value="乙">乙欄（扶養控除等申告書なし）</option>
             </select>
           </div>
         </div>

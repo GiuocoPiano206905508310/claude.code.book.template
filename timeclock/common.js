@@ -91,6 +91,26 @@ function ymLabel(ym) {
   return `${y}年${Number(m)}月`;
 }
 
+const AGE_GROUP_LABELS = {
+  under40: '40歳未満',
+  '40to64': '40〜64歳',
+  '65to69': '65〜69歳',
+  '70to74': '70〜74歳',
+  '75plus': '75歳以上',
+};
+
+// 従業員マスタ管理から取り込んだ値をカード形式で表示する（payroll.js / bonus.js から共用）
+function renderInfoTiles(containerId, tiles) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = tiles.map(([label, value]) => `
+    <div class="summary-tile">
+      <div class="tile-label">${label}</div>
+      <div class="tile-value">${value}</div>
+    </div>
+  `).join('');
+}
+
 // 都道府県セレクトの生成（employees.js / payroll.js から共用）
 function populatePrefectureSelect(selectId, selected) {
   const select = document.getElementById(selectId);
