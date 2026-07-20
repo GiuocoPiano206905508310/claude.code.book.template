@@ -451,6 +451,11 @@ table.day-table tr.row-holiday_work { background: rgba(31,78,121,0.06); }
 table.day-table tr.month-total-row { background: var(--surface-line); font-weight: 600; }
 table.day-table tr.month-total-row td.computed { color: var(--ink); }
 table.day-table tr.month-total-row td:first-child { text-align: left; }
+table.day-table tr.mid-header-row th {
+  background: var(--surface-line);
+  border-top: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);
+}
 
 /* ---------- payslip ---------- */
 .payslip { padding: 0; overflow: hidden; }

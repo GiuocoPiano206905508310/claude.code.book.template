@@ -55,6 +55,18 @@ function defaultStatusForWeekday(dow, company) {
   return 'normal';
 }
 
+// 見出し行を再掲する位置（0始まりのインデックス。この位置の行の直前に挿入する）を決める。
+// 期間が暦月をまたぐ場合はその境目（例：15日締めなら月末日と翌月1日の間）、またがない
+// 場合（末日締め）は期間の中間（例：31日間なら15日と16日の間）とする。
+function computeMidHeaderInsertIndex(periodDates) {
+  for (let i = 1; i < periodDates.length; i++) {
+    if (periodDates[i].m !== periodDates[i - 1].m || periodDates[i].y !== periodDates[i - 1].y) {
+      return i;
+    }
+  }
+  return Math.floor(periodDates.length / 2);
+}
+
 function renderMonthTotalRow(rowId, totals) {
   const row = document.getElementById(rowId);
   OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY.concat('worked').forEach((key) => {
@@ -101,10 +113,18 @@ async function renderDayTable() {
   const records = await fetchPeriodRecords(employee.id, periodDates);
   const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, periodDates.length);
   const weeklyByDay = computeWeeklyOvertimeByDay(records, overtimeByDay, periodDates, company.weekStartDay);
+  const midHeaderInsertAt = computeMidHeaderInsertIndex(periodDates);
+  const headerRowTemplate = document.getElementById('dayTableHeaderRow');
   let workedTotal = 0;
   let weeklyOvertimeTotal = 0;
 
   periodDates.forEach((date, i) => {
+    if (i === midHeaderInsertAt) {
+      const midHeader = headerRowTemplate.cloneNode(true);
+      midHeader.removeAttribute('id');
+      midHeader.classList.add('mid-header-row');
+      tbody.appendChild(midHeader);
+    }
     const idx = i + 1;
     const jsDate = new Date(date.y, date.m - 1, date.d);
     const dow = jsDate.getDay();
@@ -156,7 +176,7 @@ async function renderDayTable() {
   // しない。時刻欄はスマホのピッカー操作中にも'change'が発火しうるため、
   // ピッカーを閉じた（フォーカスが外れた）タイミングである'blur'で判定する
   // （'change'で判定すると、退勤時刻を選び終える前に保存されてしまう）。
-  tbody.querySelectorAll('tr').forEach((tr) => {
+  tbody.querySelectorAll('tr:not(.mid-header-row)').forEach((tr) => {
     const actualYm = tr.dataset.actualYm;
     const actualDay = tr.dataset.actualDay;
     const statusSelect = tr.querySelector('[data-field="status"]');
