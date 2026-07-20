@@ -65,6 +65,7 @@ function resetFormToNewBonus() {
   editingBonusId = null;
   const employee = currentEmployee();
   if (!employee) return;
+  const company = getCompany();
 
   document.getElementById('bonusLabel').value = '';
   document.getElementById('bonusDate').value = new Date().toISOString().slice(0, 10);
@@ -76,18 +77,18 @@ function resetFormToNewBonus() {
   document.getElementById('bonusAmount').value = '500,000';
   document.getElementById('prevMonthSalary').value = '250,000';
   document.getElementById('bonusCalcPeriod').value = '6';
-  document.getElementById('healthInsuranceType').value = employee.healthInsuranceType;
-  populatePrefectureSelect('prefecture', employee.prefecture);
-  populateIndustrySelect('industryType', employee.industryType);
+  document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
+  populatePrefectureSelect('prefecture', company.prefecture);
+  populateIndustrySelect('industryType', company.industryType);
   document.getElementById('healthCumulative').value = '0';
   document.getElementById('pensionCumulative').value = '0';
 
   updateInsuranceFieldVisibilityInForm();
   applyIndustryRateToForm();
-  document.getElementById('healthRate').value = Number(employee.healthRate).toFixed(2);
-  document.getElementById('careRate').value = Number(employee.careRate).toFixed(2);
-  document.getElementById('pensionRate').value = Number(employee.pensionRate).toFixed(2);
-  document.getElementById('employmentRate').value = Number(employee.employmentRate).toFixed(2);
+  document.getElementById('healthRate').value = Number(company.healthRate).toFixed(2);
+  document.getElementById('careRate').value = Number(company.careRate).toFixed(2);
+  document.getElementById('pensionRate').value = Number(company.pensionRate).toFixed(2);
+  document.getElementById('employmentRate').value = Number(company.employmentRate).toFixed(2);
 
   document.querySelector('#bonusResultTable tbody').innerHTML = '';
   document.getElementById('bonusNetValue').textContent = '— 円';
@@ -106,8 +107,7 @@ function loadFormFromBonusRecord(record) {
   document.getElementById('bonusAmount').value = formatThousands(input.bonusAmount);
   document.getElementById('prevMonthSalary').value = formatThousands(input.prevMonthSalary);
   document.getElementById('bonusCalcPeriod').value = String(input.calcPeriodMonths);
-  const employee = currentEmployee();
-  populatePrefectureSelect('prefecture', employee ? employee.prefecture : null);
+  populatePrefectureSelect('prefecture', getCompany().prefecture);
   document.getElementById('healthCumulative').value = formatThousands(input.healthCumulative);
   document.getElementById('pensionCumulative').value = formatThousands(input.pensionCumulative);
 

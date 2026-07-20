@@ -8,48 +8,9 @@ let editingId = null;
 let allowanceSeq = 0;
 let ageUpdateTimer = null;
 
-function applyPrefectureRateToForm() {
-  const prefecture = document.getElementById('prefecture').value;
-  document.getElementById('healthRate').value = PREFECTURE_HEALTH_RATES[prefecture].toFixed(2);
-  document.getElementById('careRate').value = CARE_RATE_DEFAULT.toFixed(2);
-}
-
-function applyHealthInsuranceTypeToForm() {
-  const isKumiai = document.getElementById('healthInsuranceType').value === 'kumiai';
-  document.getElementById('prefectureFieldRow').style.display = isKumiai ? 'none' : '';
-  document.getElementById('careRate').readOnly = !isKumiai;
-  document.getElementById('healthRateLabel').textContent = isKumiai ? '健康保険料率（手動入力）' : '健康保険料率（自動入力・編集可）';
-  document.getElementById('careRateLabel').textContent = isKumiai ? '介護保険料率（手動入力）' : '介護保険料率（全国一律）';
-  if (!isKumiai) applyPrefectureRateToForm();
-}
-
-function applyIndustryRateToForm() {
-  const industry = document.getElementById('industryType').value;
-  document.getElementById('employmentRate').value = EMPLOYMENT_RATES_BY_INDUSTRY[industry].toFixed(2);
-}
-
 function applyEmploymentTypeLabelToForm() {
   const employmentType = document.getElementById('employmentType').value;
   document.getElementById('baseSalaryLabel').textContent = employmentType === '役員' ? '役員報酬（円）' : '基本給（円）';
-}
-
-function updateInsuranceFieldVisibilityInForm() {
-  const employmentType = document.getElementById('employmentType').value;
-  const hideHealthGroup = employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）';
-  const hideEmploymentGroup = employmentType === 'アルバイト・パート（雇用保険対象外）';
-
-  ['rateSectionHeader', 'healthTypeFieldRow', 'rateGrid'].forEach((id) => {
-    document.getElementById(id).style.display = hideHealthGroup ? 'none' : '';
-  });
-  ['industryFieldRow', 'employmentRateFieldRow'].forEach((id) => {
-    document.getElementById(id).style.display = hideEmploymentGroup ? 'none' : '';
-  });
-
-  if (hideHealthGroup) {
-    document.getElementById('prefectureFieldRow').style.display = 'none';
-  } else {
-    applyHealthInsuranceTypeToForm();
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -252,9 +213,6 @@ function resetForm() {
   document.getElementById('calcMethod').value = 'table';
   document.getElementById('taxTable').value = '甲';
   document.getElementById('residentTax').value = '0';
-  document.getElementById('healthInsuranceType').value = 'kyoukai';
-  populatePrefectureSelect('prefecture', '東京');
-  populateIndustrySelect('industryType', '一般の事業');
   document.getElementById('workStart').value = '09:00';
   document.getElementById('workEnd').value = '18:00';
   document.getElementById('standardDailyHours').value = '8';
@@ -262,9 +220,6 @@ function resetForm() {
   document.getElementById('monthlyStandardDays').value = '20';
   renderOvertimeRatesList(defaultOvertimeRates());
   applyEmploymentTypeLabelToForm();
-  applyHealthInsuranceTypeToForm();
-  applyIndustryRateToForm();
-  updateInsuranceFieldVisibilityInForm();
   updateAgeDisplay();
 }
 
@@ -287,9 +242,6 @@ function loadFormFromEmployee(emp) {
   document.getElementById('calcMethod').value = emp.calcMethod;
   document.getElementById('taxTable').value = emp.taxTable;
   document.getElementById('residentTax').value = formatThousands(emp.residentTax);
-  document.getElementById('healthInsuranceType').value = emp.healthInsuranceType;
-  populatePrefectureSelect('prefecture', emp.prefecture);
-  populateIndustrySelect('industryType', emp.industryType);
   document.getElementById('workStart').value = emp.workStart || '09:00';
   document.getElementById('workEnd').value = emp.workEnd || '18:00';
   document.getElementById('standardDailyHours').value = emp.standardDailyHours || 8;
@@ -301,12 +253,6 @@ function loadFormFromEmployee(emp) {
   });
   renderOvertimeRatesList(storedRates);
   applyEmploymentTypeLabelToForm();
-  updateInsuranceFieldVisibilityInForm();
-  applyIndustryRateToForm();
-  document.getElementById('healthRate').value = Number(emp.healthRate).toFixed(2);
-  document.getElementById('careRate').value = Number(emp.careRate).toFixed(2);
-  document.getElementById('pensionRate').value = Number(emp.pensionRate).toFixed(2);
-  document.getElementById('employmentRate').value = Number(emp.employmentRate).toFixed(2);
   updateAgeDisplay();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -328,13 +274,6 @@ function collectFormAsEmployee() {
     calcMethod: document.getElementById('calcMethod').value,
     taxTable: document.getElementById('taxTable').value,
     residentTax: getNumInputValue('residentTax'),
-    healthInsuranceType: document.getElementById('healthInsuranceType').value,
-    prefecture: document.getElementById('prefecture').value,
-    healthRate: Number(document.getElementById('healthRate').value) || 0,
-    careRate: Number(document.getElementById('careRate').value) || 0,
-    pensionRate: Number(document.getElementById('pensionRate').value) || 0,
-    industryType: document.getElementById('industryType').value,
-    employmentRate: Number(document.getElementById('employmentRate').value) || 0,
     workStart: document.getElementById('workStart').value || '09:00',
     workEnd: document.getElementById('workEnd').value || '18:00',
     standardDailyHours: Number(document.getElementById('standardDailyHours').value) || 8,
@@ -383,13 +322,7 @@ function renderEmployeeTable() {
   });
 }
 
-document.getElementById('prefecture').addEventListener('change', applyPrefectureRateToForm);
-document.getElementById('healthInsuranceType').addEventListener('change', applyHealthInsuranceTypeToForm);
-document.getElementById('industryType').addEventListener('change', applyIndustryRateToForm);
-document.getElementById('employmentType').addEventListener('change', () => {
-  applyEmploymentTypeLabelToForm();
-  updateInsuranceFieldVisibilityInForm();
-});
+document.getElementById('employmentType').addEventListener('change', applyEmploymentTypeLabelToForm);
 document.getElementById('birthDate').addEventListener('change', updateAgeDisplay);
 document.getElementById('addAllowanceBtn').addEventListener('click', addAllowanceRow);
 

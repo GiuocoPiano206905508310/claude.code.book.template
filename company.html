@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>会社マスタ管理 | 給与・勤怠管理システム</title>
+<link rel="stylesheet" href="style.css?v=4">
+</head>
+<body>
+<nav class="navbar" id="navbar"></nav>
+
+<div class="page narrow">
+  <header class="masthead">
+    <p class="eyebrow">Company Master</p>
+    <h1>会社マスタ管理</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="notice">
+    <p>※ ここで設定した保険料率は、全従業員に共通の会社設定として給与計算・賞与計算で自動的に使用されます。</p>
+    <p>※ 入力していただいた情報は、お使いのブラウザ内（localStorage）にのみ保存され、外部のサーバーへ送信・保存されることはありません。</p>
+  </div>
+
+  <section class="card form-card" aria-label="会社の保険料率設定">
+    <h2 id="rateSectionHeader">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
+    <div class="field-row" id="healthTypeFieldRow">
+      <label for="healthInsuranceType">健康保険の種類</label>
+      <div class="field-input">
+        <select id="healthInsuranceType">
+          <option value="kyoukai">協会けんぽ（都道府県単位保険料率）</option>
+          <option value="kumiai">健康保険組合（保険料率手動入力）</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row" id="prefectureFieldRow">
+      <label for="prefecture">都道府県（協会けんぽ支部）</label>
+      <div class="field-input">
+        <select id="prefecture"></select>
+      </div>
+    </div>
+    <div class="rate-grid" id="rateGrid">
+      <div class="field-row">
+        <label for="healthRate" id="healthRateLabel">健康保険料率（自動入力・編集可）</label>
+        <div class="field-input">
+          <input type="number" id="healthRate" value="9.85" min="0" step="0.01">
+          <span class="unit">%</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="careRate" id="careRateLabel">介護保険料率（全国一律）</label>
+        <div class="field-input">
+          <input type="number" id="careRate" value="1.62" min="0" step="0.01" readonly>
+          <span class="unit">%</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="pensionRate">厚生年金保険料率</label>
+        <div class="field-input">
+          <input type="number" id="pensionRate" value="18.30" min="0" step="0.01" readonly>
+          <span class="unit">%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row" id="industryFieldRow">
+      <label for="industryType">事業の種類（雇用保険）</label>
+      <div class="field-input">
+        <select id="industryType"></select>
+      </div>
+    </div>
+    <div class="field-row" id="employmentRateFieldRow">
+      <label for="employmentRate">雇用保険料率（従業員負担分、自動入力）</label>
+      <div class="field-input">
+        <input type="number" id="employmentRate" value="0.50" min="0" step="0.01" readonly>
+        <span class="unit">%</span>
+      </div>
+    </div>
+
+    <button id="saveBtn" type="button" class="btn btn-block">保存する</button>
+    <p class="export-status" id="saveStatus"></p>
+  </section>
+
+  <footer>個人・小規模事業向けの概算ツールです。正式な保険料率の適用には専門家・社会保険労務士にご確認ください。</footer>
+</div>
+
+<script src="calc.js?v=4"></script>
+<script src="data.js?v=4"></script>
+<script src="common.js?v=4"></script>
+<script src="company.js?v=4"></script>
+</body>
+</html>
