@@ -6,6 +6,9 @@ let editingBonusId = null;
 // 従業員マスタ管理（保存済み賞与を表示中の場合はその当時の値）から取り込む、
 // 賞与計算画面では編集不可の項目
 let currentEmployeeFields = null;
+// 会社マスタ管理（保存済み賞与を表示中の場合はその当時の値）から取り込む、
+// 賞与計算画面では編集不可の項目
+let currentCompanyFields = null;
 
 async function currentEmployee() {
   const id = document.getElementById('employeeSelect').value;
@@ -22,26 +25,6 @@ async function populateEmployeeSelect() {
   return hasEmployees;
 }
 
-function applyPrefectureRateToForm() {
-  const prefecture = document.getElementById('prefecture').value;
-  document.getElementById('healthRate').value = PREFECTURE_HEALTH_RATES[prefecture].toFixed(2);
-  document.getElementById('careRate').value = CARE_RATE_DEFAULT.toFixed(2);
-}
-
-function applyHealthInsuranceTypeToForm() {
-  const isKumiai = document.getElementById('healthInsuranceType').value === 'kumiai';
-  document.getElementById('prefectureFieldRow').style.display = isKumiai ? 'none' : '';
-  document.getElementById('careRate').readOnly = !isKumiai;
-  document.getElementById('healthRateLabel').textContent = isKumiai ? '健康保険料率（手動入力）' : '健康保険料率（自動入力・編集可）';
-  document.getElementById('careRateLabel').textContent = isKumiai ? '介護保険料率（手動入力）' : '介護保険料率（全国一律）';
-  if (!isKumiai) applyPrefectureRateToForm();
-}
-
-function applyIndustryRateToForm() {
-  const industry = document.getElementById('industryType').value;
-  document.getElementById('employmentRate').value = EMPLOYMENT_RATES_BY_INDUSTRY[industry].toFixed(2);
-}
-
 function renderEmployeeInfoGrid(fields) {
   renderInfoTiles('employeeInfoGrid', [
     ['雇用形態', fields.employmentType],
@@ -51,23 +34,17 @@ function renderEmployeeInfoGrid(fields) {
   ]);
 }
 
-function updateInsuranceFieldVisibilityInForm(employmentType) {
-  const hideHealthGroup = employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）';
-  const hideEmploymentGroup = employmentType === 'アルバイト・パート（雇用保険対象外）';
-
-  ['rateSectionHeader', 'healthTypeFieldRow', 'rateGrid', 'healthCumulativeRow', 'pensionCumulativeRow'].forEach((id) => {
-    document.getElementById(id).style.display = hideHealthGroup ? 'none' : '';
-  });
-  ['industryFieldRow', 'employmentRateFieldRow'].forEach((id) => {
-    document.getElementById(id).style.display = hideEmploymentGroup ? 'none' : '';
-  });
-
-  if (hideHealthGroup) {
-    document.getElementById('prefectureFieldRow').style.display = 'none';
-  } else {
-    document.getElementById('prefectureFieldRow').style.display =
-      document.getElementById('healthInsuranceType').value === 'kumiai' ? 'none' : '';
-  }
+function renderCompanyInfoGrid(fields) {
+  renderInfoTiles('companyInfoGrid', [
+    ['源泉所得税の計算方法', fields.calcMethod === 'machine' ? '機械計算（甲欄のみ）' : '月額表'],
+    ['健康保険の種類', fields.healthInsuranceType === 'kumiai' ? '健康保険組合' : '協会けんぽ'],
+    ['都道府県（協会けんぽ支部）', fields.prefecture],
+    ['健康保険料率', `${(fields.healthRate * 100).toFixed(2)} %`],
+    ['介護保険料率', `${(fields.careRate * 100).toFixed(2)} %`],
+    ['厚生年金保険料率', `${(fields.pensionRate * 100).toFixed(2)} %`],
+    ['事業の種類（雇用保険）', fields.industryType],
+    ['雇用保険料率（従業員負担分）', `${(fields.employmentRate * 100).toFixed(2)} %`],
+  ]);
 }
 
 async function resetFormToNewBonus() {
@@ -85,22 +62,24 @@ async function resetFormToNewBonus() {
     taxTable: employee.taxTable,
   };
   renderEmployeeInfoGrid(currentEmployeeFields);
-  document.getElementById('calcMethod').value = company.calcMethod;
+
+  currentCompanyFields = {
+    calcMethod: company.calcMethod,
+    healthRate: Number(company.healthRate) / 100,
+    careRate: Number(company.careRate) / 100,
+    pensionRate: Number(company.pensionRate) / 100,
+    employmentRate: Number(company.employmentRate) / 100,
+    healthInsuranceType: company.healthInsuranceType,
+    prefecture: company.prefecture,
+    industryType: company.industryType,
+  };
+  renderCompanyInfoGrid(currentCompanyFields);
+
   document.getElementById('bonusAmount').value = '500,000';
   document.getElementById('prevMonthSalary').value = '250,000';
   document.getElementById('bonusCalcPeriod').value = '6';
-  document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
-  populatePrefectureSelect('prefecture', company.prefecture);
-  populateIndustrySelect('industryType', company.industryType);
   document.getElementById('healthCumulative').value = '0';
   document.getElementById('pensionCumulative').value = '0';
-
-  updateInsuranceFieldVisibilityInForm(currentEmployeeFields.employmentType);
-  applyIndustryRateToForm();
-  document.getElementById('healthRate').value = Number(company.healthRate).toFixed(2);
-  document.getElementById('careRate').value = Number(company.careRate).toFixed(2);
-  document.getElementById('pensionRate').value = Number(company.pensionRate).toFixed(2);
-  document.getElementById('employmentRate').value = Number(company.employmentRate).toFixed(2);
 
   document.querySelector('#bonusResultTable tbody').innerHTML = '';
   document.getElementById('bonusNetValue').textContent = '— 円';
@@ -118,20 +97,25 @@ async function loadFormFromBonusRecord(record) {
     taxTable: input.taxTable,
   };
   renderEmployeeInfoGrid(currentEmployeeFields);
-  document.getElementById('calcMethod').value = input.calcMethod;
+
+  const company = await getCompany();
+  currentCompanyFields = {
+    calcMethod: input.calcMethod,
+    healthRate: input.healthRate,
+    careRate: input.careRate,
+    pensionRate: input.pensionRate,
+    employmentRate: input.employmentRate,
+    healthInsuranceType: company.healthInsuranceType,
+    prefecture: company.prefecture,
+    industryType: company.industryType,
+  };
+  renderCompanyInfoGrid(currentCompanyFields);
+
   document.getElementById('bonusAmount').value = formatThousands(input.bonusAmount);
   document.getElementById('prevMonthSalary').value = formatThousands(input.prevMonthSalary);
   document.getElementById('bonusCalcPeriod').value = String(input.calcPeriodMonths);
-  const company = await getCompany();
-  populatePrefectureSelect('prefecture', company.prefecture);
   document.getElementById('healthCumulative').value = formatThousands(input.healthCumulative);
   document.getElementById('pensionCumulative').value = formatThousands(input.pensionCumulative);
-
-  updateInsuranceFieldVisibilityInForm(currentEmployeeFields.employmentType);
-  document.getElementById('healthRate').value = (input.healthRate * 100).toFixed(2);
-  document.getElementById('careRate').value = (input.careRate * 100).toFixed(2);
-  document.getElementById('pensionRate').value = (input.pensionRate * 100).toFixed(2);
-  document.getElementById('employmentRate').value = (input.employmentRate * 100).toFixed(2);
 
   renderResult(record.result);
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -140,11 +124,7 @@ async function loadFormFromBonusRecord(record) {
 function collectInput() {
   return {
     ...currentEmployeeFields,
-    calcMethod: document.getElementById('calcMethod').value,
-    healthRate: Number(document.getElementById('healthRate').value) / 100,
-    careRate: Number(document.getElementById('careRate').value) / 100,
-    pensionRate: Number(document.getElementById('pensionRate').value) / 100,
-    employmentRate: Number(document.getElementById('employmentRate').value) / 100,
+    ...currentCompanyFields,
     bonusAmount: getNumInputValue('bonusAmount'),
     prevMonthSalary: getNumInputValue('prevMonthSalary'),
     calcPeriodMonths: Number(document.getElementById('bonusCalcPeriod').value) || 6,
@@ -232,9 +212,6 @@ document.getElementById('employeeSelect').addEventListener('change', async () =>
   await resetFormToNewBonus();
   await renderHistoryTable();
 });
-document.getElementById('prefecture').addEventListener('change', applyPrefectureRateToForm);
-document.getElementById('healthInsuranceType').addEventListener('change', applyHealthInsuranceTypeToForm);
-document.getElementById('industryType').addEventListener('change', applyIndustryRateToForm);
 document.getElementById('calcBonusBtn').addEventListener('click', calculate);
 
 document.getElementById('saveBtn').addEventListener('click', async () => {

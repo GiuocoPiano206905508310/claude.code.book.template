@@ -357,30 +357,31 @@ function defaultCompany() {
   };
 }
 
+// サインアップ時にuser_idのみのプレースホルダー行を作成しているため（login.js参照）、
+// 行自体は存在してもほとんどの列がnull/undefinedの場合がある。列ごとに未設定なら
+// defaultCompany()の値にフォールバックする（存在チェックを行全体ではなく列単位で行う）。
 async function getCompany() {
   const { data, error } = await supabaseClient.from('company_settings').select('*').maybeSingle();
   if (error) throw error;
-  if (!data) return defaultCompany();
+  const defaults = defaultCompany();
+  if (!data) return defaults;
+  const orNum = (v, fallback) => (v !== null && v !== undefined ? Number(v) : fallback);
   return {
-    companyName: data.company_name || '',
-    statutoryHolidayWeekday: data.statutory_holiday_weekday !== null && data.statutory_holiday_weekday !== undefined
-      ? Number(data.statutory_holiday_weekday) : 0,
-    scheduledHolidayWeekday: data.scheduled_holiday_weekday !== null && data.scheduled_holiday_weekday !== undefined
-      ? Number(data.scheduled_holiday_weekday) : 6,
-    weekStartDay: data.week_start_day !== null && data.week_start_day !== undefined
-      ? Number(data.week_start_day) : 0,
-    weeklyOvertimeThreshold: data.weekly_overtime_threshold !== null && data.weekly_overtime_threshold !== undefined
-      ? Number(data.weekly_overtime_threshold) : 40,
-    paycheckClosingDay: data.paycheck_closing_day || 'end',
-    paycheckPaymentDay: data.paycheck_payment_day || '25',
-    healthInsuranceType: data.health_insurance_type,
-    prefecture: data.prefecture,
-    healthRate: Number(data.health_rate),
-    careRate: Number(data.care_rate),
-    pensionRate: Number(data.pension_rate),
-    industryType: data.industry_type,
-    employmentRate: Number(data.employment_rate),
-    calcMethod: data.calc_method,
+    companyName: data.company_name || defaults.companyName,
+    statutoryHolidayWeekday: orNum(data.statutory_holiday_weekday, defaults.statutoryHolidayWeekday),
+    scheduledHolidayWeekday: orNum(data.scheduled_holiday_weekday, defaults.scheduledHolidayWeekday),
+    weekStartDay: orNum(data.week_start_day, defaults.weekStartDay),
+    weeklyOvertimeThreshold: orNum(data.weekly_overtime_threshold, defaults.weeklyOvertimeThreshold),
+    paycheckClosingDay: data.paycheck_closing_day || defaults.paycheckClosingDay,
+    paycheckPaymentDay: data.paycheck_payment_day || defaults.paycheckPaymentDay,
+    healthInsuranceType: data.health_insurance_type || defaults.healthInsuranceType,
+    prefecture: data.prefecture || defaults.prefecture,
+    healthRate: orNum(data.health_rate, defaults.healthRate),
+    careRate: orNum(data.care_rate, defaults.careRate),
+    pensionRate: orNum(data.pension_rate, defaults.pensionRate),
+    industryType: data.industry_type || defaults.industryType,
+    employmentRate: orNum(data.employment_rate, defaults.employmentRate),
+    calcMethod: data.calc_method || defaults.calcMethod,
   };
 }
 
