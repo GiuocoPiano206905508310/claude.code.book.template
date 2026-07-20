@@ -56,6 +56,7 @@
               <th>実働</th>
               <th title="法定内労働時間">法定内</th>
               <th title="法定外労働時間(月60時間以内)">法定外60内</th>
+              <th title="週の法定外労働時間（週40時間超、日次の法定外分と重複しない分のみ）。会社マスタ管理の「週の起算日」を基準とした週の最終日に計上されます。">週残業</th>
               <th title="法定外労働時間(月60時間超)">法定外60超</th>
               <th title="所定休日労働時間">所定休日</th>
               <th title="法定休日労働時間">法定休日</th>
@@ -64,8 +65,38 @@
               <th title="法定外労働時間(月60時間超) + 深夜労働時間">法定外60超+深夜</th>
               <th title="法定休日労働時間 + 深夜労働時間">法定休日+深夜</th>
             </tr>
+            <tr class="month-total-row" id="monthTotalTopRow">
+              <td>月合計</td><td></td><td></td><td></td><td></td><td></td><td></td>
+              <td class="computed" data-role="worked"></td>
+              <td class="computed" data-role="legalWithin"></td>
+              <td class="computed" data-role="overtimeWithin60"></td>
+              <td class="computed" data-role="weeklyOvertime"></td>
+              <td class="computed" data-role="overtimeOver60"></td>
+              <td class="computed" data-role="scheduledHoliday"></td>
+              <td class="computed" data-role="statutoryHoliday"></td>
+              <td class="computed" data-role="lateNight"></td>
+              <td class="computed" data-role="overtimeWithin60Night"></td>
+              <td class="computed" data-role="overtimeOver60Night"></td>
+              <td class="computed" data-role="statutoryHolidayNight"></td>
+            </tr>
           </thead>
           <tbody></tbody>
+          <tfoot>
+            <tr class="month-total-row" id="monthTotalBottomRow">
+              <td>月合計</td><td></td><td></td><td></td><td></td><td></td><td></td>
+              <td class="computed" data-role="worked"></td>
+              <td class="computed" data-role="legalWithin"></td>
+              <td class="computed" data-role="overtimeWithin60"></td>
+              <td class="computed" data-role="weeklyOvertime"></td>
+              <td class="computed" data-role="overtimeOver60"></td>
+              <td class="computed" data-role="scheduledHoliday"></td>
+              <td class="computed" data-role="statutoryHoliday"></td>
+              <td class="computed" data-role="lateNight"></td>
+              <td class="computed" data-role="overtimeWithin60Night"></td>
+              <td class="computed" data-role="overtimeOver60Night"></td>
+              <td class="computed" data-role="statutoryHolidayNight"></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
       <p class="field-note">※ 出勤・退勤の時刻が両方入力されると自動的に保存されます（有給休暇・欠勤はステータス選択のみで保存されます）。</p>
