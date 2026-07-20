@@ -32,10 +32,6 @@
     </div>
     <a class="btn btn-outline" id="goPayrollBtn" href="payroll.html">この月の給与計算へ →</a>
   </div>
-  <div class="checkbox-row">
-    <input type="checkbox" id="showMidHeaderCheckbox" checked>
-    <label for="showMidHeaderCheckbox">列見出しを期間の中間にも表示する</label>
-  </div>
   <p class="field-note" id="periodRangeLabel"></p>
 
   <div id="noEmployeeState" class="empty-state" style="display:none;">
@@ -105,6 +101,10 @@
         </table>
       </div>
       <p class="field-note">※ 出勤・退勤の時刻が両方入力されると自動的に保存されます（有給休暇・欠勤はステータス選択のみで保存されます）。</p>
+      <div class="checkbox-row">
+        <input type="checkbox" id="showMidHeaderCheckbox" checked>
+        <label for="showMidHeaderCheckbox">列見出しを期間の中間にも表示する</label>
+      </div>
     </section>
   </div>
 
