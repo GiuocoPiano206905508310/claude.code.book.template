@@ -1,33 +1,14 @@
 // ============================================================================
-// データ層。localStorage にすべてのデータをブラウザ内保存する（外部送信なし）。
-// 従業員マスタ / 勤怠記録 / 給与明細履歴 / 賞与明細履歴 を管理する。
+// データ層。Supabase（Postgres + RLS）に会社ごとのデータを保存する。
+// 各テーブルは行レベルセキュリティ（RLS）で user_id = auth.uid() の行だけを
+// 読み書きできるよう制限されているため、SELECT時に自分で絞り込む必要はない。
+// 従業員マスタ / 勤怠記録 / 給与明細履歴 / 賞与明細履歴 / 会社設定を管理する。
 // ============================================================================
 
-const STORAGE_KEY = 'payrollAttendanceApp.v1';
-
-function defaultDB() {
-  return { employees: [], attendance: {}, payslips: {}, bonuses: {}, company: null };
-}
-
-function loadDB() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultDB();
-    const parsed = JSON.parse(raw);
-    return {
-      employees: parsed.employees || [],
-      attendance: parsed.attendance || {},
-      payslips: parsed.payslips || {},
-      bonuses: parsed.bonuses || {},
-      company: parsed.company || null,
-    };
-  } catch (e) {
-    return defaultDB();
-  }
-}
-
-function saveDB(db) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+async function getCurrentUserId() {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('ログインしていません。');
+  return user.id;
 }
 
 function genId(prefix) {
@@ -37,60 +18,132 @@ function genId(prefix) {
 // ---------------------------------------------------------------------------
 // 従業員マスタ
 // ---------------------------------------------------------------------------
-function listEmployees() {
-  return loadDB().employees.slice().sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+function employeeRowToObj(row) {
+  const obj = {
+    id: row.id,
+    name: row.name,
+    nameKana: row.name_kana || '',
+    employmentType: row.employment_type,
+    birthDate: row.birth_date,
+    baseSalary: row.base_salary,
+    allowances: row.allowances || [],
+    commuteAllowance: row.commute_allowance,
+    commuteAllowanceExcludeFromOvertimeBase: row.commute_allowance_exclude,
+    dependents: row.dependents,
+    taxTable: row.tax_table,
+    residentTax: row.resident_tax,
+    workStart: row.work_start,
+    workEnd: row.work_end,
+    standardDailyHours: Number(row.standard_daily_hours),
+    monthlyStandardHours: Number(row.monthly_standard_hours),
+    monthlyStandardDays: Number(row.monthly_standard_days),
+  };
+  const rates = row.overtime_rates || {};
+  OVERTIME_RATE_CATEGORIES.forEach((c) => {
+    obj[c.key] = rates[c.key] !== undefined ? rates[c.key] : c.defaultRate;
+  });
+  return obj;
 }
 
-function getEmployee(id) {
-  return loadDB().employees.find((e) => e.id === id) || null;
+function employeeObjToRow(emp, userId) {
+  const rates = {};
+  OVERTIME_RATE_CATEGORIES.forEach((c) => { rates[c.key] = emp[c.key]; });
+  return {
+    user_id: userId,
+    name: emp.name,
+    name_kana: emp.nameKana || null,
+    employment_type: emp.employmentType,
+    birth_date: emp.birthDate || null,
+    base_salary: emp.baseSalary,
+    allowances: emp.allowances || [],
+    commute_allowance: emp.commuteAllowance,
+    commute_allowance_exclude: emp.commuteAllowanceExcludeFromOvertimeBase,
+    dependents: emp.dependents,
+    tax_table: emp.taxTable,
+    resident_tax: emp.residentTax,
+    work_start: emp.workStart,
+    work_end: emp.workEnd,
+    standard_daily_hours: emp.standardDailyHours,
+    monthly_standard_hours: emp.monthlyStandardHours,
+    monthly_standard_days: emp.monthlyStandardDays,
+    overtime_rates: rates,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function listEmployees() {
+  const { data, error } = await supabase.from('employees').select('*').order('name');
+  if (error) throw error;
+  return data.map(employeeRowToObj);
+}
+
+async function getEmployee(id) {
+  const { data, error } = await supabase.from('employees').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data ? employeeRowToObj(data) : null;
 }
 
 // emp.id が未設定なら新規追加、設定済みなら更新
-function saveEmployee(emp) {
-  const db = loadDB();
+async function saveEmployee(emp) {
+  const userId = await getCurrentUserId();
+  const row = employeeObjToRow(emp, userId);
   if (emp.id) {
-    const i = db.employees.findIndex((e) => e.id === emp.id);
-    if (i >= 0) db.employees[i] = emp;
-    else db.employees.push(emp);
-  } else {
-    emp.id = genId('emp');
-    db.employees.push(emp);
+    const { data, error } = await supabase.from('employees').update(row).eq('id', emp.id).select().single();
+    if (error) throw error;
+    return employeeRowToObj(data);
   }
-  saveDB(db);
-  return emp;
+  const { data, error } = await supabase.from('employees').insert(row).select().single();
+  if (error) throw error;
+  return employeeRowToObj(data);
 }
 
-function deleteEmployee(id) {
-  const db = loadDB();
-  db.employees = db.employees.filter((e) => e.id !== id);
-  delete db.attendance[id];
-  delete db.payslips[id];
-  delete db.bonuses[id];
-  saveDB(db);
+// 従業員を削除すると、紐づく勤怠・給与明細・賞与明細もDBの外部キー制約により自動削除される
+async function deleteEmployee(id) {
+  const { error } = await supabase.from('employees').delete().eq('id', id);
+  if (error) throw error;
 }
 
 // ---------------------------------------------------------------------------
 // 勤怠記録
 // ym: 'YYYY-MM' 形式、day: 1〜31（数値 or 文字列どちらでも可）
-// record: { clockIn: 'HH:MM', clockOut: 'HH:MM', breakMinutes: number, status, note }
+// record: { clockIn: 'HH:MM', clockOut: 'HH:MM', breakMinutes: number, status }
 // status: 'normal' | 'paid_leave' | 'absence' | 'holiday_work'
 // ---------------------------------------------------------------------------
-function getMonthAttendance(empId, ym) {
-  const db = loadDB();
-  return (db.attendance[empId] && db.attendance[empId][ym]) || {};
+async function getMonthAttendance(employeeId, ym) {
+  const { data, error } = await supabase
+    .from('attendance_records').select('*').eq('employee_id', employeeId).eq('ym', ym);
+  if (error) throw error;
+  const result = {};
+  for (const row of data) {
+    result[String(row.day)] = {
+      clockIn: row.clock_in || '',
+      clockOut: row.clock_out || '',
+      breakMinutes: row.break_minutes,
+      status: row.status,
+    };
+  }
+  return result;
 }
 
-function setDayAttendance(empId, ym, day, record) {
-  const db = loadDB();
-  db.attendance[empId] = db.attendance[empId] || {};
-  db.attendance[empId][ym] = db.attendance[empId][ym] || {};
-  const key = String(day);
+async function setDayAttendance(employeeId, ym, day, record) {
   if (record === null) {
-    delete db.attendance[empId][ym][key];
-  } else {
-    db.attendance[empId][ym][key] = record;
+    const { error } = await supabase.from('attendance_records').delete()
+      .eq('employee_id', employeeId).eq('ym', ym).eq('day', day);
+    if (error) throw error;
+    return;
   }
-  saveDB(db);
+  const userId = await getCurrentUserId();
+  const { error } = await supabase.from('attendance_records').upsert({
+    user_id: userId,
+    employee_id: employeeId,
+    ym,
+    day: Number(day),
+    clock_in: record.clockIn || null,
+    clock_out: record.clockOut || null,
+    break_minutes: Number(record.breakMinutes) || 0,
+    status: record.status || 'normal',
+  }, { onConflict: 'employee_id,ym,day' });
+  if (error) throw error;
 }
 
 function timeToMinutes(t) {
@@ -108,8 +161,8 @@ const ATTENDANCE_STATUS_LABELS = {
 };
 
 // 従業員の所定労働設定をもとに、1か月分の勤怠から集計値を計算する
-function computeMonthSummary(employee, ym) {
-  const records = getMonthAttendance(employee.id, ym);
+async function computeMonthSummary(employee, ym) {
+  const records = await getMonthAttendance(employee.id, ym);
   const [y, m] = ym.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
   const standardDailyMinutes = (employee.standardDailyHours || 8) * 60;
@@ -171,63 +224,88 @@ function computeMonthSummary(employee, ym) {
 // ---------------------------------------------------------------------------
 // 給与明細履歴（従業員ID × 年月をキーに1件保存）
 // ---------------------------------------------------------------------------
-function savePayslip(empId, ym, data) {
-  const db = loadDB();
-  db.payslips[empId] = db.payslips[empId] || {};
-  db.payslips[empId][ym] = Object.assign({}, data, { savedAt: new Date().toISOString() });
-  saveDB(db);
+async function savePayslip(employeeId, ym, data) {
+  const userId = await getCurrentUserId();
+  const { error } = await supabase.from('payslips').upsert({
+    user_id: userId,
+    employee_id: employeeId,
+    ym,
+    input: data.input,
+    result: data.result,
+    saved_at: new Date().toISOString(),
+  }, { onConflict: 'employee_id,ym' });
+  if (error) throw error;
 }
 
-function getPayslip(empId, ym) {
-  const db = loadDB();
-  return (db.payslips[empId] && db.payslips[empId][ym]) || null;
+async function getPayslip(employeeId, ym) {
+  const { data, error } = await supabase.from('payslips').select('*')
+    .eq('employee_id', employeeId).eq('ym', ym).maybeSingle();
+  if (error) throw error;
+  return data ? { input: data.input, result: data.result, savedAt: data.saved_at } : null;
 }
 
-function listPayslips(empId) {
-  const db = loadDB();
-  return db.payslips[empId] || {};
+async function listPayslips(employeeId) {
+  const { data, error } = await supabase.from('payslips').select('*').eq('employee_id', employeeId);
+  if (error) throw error;
+  const result = {};
+  for (const row of data) result[row.ym] = { input: row.input, result: row.result, savedAt: row.saved_at };
+  return result;
 }
 
-function deletePayslip(empId, ym) {
-  const db = loadDB();
-  if (db.payslips[empId]) delete db.payslips[empId][ym];
-  saveDB(db);
+async function deletePayslip(employeeId, ym) {
+  const { error } = await supabase.from('payslips').delete().eq('employee_id', employeeId).eq('ym', ym);
+  if (error) throw error;
 }
 
 // ---------------------------------------------------------------------------
-// 賞与明細履歴（従業員ID配下に配列で保存、複数回の賞与支給に対応）
+// 賞与明細履歴（従業員ごとに複数件、複数回の賞与支給に対応）
 // ---------------------------------------------------------------------------
-function listBonuses(empId) {
-  const db = loadDB();
-  return (db.bonuses[empId] || []).slice().sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+function bonusRowToObj(row) {
+  return { id: row.id, label: row.label || '', date: row.bonus_date || '', input: row.input, result: row.result };
 }
 
-function saveBonusRecord(empId, bonusRecord) {
-  const db = loadDB();
-  db.bonuses[empId] = db.bonuses[empId] || [];
+async function listBonuses(employeeId) {
+  const { data, error } = await supabase.from('bonuses').select('*')
+    .eq('employee_id', employeeId).order('bonus_date', { ascending: true });
+  if (error) throw error;
+  return data.map(bonusRowToObj);
+}
+
+async function saveBonusRecord(employeeId, bonusRecord) {
   if (bonusRecord.id) {
-    const i = db.bonuses[empId].findIndex((b) => b.id === bonusRecord.id);
-    if (i >= 0) db.bonuses[empId][i] = bonusRecord;
-    else db.bonuses[empId].push(bonusRecord);
-  } else {
-    bonusRecord.id = genId('bonus');
-    db.bonuses[empId].push(bonusRecord);
+    const { data, error } = await supabase.from('bonuses').update({
+      label: bonusRecord.label || null,
+      bonus_date: bonusRecord.date || null,
+      input: bonusRecord.input,
+      result: bonusRecord.result,
+    }).eq('id', bonusRecord.id).select().single();
+    if (error) throw error;
+    return bonusRowToObj(data);
   }
-  saveDB(db);
-  return bonusRecord;
+  const userId = await getCurrentUserId();
+  const { data, error } = await supabase.from('bonuses').insert({
+    user_id: userId,
+    employee_id: employeeId,
+    label: bonusRecord.label || null,
+    bonus_date: bonusRecord.date || null,
+    input: bonusRecord.input,
+    result: bonusRecord.result,
+  }).select().single();
+  if (error) throw error;
+  return bonusRowToObj(data);
 }
 
-function deleteBonusRecord(empId, bonusId) {
-  const db = loadDB();
-  if (db.bonuses[empId]) db.bonuses[empId] = db.bonuses[empId].filter((b) => b.id !== bonusId);
-  saveDB(db);
+async function deleteBonusRecord(employeeId, bonusId) {
+  const { error } = await supabase.from('bonuses').delete().eq('id', bonusId).eq('employee_id', employeeId);
+  if (error) throw error;
 }
 
 // ---------------------------------------------------------------------------
-// 会社マスタ（保険料率設定。全従業員で共通の単一レコード）
+// 会社マスタ（保険料率設定。ログインユーザー1人＝会社1社の単一レコード）
 // ---------------------------------------------------------------------------
 function defaultCompany() {
   return {
+    companyName: '',
     healthInsuranceType: 'kyoukai',
     prefecture: '東京',
     healthRate: PREFECTURE_HEALTH_RATES['東京'],
@@ -239,15 +317,39 @@ function defaultCompany() {
   };
 }
 
-function getCompany() {
-  const db = loadDB();
-  return Object.assign(defaultCompany(), db.company || {});
+async function getCompany() {
+  const { data, error } = await supabase.from('company_settings').select('*').maybeSingle();
+  if (error) throw error;
+  if (!data) return defaultCompany();
+  return {
+    companyName: data.company_name || '',
+    healthInsuranceType: data.health_insurance_type,
+    prefecture: data.prefecture,
+    healthRate: Number(data.health_rate),
+    careRate: Number(data.care_rate),
+    pensionRate: Number(data.pension_rate),
+    industryType: data.industry_type,
+    employmentRate: Number(data.employment_rate),
+    calcMethod: data.calc_method,
+  };
 }
 
-function saveCompany(company) {
-  const db = loadDB();
-  db.company = company;
-  saveDB(db);
+async function saveCompany(company) {
+  const userId = await getCurrentUserId();
+  const { error } = await supabase.from('company_settings').upsert({
+    user_id: userId,
+    company_name: company.companyName || null,
+    health_insurance_type: company.healthInsuranceType,
+    prefecture: company.prefecture,
+    health_rate: company.healthRate,
+    care_rate: company.careRate,
+    pension_rate: company.pensionRate,
+    industry_type: company.industryType,
+    employment_rate: company.employmentRate,
+    calc_method: company.calcMethod,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
 }
 
 // ---------------------------------------------------------------------------

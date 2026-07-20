@@ -2,17 +2,15 @@
 // 賞与計算画面のロジック
 // ============================================================================
 
-renderNavbar('bonus.html');
-
 let editingBonusId = null;
 
-function currentEmployee() {
+async function currentEmployee() {
   const id = document.getElementById('employeeSelect').value;
-  return id ? getEmployee(id) : null;
+  return id ? await getEmployee(id) : null;
 }
 
-function populateEmployeeSelect() {
-  const employees = listEmployees();
+async function populateEmployeeSelect() {
+  const employees = await listEmployees();
   const select = document.getElementById('employeeSelect');
   select.innerHTML = employees.map((e) => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
   const hasEmployees = employees.length > 0;
@@ -61,11 +59,11 @@ function updateInsuranceFieldVisibilityInForm() {
   }
 }
 
-function resetFormToNewBonus() {
+async function resetFormToNewBonus() {
   editingBonusId = null;
-  const employee = currentEmployee();
+  const employee = await currentEmployee();
   if (!employee) return;
-  const company = getCompany();
+  const company = await getCompany();
 
   document.getElementById('bonusLabel').value = '';
   document.getElementById('bonusDate').value = new Date().toISOString().slice(0, 10);
@@ -94,7 +92,7 @@ function resetFormToNewBonus() {
   document.getElementById('bonusNetValue').textContent = '— 円';
 }
 
-function loadFormFromBonusRecord(record) {
+async function loadFormFromBonusRecord(record) {
   editingBonusId = record.id;
   document.getElementById('bonusLabel').value = record.label || '';
   document.getElementById('bonusDate').value = record.date || '';
@@ -107,7 +105,8 @@ function loadFormFromBonusRecord(record) {
   document.getElementById('bonusAmount').value = formatThousands(input.bonusAmount);
   document.getElementById('prevMonthSalary').value = formatThousands(input.prevMonthSalary);
   document.getElementById('bonusCalcPeriod').value = String(input.calcPeriodMonths);
-  populatePrefectureSelect('prefecture', getCompany().prefecture);
+  const company = await getCompany();
+  populatePrefectureSelect('prefecture', company.prefecture);
   document.getElementById('healthCumulative').value = formatThousands(input.healthCumulative);
   document.getElementById('pensionCumulative').value = formatThousands(input.pensionCumulative);
 
@@ -173,13 +172,13 @@ function renderResult(r) {
   document.getElementById('bonusNetValue').textContent = yen(r.netPay);
 }
 
-function renderHistoryTable() {
-  const employee = currentEmployee();
+async function renderHistoryTable() {
+  const employee = await currentEmployee();
   const tbody = document.querySelector('#historyTable tbody');
   tbody.innerHTML = '';
   if (!employee) { document.getElementById('historyEmptyState').style.display = ''; return; }
 
-  const records = listBonuses(employee.id).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const records = (await listBonuses(employee.id)).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   document.getElementById('historyEmptyState').style.display = records.length ? 'none' : '';
   document.getElementById('historyTable').style.display = records.length ? '' : 'none';
 
@@ -199,24 +198,25 @@ function renderHistoryTable() {
   }
 
   tbody.querySelectorAll('[data-action="view"]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const record = listBonuses(employee.id).find((r) => r.id === btn.dataset.id);
-      if (record) loadFormFromBonusRecord(record);
+    btn.addEventListener('click', async () => {
+      const records2 = await listBonuses(employee.id);
+      const record = records2.find((r) => r.id === btn.dataset.id);
+      if (record) await loadFormFromBonusRecord(record);
     });
   });
   tbody.querySelectorAll('[data-action="delete"]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       if (!confirm('この賞与明細を削除します。よろしいですか？')) return;
-      deleteBonusRecord(employee.id, btn.dataset.id);
-      if (editingBonusId === btn.dataset.id) resetFormToNewBonus();
-      renderHistoryTable();
+      await deleteBonusRecord(employee.id, btn.dataset.id);
+      if (editingBonusId === btn.dataset.id) await resetFormToNewBonus();
+      await renderHistoryTable();
     });
   });
 }
 
-document.getElementById('employeeSelect').addEventListener('change', () => {
-  resetFormToNewBonus();
-  renderHistoryTable();
+document.getElementById('employeeSelect').addEventListener('change', async () => {
+  await resetFormToNewBonus();
+  await renderHistoryTable();
 });
 document.getElementById('prefecture').addEventListener('change', applyPrefectureRateToForm);
 document.getElementById('healthInsuranceType').addEventListener('change', applyHealthInsuranceTypeToForm);
@@ -224,19 +224,27 @@ document.getElementById('industryType').addEventListener('change', applyIndustry
 document.getElementById('employmentType').addEventListener('change', updateInsuranceFieldVisibilityInForm);
 document.getElementById('calcBonusBtn').addEventListener('click', calculate);
 
-document.getElementById('saveBtn').addEventListener('click', () => {
-  const employee = currentEmployee();
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const employee = await currentEmployee();
   if (!employee) return;
-  const { input, result } = calculate();
-  const record = saveBonusRecord(employee.id, {
-    id: editingBonusId,
-    label: document.getElementById('bonusLabel').value.trim(),
-    date: document.getElementById('bonusDate').value,
-    input, result,
-  });
-  editingBonusId = record.id;
-  showExportStatus('exportStatus', '賞与明細を保存しました。', false);
-  renderHistoryTable();
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  try {
+    const { input, result } = calculate();
+    const record = await saveBonusRecord(employee.id, {
+      id: editingBonusId,
+      label: document.getElementById('bonusLabel').value.trim(),
+      date: document.getElementById('bonusDate').value,
+      input, result,
+    });
+    editingBonusId = record.id;
+    showExportStatus('exportStatus', '賞与明細を保存しました。', false);
+    await renderHistoryTable();
+  } catch (e) {
+    showExportStatus('exportStatus', '保存に失敗しました：' + e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 document.getElementById('exportPdfBtn').addEventListener('click', () => printSection('resultCard'));
@@ -253,12 +261,19 @@ document.getElementById('exportCopyBtn').addEventListener('click', () => copyRes
 
 ['bonusAmount', 'prevMonthSalary', 'healthCumulative', 'pensionCumulative'].forEach(attachThousandsFormatting);
 
-const hasEmployees = populateEmployeeSelect();
-if (hasEmployees) {
-  const params = new URLSearchParams(location.search);
-  if (params.get('emp') && getEmployee(params.get('emp'))) {
-    document.getElementById('employeeSelect').value = params.get('emp');
+(async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  renderNavbar('bonus.html');
+  renderNavbarUser(user);
+
+  const hasEmployees = await populateEmployeeSelect();
+  if (hasEmployees) {
+    const params = new URLSearchParams(location.search);
+    if (params.get('emp') && await getEmployee(params.get('emp'))) {
+      document.getElementById('employeeSelect').value = params.get('emp');
+    }
+    await resetFormToNewBonus();
+    await renderHistoryTable();
   }
-  resetFormToNewBonus();
-  renderHistoryTable();
-}
+})();

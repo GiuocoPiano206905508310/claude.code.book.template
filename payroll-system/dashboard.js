@@ -2,16 +2,22 @@
 // ダッシュボード画面のロジック
 // ============================================================================
 
-renderNavbar('index.html');
+(async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  renderNavbar('index.html');
+  renderNavbarUser(user);
 
-const employees = listEmployees();
-const ym = currentYm();
-document.getElementById('thisMonthLabel').textContent = ymLabel(ym);
+  const employees = await listEmployees();
+  const ym = currentYm();
+  document.getElementById('thisMonthLabel').textContent = ymLabel(ym);
 
-if (employees.length === 0) {
-  document.getElementById('emptyState').style.display = '';
-  document.getElementById('summaryGrid').innerHTML = '';
-} else {
+  if (employees.length === 0) {
+    document.getElementById('emptyState').style.display = '';
+    document.getElementById('summaryGrid').innerHTML = '';
+    return;
+  }
+
   document.getElementById('employeeStatusSection').style.display = '';
 
   let createdCount = 0;
@@ -24,8 +30,8 @@ if (employees.length === 0) {
   tbody.innerHTML = '';
 
   for (const emp of employees) {
-    const slip = getPayslip(emp.id, ym);
-    const summary = computeMonthSummary(emp, ym);
+    const slip = await getPayslip(emp.id, ym);
+    const summary = await computeMonthSummary(emp, ym);
     totalOvertimeHours += summary.overtimeHours;
     totalAbsenceDays += summary.absenceDays;
     if (slip) {
@@ -61,4 +67,4 @@ if (employees.length === 0) {
       <div class="tile-value ${cls}">${value}</div>
     </div>
   `).join('');
-}
+})();

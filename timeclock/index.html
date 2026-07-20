@@ -4,13 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>勤怠打刻 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <nav class="navbar" id="navbar">
   <a class="brand" href="index.html">勤怠打刻</a>
   <div class="nav-links">
     <a class="nav-link" href="../payroll-system/index.html">給与・勤怠管理システムへ →</a>
+    <span id="navUserArea"></span>
   </div>
 </nav>
 
@@ -57,9 +58,12 @@
   <footer>この打刻データは同一ブラウザ内の給与・勤怠管理システムと共有されます。個人・小規模事業向けの簡易ツールです。</footer>
 </div>
 
-<script src="calc.js?v=1"></script>
-<script src="data.js?v=1"></script>
-<script src="common.js?v=1"></script>
-<script src="timeclock.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-client.js?v=2"></script>
+<script src="auth.js?v=2"></script>
+<script src="calc.js?v=2"></script>
+<script src="data.js?v=2"></script>
+<script src="common.js?v=2"></script>
+<script src="timeclock.js?v=2"></script>
 </body>
 </html>
