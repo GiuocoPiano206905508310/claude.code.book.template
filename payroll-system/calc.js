@@ -585,3 +585,70 @@ function calcAbsenceDeduction(baseSalary, monthlyStandardDays, absenceDays) {
   const daily = baseSalary / (monthlyStandardDays || 20);
   return Math.round(daily * absenceDays);
 }
+
+// ----------------------------------------------------------------------
+// 年齢・年齢区分ヘルパー（日本時間基準でリアルタイムに算定）
+// ----------------------------------------------------------------------
+// 実行環境のタイムゾーンに関わらず「日本時間の現在日時」を取得する
+function getJstNow() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+}
+
+// birthDate: 'YYYY-MM-DD' / asOfDate: 基準日（省略時は日本時間の現在日時）
+function calcAge(birthDate, asOfDate) {
+  if (!birthDate) return null;
+  const parts = birthDate.split('-').map(Number);
+  if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return null;
+  const [by, bm, bd] = parts;
+  const asOf = asOfDate || getJstNow();
+  let age = asOf.getFullYear() - by;
+  const hadBirthdayThisYear = (asOf.getMonth() + 1 > bm) || (asOf.getMonth() + 1 === bm && asOf.getDate() >= bd);
+  if (!hadBirthdayThisYear) age--;
+  return Math.max(0, age);
+}
+
+// 社会保険の加入区分に用いる年齢区分（40歳以上：介護保険、70歳以上：厚生年金対象外、75歳以上：後期高齢者医療）
+function ageGroupFromAge(age) {
+  if (age === null || age === undefined) return 'under40';
+  if (age < 40) return 'under40';
+  if (age <= 64) return '40to64';
+  if (age <= 69) return '65to69';
+  if (age <= 74) return '70to74';
+  return '75plus';
+}
+
+// ----------------------------------------------------------------------
+// 割増賃金率の区分（従業員マスタで設定・編集する既定値。労働基準法上の下限）
+// ----------------------------------------------------------------------
+const OVERTIME_RATE_CATEGORIES = [
+  { key: 'legalWithinRate', label: '法定内労働時間', defaultRate: 1.00 },
+  { key: 'overtimeWithin60Rate', label: '法定外労働時間(月60時間以内)', defaultRate: 1.25 },
+  { key: 'overtimeOver60Rate', label: '法定外労働時間(月60時間超)', defaultRate: 1.50 },
+  { key: 'scheduledHolidayRate', label: '所定休日労働時間', defaultRate: 1.00 },
+  { key: 'statutoryHolidayRate', label: '法定休日労働時間', defaultRate: 1.35 },
+  { key: 'lateNightRate', label: '深夜労働時間', defaultRate: 0.25 },
+  { key: 'overtimeWithin60NightRate', label: '法定外労働時間(月60時間以内) + 深夜労働時間', defaultRate: 1.50 },
+  { key: 'overtimeOver60NightRate', label: '法定外労働時間(月60時間超) + 深夜労働時間', defaultRate: 1.75 },
+  { key: 'statutoryHolidayNightRate', label: '法定休日労働時間 + 深夜労働時間', defaultRate: 1.50 },
+];
+
+function defaultOvertimeRates() {
+  const rates = {};
+  OVERTIME_RATE_CATEGORIES.forEach((c) => { rates[c.key] = c.defaultRate; });
+  return rates;
+}
+
+// ----------------------------------------------------------------------
+// 手当（複数行）の集計ヘルパー
+// allowance: { name, amount, excludeFromOvertimeBase }
+// ----------------------------------------------------------------------
+function sumAllowances(allowances) {
+  return (allowances || []).reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+}
+
+// 割増賃金の基礎となる賃金に算入する手当の合計（除外チェックが付いた手当を除く）
+function sumNonExcludedAllowances(allowances) {
+  return (allowances || [])
+    .filter((a) => !a.excludeFromOvertimeBase)
+    .reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+}
