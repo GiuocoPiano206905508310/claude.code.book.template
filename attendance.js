@@ -55,6 +55,8 @@ async function renderDayTable() {
     const date = new Date(y, m - 1, d);
     const weekday = WEEKDAY_LABELS[date.getDay()];
     const rec = records[String(d)] || { clockIn: '', clockOut: '', breakMinutes: 60, status: 'normal' };
+    const scheduledStart = rec.scheduledStart || employee.workStart || '';
+    const scheduledEnd = rec.scheduledEnd || employee.workEnd || '';
     const worked = computeWorkedMinutes(rec);
     const categoryCells = OVERTIME_MINUTE_COLUMNS
       .map((key) => `<td class="computed" data-role="${key}">${fmtHm(overtimeByDay[d][key])}</td>`)
@@ -76,8 +78,8 @@ async function renderDayTable() {
       </td>
       <td><input type="time" data-field="clockIn" value="${rec.clockIn || ''}" ${isTimeless ? 'disabled' : ''}></td>
       <td><input type="time" data-field="clockOut" value="${rec.clockOut || ''}" ${isTimeless ? 'disabled' : ''}></td>
-      <td class="computed">${escapeHtml(employee.workStart || '')}</td>
-      <td class="computed">${escapeHtml(employee.workEnd || '')}</td>
+      <td><input type="time" data-field="scheduledStart" value="${escapeHtml(scheduledStart)}" ${isTimeless ? 'disabled' : ''}></td>
+      <td><input type="time" data-field="scheduledEnd" value="${escapeHtml(scheduledEnd)}" ${isTimeless ? 'disabled' : ''}></td>
       <td><input type="number" min="0" step="5" data-field="breakMinutes" value="${rec.breakMinutes ?? 60}" ${isTimeless ? 'disabled' : ''}></td>
       <td class="computed" data-role="worked">${fmtHm(worked)}</td>
       ${categoryCells}
@@ -96,17 +98,19 @@ async function renderDayTable() {
     const statusSelect = tr.querySelector('[data-field="status"]');
     const clockInEl = tr.querySelector('[data-field="clockIn"]');
     const clockOutEl = tr.querySelector('[data-field="clockOut"]');
+    const scheduledStartEl = tr.querySelector('[data-field="scheduledStart"]');
+    const scheduledEndEl = tr.querySelector('[data-field="scheduledEnd"]');
     const isReadyToSave = () => {
       const timeless = statusSelect.value === 'absence' || statusSelect.value === 'paid_leave';
       return timeless || (clockInEl.value && clockOutEl.value);
     };
     statusSelect.addEventListener('change', () => {
       const timeless = statusSelect.value === 'absence' || statusSelect.value === 'paid_leave';
-      tr.querySelectorAll('[data-field="clockIn"], [data-field="clockOut"], [data-field="breakMinutes"]')
+      tr.querySelectorAll('[data-field="clockIn"], [data-field="clockOut"], [data-field="scheduledStart"], [data-field="scheduledEnd"], [data-field="breakMinutes"]')
         .forEach((el) => { el.disabled = timeless; });
       if (isReadyToSave()) saveRow(employee, ym, day, tr);
     });
-    [clockInEl, clockOutEl].forEach((el) => {
+    [clockInEl, clockOutEl, scheduledStartEl, scheduledEndEl].forEach((el) => {
       el.addEventListener('blur', () => { if (isReadyToSave()) saveRow(employee, ym, day, tr); });
     });
     tr.querySelector('[data-field="breakMinutes"]').addEventListener('change', () => {
@@ -121,6 +125,8 @@ async function saveRow(employee, ym, day, tr) {
     status,
     clockIn: tr.querySelector('[data-field="clockIn"]').value,
     clockOut: tr.querySelector('[data-field="clockOut"]').value,
+    scheduledStart: tr.querySelector('[data-field="scheduledStart"]').value,
+    scheduledEnd: tr.querySelector('[data-field="scheduledEnd"]').value,
     breakMinutes: Number(tr.querySelector('[data-field="breakMinutes"]').value) || 0,
   };
   await setDayAttendance(employee.id, ym, day, record);
