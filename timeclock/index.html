@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>勤怠打刻 | 給与・勤怠管理システム</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<nav class="navbar" id="navbar">
+  <a class="brand" href="index.html">勤怠打刻</a>
+  <div class="nav-links">
+    <a class="nav-link" href="../payroll-system/index.html">給与・勤怠管理システムへ →</a>
+  </div>
+</nav>
+
+<div class="page narrow">
+  <header class="masthead">
+    <p class="eyebrow">Time Clock</p>
+    <h1>勤怠打刻</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="notice">
+    <p>※ ここで打刻した出勤・退勤時刻は、給与・勤怠管理システムの勤怠データと自動的に連動します（同じブラウザのlocalStorageを共有しています）。</p>
+    <p>※ 別のブラウザ・別の端末とはデータが共有されません。給与計算画面での反映は、同じブラウザで<a href="../payroll-system/index.html">給与・勤怠管理システム</a>を開いて確認してください。</p>
+  </div>
+
+  <div id="noEmployeeState" class="empty-state" style="display:none;">
+    従業員が登録されていません。先に給与・勤怠管理システムの<a href="../payroll-system/employees.html">従業員マスタ管理</a>から従業員を登録してください。
+  </div>
+
+  <div id="clockContent">
+    <div class="toolbar" style="justify-content:center;">
+      <div class="toolbar-field">
+        <label for="employeeSelect">従業員</label>
+        <div class="field-input"><select id="employeeSelect"></select></div>
+      </div>
+    </div>
+
+    <section class="card form-card" style="text-align:center;">
+      <p class="eyebrow" id="dateLabel"></p>
+      <div class="clock-display" id="clockDisplay">--:--:--</div>
+      <div class="punch-buttons">
+        <button type="button" class="btn punch-btn punch-in" id="clockInBtn">🟢 出勤</button>
+        <button type="button" class="btn punch-btn punch-out" id="clockOutBtn">🔴 退勤</button>
+      </div>
+      <div class="punch-status" id="punchStatus"></div>
+    </section>
+
+    <section class="card form-card" style="margin-top:20px;">
+      <h2>本日の打刻状況</h2>
+      <table class="result-table" id="todayTable"><tbody></tbody></table>
+    </section>
+  </div>
+
+  <footer>この打刻データは同一ブラウザ内の給与・勤怠管理システムと共有されます。個人・小規模事業向けの簡易ツールです。</footer>
+</div>
+
+<script src="calc.js?v=1"></script>
+<script src="data.js?v=1"></script>
+<script src="common.js?v=1"></script>
+<script src="timeclock.js?v=1"></script>
+</body>
+</html>
