@@ -76,6 +76,8 @@ async function renderDayTable() {
       </td>
       <td><input type="time" data-field="clockIn" value="${rec.clockIn || ''}" ${isTimeless ? 'disabled' : ''}></td>
       <td><input type="time" data-field="clockOut" value="${rec.clockOut || ''}" ${isTimeless ? 'disabled' : ''}></td>
+      <td class="computed">${escapeHtml(employee.workStart || '')}</td>
+      <td class="computed">${escapeHtml(employee.workEnd || '')}</td>
       <td><input type="number" min="0" step="5" data-field="breakMinutes" value="${rec.breakMinutes ?? 60}" ${isTimeless ? 'disabled' : ''}></td>
       <td class="computed" data-role="worked">${fmtHm(worked)}</td>
       ${categoryCells}
