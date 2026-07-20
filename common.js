@@ -20,8 +20,24 @@ function renderNavbar(activeHref) {
   }).join('');
   nav.innerHTML = `
     <a class="brand" href="index.html">給与・勤怠管理システム</a>
-    <div class="nav-links">${links}</div>
+    <div class="nav-links">${links}<span id="navUserArea"></span></div>
   `;
+}
+
+// ログイン中のユーザー名とログアウトボタンをナビバーに反映する。
+// 各ページで requireAuth() の後に呼び出す。
+function renderNavbarUser(user) {
+  const area = document.getElementById('navUserArea');
+  if (!area || !user) return;
+  area.innerHTML = `
+    <span class="nav-link" style="cursor:default;">${escapeHtml(currentUsername(user))} さん</span>
+    <a class="nav-link" href="#" id="logoutLink">ログアウト</a>
+  `;
+  document.getElementById('logoutLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await signOut();
+    location.href = 'login.html';
+  });
 }
 
 // 数字にカンマを付けて表示する入力欄

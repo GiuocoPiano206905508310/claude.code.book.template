@@ -2,18 +2,16 @@
 // 給与計算画面のロジック
 // ============================================================================
 
-renderNavbar('payroll.html');
-
 let currentAttendanceSummary = null;
 let currentAutoOvertimePay = 0;
 
-function currentEmployee() {
+async function currentEmployee() {
   const id = document.getElementById('employeeSelect').value;
-  return id ? getEmployee(id) : null;
+  return id ? await getEmployee(id) : null;
 }
 
-function populateEmployeeSelect() {
-  const employees = listEmployees();
+async function populateEmployeeSelect() {
+  const employees = await listEmployees();
   const select = document.getElementById('employeeSelect');
   select.innerHTML = employees.map((e) => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
   const hasEmployees = employees.length > 0;
@@ -68,13 +66,13 @@ function applyEmploymentTypeLabelToForm() {
 }
 
 // 従業員マスタ・勤怠集計をもとに、フォームへ初期値を流し込む
-function loadFormForEmployeeMonth() {
-  const employee = currentEmployee();
+async function loadFormForEmployeeMonth() {
+  const employee = await currentEmployee();
   const ym = document.getElementById('monthInput').value;
   if (!employee || !ym) return;
 
-  const company = getCompany();
-  currentAttendanceSummary = computeMonthSummary(employee, ym);
+  const company = await getCompany();
+  currentAttendanceSummary = await computeMonthSummary(employee, ym);
   const commuteAllowanceForOvertimeBase = employee.commuteAllowanceExcludeFromOvertimeBase === false ? (employee.commuteAllowance || 0) : 0;
   const overtimeBaseWage = employee.baseSalary + sumNonExcludedAllowances(employee.allowances) + commuteAllowanceForOvertimeBase;
   currentAutoOvertimePay = calcOvertimePayFromHours(
@@ -83,7 +81,7 @@ function loadFormForEmployeeMonth() {
   const absenceDeduction = calcAbsenceDeduction(employee.baseSalary, employee.monthlyStandardDays, currentAttendanceSummary.absenceDays);
   const employeeAgeGroup = ageGroupFromAge(calcAge(employee.birthDate));
 
-  const saved = getPayslip(employee.id, ym);
+  const saved = await getPayslip(employee.id, ym);
   const input = saved ? saved.input : null;
 
   document.getElementById('employmentType').value = input ? input.employmentType : employee.employmentType;
@@ -158,11 +156,11 @@ function collectInput() {
   };
 }
 
-function calculate() {
+async function calculate() {
   const input = collectInput();
   const result = calculateMonthlyPayroll(input);
 
-  const employee = currentEmployee();
+  const employee = await currentEmployee();
   result.absenceDeduction = 0;
   if (input.applyAbsenceDeduction && employee && currentAttendanceSummary) {
     result.absenceDeduction = calcAbsenceDeduction(employee.baseSalary, employee.monthlyStandardDays, currentAttendanceSummary.absenceDays);
@@ -202,13 +200,13 @@ function renderResult(r) {
   document.getElementById('netValue').textContent = yen(r.netPay);
 }
 
-function renderHistoryTable() {
-  const employee = currentEmployee();
+async function renderHistoryTable() {
+  const employee = await currentEmployee();
   const tbody = document.querySelector('#historyTable tbody');
   tbody.innerHTML = '';
   if (!employee) { document.getElementById('historyEmptyState').style.display = ''; return; }
 
-  const slips = listPayslips(employee.id);
+  const slips = await listPayslips(employee.id);
   const yms = Object.keys(slips).sort().reverse();
   document.getElementById('historyEmptyState').style.display = yms.length ? 'none' : '';
   document.getElementById('historyTable').style.display = yms.length ? '' : 'none';
@@ -229,25 +227,25 @@ function renderHistoryTable() {
   }
 
   tbody.querySelectorAll('[data-action="view"]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       document.getElementById('monthInput').value = btn.dataset.ym;
-      refreshAll();
+      await refreshAll();
     });
   });
   tbody.querySelectorAll('[data-action="delete"]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       if (!confirm(`${ymLabel(btn.dataset.ym)}分の給与明細を削除します。よろしいですか？`)) return;
-      deletePayslip(employee.id, btn.dataset.ym);
-      renderHistoryTable();
+      await deletePayslip(employee.id, btn.dataset.ym);
+      await renderHistoryTable();
     });
   });
 }
 
-function refreshAll() {
-  const employee = currentEmployee();
+async function refreshAll() {
+  const employee = await currentEmployee();
   const ym = document.getElementById('monthInput').value;
-  loadFormForEmployeeMonth();
-  renderHistoryTable();
+  await loadFormForEmployeeMonth();
+  await renderHistoryTable();
   document.getElementById('goAttendanceBtn').href = employee && ym
     ? `attendance.html?emp=${encodeURIComponent(employee.id)}&ym=${encodeURIComponent(ym)}`
     : 'attendance.html';
@@ -264,14 +262,22 @@ document.getElementById('employmentType').addEventListener('change', () => {
 });
 document.getElementById('calcBtn').addEventListener('click', calculate);
 
-document.getElementById('saveBtn').addEventListener('click', () => {
-  const employee = currentEmployee();
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const employee = await currentEmployee();
   const ym = document.getElementById('monthInput').value;
   if (!employee || !ym) return;
-  const { input, result } = calculate();
-  savePayslip(employee.id, ym, { input, result });
-  showExportStatus('exportStatus', `${ymLabel(ym)}分の給与明細を保存しました。`, false);
-  renderHistoryTable();
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  try {
+    const { input, result } = await calculate();
+    await savePayslip(employee.id, ym, { input, result });
+    showExportStatus('exportStatus', `${ymLabel(ym)}分の給与明細を保存しました。`, false);
+    await renderHistoryTable();
+  } catch (e) {
+    showExportStatus('exportStatus', '保存に失敗しました：' + e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 document.getElementById('exportPdfBtn').addEventListener('click', () => printSection('resultCard'));
@@ -288,17 +294,24 @@ document.getElementById('exportCopyBtn').addEventListener('click', () => copyRes
 
 ['baseSalary', 'overtimePay', 'taxableAllowance', 'commuteAllowance', 'residentTax'].forEach(attachThousandsFormatting);
 
-document.getElementById('monthInput').value = currentYmInputValue();
-const hasEmployees = populateEmployeeSelect();
+(async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  renderNavbar('payroll.html');
+  renderNavbarUser(user);
 
-const params = new URLSearchParams(location.search);
-if (hasEmployees) {
-  if (params.get('emp') && getEmployee(params.get('emp'))) {
-    document.getElementById('employeeSelect').value = params.get('emp');
-  }
-  if (params.get('ym')) {
-    document.getElementById('monthInput').value = params.get('ym');
-  }
-}
+  document.getElementById('monthInput').value = currentYmInputValue();
+  const hasEmployees = await populateEmployeeSelect();
 
-refreshAll();
+  const params = new URLSearchParams(location.search);
+  if (hasEmployees) {
+    if (params.get('emp') && await getEmployee(params.get('emp'))) {
+      document.getElementById('employeeSelect').value = params.get('emp');
+    }
+    if (params.get('ym')) {
+      document.getElementById('monthInput').value = params.get('ym');
+    }
+  }
+
+  await refreshAll();
+})();

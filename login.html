@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ログイン | 給与・勤怠管理システム</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div class="page narrow">
+  <header class="masthead">
+    <p class="eyebrow">Payroll &amp; Attendance System</p>
+    <h1>給与・勤怠管理システム</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="notice">
+    <p>※ 会社ごとにユーザー名・パスワードでログインし、登録したデータはそのアカウントにのみ保存・反映されます。メールアドレスの登録は不要です。</p>
+  </div>
+
+  <div class="tabs" style="max-width:360px; margin:0 auto 24px;">
+    <button type="button" class="tab-btn active" id="tabLoginBtn">ログイン</button>
+    <button type="button" class="tab-btn" id="tabSignupBtn">新規登録</button>
+  </div>
+
+  <section class="card form-card" style="max-width:420px; margin:0 auto;">
+    <div id="loginPanel">
+      <h2>ログイン</h2>
+      <div class="field-row">
+        <label for="loginUsername">ユーザー名</label>
+        <div class="field-input"><input type="text" id="loginUsername" autocomplete="username"></div>
+      </div>
+      <div class="field-row">
+        <label for="loginPassword">パスワード</label>
+        <div class="field-input"><input type="password" id="loginPassword" autocomplete="current-password"></div>
+      </div>
+      <button type="button" class="btn btn-block" id="loginBtn">ログイン</button>
+      <p class="export-status error" id="loginError"></p>
+    </div>
+
+    <div id="signupPanel" style="display:none;">
+      <h2>新規登録（会社アカウント作成）</h2>
+      <div class="field-row">
+        <label for="signupUsername">ユーザー名</label>
+        <div class="field-input"><input type="text" id="signupUsername" autocomplete="username"></div>
+        <p class="field-note">※ 半角英数字を推奨します。後から変更できません。</p>
+      </div>
+      <div class="field-row">
+        <label for="signupPassword">パスワード</label>
+        <div class="field-input"><input type="password" id="signupPassword" autocomplete="new-password"></div>
+        <p class="field-note">※ 6文字以上で設定してください。</p>
+      </div>
+      <div class="field-row">
+        <label for="signupPasswordConfirm">パスワード（確認）</label>
+        <div class="field-input"><input type="password" id="signupPasswordConfirm" autocomplete="new-password"></div>
+      </div>
+      <button type="button" class="btn btn-block" id="signupBtn">登録する</button>
+      <p class="export-status error" id="signupError"></p>
+    </div>
+  </section>
+
+  <footer>個人・小規模事業向けの概算ツールです。正式な給与計算・勤怠管理には専門家にご確認ください。</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-client.js"></script>
+<script src="auth.js"></script>
+<script src="login.js"></script>
+</body>
+</html>

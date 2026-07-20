@@ -2,8 +2,6 @@
 // 従業員マスタ管理画面のロジック
 // ============================================================================
 
-renderNavbar('employees.html');
-
 let editingId = null;
 let allowanceSeq = 0;
 let ageUpdateTimer = null;
@@ -314,8 +312,8 @@ function collectFormAsEmployee() {
   }, rates);
 }
 
-function renderEmployeeTable() {
-  const employees = listEmployees();
+async function renderEmployeeTable() {
+  const employees = await listEmployees();
   const tbody = document.querySelector('#employeeTable tbody');
   tbody.innerHTML = '';
   document.getElementById('emptyState').style.display = employees.length ? 'none' : '';
@@ -336,20 +334,20 @@ function renderEmployeeTable() {
   }
 
   tbody.querySelectorAll('[data-action="edit"]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const emp = getEmployee(btn.dataset.id);
+    btn.addEventListener('click', async () => {
+      const emp = await getEmployee(btn.dataset.id);
       if (emp) loadFormFromEmployee(emp);
     });
   });
   tbody.querySelectorAll('[data-action="delete"]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const emp = getEmployee(btn.dataset.id);
+    btn.addEventListener('click', async () => {
+      const emp = await getEmployee(btn.dataset.id);
       if (!emp) return;
       const ok = confirm(`「${emp.name}」を削除します。この従業員に紐づく勤怠・給与・賞与の記録もすべて削除されます。よろしいですか？`);
       if (!ok) return;
-      deleteEmployee(emp.id);
+      await deleteEmployee(emp.id);
       if (editingId === emp.id) resetForm();
-      renderEmployeeTable();
+      await renderEmployeeTable();
     });
   });
 }
@@ -358,7 +356,7 @@ document.getElementById('employmentType').addEventListener('change', applyEmploy
 document.getElementById('birthDate').addEventListener('change', updateAgeDisplay);
 document.getElementById('addAllowanceBtn').addEventListener('click', addAllowanceRow);
 
-document.getElementById('saveBtn').addEventListener('click', () => {
+document.getElementById('saveBtn').addEventListener('click', async () => {
   if (!document.getElementById('empName').value.trim()) {
     alert('氏名を入力してください。');
     return;
@@ -368,9 +366,17 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     return;
   }
   const emp = collectFormAsEmployee();
-  saveEmployee(emp);
-  resetForm();
-  renderEmployeeTable();
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  try {
+    await saveEmployee(emp);
+    resetForm();
+    await renderEmployeeTable();
+  } catch (e) {
+    alert('保存に失敗しました：' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
 });
 document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
 
@@ -378,5 +384,11 @@ document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
 setupFuriganaAutoFill();
 startAgeAutoUpdate();
 
-resetForm();
-renderEmployeeTable();
+(async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  renderNavbar('employees.html');
+  renderNavbarUser(user);
+  resetForm();
+  await renderEmployeeTable();
+})();

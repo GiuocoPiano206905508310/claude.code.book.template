@@ -2,17 +2,15 @@
 // 勤怠管理画面のロジック
 // ============================================================================
 
-renderNavbar('attendance.html');
-
 const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
-function currentEmployee() {
+async function currentEmployee() {
   const id = document.getElementById('employeeSelect').value;
-  return id ? getEmployee(id) : null;
+  return id ? await getEmployee(id) : null;
 }
 
-function populateEmployeeSelect() {
-  const employees = listEmployees();
+async function populateEmployeeSelect() {
+  const employees = await listEmployees();
   const select = document.getElementById('employeeSelect');
   select.innerHTML = employees.map((e) => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
 
@@ -41,14 +39,14 @@ function fmtHm(minutes) {
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
-function renderDayTable() {
-  const employee = currentEmployee();
+async function renderDayTable() {
+  const employee = await currentEmployee();
   const ym = document.getElementById('monthInput').value;
   const tbody = document.querySelector('#dayTable tbody');
   tbody.innerHTML = '';
   if (!employee || !ym) return;
 
-  const records = getMonthAttendance(employee.id, ym);
+  const records = await getMonthAttendance(employee.id, ym);
   const [y, m] = ym.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
 
@@ -88,7 +86,7 @@ function renderDayTable() {
   });
 }
 
-function saveRow(employee, ym, day, tr) {
+async function saveRow(employee, ym, day, tr) {
   const status = tr.querySelector('[data-field="status"]').value;
   const record = {
     status,
@@ -96,18 +94,18 @@ function saveRow(employee, ym, day, tr) {
     clockOut: tr.querySelector('[data-field="clockOut"]').value,
     breakMinutes: Number(tr.querySelector('[data-field="breakMinutes"]').value) || 0,
   };
-  setDayAttendance(employee.id, ym, day, record);
-  renderDayTable();
-  renderSummary();
+  await setDayAttendance(employee.id, ym, day, record);
+  await renderDayTable();
+  await renderSummary();
 }
 
-function renderSummary() {
-  const employee = currentEmployee();
+async function renderSummary() {
+  const employee = await currentEmployee();
   const ym = document.getElementById('monthInput').value;
   const grid = document.getElementById('summaryGrid');
   if (!employee || !ym) { grid.innerHTML = ''; return; }
 
-  const s = computeMonthSummary(employee, ym);
+  const s = await computeMonthSummary(employee, ym);
   const tiles = [
     ['出勤日数', `${s.workDays} 日`, ''],
     ['実働時間 合計', `${s.workedHours.toFixed(1)} h`, ''],
@@ -126,10 +124,10 @@ function renderSummary() {
   `).join('');
 }
 
-function refreshAll() {
-  renderDayTable();
-  renderSummary();
-  const employee = currentEmployee();
+async function refreshAll() {
+  await renderDayTable();
+  await renderSummary();
+  const employee = await currentEmployee();
   const ym = document.getElementById('monthInput').value;
   const link = document.getElementById('goPayrollBtn');
   link.href = employee && ym ? `payroll.html?emp=${encodeURIComponent(employee.id)}&ym=${encodeURIComponent(ym)}` : 'payroll.html';
@@ -138,17 +136,24 @@ function refreshAll() {
 document.getElementById('employeeSelect').addEventListener('change', refreshAll);
 document.getElementById('monthInput').addEventListener('change', refreshAll);
 
-document.getElementById('monthInput').value = currentYmInputValue();
-const hasEmployees = populateEmployeeSelect();
+(async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  renderNavbar('attendance.html');
+  renderNavbarUser(user);
 
-const params = new URLSearchParams(location.search);
-if (hasEmployees) {
-  if (params.get('emp') && getEmployee(params.get('emp'))) {
-    document.getElementById('employeeSelect').value = params.get('emp');
-  }
-  if (params.get('ym')) {
-    document.getElementById('monthInput').value = params.get('ym');
-  }
-}
+  document.getElementById('monthInput').value = currentYmInputValue();
+  const hasEmployees = await populateEmployeeSelect();
 
-refreshAll();
+  const params = new URLSearchParams(location.search);
+  if (hasEmployees) {
+    if (params.get('emp') && await getEmployee(params.get('emp'))) {
+      document.getElementById('employeeSelect').value = params.get('emp');
+    }
+    if (params.get('ym')) {
+      document.getElementById('monthInput').value = params.get('ym');
+    }
+  }
+
+  await refreshAll();
+})();

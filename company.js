@@ -2,8 +2,6 @@
 // 会社マスタ管理画面のロジック（全従業員共通の保険料率設定）
 // ============================================================================
 
-renderNavbar('company.html');
-
 function applyPrefectureRateToForm() {
   const prefecture = document.getElementById('prefecture').value;
   document.getElementById('healthRate').value = PREFECTURE_HEALTH_RATES[prefecture].toFixed(2);
@@ -24,8 +22,8 @@ function applyIndustryRateToForm() {
   document.getElementById('employmentRate').value = EMPLOYMENT_RATES_BY_INDUSTRY[industry].toFixed(2);
 }
 
-function loadFormFromCompany() {
-  const company = getCompany();
+async function loadFormFromCompany() {
+  const company = await getCompany();
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
   populatePrefectureSelect('prefecture', company.prefecture);
   populateIndustrySelect('industryType', company.industryType);
@@ -54,9 +52,23 @@ document.getElementById('prefecture').addEventListener('change', applyPrefecture
 document.getElementById('healthInsuranceType').addEventListener('change', applyHealthInsuranceTypeToForm);
 document.getElementById('industryType').addEventListener('change', applyIndustryRateToForm);
 
-document.getElementById('saveBtn').addEventListener('click', () => {
-  saveCompany(collectFormAsCompany());
-  showExportStatus('saveStatus', '会社マスタ情報を保存しました。', false);
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  try {
+    await saveCompany(collectFormAsCompany());
+    showExportStatus('saveStatus', '会社マスタ情報を保存しました。', false);
+  } catch (e) {
+    showExportStatus('saveStatus', '保存に失敗しました：' + e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
 });
 
-loadFormFromCompany();
+(async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  renderNavbar('company.html');
+  renderNavbarUser(user);
+  await loadFormFromCompany();
+})();
