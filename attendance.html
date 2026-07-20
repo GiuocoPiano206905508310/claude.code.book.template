@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>勤怠管理 | 給与・勤怠管理システム</title>
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+<nav class="navbar" id="navbar"></nav>
+
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">Attendance Management</p>
+    <h1>勤怠管理</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="notice">
+    <p>※ 実働時間が「1日の所定労働時間」（従業員マスタで設定）を超えた分を残業時間として自動集計します。休日出勤の実働時間はすべて割増対象として扱います。</p>
+    <p>※ 遅刻・早退は、所定始業・終業時刻と実際の打刻の差から自動判定します。あくまで簡易的な集計です。</p>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-field">
+      <label for="employeeSelect">従業員</label>
+      <div class="field-input"><select id="employeeSelect"></select></div>
+    </div>
+    <div class="toolbar-field">
+      <label for="monthInput">対象年月</label>
+      <div class="field-input"><input type="month" id="monthInput"></div>
+    </div>
+    <a class="btn btn-outline" id="goPayrollBtn" href="payroll.html">この月の給与計算へ →</a>
+  </div>
+
+  <div id="noEmployeeState" class="empty-state" style="display:none;">
+    従業員が登録されていません。先に<a href="employees.html">従業員マスタ管理</a>から従業員を登録してください。
+  </div>
+
+  <div id="attendanceContent">
+    <div class="summary-grid" id="summaryGrid"></div>
+
+    <section class="card form-card">
+      <h2>日次勤怠入力</h2>
+      <div class="data-table-wrap">
+        <table class="day-table" id="dayTable">
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>ステータス</th>
+              <th>出勤</th>
+              <th>退勤</th>
+              <th>休憩(分)</th>
+              <th>実働</th>
+              <th>残業</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="field-note">※ 入力内容は変更のたびに自動的にブラウザへ保存されます。</p>
+    </section>
+  </div>
+
+  <footer>個人・小規模事業向けの概算ツールです。正式な勤怠管理・給与計算には専門家にご確認ください。</footer>
+</div>
+
+<script src="calc.js?v=2"></script>
+<script src="data.js?v=2"></script>
+<script src="common.js?v=2"></script>
+<script src="attendance.js?v=2"></script>
+</body>
+</html>

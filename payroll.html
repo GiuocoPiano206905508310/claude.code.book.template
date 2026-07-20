@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>給与計算 | 給与・勤怠管理システム</title>
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+<nav class="navbar" id="navbar"></nav>
+
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">Payroll Calculation</p>
+    <h1>給与計算（令和8年度）</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="notice">
+    <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
+    <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「給与所得の源泉徴収税額表（令和8年分）」に基づき計算しますが、標準報酬月額表とは一致しないなど概算の範囲にとどまります。</p>
+    <p>※ 残業手当・欠勤控除は、勤怠管理画面の月次集計と従業員マスタの所定労働設定から自動算出した概算値です。</p>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-field">
+      <label for="employeeSelect">従業員</label>
+      <div class="field-input"><select id="employeeSelect"></select></div>
+    </div>
+    <div class="toolbar-field">
+      <label for="monthInput">対象年月</label>
+      <div class="field-input"><input type="month" id="monthInput"></div>
+    </div>
+    <a class="btn btn-outline" id="goAttendanceBtn" href="attendance.html">この月の勤怠を見る →</a>
+  </div>
+
+  <div id="noEmployeeState" class="empty-state" style="display:none;">
+    従業員が登録されていません。先に<a href="employees.html">従業員マスタ管理</a>から従業員を登録してください。
+  </div>
+
+  <div id="payrollContent">
+    <div class="summary-grid" id="attendanceSummaryGrid"></div>
+
+    <div class="grid">
+      <section class="card form-card" aria-label="支給項目の入力">
+        <h2>支給項目（当月分・上書き可）</h2>
+
+        <div class="field-row">
+          <label for="employmentType">雇用形態</label>
+          <div class="field-input">
+            <select id="employmentType">
+              <option value="正社員">正社員（雇用保険・社会保険対象）</option>
+              <option value="役員">役員（社会保険のみ対象）</option>
+              <option value="アルバイト・パート">アルバイト・パート（雇用保険のみ対象）</option>
+              <option value="アルバイト・パート（雇用保険対象外）">アルバイト・パート（雇用保険対象外）</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="ageGroup">年齢区分</label>
+          <div class="field-input">
+            <select id="ageGroup">
+              <option value="under40">40歳未満</option>
+              <option value="40to64">40〜64歳</option>
+              <option value="65to69">65〜69歳</option>
+              <option value="70to74">70〜74歳</option>
+              <option value="75plus">75歳以上</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="baseSalary" id="baseSalaryLabel">基本給</label>
+          <div class="field-input">
+            <input type="text" inputmode="numeric" id="baseSalary">
+            <span class="unit">円</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="overtimePay">残業手当（勤怠集計から自動計算）</label>
+          <div class="field-input">
+            <input type="text" inputmode="numeric" id="overtimePay">
+            <span class="unit">円</span>
+          </div>
+          <p class="field-note" id="overtimeNote"></p>
+        </div>
+        <div class="field-row">
+          <label for="taxableAllowance">その他手当（課税）</label>
+          <div class="field-input">
+            <input type="text" inputmode="numeric" id="taxableAllowance">
+            <span class="unit">円</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="commuteAllowance">通勤手当（非課税）</label>
+          <div class="field-input">
+            <input type="text" inputmode="numeric" id="commuteAllowance">
+            <span class="unit">円</span>
+          </div>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="applyAbsenceDeduction">
+          <label for="applyAbsenceDeduction">欠勤控除を適用する（<span id="absenceDeductionPreview">0 円</span>）</label>
+        </div>
+        <div class="field-row">
+          <label for="dependents">扶養親族等の数</label>
+          <div class="field-input">
+            <input type="number" id="dependents" min="0" step="1">
+            <span class="unit">人</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="calcMethod">源泉所得税の計算方法</label>
+          <div class="field-input">
+            <select id="calcMethod">
+              <option value="table">月額表</option>
+              <option value="machine">機械計算（甲欄のみ）</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="taxTable">甲欄・乙欄</label>
+          <div class="field-input">
+            <select id="taxTable">
+              <option value="甲">甲欄（扶養控除等申告書あり）</option>
+              <option value="乙">乙欄（扶養控除等申告書なし）</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="residentTax">住民税（月額）</label>
+          <div class="field-input">
+            <input type="text" inputmode="numeric" id="residentTax">
+            <span class="unit">円</span>
+          </div>
+        </div>
+
+        <h2 class="section-2" id="rateSectionHeader">保険料率設定</h2>
+        <div class="field-row" id="healthTypeFieldRow">
+          <label for="healthInsuranceType">健康保険の種類</label>
+          <div class="field-input">
+            <select id="healthInsuranceType">
+              <option value="kyoukai">協会けんぽ（都道府県単位保険料率）</option>
+              <option value="kumiai">健康保険組合（保険料率手動入力）</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row" id="prefectureFieldRow">
+          <label for="prefecture">都道府県（協会けんぽ支部）</label>
+          <div class="field-input">
+            <select id="prefecture"></select>
+          </div>
+        </div>
+        <div class="rate-grid" id="rateGrid">
+          <div class="field-row">
+            <label for="healthRate" id="healthRateLabel">健康保険料率</label>
+            <div class="field-input">
+              <input type="number" id="healthRate" min="0" step="0.01">
+              <span class="unit">%</span>
+            </div>
+          </div>
+          <div class="field-row">
+            <label for="careRate" id="careRateLabel">介護保険料率</label>
+            <div class="field-input">
+              <input type="number" id="careRate" min="0" step="0.01" readonly>
+              <span class="unit">%</span>
+            </div>
+          </div>
+          <div class="field-row">
+            <label for="pensionRate">厚生年金保険料率</label>
+            <div class="field-input">
+              <input type="number" id="pensionRate" min="0" step="0.01" readonly>
+              <span class="unit">%</span>
+            </div>
+          </div>
+        </div>
+        <div class="field-row" id="industryFieldRow">
+          <label for="industryType">事業の種類（雇用保険）</label>
+          <div class="field-input">
+            <select id="industryType"></select>
+          </div>
+        </div>
+        <div class="field-row" id="employmentRateFieldRow">
+          <label for="employmentRate">雇用保険料率（従業員負担分）</label>
+          <div class="field-input">
+            <input type="number" id="employmentRate" min="0" step="0.01" readonly>
+            <span class="unit">%</span>
+          </div>
+        </div>
+
+        <button id="calcBtn" type="button" class="btn btn-block">給与を計算する</button>
+      </section>
+
+      <section class="card payslip is-sticky" id="resultCard" aria-label="計算結果">
+        <div class="payslip-head">
+          <span class="title">給与明細</span>
+          <span class="stamp-badge">試算</span>
+        </div>
+        <table class="result-table" id="resultTable"><tbody></tbody></table>
+        <div class="net-block">
+          <div class="net-label">差引支給額（手取り）</div>
+          <div class="net-value" id="netValue">— 円</div>
+        </div>
+        <div class="export-row">
+          <button type="button" class="export-btn pc-only" id="exportPdfBtn">🖨 印刷</button>
+          <button type="button" class="export-btn pc-only" id="exportExcelBtn">📊 Excel出力</button>
+          <button type="button" class="export-btn" id="exportCopyBtn">📋 テキスト(.txt)コピー</button>
+          <button type="button" class="export-btn" id="saveBtn" style="border-color:var(--success); color:var(--success);">💾 この明細を保存</button>
+        </div>
+        <p class="export-status" id="exportStatus"></p>
+      </section>
+    </div>
+
+    <section class="card form-card" style="margin-top:24px;">
+      <h2>給与明細の履歴</h2>
+      <div class="data-table-wrap">
+        <table class="data-table" id="historyTable">
+          <thead>
+            <tr><th>年月</th><th class="num">総支給額</th><th class="num">手取り額</th><th>操作</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="historyEmptyState" style="display:none;">この従業員の保存済み明細はまだありません。</div>
+    </section>
+  </div>
+
+  <footer>個人・小規模事業向けの概算ツールです。正式な給与計算には給与計算ソフトまたは専門家をご利用ください。</footer>
+</div>
+
+<section class="card payslip" id="printArea" aria-hidden="true"></section>
+
+<script src="calc.js?v=2"></script>
+<script src="data.js?v=2"></script>
+<script src="common.js?v=2"></script>
+<script src="payroll.js?v=2"></script>
+</body>
+</html>
