@@ -208,8 +208,20 @@ async function calculate() {
 }
 
 function renderResult(r) {
+  const isOfficer = currentEmployeeFields && currentEmployeeFields.employmentType === '役員';
   const rows = [
-    ['総支給額', r.grossPay, 'plain', true],
+    [isOfficer ? '役員報酬' : '基本給', r.baseSalary, 'plain', true],
+  ];
+  if (currentFixedOvertime && currentFixedOvertime.enabled) {
+    rows.push([currentFixedOvertime.allowanceName || '固定残業代', r.fixedOvertimePay, 'plain', true]);
+    rows.push(['超過残業代', r.excessOvertimePay, 'plain', true]);
+  } else {
+    rows.push(['残業手当', r.overtimePay, 'plain', true]);
+  }
+  rows.push(
+    ['その他手当（課税）', r.taxableAllowance, 'plain', true],
+    ['通勤手当（非課税）', r.commuteAllowance, 'plain', true],
+    ['総支給額', r.grossPay, 'total', true],
     ['健康保険料', -r.healthInsurance, 'deduction', r.hasHealth],
     ['子ども・子育て支援金', -r.childSupportLevy, 'deduction', r.hasHealth],
     ['介護保険料', -r.careInsurance, 'deduction', r.hasCare],
@@ -218,7 +230,7 @@ function renderResult(r) {
     ['社会保険料合計', -r.socialInsuranceTotal, 'total', true],
     ['源泉所得税（概算）', -r.monthlyIncomeTax, 'deduction', !r.isTaxExempt],
     ['住民税', -r.residentTax, 'deduction', true],
-  ];
+  );
   if (r.absenceDeduction) {
     rows.push(['欠勤控除', -r.absenceDeduction, 'deduction', true]);
   }
