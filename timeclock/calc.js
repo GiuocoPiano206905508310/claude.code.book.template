@@ -492,6 +492,8 @@ function calculateMonthlyPayroll(input) {
 
   return {
     grossPay,
+    baseSalary, overtimePay, taxableAllowance, commuteAllowance,
+    fixedOvertimePay: fixedOvertimePay || 0, excessOvertimePay: excessOvertimePay || 0,
     healthInsurance, hasHealth,
     careInsurance, hasCare,
     pensionInsurance, hasPension,
