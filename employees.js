@@ -500,14 +500,14 @@ populateStandardMonthlySelect('pensionStandardMonthly', PENSION_STANDARD_BRACKET
 document.getElementById('healthStandardMonthly').addEventListener('change', () => toggleStandardMonthlyCustomWrap('healthStandardMonthly', 'healthStandardMonthlyCustomWrap'));
 document.getElementById('pensionStandardMonthly').addEventListener('change', () => toggleStandardMonthlyCustomWrap('pensionStandardMonthly', 'pensionStandardMonthlyCustomWrap'));
 
-// 基本給・固定残業代・各種手当・通勤手当のいずれかが変わるたびに標準報酬月額の
-// プルダウンを自動で再計算する
+// 基本給・固定残業代・各種手当・通勤手当のいずれかが変わるたびに（入力中もリアル
+// タイムに）標準報酬月額のプルダウンを自動で再計算する
 ['baseSalary', 'fixedOvertimeAmount'].forEach((id) => {
-  document.getElementById(id).addEventListener('blur', refreshStandardMonthlyDefaults);
+  document.getElementById(id).addEventListener('input', refreshStandardMonthlyDefaults);
 });
 document.getElementById('fixedOvertimeEnabled').addEventListener('change', refreshStandardMonthlyDefaults);
-document.getElementById('commuteAllowance').addEventListener('blur', refreshStandardMonthlyDefaults);
-document.getElementById('allowancesList').addEventListener('change', (e) => {
+document.getElementById('commuteAllowance').addEventListener('input', refreshStandardMonthlyDefaults);
+document.getElementById('allowancesList').addEventListener('input', (e) => {
   if (e.target.classList.contains('allowance-amount')) refreshStandardMonthlyDefaults();
 });
 document.getElementById('addAllowanceBtn').addEventListener('click', refreshStandardMonthlyDefaults);
