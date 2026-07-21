@@ -12,6 +12,15 @@ function applyEmploymentTypeLabelToForm() {
 }
 
 // ---------------------------------------------------------------------------
+// 社会保険設定（標準報酬月額）
+// プルダウン（datalist）から選択、または直接入力の両方に対応する
+// ---------------------------------------------------------------------------
+function populateStandardMonthlyDatalist(datalistId, amounts) {
+  const datalist = document.getElementById(datalistId);
+  datalist.innerHTML = amounts.map((n) => `<option value="${formatThousands(n)}">`).join('');
+}
+
+// ---------------------------------------------------------------------------
 // 固定残業代（みなし残業代）
 // ---------------------------------------------------------------------------
 function applyFixedOvertimeVisibility() {
@@ -260,6 +269,8 @@ function resetForm() {
   editingId = null;
   document.getElementById('formTitle').textContent = '従業員を新規登録';
   document.getElementById('cancelEditBtn').style.display = 'none';
+  document.getElementById('employeeNumber').value = '';
+  document.getElementById('department').value = '';
   document.getElementById('empName').value = '';
   document.getElementById('empNameKana').value = '';
   document.getElementById('employeeCode').value = '';
@@ -279,6 +290,9 @@ function resetForm() {
   document.getElementById('dependents').value = '0';
   document.getElementById('taxTable').value = '甲';
   document.getElementById('residentTax').value = '0';
+  document.getElementById('healthInsuranceNumber').value = '';
+  document.getElementById('healthStandardMonthly').value = '280,000';
+  document.getElementById('pensionStandardMonthly').value = '280,000';
   document.getElementById('workStart').value = '09:00';
   document.getElementById('workEnd').value = '18:00';
   document.getElementById('standardDailyHours').value = '8';
@@ -293,6 +307,8 @@ function loadFormFromEmployee(emp) {
   editingId = emp.id;
   document.getElementById('formTitle').textContent = `従業員を編集：${emp.name}`;
   document.getElementById('cancelEditBtn').style.display = '';
+  document.getElementById('employeeNumber').value = emp.employeeNumber || '';
+  document.getElementById('department').value = emp.department || '';
   document.getElementById('empName').value = emp.name;
   document.getElementById('empNameKana').value = emp.nameKana || '';
   document.getElementById('employeeCode').value = emp.employeeCode || '';
@@ -315,6 +331,9 @@ function loadFormFromEmployee(emp) {
   document.getElementById('dependents').value = emp.dependents;
   document.getElementById('taxTable').value = emp.taxTable;
   document.getElementById('residentTax').value = formatThousands(emp.residentTax);
+  document.getElementById('healthInsuranceNumber').value = emp.healthInsuranceNumber || '';
+  document.getElementById('healthStandardMonthly').value = formatThousands(emp.healthStandardMonthly || emp.baseSalary);
+  document.getElementById('pensionStandardMonthly').value = formatThousands(emp.pensionStandardMonthly || emp.baseSalary);
   document.getElementById('workStart').value = emp.workStart || '09:00';
   document.getElementById('workEnd').value = emp.workEnd || '18:00';
   document.getElementById('standardDailyHours').value = emp.standardDailyHours || 8;
@@ -335,6 +354,8 @@ function collectFormAsEmployee() {
   const rates = collectRatesFromForm();
   return Object.assign({
     id: editingId,
+    employeeNumber: document.getElementById('employeeNumber').value.trim(),
+    department: document.getElementById('department').value.trim(),
     name: name || '(氏名未入力)',
     nameKana: document.getElementById('empNameKana').value.trim(),
     employeeCode: document.getElementById('employeeCode').value.trim(),
@@ -353,6 +374,9 @@ function collectFormAsEmployee() {
     dependents: Number(document.getElementById('dependents').value) || 0,
     taxTable: document.getElementById('taxTable').value,
     residentTax: getNumInputValue('residentTax'),
+    healthInsuranceNumber: document.getElementById('healthInsuranceNumber').value.trim(),
+    healthStandardMonthly: getNumInputValue('healthStandardMonthly'),
+    pensionStandardMonthly: getNumInputValue('pensionStandardMonthly'),
     workStart: document.getElementById('workStart').value || '09:00',
     workEnd: document.getElementById('workEnd').value || '18:00',
     standardDailyHours: Number(document.getElementById('standardDailyHours').value) || 8,
@@ -430,9 +454,11 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 });
 document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
 
-['baseSalary', 'fixedOvertimeAmount', 'commuteAllowance', 'residentTax'].forEach(attachThousandsFormatting);
+['baseSalary', 'fixedOvertimeAmount', 'commuteAllowance', 'residentTax', 'healthStandardMonthly', 'pensionStandardMonthly'].forEach(attachThousandsFormatting);
 setupFuriganaAutoFill();
 startAgeAutoUpdate();
+populateStandardMonthlyDatalist('healthStandardMonthlyList', HEALTH_STANDARD_MONTHLY_AMOUNTS);
+populateStandardMonthlyDatalist('pensionStandardMonthlyList', PENSION_STANDARD_MONTHLY_AMOUNTS);
 
 (async () => {
   const user = await requireAuth();

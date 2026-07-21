@@ -21,6 +21,8 @@ function genId(prefix) {
 function employeeRowToObj(row) {
   const obj = {
     id: row.id,
+    employeeNumber: row.employee_number || '',
+    department: row.department || '',
     name: row.name,
     nameKana: row.name_kana || '',
     employeeCode: row.employee_code || '',
@@ -51,6 +53,10 @@ function employeeRowToObj(row) {
   obj.fixedOvertimeAmount = Number(fixedOT.amount) || 0;
   obj.fixedOvertimeBaseCategories = Array.isArray(fixedOT.baseCategories) && fixedOT.baseCategories.length
     ? fixedOT.baseCategories : DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES.slice();
+  const socialIns = row.social_insurance || {};
+  obj.healthInsuranceNumber = socialIns.healthInsuranceNumber || '';
+  obj.healthStandardMonthly = Number(socialIns.healthStandardMonthly) || obj.baseSalary;
+  obj.pensionStandardMonthly = Number(socialIns.pensionStandardMonthly) || obj.baseSalary;
   return obj;
 }
 
@@ -59,6 +65,8 @@ function employeeObjToRow(emp, userId) {
   OVERTIME_RATE_CATEGORIES.forEach((c) => { rates[c.key] = emp[c.key]; });
   return {
     user_id: userId,
+    employee_number: emp.employeeNumber || null,
+    department: emp.department || null,
     name: emp.name,
     name_kana: emp.nameKana || null,
     employee_code: emp.employeeCode || null,
@@ -85,6 +93,11 @@ function employeeObjToRow(emp, userId) {
       amount: Number(emp.fixedOvertimeAmount) || 0,
       baseCategories: (emp.fixedOvertimeBaseCategories && emp.fixedOvertimeBaseCategories.length)
         ? emp.fixedOvertimeBaseCategories : DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES.slice(),
+    },
+    social_insurance: {
+      healthInsuranceNumber: emp.healthInsuranceNumber || '',
+      healthStandardMonthly: Number(emp.healthStandardMonthly) || 0,
+      pensionStandardMonthly: Number(emp.pensionStandardMonthly) || 0,
     },
     updated_at: new Date().toISOString(),
   };
