@@ -179,26 +179,30 @@
       <div class="field-row">
         <label for="healthInsuranceNumber">健保番号</label>
         <div class="field-input">
-          <input type="text" id="healthInsuranceNumber" placeholder="例：12345678">
+          <input type="text" id="healthInsuranceNumber" placeholder="例：1">
         </div>
       </div>
       <div class="field-row">
         <label for="healthStandardMonthly">標準報酬月額（健保）</label>
         <div class="field-input">
-          <input type="text" inputmode="numeric" id="healthStandardMonthly" list="healthStandardMonthlyList">
+          <select id="healthStandardMonthly"></select>
+        </div>
+        <div class="field-input" id="healthStandardMonthlyCustomWrap" style="display:none; margin-top:6px;">
+          <input type="text" inputmode="numeric" id="healthStandardMonthlyCustom" placeholder="金額を直接入力">
           <span class="unit">円</span>
         </div>
-        <p class="field-note">※ 58,000円〜1,390,000円の範囲。プルダウンから選択、または直接入力できます。</p>
-        <datalist id="healthStandardMonthlyList"></datalist>
+        <p class="field-note">※ 基本給・固定残業代・各種手当・通勤手当の合計額から自動算出されます（58,000円〜1,390,000円の等級）。プルダウンから選択、または「その他（直接入力）」で直接入力もできます。</p>
       </div>
       <div class="field-row">
         <label for="pensionStandardMonthly">標準報酬月額（厚年）</label>
         <div class="field-input">
-          <input type="text" inputmode="numeric" id="pensionStandardMonthly" list="pensionStandardMonthlyList">
+          <select id="pensionStandardMonthly"></select>
+        </div>
+        <div class="field-input" id="pensionStandardMonthlyCustomWrap" style="display:none; margin-top:6px;">
+          <input type="text" inputmode="numeric" id="pensionStandardMonthlyCustom" placeholder="金額を直接入力">
           <span class="unit">円</span>
         </div>
-        <p class="field-note">※ 88,000円〜650,000円の範囲。プルダウンから選択、または直接入力できます。</p>
-        <datalist id="pensionStandardMonthlyList"></datalist>
+        <p class="field-note">※ 基本給・固定残業代・各種手当・通勤手当の合計額から自動算出されます（88,000円〜650,000円の等級）。プルダウンから選択、または「その他（直接入力）」で直接入力もできます。</p>
       </div>
 
       <h2 class="section-2">勤怠・所定労働設定</h2>
@@ -258,6 +262,7 @@
           <thead>
             <tr>
               <th>氏名</th>
+              <th>従業員番号</th>
               <th>雇用形態</th>
               <th class="num">基本給</th>
               <th>操作</th>
@@ -278,9 +283,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
-<script src="calc.js?v=9"></script>
-<script src="data.js?v=9"></script>
+<script src="calc.js?v=10"></script>
+<script src="data.js?v=10"></script>
 <script src="common.js?v=6"></script>
-<script src="employees.js?v=7"></script>
+<script src="employees.js?v=8"></script>
 </body>
 </html>

@@ -54,9 +54,15 @@ function employeeRowToObj(row) {
   obj.fixedOvertimeBaseCategories = Array.isArray(fixedOT.baseCategories) && fixedOT.baseCategories.length
     ? fixedOT.baseCategories : DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES.slice();
   const socialIns = row.social_insurance || {};
+  const fixedOTAmountForStandard = obj.fixedOvertimeEnabled ? obj.fixedOvertimeAmount : 0;
+  const standardMonthlyBase = computeStandardMonthlyBase(
+    obj.baseSalary, fixedOTAmountForStandard, sumAllowances(obj.allowances), obj.commuteAllowance
+  );
   obj.healthInsuranceNumber = socialIns.healthInsuranceNumber || '';
-  obj.healthStandardMonthly = Number(socialIns.healthStandardMonthly) || obj.baseSalary;
-  obj.pensionStandardMonthly = Number(socialIns.pensionStandardMonthly) || obj.baseSalary;
+  obj.healthStandardMonthly = Number(socialIns.healthStandardMonthly)
+    || lookupStandardMonthlyAmount(standardMonthlyBase, HEALTH_STANDARD_BRACKETS);
+  obj.pensionStandardMonthly = Number(socialIns.pensionStandardMonthly)
+    || lookupStandardMonthlyAmount(standardMonthlyBase, PENSION_STANDARD_BRACKETS);
   return obj;
 }
 
