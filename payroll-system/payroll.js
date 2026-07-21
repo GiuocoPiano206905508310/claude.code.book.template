@@ -96,6 +96,9 @@ async function loadFormForEmployeeMonth() {
     dependents: input ? input.dependents : employee.dependents,
     taxTable: input ? input.taxTable : employee.taxTable,
     residentTax: input ? input.residentTax : employee.residentTax,
+    employmentInsuranceExcludedAllowance: input
+      ? (input.employmentInsuranceExcludedAllowance || 0)
+      : sumExcludedFromEmploymentInsurance(employee.allowances),
   };
   renderEmployeeInfoGrid(currentEmployeeFields);
   document.getElementById('residentTaxDisplay').textContent = `${formatThousands(currentEmployeeFields.residentTax)} 円`;

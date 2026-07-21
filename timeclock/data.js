@@ -56,7 +56,7 @@ function employeeRowToObj(row) {
   const socialIns = row.social_insurance || {};
   const fixedOTAmountForStandard = obj.fixedOvertimeEnabled ? obj.fixedOvertimeAmount : 0;
   const standardMonthlyBase = computeStandardMonthlyBase(
-    obj.baseSalary, fixedOTAmountForStandard, sumAllowances(obj.allowances), obj.commuteAllowance
+    obj.baseSalary, fixedOTAmountForStandard, sumNonExcludedFromSocialInsurance(obj.allowances), obj.commuteAllowance
   );
   obj.healthInsuranceNumber = socialIns.healthInsuranceNumber || '';
   obj.healthStandardMonthly = Number(socialIns.healthStandardMonthly)
