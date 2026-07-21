@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>従業員マスタ管理 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -130,10 +130,10 @@
       </div>
       <div id="allowancesList"></div>
       <button type="button" id="addAllowanceBtn" class="btn btn-outline btn-sm" style="margin: 2px 0 4px;">＋ 手当を追加</button>
-      <div class="allowances-legal-note">
-        <p><strong>※ 割増賃金の基礎となる賃金から除外できる手当は、法定で限定的に定められています。</strong></p>
-        <p>① 家族手当　② 通勤手当　③ 別居手当　④ 子女教育手当　⑤ 住宅手当　⑥ 臨時に支払われた賃金　⑦ １か月を超える期間ごとに支払われる賃金</p>
-      </div>
+      <details class="dependents-note">
+        <summary>※ 割増賃金の基礎となる賃金から除外できる手当</summary>
+        <img src="warizoku-jogai-teate.jpg" alt="「割増賃金の基礎となる賃金」から除外できるもの（厚生労働省・都道府県労働局・労働基準監督署）">
+      </details>
       <div class="field-row">
         <label for="commuteAllowance">通勤手当（非課税）</label>
         <div class="field-input">
@@ -283,9 +283,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
-<script src="calc.js?v=10"></script>
-<script src="data.js?v=10"></script>
+<script src="calc.js?v=11"></script>
+<script src="data.js?v=11"></script>
 <script src="common.js?v=6"></script>
-<script src="employees.js?v=10"></script>
+<script src="employees.js?v=11"></script>
 </body>
 </html>

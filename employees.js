@@ -45,7 +45,7 @@ function getStandardMonthlyValue(selectId, customId) {
 function refreshStandardMonthlyDefaults() {
   const baseSalary = getNumInputValue('baseSalary');
   const fixedOvertimeAmount = document.getElementById('fixedOvertimeEnabled').value === 'yes' ? getNumInputValue('fixedOvertimeAmount') : 0;
-  const allowancesTotal = sumAllowances(collectAllowancesFromForm());
+  const allowancesTotal = sumNonExcludedFromSocialInsurance(collectAllowancesFromForm());
   const commuteAllowance = getNumInputValue('commuteAllowance');
   const total = computeStandardMonthlyBase(baseSalary, fixedOvertimeAmount, allowancesTotal, commuteAllowance);
   setStandardMonthlyValue('healthStandardMonthly', 'healthStandardMonthlyCustom', 'healthStandardMonthlyCustomWrap',
@@ -244,9 +244,19 @@ function allowanceRowHtml(a) {
           <span class="unit">円</span>
         </div>
       </div>
-      <div class="checkbox-row">
-        <input type="checkbox" id="allowanceExclude_${seq}" class="allowance-exclude" ${a.excludeFromOvertimeBase ? 'checked' : ''}>
-        <label for="allowanceExclude_${seq}">割増賃金の基礎となる賃金から除外</label>
+      <div class="allowance-checkboxes">
+        <div class="checkbox-row">
+          <input type="checkbox" id="allowanceExclude_${seq}" class="allowance-exclude" ${a.excludeFromOvertimeBase ? 'checked' : ''}>
+          <label for="allowanceExclude_${seq}">割増賃金の基礎となる賃金から除外</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="allowanceExcludeEmployment_${seq}" class="allowance-exclude-employment" ${a.excludeFromEmploymentInsuranceBase ? 'checked' : ''}>
+          <label for="allowanceExcludeEmployment_${seq}">雇用保険料の基礎となる賃金から除外</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="allowanceExcludeSocial_${seq}" class="allowance-exclude-social" ${a.excludeFromSocialInsuranceBase ? 'checked' : ''}>
+          <label for="allowanceExcludeSocial_${seq}">社会保険料の基礎となる報酬から除外</label>
+        </div>
       </div>
       <button type="button" class="btn btn-sm btn-danger allowance-remove">削除</button>
     </div>
@@ -275,6 +285,8 @@ function attachAllowanceRowEvents() {
         row.querySelector('.allowance-name').value = '';
         row.querySelector('.allowance-amount').value = '0';
         row.querySelector('.allowance-exclude').checked = false;
+        row.querySelector('.allowance-exclude-employment').checked = false;
+        row.querySelector('.allowance-exclude-social').checked = false;
       } else {
         row.remove();
       }
@@ -285,7 +297,10 @@ function attachAllowanceRowEvents() {
 
 function addAllowanceRow() {
   const container = document.getElementById('allowancesList');
-  container.insertAdjacentHTML('beforeend', allowanceRowHtml({ name: '', amount: 0, excludeFromOvertimeBase: false }));
+  container.insertAdjacentHTML('beforeend', allowanceRowHtml({
+    name: '', amount: 0, excludeFromOvertimeBase: false,
+    excludeFromEmploymentInsuranceBase: false, excludeFromSocialInsuranceBase: false,
+  }));
   attachAllowanceRowEvents();
 }
 
@@ -294,6 +309,8 @@ function collectAllowancesFromForm() {
     name: row.querySelector('.allowance-name').value.trim(),
     amount: Number(row.querySelector('.allowance-amount').value.replace(/,/g, '')) || 0,
     excludeFromOvertimeBase: row.querySelector('.allowance-exclude').checked,
+    excludeFromEmploymentInsuranceBase: row.querySelector('.allowance-exclude-employment').checked,
+    excludeFromSocialInsuranceBase: row.querySelector('.allowance-exclude-social').checked,
   })).filter((a) => a.name || a.amount);
 }
 
@@ -509,6 +526,9 @@ document.getElementById('fixedOvertimeEnabled').addEventListener('change', refre
 document.getElementById('commuteAllowance').addEventListener('input', refreshStandardMonthlyDefaults);
 document.getElementById('allowancesList').addEventListener('input', (e) => {
   if (e.target.classList.contains('allowance-amount')) refreshStandardMonthlyDefaults();
+});
+document.getElementById('allowancesList').addEventListener('change', (e) => {
+  if (e.target.classList.contains('allowance-exclude-social')) refreshStandardMonthlyDefaults();
 });
 document.getElementById('addAllowanceBtn').addEventListener('click', refreshStandardMonthlyDefaults);
 

@@ -565,7 +565,7 @@ function calculateMonthlyPayroll(input) {
     baseSalary, overtimePay, taxableAllowance, commuteAllowance,
     dependents, residentTax,
     healthRate, careRate, pensionRate, employmentRate,
-    fixedOvertimePay, excessOvertimePay,
+    fixedOvertimePay, excessOvertimePay, employmentInsuranceExcludedAllowance,
   } = input;
 
   const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
@@ -578,11 +578,12 @@ function calculateMonthlyPayroll(input) {
 
   const grossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance + (fixedOvertimePay || 0) + (excessOvertimePay || 0);
   const socialInsuranceBase = grossPay;
+  const employmentInsuranceBase = Math.max(0, grossPay - (employmentInsuranceExcludedAllowance || 0));
 
   const healthInsurance = hasHealth ? Math.round(socialInsuranceBase * healthRate / 2) : 0;
   const careInsurance = hasCare ? Math.round(socialInsuranceBase * careRate / 2) : 0;
   const pensionInsurance = hasPension ? Math.round(socialInsuranceBase * pensionRate / 2) : 0;
-  const employmentInsurance = subjectEmploymentInsurance ? grossPay * employmentRate : 0;
+  const employmentInsurance = subjectEmploymentInsurance ? employmentInsuranceBase * employmentRate : 0;
   const childSupportLevy = hasHealth ? Math.round(socialInsuranceBase * (CHILD_SUPPORT_LEVY_RATE / 100) / 2) : 0;
 
   const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
@@ -1036,5 +1037,26 @@ function sumAllowances(allowances) {
 function sumNonExcludedAllowances(allowances) {
   return (allowances || [])
     .filter((a) => !a.excludeFromOvertimeBase)
+    .reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+}
+
+// 雇用保険料の基礎となる賃金に算入する手当の合計（除外チェックが付いた手当を除く）
+function sumNonExcludedFromEmploymentInsurance(allowances) {
+  return (allowances || [])
+    .filter((a) => !a.excludeFromEmploymentInsuranceBase)
+    .reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+}
+
+// 雇用保険料の基礎となる賃金から除外された手当の合計
+function sumExcludedFromEmploymentInsurance(allowances) {
+  return (allowances || [])
+    .filter((a) => a.excludeFromEmploymentInsuranceBase)
+    .reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+}
+
+// 社会保険料（標準報酬月額）の基礎となる報酬に算入する手当の合計（除外チェックが付いた手当を除く）
+function sumNonExcludedFromSocialInsurance(allowances) {
+  return (allowances || [])
+    .filter((a) => !a.excludeFromSocialInsuranceBase)
     .reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
 }
