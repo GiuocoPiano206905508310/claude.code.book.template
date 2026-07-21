@@ -29,18 +29,114 @@ const EMPLOYMENT_RATES_BY_INDUSTRY = {
 };
 
 // 協会けんぽ「令和8年3月分（4月納付分）からの健康保険・厚生年金保険の保険料額表」の
-// 標準報酬月額（都道府県によらず全国共通。等級1〜50、58,000円〜1,390,000円）
-const HEALTH_STANDARD_MONTHLY_AMOUNTS = [
-  58000, 68000, 78000, 88000, 98000, 104000, 110000, 118000, 126000, 134000,
-  142000, 150000, 160000, 170000, 180000, 190000, 200000, 220000, 240000, 260000,
-  280000, 300000, 320000, 340000, 360000, 380000, 410000, 440000, 470000, 500000,
-  530000, 560000, 590000, 620000, 650000, 680000, 710000, 750000, 790000, 830000,
-  880000, 930000, 980000, 1030000, 1090000, 1150000, 1210000, 1270000, 1330000, 1390000,
+// 標準報酬月額等級（都道府県によらず全国共通）。amountが標準報酬月額、lower/upperが対応する
+// 報酬月額の範囲（lower円以上・upper円未満。null は範囲の下限／上限なし）。
+// 健康保険：等級1〜50（58,000円〜1,390,000円）
+const HEALTH_STANDARD_BRACKETS = [
+  { amount: 58000, lower: null, upper: 63000 },
+  { amount: 68000, lower: 63000, upper: 73000 },
+  { amount: 78000, lower: 73000, upper: 83000 },
+  { amount: 88000, lower: 83000, upper: 93000 },
+  { amount: 98000, lower: 93000, upper: 101000 },
+  { amount: 104000, lower: 101000, upper: 107000 },
+  { amount: 110000, lower: 107000, upper: 114000 },
+  { amount: 118000, lower: 114000, upper: 122000 },
+  { amount: 126000, lower: 122000, upper: 130000 },
+  { amount: 134000, lower: 130000, upper: 138000 },
+  { amount: 142000, lower: 138000, upper: 146000 },
+  { amount: 150000, lower: 146000, upper: 155000 },
+  { amount: 160000, lower: 155000, upper: 165000 },
+  { amount: 170000, lower: 165000, upper: 175000 },
+  { amount: 180000, lower: 175000, upper: 185000 },
+  { amount: 190000, lower: 185000, upper: 195000 },
+  { amount: 200000, lower: 195000, upper: 210000 },
+  { amount: 220000, lower: 210000, upper: 230000 },
+  { amount: 240000, lower: 230000, upper: 250000 },
+  { amount: 260000, lower: 250000, upper: 270000 },
+  { amount: 280000, lower: 270000, upper: 290000 },
+  { amount: 300000, lower: 290000, upper: 310000 },
+  { amount: 320000, lower: 310000, upper: 330000 },
+  { amount: 340000, lower: 330000, upper: 350000 },
+  { amount: 360000, lower: 350000, upper: 370000 },
+  { amount: 380000, lower: 370000, upper: 395000 },
+  { amount: 410000, lower: 395000, upper: 425000 },
+  { amount: 440000, lower: 425000, upper: 455000 },
+  { amount: 470000, lower: 455000, upper: 485000 },
+  { amount: 500000, lower: 485000, upper: 515000 },
+  { amount: 530000, lower: 515000, upper: 545000 },
+  { amount: 560000, lower: 545000, upper: 575000 },
+  { amount: 590000, lower: 575000, upper: 605000 },
+  { amount: 620000, lower: 605000, upper: 635000 },
+  { amount: 650000, lower: 635000, upper: 665000 },
+  { amount: 680000, lower: 665000, upper: 695000 },
+  { amount: 710000, lower: 695000, upper: 730000 },
+  { amount: 750000, lower: 730000, upper: 770000 },
+  { amount: 790000, lower: 770000, upper: 810000 },
+  { amount: 830000, lower: 810000, upper: 855000 },
+  { amount: 880000, lower: 855000, upper: 905000 },
+  { amount: 930000, lower: 905000, upper: 955000 },
+  { amount: 980000, lower: 955000, upper: 1005000 },
+  { amount: 1030000, lower: 1005000, upper: 1055000 },
+  { amount: 1090000, lower: 1055000, upper: 1115000 },
+  { amount: 1150000, lower: 1115000, upper: 1175000 },
+  { amount: 1210000, lower: 1175000, upper: 1235000 },
+  { amount: 1270000, lower: 1235000, upper: 1295000 },
+  { amount: 1330000, lower: 1295000, upper: 1355000 },
+  { amount: 1390000, lower: 1355000, upper: null },
 ];
-// 同表のうち厚生年金保険の等級（1〜32、88,000円〜650,000円）に該当する範囲
-const PENSION_STANDARD_MONTHLY_AMOUNTS = HEALTH_STANDARD_MONTHLY_AMOUNTS.filter(
-  (n) => n >= 88000 && n <= 650000
-);
+// 厚生年金保険：等級1〜32（88,000円〜650,000円。上限650,000円で頭打ちのため
+// 最終等級の上限、最初の等級の下限はそれぞれ範囲なし）
+const PENSION_STANDARD_BRACKETS = [
+  { amount: 88000, lower: null, upper: 93000 },
+  { amount: 98000, lower: 93000, upper: 101000 },
+  { amount: 104000, lower: 101000, upper: 107000 },
+  { amount: 110000, lower: 107000, upper: 114000 },
+  { amount: 118000, lower: 114000, upper: 122000 },
+  { amount: 126000, lower: 122000, upper: 130000 },
+  { amount: 134000, lower: 130000, upper: 138000 },
+  { amount: 142000, lower: 138000, upper: 146000 },
+  { amount: 150000, lower: 146000, upper: 155000 },
+  { amount: 160000, lower: 155000, upper: 165000 },
+  { amount: 170000, lower: 165000, upper: 175000 },
+  { amount: 180000, lower: 175000, upper: 185000 },
+  { amount: 190000, lower: 185000, upper: 195000 },
+  { amount: 200000, lower: 195000, upper: 210000 },
+  { amount: 220000, lower: 210000, upper: 230000 },
+  { amount: 240000, lower: 230000, upper: 250000 },
+  { amount: 260000, lower: 250000, upper: 270000 },
+  { amount: 280000, lower: 270000, upper: 290000 },
+  { amount: 300000, lower: 290000, upper: 310000 },
+  { amount: 320000, lower: 310000, upper: 330000 },
+  { amount: 340000, lower: 330000, upper: 350000 },
+  { amount: 360000, lower: 350000, upper: 370000 },
+  { amount: 380000, lower: 370000, upper: 395000 },
+  { amount: 410000, lower: 395000, upper: 425000 },
+  { amount: 440000, lower: 425000, upper: 455000 },
+  { amount: 470000, lower: 455000, upper: 485000 },
+  { amount: 500000, lower: 485000, upper: 515000 },
+  { amount: 530000, lower: 515000, upper: 545000 },
+  { amount: 560000, lower: 545000, upper: 575000 },
+  { amount: 590000, lower: 575000, upper: 605000 },
+  { amount: 620000, lower: 605000, upper: 635000 },
+  { amount: 650000, lower: 635000, upper: null },
+];
+
+// 報酬月額に対応する標準報酬月額を等級表から検索する
+function lookupStandardMonthlyAmount(compensation, brackets) {
+  const amount = Number(compensation) || 0;
+  for (const b of brackets) {
+    if ((b.lower === null || amount >= b.lower) && (b.upper === null || amount < b.upper)) {
+      return b.amount;
+    }
+  }
+  return brackets[brackets.length - 1].amount;
+}
+
+// 標準報酬月額の算定基礎となる報酬月額＝基本給＋固定残業代（設定時）＋各種手当＋通勤手当
+function computeStandardMonthlyBase(baseSalary, fixedOvertimeAmount, allowancesTotal, commuteAllowance) {
+  return (Number(baseSalary) || 0) + (Number(fixedOvertimeAmount) || 0)
+    + (Number(allowancesTotal) || 0) + (Number(commuteAllowance) || 0);
+}
 
 // 年齢区分ごとの社会保険加入ルール
 const AGE_RULES = {

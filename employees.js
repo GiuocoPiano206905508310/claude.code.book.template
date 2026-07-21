@@ -13,11 +13,45 @@ function applyEmploymentTypeLabelToForm() {
 
 // ---------------------------------------------------------------------------
 // 社会保険設定（標準報酬月額）
-// プルダウン（datalist）から選択、または直接入力の両方に対応する
+// プルダウン（等級表の金額）から選択、または「その他」で直接入力の両方に対応する
 // ---------------------------------------------------------------------------
-function populateStandardMonthlyDatalist(datalistId, amounts) {
-  const datalist = document.getElementById(datalistId);
-  datalist.innerHTML = amounts.map((n) => `<option value="${formatThousands(n)}">`).join('');
+function populateStandardMonthlySelect(selectId, brackets) {
+  const select = document.getElementById(selectId);
+  select.innerHTML = brackets.map((b) => `<option value="${b.amount}">${formatThousands(b.amount)}円</option>`).join('')
+    + '<option value="custom">その他（直接入力）</option>';
+}
+
+function toggleStandardMonthlyCustomWrap(selectId, wrapId) {
+  const isCustom = document.getElementById(selectId).value === 'custom';
+  document.getElementById(wrapId).style.display = isCustom ? '' : 'none';
+}
+
+function setStandardMonthlyValue(selectId, customId, wrapId, amount, brackets) {
+  const select = document.getElementById(selectId);
+  const matches = brackets.some((b) => b.amount === amount);
+  select.value = matches ? String(amount) : 'custom';
+  document.getElementById(customId).value = formatThousands(amount);
+  toggleStandardMonthlyCustomWrap(selectId, wrapId);
+}
+
+function getStandardMonthlyValue(selectId, customId) {
+  const select = document.getElementById(selectId);
+  return select.value === 'custom' ? getNumInputValue(customId) : Number(select.value) || 0;
+}
+
+// 基本給・固定残業代（有効時）・各種手当・通勤手当の合計から、健保・厚年それぞれの
+// 標準報酬月額をプルダウンへ自動反映する（既存の従業員を編集する場合、保存済みの値を
+// 表示した後に本人が給与項目を変更した際にも再計算されるよう、各項目の変更時に呼び出す）
+function refreshStandardMonthlyDefaults() {
+  const baseSalary = getNumInputValue('baseSalary');
+  const fixedOvertimeAmount = document.getElementById('fixedOvertimeEnabled').value === 'yes' ? getNumInputValue('fixedOvertimeAmount') : 0;
+  const allowancesTotal = sumAllowances(collectAllowancesFromForm());
+  const commuteAllowance = getNumInputValue('commuteAllowance');
+  const total = computeStandardMonthlyBase(baseSalary, fixedOvertimeAmount, allowancesTotal, commuteAllowance);
+  setStandardMonthlyValue('healthStandardMonthly', 'healthStandardMonthlyCustom', 'healthStandardMonthlyCustomWrap',
+    lookupStandardMonthlyAmount(total, HEALTH_STANDARD_BRACKETS), HEALTH_STANDARD_BRACKETS);
+  setStandardMonthlyValue('pensionStandardMonthly', 'pensionStandardMonthlyCustom', 'pensionStandardMonthlyCustomWrap',
+    lookupStandardMonthlyAmount(total, PENSION_STANDARD_BRACKETS), PENSION_STANDARD_BRACKETS);
 }
 
 // ---------------------------------------------------------------------------
@@ -241,9 +275,10 @@ function attachAllowanceRowEvents() {
         row.querySelector('.allowance-name').value = '';
         row.querySelector('.allowance-amount').value = '0';
         row.querySelector('.allowance-exclude').checked = false;
-        return;
+      } else {
+        row.remove();
       }
-      row.remove();
+      refreshStandardMonthlyDefaults();
     });
   });
 }
@@ -291,8 +326,6 @@ function resetForm() {
   document.getElementById('taxTable').value = '甲';
   document.getElementById('residentTax').value = '0';
   document.getElementById('healthInsuranceNumber').value = '';
-  document.getElementById('healthStandardMonthly').value = '280,000';
-  document.getElementById('pensionStandardMonthly').value = '280,000';
   document.getElementById('workStart').value = '09:00';
   document.getElementById('workEnd').value = '18:00';
   document.getElementById('standardDailyHours').value = '8';
@@ -301,6 +334,7 @@ function resetForm() {
   renderOvertimeRatesList(defaultOvertimeRates());
   applyEmploymentTypeLabelToForm();
   updateAgeDisplay();
+  refreshStandardMonthlyDefaults();
 }
 
 function loadFormFromEmployee(emp) {
@@ -332,8 +366,10 @@ function loadFormFromEmployee(emp) {
   document.getElementById('taxTable').value = emp.taxTable;
   document.getElementById('residentTax').value = formatThousands(emp.residentTax);
   document.getElementById('healthInsuranceNumber').value = emp.healthInsuranceNumber || '';
-  document.getElementById('healthStandardMonthly').value = formatThousands(emp.healthStandardMonthly || emp.baseSalary);
-  document.getElementById('pensionStandardMonthly').value = formatThousands(emp.pensionStandardMonthly || emp.baseSalary);
+  setStandardMonthlyValue('healthStandardMonthly', 'healthStandardMonthlyCustom', 'healthStandardMonthlyCustomWrap',
+    emp.healthStandardMonthly || emp.baseSalary, HEALTH_STANDARD_BRACKETS);
+  setStandardMonthlyValue('pensionStandardMonthly', 'pensionStandardMonthlyCustom', 'pensionStandardMonthlyCustomWrap',
+    emp.pensionStandardMonthly || emp.baseSalary, PENSION_STANDARD_BRACKETS);
   document.getElementById('workStart').value = emp.workStart || '09:00';
   document.getElementById('workEnd').value = emp.workEnd || '18:00';
   document.getElementById('standardDailyHours').value = emp.standardDailyHours || 8;
@@ -375,8 +411,8 @@ function collectFormAsEmployee() {
     taxTable: document.getElementById('taxTable').value,
     residentTax: getNumInputValue('residentTax'),
     healthInsuranceNumber: document.getElementById('healthInsuranceNumber').value.trim(),
-    healthStandardMonthly: getNumInputValue('healthStandardMonthly'),
-    pensionStandardMonthly: getNumInputValue('pensionStandardMonthly'),
+    healthStandardMonthly: getStandardMonthlyValue('healthStandardMonthly', 'healthStandardMonthlyCustom'),
+    pensionStandardMonthly: getStandardMonthlyValue('pensionStandardMonthly', 'pensionStandardMonthlyCustom'),
     workStart: document.getElementById('workStart').value || '09:00',
     workEnd: document.getElementById('workEnd').value || '18:00',
     standardDailyHours: Number(document.getElementById('standardDailyHours').value) || 8,
@@ -396,6 +432,7 @@ async function renderEmployeeTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${escapeHtml(emp.name)}${emp.nameKana ? `<br><span style="font-size:11px;color:var(--ink-faint);">${escapeHtml(emp.nameKana)}</span>` : ''}</td>
+      <td>${escapeHtml(emp.employeeNumber)}</td>
       <td>${escapeHtml(emp.employmentType)}</td>
       <td class="num">${formatThousands(emp.baseSalary)} 円</td>
       <td class="actions">
@@ -454,11 +491,26 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 });
 document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
 
-['baseSalary', 'fixedOvertimeAmount', 'commuteAllowance', 'residentTax', 'healthStandardMonthly', 'pensionStandardMonthly'].forEach(attachThousandsFormatting);
+['baseSalary', 'fixedOvertimeAmount', 'commuteAllowance', 'residentTax', 'healthStandardMonthlyCustom', 'pensionStandardMonthlyCustom'].forEach(attachThousandsFormatting);
 setupFuriganaAutoFill();
 startAgeAutoUpdate();
-populateStandardMonthlyDatalist('healthStandardMonthlyList', HEALTH_STANDARD_MONTHLY_AMOUNTS);
-populateStandardMonthlyDatalist('pensionStandardMonthlyList', PENSION_STANDARD_MONTHLY_AMOUNTS);
+populateStandardMonthlySelect('healthStandardMonthly', HEALTH_STANDARD_BRACKETS);
+populateStandardMonthlySelect('pensionStandardMonthly', PENSION_STANDARD_BRACKETS);
+
+document.getElementById('healthStandardMonthly').addEventListener('change', () => toggleStandardMonthlyCustomWrap('healthStandardMonthly', 'healthStandardMonthlyCustomWrap'));
+document.getElementById('pensionStandardMonthly').addEventListener('change', () => toggleStandardMonthlyCustomWrap('pensionStandardMonthly', 'pensionStandardMonthlyCustomWrap'));
+
+// 基本給・固定残業代・各種手当・通勤手当のいずれかが変わるたびに標準報酬月額の
+// プルダウンを自動で再計算する
+['baseSalary', 'fixedOvertimeAmount'].forEach((id) => {
+  document.getElementById(id).addEventListener('blur', refreshStandardMonthlyDefaults);
+});
+document.getElementById('fixedOvertimeEnabled').addEventListener('change', refreshStandardMonthlyDefaults);
+document.getElementById('commuteAllowance').addEventListener('blur', refreshStandardMonthlyDefaults);
+document.getElementById('allowancesList').addEventListener('change', (e) => {
+  if (e.target.classList.contains('allowance-amount')) refreshStandardMonthlyDefaults();
+});
+document.getElementById('addAllowanceBtn').addEventListener('click', refreshStandardMonthlyDefaults);
 
 (async () => {
   const user = await requireAuth();
