@@ -431,8 +431,8 @@ async function renderEmployeeTable() {
   for (const emp of employees) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${escapeHtml(emp.name)}${emp.nameKana ? `<br><span style="font-size:11px;color:var(--ink-faint);">${escapeHtml(emp.nameKana)}</span>` : ''}</td>
       <td>${escapeHtml(emp.employeeNumber)}</td>
+      <td>${escapeHtml(emp.name)}${emp.nameKana ? `<br><span style="font-size:11px;color:var(--ink-faint);">${escapeHtml(emp.nameKana)}</span>` : ''}</td>
       <td>${escapeHtml(emp.employmentType)}</td>
       <td class="num">${formatThousands(emp.baseSalary)} 円</td>
       <td class="actions">
