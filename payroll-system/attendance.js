@@ -153,8 +153,8 @@ async function renderDayTable() {
           <option value="normal" ${rec.status === 'normal' ? 'selected' : ''}>通常</option>
           <option value="paid_leave" ${rec.status === 'paid_leave' ? 'selected' : ''}>有給休暇</option>
           <option value="absence" ${rec.status === 'absence' ? 'selected' : ''}>欠勤</option>
-          <option value="scheduled_holiday_work" ${rec.status === 'scheduled_holiday_work' || rec.status === 'holiday_work' ? 'selected' : ''}>所定休日出勤</option>
-          <option value="statutory_holiday_work" ${rec.status === 'statutory_holiday_work' ? 'selected' : ''}>法定休日出勤</option>
+          <option value="scheduled_holiday_work" ${rec.status === 'scheduled_holiday_work' || rec.status === 'holiday_work' ? 'selected' : ''}>所定休日</option>
+          <option value="statutory_holiday_work" ${rec.status === 'statutory_holiday_work' ? 'selected' : ''}>法定休日</option>
         </select>
       </td>
       <td><input type="time" data-field="clockIn" value="${rec.clockIn || ''}" ${isTimeless ? 'disabled' : ''}></td>

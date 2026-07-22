@@ -184,6 +184,30 @@ function renderAttendanceSummaryTiles(s) {
       <div class="tile-value ${cls}">${value}</div>
     </div>
   `).join('');
+  renderOvertimeBreakdownTiles(s);
+}
+
+// 「残業時間」の内訳（日次勤怠入力の割増区分別の当月合計）
+const OVERTIME_BREAKDOWN_TILE_KEYS = [
+  ['overtimeWithin60', '法定外60内'],
+  ['overtimeOver60', '法定外60超'],
+  ['weeklyOvertime', '週残業'],
+  ['statutoryHoliday', '法定休日'],
+  ['lateNight', '深夜'],
+  ['weeklyOvertimeNight', '週深夜残業時間'],
+  ['overtimeWithin60Night', '法定外60内+深夜'],
+  ['overtimeOver60Night', '法定外60超+深夜'],
+  ['statutoryHolidayNight', '法定休日+深夜'],
+];
+
+function renderOvertimeBreakdownTiles(s) {
+  const totals = s.overtimeCategoryMonthTotals || {};
+  document.getElementById('overtimeBreakdownGrid').innerHTML = OVERTIME_BREAKDOWN_TILE_KEYS.map(([key, label]) => `
+    <div class="summary-tile">
+      <div class="tile-label">${label}</div>
+      <div class="tile-value">${((totals[key] || 0) / 60).toFixed(1)} h</div>
+    </div>
+  `).join('');
 }
 
 function collectInput() {
