@@ -214,9 +214,9 @@ const ATTENDANCE_STATUS_LABELS = {
   normal: '通常',
   paid_leave: '有給休暇',
   absence: '欠勤',
-  scheduled_holiday_work: '所定休日出勤',
-  statutory_holiday_work: '法定休日出勤',
-  holiday_work: '休日出勤（旧）', // 旧データ互換用。以後は所定／法定休日出勤のいずれかで記録される
+  scheduled_holiday_work: '所定休日',
+  statutory_holiday_work: '法定休日',
+  holiday_work: '休日出勤（旧）', // 旧データ互換用。以後は所定休日／法定休日のいずれかで記録される
 };
 
 // 従業員の所定労働設定をもとに、1か月分の勤怠から集計値を計算する。

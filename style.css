@@ -14,6 +14,8 @@
   --success-bg: rgba(47, 125, 91, 0.1);
   --warn: #a9791f;
   --warn-bg: rgba(169, 121, 31, 0.12);
+  --sky-bg: rgba(31, 143, 209, 0.14);
+  --orange-bg: rgba(217, 119, 6, 0.16);
   --border: #d8d2c0;
   --focus: #1f4e79;
   --shadow: rgba(35, 40, 42, 0.08);
@@ -36,6 +38,8 @@
     --success-bg: rgba(116, 199, 154, 0.14);
     --warn: #d9b35e;
     --warn-bg: rgba(217, 179, 94, 0.14);
+    --sky-bg: rgba(96, 178, 224, 0.18);
+    --orange-bg: rgba(224, 158, 74, 0.2);
     --border: #333c3a;
     --focus: #7fb0dd;
     --shadow: rgba(0, 0, 0, 0.35);
@@ -409,6 +413,11 @@ table.data-table td.actions { text-align: right; }
 .summary-tile .tile-value.accent { color: var(--indigo); }
 .summary-tile .tile-value.warn { color: var(--stamp); }
 
+.summary-grid.compact-grid { grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 8px; margin-top: -14px; }
+.summary-grid.compact-grid .summary-tile { padding: 8px 12px; }
+.summary-grid.compact-grid .tile-label { font-size: 10.5px; }
+.summary-grid.compact-grid .tile-value { font-size: 15px; margin-top: 2px; }
+
 /* ---------- attendance day grid ---------- */
 table.day-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.day-table th, table.day-table td {
@@ -441,6 +450,8 @@ table.day-table td.computed { font-variant-numeric: tabular-nums; color: var(--i
 table.day-table tr.row-absence { background: var(--stamp-bg); }
 table.day-table tr.row-paid_leave { background: var(--warn-bg); }
 table.day-table tr.row-holiday_work { background: rgba(31,78,121,0.06); }
+table.day-table tr.row-scheduled_holiday_work { background: var(--sky-bg); }
+table.day-table tr.row-statutory_holiday_work { background: var(--orange-bg); }
 table.day-table tr.month-total-row { background: var(--surface-line); font-weight: 600; }
 table.day-table tr.month-total-row td.computed { color: var(--ink); }
 table.day-table tr.month-total-row td:first-child { text-align: left; }
