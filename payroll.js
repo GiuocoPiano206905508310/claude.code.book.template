@@ -92,13 +92,27 @@ async function loadFormForEmployeeMonth() {
     commuteAllowance: input ? input.commuteAllowance : employee.commuteAllowance,
     dependents: input ? input.dependents : employee.dependents,
     taxTable: input ? input.taxTable : employee.taxTable,
-    residentTax: input ? input.residentTax : employee.residentTax,
     employmentInsuranceExcludedAllowance: input
       ? (input.employmentInsuranceExcludedAllowance || 0)
       : sumExcludedFromEmploymentInsurance(employee.allowances),
   };
   renderEmployeeInfoGrid(currentEmployeeFields);
-  document.getElementById('residentTaxDisplay').textContent = `${formatThousands(currentEmployeeFields.residentTax)} 円`;
+
+  const residentTaxInput = document.getElementById('residentTax');
+  if (input) {
+    residentTaxInput.value = formatThousands(input.residentTax || 0);
+    document.getElementById('residentTaxNote').textContent = '';
+  } else {
+    const prevSlip = await getPayslip(employee.id, previousYm(ym));
+    if (prevSlip) {
+      residentTaxInput.value = formatThousands(prevSlip.input.residentTax || 0);
+      document.getElementById('residentTaxNote').textContent =
+        `前月（${ymLabel(previousYm(ym))}）の住民税額を自動反映しています。変更がある場合は編集してください。`;
+    } else {
+      residentTaxInput.value = formatThousands(0);
+      document.getElementById('residentTaxNote').textContent = '';
+    }
+  }
 
   currentCompanyFields = {
     calcMethod: input ? input.calcMethod : company.calcMethod,
@@ -177,6 +191,7 @@ function collectInput() {
     ...currentEmployeeFields,
     ...currentCompanyFields,
     overtimePay: getNumInputValue('overtimePay'),
+    residentTax: getNumInputValue('residentTax'),
     applyAbsenceDeduction: document.getElementById('applyAbsenceDeduction').checked,
     fixedOvertimeEnabled: currentFixedOvertime.enabled,
     fixedOvertimeAllowanceName: currentFixedOvertime.allowanceName,
@@ -330,7 +345,7 @@ document.getElementById('exportCopyBtn').addEventListener('click', () => copyRes
   'exportStatus'
 ));
 
-['overtimePay'].forEach(attachThousandsFormatting);
+['overtimePay', 'residentTax'].forEach(attachThousandsFormatting);
 
 (async () => {
   const user = await requireAuth();

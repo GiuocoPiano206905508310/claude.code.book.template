@@ -341,7 +341,6 @@ function resetForm() {
   document.getElementById('commuteAllowanceExclude').checked = true;
   document.getElementById('dependents').value = '0';
   document.getElementById('taxTable').value = '甲';
-  document.getElementById('residentTax').value = '0';
   document.getElementById('healthInsuranceNumber').value = '';
   document.getElementById('workStart').value = '09:00';
   document.getElementById('workEnd').value = '18:00';
@@ -381,7 +380,6 @@ function loadFormFromEmployee(emp) {
   document.getElementById('commuteAllowanceExclude').checked = emp.commuteAllowanceExcludeFromOvertimeBase !== false;
   document.getElementById('dependents').value = emp.dependents;
   document.getElementById('taxTable').value = emp.taxTable;
-  document.getElementById('residentTax').value = formatThousands(emp.residentTax);
   document.getElementById('healthInsuranceNumber').value = emp.healthInsuranceNumber || '';
   setStandardMonthlyValue('healthStandardMonthly', 'healthStandardMonthlyCustom', 'healthStandardMonthlyCustomWrap',
     emp.healthStandardMonthly || emp.baseSalary, HEALTH_STANDARD_BRACKETS);
@@ -426,7 +424,6 @@ function collectFormAsEmployee() {
     commuteAllowanceExcludeFromOvertimeBase: document.getElementById('commuteAllowanceExclude').checked,
     dependents: Number(document.getElementById('dependents').value) || 0,
     taxTable: document.getElementById('taxTable').value,
-    residentTax: getNumInputValue('residentTax'),
     healthInsuranceNumber: document.getElementById('healthInsuranceNumber').value.trim(),
     healthStandardMonthly: getStandardMonthlyValue('healthStandardMonthly', 'healthStandardMonthlyCustom'),
     pensionStandardMonthly: getStandardMonthlyValue('pensionStandardMonthly', 'pensionStandardMonthlyCustom'),
@@ -508,7 +505,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 });
 document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
 
-['baseSalary', 'fixedOvertimeAmount', 'commuteAllowance', 'residentTax', 'healthStandardMonthlyCustom', 'pensionStandardMonthlyCustom'].forEach(attachThousandsFormatting);
+['baseSalary', 'fixedOvertimeAmount', 'commuteAllowance', 'healthStandardMonthlyCustom', 'pensionStandardMonthlyCustom'].forEach(attachThousandsFormatting);
 setupFuriganaAutoFill();
 startAgeAutoUpdate();
 populateStandardMonthlySelect('healthStandardMonthly', HEALTH_STANDARD_BRACKETS);
