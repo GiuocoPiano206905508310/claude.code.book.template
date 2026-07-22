@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>給与計算 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -19,7 +19,7 @@
   <div class="notice">
     <p>※ この計算結果は概算です。正確な金額については専門家にご確認ください。</p>
     <p>※ 健康保険料率は協会けんぽ「令和8年度都道府県単位保険料率」、雇用保険料率は厚生労働省「令和8年度雇用保険料率」、源泉所得税は国税庁「給与所得の源泉徴収税額表（令和8年分）」に基づき計算しますが、標準報酬月額表とは一致しないなど概算の範囲にとどまります。</p>
-    <p>※ 残業手当・欠勤控除は、勤怠管理画面の月次集計と従業員マスタの所定労働設定から自動算出した概算値です。</p>
+    <p>※ 割増手当・欠勤控除は、勤怠管理画面の月次集計と従業員マスタの所定労働設定から自動算出した概算値です。</p>
     <p>※ 雇用形態・年齢区分・基本給・その他手当・通勤手当・扶養親族等の数・甲欄乙欄・住民税は、<a href="employees.html">従業員マスタ管理</a>で登録した内容がそのまま使用されます。変更する場合は従業員マスタ管理で編集してください。</p>
     <p>※ 源泉所得税の計算方法・保険料率（健康保険・介護保険・厚生年金・雇用保険）は、<a href="company.html">会社マスタ管理</a>で設定した内容がそのまま使用されます。変更する場合は会社マスタ管理で編集してください。</p>
   </div>
@@ -50,7 +50,7 @@
         <h2>支給項目（当月分）</h2>
 
         <div class="field-row">
-          <label for="overtimePay">残業手当（勤怠集計から自動計算）</label>
+          <label for="overtimePay">割増手当（勤怠集計から自動計算）</label>
           <div class="field-input">
             <input type="text" inputmode="numeric" id="overtimePay">
             <span class="unit">円</span>
@@ -102,11 +102,7 @@
           <label>金額</label>
           <div class="field-input"><span id="fixedOvertimeAmountDisplay">—</span></div>
         </div>
-        <div class="field-row">
-          <label>超過残業代（自動計算）</label>
-          <div class="field-input"><span id="excessOvertimePayDisplay">—</span></div>
-          <p class="field-note" id="excessOvertimeNote"></p>
-        </div>
+        <p class="field-note">※ 固定残業代の対象区分を超えた分・対象区分外の実績分は、給与明細の「割増手当」にまとめて計上されます。</p>
       </section>
     </div>
 
@@ -132,9 +128,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
-<script src="calc.js?v=11"></script>
+<script src="calc.js?v=12"></script>
 <script src="data.js?v=11"></script>
 <script src="common.js?v=6"></script>
-<script src="payroll.js?v=10"></script>
+<script src="payroll.js?v=11"></script>
 </body>
 </html>
