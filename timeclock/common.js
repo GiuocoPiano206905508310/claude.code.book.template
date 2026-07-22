@@ -91,6 +91,12 @@ function ymLabel(ym) {
   return `${y}年${Number(m)}月`;
 }
 
+function previousYm(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 2, 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
 const AGE_GROUP_LABELS = {
   under40: '40歳未満',
   '40to64': '40〜64歳',
