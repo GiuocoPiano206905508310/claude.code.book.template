@@ -4,6 +4,9 @@
 
 let currentAttendanceSummary = null;
 let currentAutoOvertimePay = 0;
+// 割増手当の区分別内訳（{key, label, hours, pay}の配列）。固定残業代の対象区分は
+// 超過分のみ、対象外の区分は実績の全額を計上する（固定残業代が無効の場合は全区分が全額）
+let currentOvertimeBreakdown = [];
 // 従業員マスタ管理（保存済み明細を表示中の場合はその当時の値）から取り込む、
 // 給与計算画面では編集不可の項目
 let currentEmployeeFields = null;
@@ -49,10 +52,6 @@ function renderFixedOvertimeCard(fo) {
   document.getElementById('fixedOvertimeNameDisplay').textContent = fo.allowanceName || '—';
   document.getElementById('fixedOvertimeHoursDisplay').textContent = `${fo.monthlyHours} 時間`;
   document.getElementById('fixedOvertimeAmountDisplay').textContent = `${formatThousands(fo.fixedPay)} 円`;
-  document.getElementById('excessOvertimePayDisplay').textContent = `${formatThousands(fo.excessPay)} 円`;
-  document.getElementById('excessOvertimeNote').textContent = fo.excessPay > 0
-    ? '当月の実際の残業時間が固定残業時間数を超えたため、超過分を従業員マスタの割増率で計算し追加しています。'
-    : '当月の実際の残業時間は固定残業時間数の範囲内のため、超過分はありません。';
 }
 
 function renderCompanyInfoGrid(fields) {
@@ -78,9 +77,7 @@ async function loadFormForEmployeeMonth() {
   currentAttendanceSummary = await computeMonthSummary(employee, ym, company);
   const commuteAllowanceForOvertimeBase = employee.commuteAllowanceExcludeFromOvertimeBase === false ? (employee.commuteAllowance || 0) : 0;
   const overtimeBaseWage = employee.baseSalary + sumNonExcludedAllowances(employee.allowances) + commuteAllowanceForOvertimeBase;
-  currentAutoOvertimePay = calcOvertimePayFromHours(
-    overtimeBaseWage, employee.monthlyStandardHours, currentAttendanceSummary.overtimeHours, employee.overtimeWithin60Rate
-  );
+  const hourlyWage = calcHourlyWage(overtimeBaseWage, employee.monthlyStandardHours);
   const absenceDeduction = calcAbsenceDeduction(employee.baseSalary, employee.monthlyStandardDays, currentAttendanceSummary.absenceDays);
   const employeeAgeGroup = ageGroupFromAge(calcAge(employee.birthDate));
 
@@ -121,37 +118,31 @@ async function loadFormForEmployeeMonth() {
       allowanceName: input.fixedOvertimeAllowanceName || '',
       monthlyHours: input.fixedOvertimeMonthlyHours || 0,
       fixedPay: input.fixedOvertimePay || 0,
-      excessPay: input.excessOvertimePay || 0,
     };
   } else if (employee.fixedOvertimeEnabled) {
-    const hourlyWage = calcHourlyWage(overtimeBaseWage, employee.monthlyStandardHours);
-    const excess = calcFixedOvertimeExcess(
-      hourlyWage, employee.fixedOvertimeMonthlyHours, employee.fixedOvertimeBaseCategories,
-      currentAttendanceSummary.overtimeCategoryMonthTotals, employee
-    );
     currentFixedOvertime = {
       enabled: true,
       allowanceName: employee.fixedOvertimeAllowanceName,
       monthlyHours: employee.fixedOvertimeMonthlyHours,
       fixedPay: employee.fixedOvertimeAmount,
-      excessPay: excess.excessPay,
     };
   } else {
-    currentFixedOvertime = { enabled: false, allowanceName: '', monthlyHours: 0, fixedPay: 0, excessPay: 0 };
+    currentFixedOvertime = { enabled: false, allowanceName: '', monthlyHours: 0, fixedPay: 0 };
   }
   renderFixedOvertimeCard(currentFixedOvertime);
 
+  currentOvertimeBreakdown = (input && input.overtimeBreakdown) ? input.overtimeBreakdown : calcOvertimeBreakdown(
+    hourlyWage, employee, currentAttendanceSummary.overtimeCategoryMonthTotals,
+    !!employee.fixedOvertimeEnabled, employee.fixedOvertimeMonthlyHours, employee.fixedOvertimeBaseCategories
+  ).items;
+  currentAutoOvertimePay = currentOvertimeBreakdown.reduce((sum, it) => sum + it.pay, 0);
+
   const overtimePayInput = document.getElementById('overtimePay');
-  overtimePayInput.disabled = currentFixedOvertime.enabled;
-  if (currentFixedOvertime.enabled) {
-    overtimePayInput.value = formatThousands(input ? input.overtimePay : 0);
-    document.getElementById('overtimeNote').textContent =
-      '固定残業代が設定されているため、通常の残業手当は自動計算されません（残業代は下部の固定残業代・超過残業代でまとめて計算されます）。';
-  } else {
-    overtimePayInput.value = formatThousands(input ? input.overtimePay : currentAutoOvertimePay);
-    document.getElementById('overtimeNote').textContent =
-      `勤怠集計：残業 ${currentAttendanceSummary.overtimeHours.toFixed(1)}h ×「法定外労働時間(月60時間以内)」の割増率(${Number(employee.overtimeWithin60Rate).toFixed(2)}倍) → 自動計算額 ${formatThousands(currentAutoOvertimePay)} 円（編集可。深夜・休日等の割増区分は従業員マスタで設定・手動反映してください）`;
-  }
+  overtimePayInput.disabled = false;
+  overtimePayInput.value = formatThousands(input ? input.overtimePay : currentAutoOvertimePay);
+  document.getElementById('overtimeNote').textContent = currentFixedOvertime.enabled
+    ? `勤怠集計に基づく自動計算額 ${formatThousands(currentAutoOvertimePay)} 円（固定残業代の対象区分は超過分のみ、対象外の区分は実績の全額を計上。内訳は下部の給与明細でご確認いただけます。編集可）`
+    : `勤怠集計に基づく自動計算額 ${formatThousands(currentAutoOvertimePay)} 円（内訳は下部の給与明細でご確認いただけます。編集可）`;
   document.getElementById('applyAbsenceDeduction').checked = input ? !!input.applyAbsenceDeduction : currentAttendanceSummary.absenceDays > 0;
 
   document.getElementById('absenceDeductionPreview').textContent = `${formatThousands(absenceDeduction)} 円 / 欠勤 ${currentAttendanceSummary.absenceDays} 日`;
@@ -191,13 +182,14 @@ function collectInput() {
     fixedOvertimeAllowanceName: currentFixedOvertime.allowanceName,
     fixedOvertimeMonthlyHours: currentFixedOvertime.monthlyHours,
     fixedOvertimePay: currentFixedOvertime.fixedPay,
-    excessOvertimePay: currentFixedOvertime.excessPay,
+    overtimeBreakdown: currentOvertimeBreakdown,
   };
 }
 
 async function calculate() {
   const input = collectInput();
   const result = calculateMonthlyPayroll(input);
+  result.overtimeBreakdown = input.overtimeBreakdown;
 
   const employee = await currentEmployee();
   result.absenceDeduction = 0;
@@ -217,10 +209,11 @@ function renderResult(r) {
   ];
   if (currentFixedOvertime && currentFixedOvertime.enabled) {
     rows.push([currentFixedOvertime.allowanceName || '固定残業代', r.fixedOvertimePay, 'plain', true]);
-    rows.push(['超過残業代', r.excessOvertimePay, 'plain', true]);
-  } else {
-    rows.push(['残業手当', r.overtimePay, 'plain', true]);
   }
+  rows.push(['割増手当', r.overtimePay, 'plain', true]);
+  (r.overtimeBreakdown || []).forEach((it) => {
+    rows.push([`　└ ${it.label}`, it.pay, 'sub', true]);
+  });
   rows.push(
     ['その他手当（課税）', r.taxableAllowance, 'plain', true],
     ['通勤手当（非課税）', r.commuteAllowance, 'plain', true],
@@ -243,6 +236,7 @@ function renderResult(r) {
   for (const [label, value, kind, applicable] of rows) {
     const tr = document.createElement('tr');
     if (kind === 'total') tr.className = 'total';
+    if (kind === 'sub') tr.className = 'sub';
     const valueClass = !applicable ? 'value na' : (kind === 'deduction' ? 'value deduction' : 'value');
     const valueHtml = applicable ? yen(value) : '対象外';
     tr.innerHTML = `<td class="label">${label}</td><td class="${valueClass}">${valueHtml}</td>`;

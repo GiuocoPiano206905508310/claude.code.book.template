@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>従業員マスタ管理 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -123,7 +123,7 @@
           <label>固定残業代の計算の基礎</label>
         </div>
         <div id="fixedOvertimeBaseList"></div>
-        <p class="field-note">※ 固定残業代＝1時間あたりの賃金（基本給＋割増賃金の基礎となる賃金から除外していない手当）×月固定残業時間数×選択した割増率（複数選択した場合は各区分の合計）。日次勤怠管理の実際の残業代がこの金額を超えた分は、給与計算画面で「超過残業代」として別途自動計算されます。</p>
+        <p class="field-note">※ 固定残業代＝1時間あたりの賃金（基本給＋割増賃金の基礎となる賃金から除外していない手当）×月固定残業時間数×選択した割増率（複数選択した場合は各区分の合計）。日次勤怠管理の実際の労働時間が、選択した区分の合計時間数を超えた分、および選択していない区分（例：法定休日）の実績分は、給与計算画面の「割増手当」としてまとめて自動計算されます。</p>
       </div>
       <div class="field-row" style="border-bottom: none; padding-bottom: 4px;">
         <label>その他手当（課税）</label>
@@ -252,7 +252,7 @@
         </div>
         <p class="field-note">※ 月平均所定労働時間 = (365日または閏年366日 － 年間休日日数) × 1日の所定労働時間数 ÷ 12ヶ月)</p>
       </div>
-      <p class="field-note">※ 残業手当・欠勤控除は、勤怠管理画面の月次集計値と上記設定から給与計算画面で自動算出されます（給与計算画面で個別に上書きも可能）。</p>
+      <p class="field-note">※ 割増手当・欠勤控除は、勤怠管理画面の月次集計値と上記設定から給与計算画面で自動算出されます（給与計算画面で個別に上書きも可能）。</p>
 
       <h2 class="section-2">割増率（デフォルトの割増率未満に設定不可）</h2>
       <div id="overtimeRatesList"></div>
@@ -291,7 +291,7 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
-<script src="calc.js?v=11"></script>
+<script src="calc.js?v=12"></script>
 <script src="data.js?v=11"></script>
 <script src="common.js?v=6"></script>
 <script src="employees.js?v=11"></script>

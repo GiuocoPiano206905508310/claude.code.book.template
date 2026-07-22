@@ -565,7 +565,7 @@ function calculateMonthlyPayroll(input) {
     baseSalary, overtimePay, taxableAllowance, commuteAllowance,
     dependents, residentTax,
     healthRate, careRate, pensionRate, employmentRate,
-    fixedOvertimePay, excessOvertimePay, employmentInsuranceExcludedAllowance,
+    fixedOvertimePay, employmentInsuranceExcludedAllowance,
   } = input;
 
   const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
@@ -576,7 +576,7 @@ function calculateMonthlyPayroll(input) {
   const hasCare = subjectSocialInsurance && ageRule.care;
   const hasPension = subjectSocialInsurance && ageRule.pension;
 
-  const grossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance + (fixedOvertimePay || 0) + (excessOvertimePay || 0);
+  const grossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance + (fixedOvertimePay || 0);
   const socialInsuranceBase = grossPay;
   const employmentInsuranceBase = Math.max(0, grossPay - (employmentInsuranceExcludedAllowance || 0));
 
@@ -604,7 +604,7 @@ function calculateMonthlyPayroll(input) {
   return {
     grossPay,
     baseSalary, overtimePay, taxableAllowance, commuteAllowance,
-    fixedOvertimePay: fixedOvertimePay || 0, excessOvertimePay: excessOvertimePay || 0,
+    fixedOvertimePay: fixedOvertimePay || 0,
     healthInsurance, hasHealth,
     careInsurance, hasCare,
     pensionInsurance, hasPension,
@@ -685,12 +685,6 @@ const BONUS_SITUATION_LABELS = {
 // 時給換算 = 基本給 ÷ 月平均所定労働時間
 function calcHourlyWage(baseSalary, monthlyStandardHours) {
   return baseSalary / (monthlyStandardHours || 160);
-}
-
-// 残業手当 = 時給換算 × 割増率 × 残業時間
-function calcOvertimePayFromHours(baseSalary, monthlyStandardHours, overtimeHours, overtimeRate) {
-  const hourly = calcHourlyWage(baseSalary, monthlyStandardHours);
-  return Math.round(hourly * (overtimeRate || 1.25) * overtimeHours);
 }
 
 // 欠勤控除 = 日給換算（基本給 ÷ 月平均所定労働日数） × 欠勤日数
@@ -778,41 +772,51 @@ function defaultOvertimeRates() {
 // この区分の実際の計算に使用するもの。
 // ----------------------------------------------------------------------
 const FIXED_OVERTIME_BASE_CATEGORIES = [
-  { key: 'within60Combined', label: '法定外60内+週残業(1.25倍)', minuteKeys: ['overtimeWithin60', 'weeklyOvertime'], rateKey: 'overtimeWithin60Rate' },
-  { key: 'over60', label: '法定外60超(1.50倍)', minuteKeys: ['overtimeOver60'], rateKey: 'overtimeOver60Rate' },
-  { key: 'statutoryHoliday', label: '法定休日(1.35倍)', minuteKeys: ['statutoryHoliday'], rateKey: 'statutoryHolidayRate' },
-  { key: 'lateNightCombined', label: '深夜+ 週深夜残業時間(0.25倍)', minuteKeys: ['lateNight', 'weeklyOvertimeNight'], rateKey: 'lateNightRate' },
-  { key: 'within60Night', label: '法定外60内+深夜(1.50倍)', minuteKeys: ['overtimeWithin60Night'], rateKey: 'overtimeWithin60NightRate' },
-  { key: 'over60Night', label: '法定外60超+深夜(1.75倍)', minuteKeys: ['overtimeOver60Night'], rateKey: 'overtimeOver60NightRate' },
-  { key: 'statutoryHolidayNight', label: '法定休日+深夜(1.60倍)', minuteKeys: ['statutoryHolidayNight'], rateKey: 'statutoryHolidayNightRate' },
+  { key: 'within60Combined', label: '法定外60内+週残業(1.25倍)', payLabel: '残業手当(月60h以内)', minuteKeys: ['overtimeWithin60', 'weeklyOvertime'], rateKey: 'overtimeWithin60Rate' },
+  { key: 'over60', label: '法定外60超(1.50倍)', payLabel: '残業手当(月60h超)', minuteKeys: ['overtimeOver60'], rateKey: 'overtimeOver60Rate' },
+  { key: 'statutoryHoliday', label: '法定休日(1.35倍)', payLabel: '休日手当', minuteKeys: ['statutoryHoliday'], rateKey: 'statutoryHolidayRate' },
+  { key: 'lateNightCombined', label: '深夜+ 週深夜残業時間(0.25倍)', payLabel: '深夜手当', minuteKeys: ['lateNight', 'weeklyOvertimeNight'], rateKey: 'lateNightRate' },
+  { key: 'within60Night', label: '法定外60内+深夜(1.50倍)', payLabel: '深夜残業手当(月60h以内)', minuteKeys: ['overtimeWithin60Night'], rateKey: 'overtimeWithin60NightRate' },
+  { key: 'over60Night', label: '法定外60超+深夜(1.75倍)', payLabel: '深夜残業手当(月60h超)', minuteKeys: ['overtimeOver60Night'], rateKey: 'overtimeOver60NightRate' },
+  { key: 'statutoryHolidayNight', label: '法定休日+深夜(1.60倍)', payLabel: '深夜休日手当', minuteKeys: ['statutoryHolidayNight'], rateKey: 'statutoryHolidayNightRate' },
 ];
 const DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES = ['within60Combined'];
 
-// 固定残業代の対象時間に対する実際の残業代と、それを超過した分（超過残業代）を計算する。
-// 「固定残業代の計算の基礎」で選択された区分の当月の実労働時間を合算し、従業員マスタの
-// 「月固定残業時間数」と比較する。超過分の金額は、選択された各区分の実際の内訳に応じた
-// 加重平均割増率（＝選択区分の実際の割増賃金合計 ÷ 実際の合計時間）で按分して算出する
-// （区分を1つだけ選択している通常のケースでは、単純に「時給×超過時間×その区分の割増率」
-// と一致する）。
+// 割増区分ごとの割増手当（7区分）を計算する。固定残業代が設定されている場合、
+// 「固定残業代の計算の基礎」で選択された区分は、選択区分の合計実労働時間のうち
+// 固定残業時間数を超えた分（超過分）のみを計上する（固定残業代の対象内の金額は
+// 除く）。超過分の金額は、選択区分の実際の内訳に応じた加重平均で各区分に按分する
+// （区分を1つだけ選択している通常のケースでは、単純に「時給×超過時間×その区分の
+// 割増率」と一致する）。選択されていない区分（固定残業代の対象外）は、実労働時間
+// の全額をそのまま計上する。固定残業代が無効の場合はすべての区分で全額を計上する。
 // hourlyWage: 1時間あたりの賃金（基本給＋割増賃金の基礎に含む手当を月平均所定労働時間で除したもの）
+// employeeRates: 従業員マスタの割増率（OVERTIME_RATE_CATEGORIESのkeyをプロパティ名とする）
+// monthlyMinutesByKey: 当月の日次勤怠から集計した区分別の分数（法定外60内・週残業等を含む）
+// fixedOvertimeEnabled: 固定残業代が有効かどうか
 // fixedHours: 従業員マスタの「月固定残業時間数」
 // selectedKeys: 従業員マスタの「固定残業代の計算の基礎」で選択されたキーの配列
-// monthlyMinutesByKey: 当月の日次勤怠から集計した区分別の分数（法定外60内・週残業等を含む）
-// employeeRates: 従業員マスタの割増率（OVERTIME_RATE_CATEGORIESのkeyをプロパティ名とする）
-function calcFixedOvertimeExcess(hourlyWage, fixedHours, selectedKeys, monthlyMinutesByKey, employeeRates) {
-  let actualMinutes = 0;
-  let actualPay = 0;
-  FIXED_OVERTIME_BASE_CATEGORIES.forEach((cat) => {
-    if (!selectedKeys || !selectedKeys.includes(cat.key)) return;
+function calcOvertimeBreakdown(hourlyWage, employeeRates, monthlyMinutesByKey, fixedOvertimeEnabled, fixedHours, selectedKeys) {
+  const selectedSet = new Set(fixedOvertimeEnabled && selectedKeys ? selectedKeys : []);
+
+  const raw = FIXED_OVERTIME_BASE_CATEGORIES.map((cat) => {
     const minutes = cat.minuteKeys.reduce((sum, k) => sum + (Number(monthlyMinutesByKey[k]) || 0), 0);
+    const hours = minutes / 60;
     const rate = Number(employeeRates[cat.rateKey]) || 0;
-    actualMinutes += minutes;
-    actualPay += (minutes / 60) * hourlyWage * rate;
+    return { key: cat.key, label: cat.payLabel, hours, grossPay: hours * hourlyWage * rate };
   });
-  const actualHours = actualMinutes / 60;
-  const excessHours = Math.max(0, actualHours - (Number(fixedHours) || 0));
-  const excessPay = actualHours > 0 ? Math.round(excessHours * (actualPay / actualHours)) : 0;
-  return { actualHours, actualPay: Math.round(actualPay), excessHours, excessPay };
+
+  const selectedHours = raw.filter((it) => selectedSet.has(it.key)).reduce((sum, it) => sum + it.hours, 0);
+  const excessHours = Math.max(0, selectedHours - (Number(fixedHours) || 0));
+  const excessRatio = selectedHours > 0 ? excessHours / selectedHours : 0;
+
+  let total = 0;
+  const items = raw.map((it) => {
+    const ratio = selectedSet.has(it.key) ? excessRatio : 1;
+    const pay = Math.round(it.grossPay * ratio);
+    total += pay;
+    return { key: it.key, label: it.label, hours: it.hours * ratio, pay };
+  });
+  return { items, total };
 }
 
 // rateキー（末尾Rate）に対応する、分数を積み上げる集計キー
