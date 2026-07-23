@@ -54,6 +54,11 @@ function refreshStandardMonthlyDefaults() {
     lookupStandardMonthlyAmount(total, PENSION_STANDARD_BRACKETS), PENSION_STANDARD_BRACKETS);
 }
 
+function applyGenderVisibility() {
+  const isOther = document.getElementById('gender').value === 'その他';
+  document.getElementById('genderOtherWrap').style.display = isOther ? '' : 'none';
+}
+
 // ---------------------------------------------------------------------------
 // 固定残業代（みなし残業代）
 // ---------------------------------------------------------------------------
@@ -325,6 +330,9 @@ function resetForm() {
   document.getElementById('department').value = '';
   document.getElementById('empName').value = '';
   document.getElementById('empNameKana').value = '';
+  document.getElementById('gender').value = '男性';
+  document.getElementById('genderOther').value = '';
+  applyGenderVisibility();
   document.getElementById('employeeCode').value = '';
   document.getElementById('employeeLoginPassword').value = '';
   document.getElementById('employmentType').value = '正社員';
@@ -363,6 +371,9 @@ function loadFormFromEmployee(emp) {
   document.getElementById('department').value = emp.department || '';
   document.getElementById('empName').value = emp.name;
   document.getElementById('empNameKana').value = emp.nameKana || '';
+  document.getElementById('gender').value = emp.gender || '男性';
+  document.getElementById('genderOther').value = emp.genderOther || '';
+  applyGenderVisibility();
   document.getElementById('employeeCode').value = emp.employeeCode || '';
   document.getElementById('employeeLoginPassword').value = emp.loginPassword || '';
   document.getElementById('employmentType').value = emp.employmentType;
@@ -413,6 +424,8 @@ function collectFormAsEmployee() {
     department: document.getElementById('department').value.trim(),
     name: name || '(氏名未入力)',
     nameKana: document.getElementById('empNameKana').value.trim(),
+    gender: document.getElementById('gender').value,
+    genderOther: document.getElementById('genderOther').value.trim(),
     employeeCode: document.getElementById('employeeCode').value.trim(),
     loginPassword: document.getElementById('employeeLoginPassword').value,
     employmentType: document.getElementById('employmentType').value,
@@ -554,6 +567,7 @@ document.querySelectorAll('#employeeTable thead th.sortable').forEach((th) => {
 
 document.getElementById('employmentType').addEventListener('change', applyEmploymentTypeLabelToForm);
 document.getElementById('birthDate').addEventListener('change', updateAgeDisplay);
+document.getElementById('gender').addEventListener('change', applyGenderVisibility);
 document.getElementById('fixedOvertimeEnabled').addEventListener('change', applyFixedOvertimeVisibility);
 document.getElementById('addAllowanceBtn').addEventListener('click', addAllowanceRow);
 
