@@ -448,12 +448,61 @@ const INSURANCE_ENROLLMENT_LABELS = {
   'アルバイト・パート（雇用保険対象外）': 'なし',
 };
 
+function employeeInsuranceLabel(emp) {
+  return INSURANCE_ENROLLMENT_LABELS[emp.employmentType] || '';
+}
+
+// 「登録済みの従業員」一覧のソート・絞り込み状態
+let employeeSortKey = null;
+let employeeSortDir = 1;
+
+function filterAndSortEmployees(employees) {
+  const numberFilter = document.getElementById('filterEmployeeNumber').value.trim().toLowerCase();
+  const nameFilter = document.getElementById('filterName').value.trim().toLowerCase();
+  const employmentTypeFilter = document.getElementById('filterEmploymentType').value;
+  const insuranceFilter = document.getElementById('filterInsurance').value;
+
+  let result = employees.filter((emp) => {
+    if (numberFilter && !(emp.employeeNumber || '').toLowerCase().includes(numberFilter)) return false;
+    if (nameFilter && !`${emp.name || ''}${emp.nameKana || ''}`.toLowerCase().includes(nameFilter)) return false;
+    if (employmentTypeFilter && emp.employmentType !== employmentTypeFilter) return false;
+    if (insuranceFilter && employeeInsuranceLabel(emp) !== insuranceFilter) return false;
+    return true;
+  });
+
+  if (employeeSortKey) {
+    result = result.slice().sort((a, b) => {
+      const va = employeeSortKey === 'insurance' ? employeeInsuranceLabel(a) : String(a[employeeSortKey] || '');
+      const vb = employeeSortKey === 'insurance' ? employeeInsuranceLabel(b) : String(b[employeeSortKey] || '');
+      return va.localeCompare(vb, 'ja', { numeric: true }) * employeeSortDir;
+    });
+  }
+  return result;
+}
+
+function updateEmployeeSortIndicators() {
+  document.querySelectorAll('#employeeTable thead th.sortable').forEach((th) => {
+    const indicator = th.querySelector('.sort-indicator');
+    indicator.textContent = th.dataset.sort === employeeSortKey ? (employeeSortDir === 1 ? '▲' : '▼') : '';
+  });
+}
+
 async function renderEmployeeTable() {
-  const employees = await listEmployees();
+  const allEmployees = await listEmployees();
+  document.getElementById('emptyState').style.display = allEmployees.length ? 'none' : '';
+  document.getElementById('employeeTable').style.display = allEmployees.length ? '' : 'none';
+  if (!allEmployees.length) return;
+
+  const employees = filterAndSortEmployees(allEmployees);
+  updateEmployeeSortIndicators();
+
   const tbody = document.querySelector('#employeeTable tbody');
   tbody.innerHTML = '';
-  document.getElementById('emptyState').style.display = employees.length ? 'none' : '';
-  document.getElementById('employeeTable').style.display = employees.length ? '' : 'none';
+
+  if (!employees.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--ink-faint);">絞り込み条件に一致する従業員がいません。</td></tr>';
+    return;
+  }
 
   for (const emp of employees) {
     const tr = document.createElement('tr');
@@ -465,7 +514,7 @@ async function renderEmployeeTable() {
       <td>${escapeHtml(emp.employeeNumber)}</td>
       <td>${escapeHtml(emp.name)}${emp.nameKana ? `<br><span style="font-size:11px;color:var(--ink-faint);">${escapeHtml(emp.nameKana)}</span>` : ''}</td>
       <td>${escapeHtml(emp.employmentType)}</td>
-      <td>${escapeHtml(INSURANCE_ENROLLMENT_LABELS[emp.employmentType] || '')}</td>
+      <td>${escapeHtml(employeeInsuranceLabel(emp))}</td>
     `;
     tbody.appendChild(tr);
   }
@@ -488,6 +537,20 @@ async function renderEmployeeTable() {
     });
   });
 }
+
+document.querySelectorAll('#employeeTable thead th.sortable').forEach((th) => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (employeeSortKey === key) { employeeSortDir *= -1; } else { employeeSortKey = key; employeeSortDir = 1; }
+    renderEmployeeTable();
+  });
+});
+['filterEmployeeNumber', 'filterName'].forEach((id) => {
+  document.getElementById(id).addEventListener('input', renderEmployeeTable);
+});
+['filterEmploymentType', 'filterInsurance'].forEach((id) => {
+  document.getElementById(id).addEventListener('change', renderEmployeeTable);
+});
 
 document.getElementById('employmentType').addEventListener('change', applyEmploymentTypeLabelToForm);
 document.getElementById('birthDate').addEventListener('change', updateAgeDisplay);

@@ -366,6 +366,15 @@ table.data-table th {
 table.data-table tbody tr:hover { background: rgba(0,0,0,0.02); }
 table.data-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.data-table td.actions { text-align: right; }
+table.data-table th.sortable { cursor: pointer; user-select: none; }
+table.data-table th.sortable:hover { color: var(--indigo); }
+table.data-table th.sortable .sort-indicator { display: inline-block; width: 10px; margin-left: 2px; font-size: 10px; color: var(--indigo); }
+table.data-table tr.filter-row th { padding: 6px 14px; border-bottom: 1px solid var(--surface-line); }
+table.data-table tr.filter-row input, table.data-table tr.filter-row select {
+  font-size: 12px; padding: 4px 20px 4px 6px; width: 100%; min-width: 90px;
+  font-weight: normal; letter-spacing: normal; text-transform: none;
+}
+table.data-table tr.filter-row input { padding-right: 6px; }
 
 .empty-state {
   text-align: center;
