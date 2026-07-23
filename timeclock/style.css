@@ -439,12 +439,14 @@ table.day-table input[type="time"], table.day-table input[type="number"] {
   background: transparent;
   color: var(--ink);
 }
+table.day-table th:nth-child(2), table.day-table td:nth-child(2) { min-width: 92px; }
 table.day-table select {
   font-size: 12px;
-  padding: 3px 2px;
+  padding: 3px 15px 3px 4px;
   border: none;
   border-bottom: 1px solid var(--border);
   background-position: calc(100% - 2px) 10px, calc(100% - 1px) 10px;
+  width: 100%;
 }
 table.day-table td.computed { font-variant-numeric: tabular-nums; color: var(--ink-soft); font-size: 12.5px; }
 table.day-table tr.row-absence { background: var(--stamp-bg); }
