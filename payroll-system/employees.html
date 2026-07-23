@@ -76,6 +76,13 @@
         </div>
       </div>
       <div class="field-row">
+        <label for="hireDate">入社日</label>
+        <div class="field-input">
+          <input type="date" id="hireDate" value="2020-04-01">
+        </div>
+        <p class="field-note">※ <a href="leave.html">有給休暇管理簿</a>の基準日（付与日）の算定に使用します。</p>
+      </div>
+      <div class="field-row">
         <label for="birthDate">生年月日</label>
         <div class="field-input">
           <input type="date" id="birthDate" value="1990-01-01">
@@ -229,6 +236,20 @@
           </div>
         </div>
         <div class="field-row">
+          <label for="weeklyScheduledDays">週の所定労働日数</label>
+          <div class="field-input">
+            <select id="weeklyScheduledDays">
+              <option value="1">1日</option>
+              <option value="2">2日</option>
+              <option value="3">3日</option>
+              <option value="4">4日</option>
+              <option value="5" selected>5日</option>
+              <option value="6">6日</option>
+            </select>
+          </div>
+          <p class="field-note">※ <a href="leave.html">有給休暇管理簿</a>の年次有給休暇の付与日数（週4日以下かつ週30時間未満の場合は比例付与）の算定に使用します。</p>
+        </div>
+        <div class="field-row">
           <label for="monthlyStandardDays">月平均所定労働日数（欠勤控除の算定用）</label>
           <div class="field-input">
             <input type="number" id="monthlyStandardDays" value="20" min="1" step="1">
@@ -283,9 +304,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
-<script src="calc.js?v=12"></script>
-<script src="data.js?v=13"></script>
-<script src="common.js?v=7"></script>
-<script src="employees.js?v=13"></script>
+<script src="calc.js?v=13"></script>
+<script src="data.js?v=14"></script>
+<script src="common.js?v=8"></script>
+<script src="employees.js?v=14"></script>
 </body>
 </html>

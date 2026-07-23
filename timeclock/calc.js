@@ -731,6 +731,67 @@ function calcAge(birthDate, asOfDate) {
   return Math.max(0, age);
 }
 
+// 'YYYY-MM-DD' 形式に整形する
+function formatDateYmd(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// ----------------------------------------------------------------------
+// 年次有給休暇の付与日数（労働基準法第39条。厚生労働省・都道府県労働局・
+// 労働基準監督署リーフレット「労基法39条」に基づく法定最低付与日数）
+// ----------------------------------------------------------------------
+// （１）通常の労働者の付与日数（継続勤務年数区分：0.5/1.5/2.5/3.5/4.5/5.5/6.5年以上）
+const PAID_LEAVE_STANDARD_GRANT_DAYS = [10, 11, 12, 14, 16, 18, 20];
+// （２）週所定労働日数が4日以下かつ週所定労働時間が30時間未満の労働者の比例付与日数
+const PAID_LEAVE_PROPORTIONAL_GRANT_DAYS = {
+  4: [7, 8, 9, 10, 12, 13, 15],
+  3: [5, 6, 6, 8, 9, 10, 11],
+  2: [3, 4, 4, 5, 6, 6, 7],
+  1: [1, 2, 2, 2, 3, 3, 3],
+};
+const PAID_LEAVE_YEAR_LABELS = ['0.5年', '1.5年', '2.5年', '3.5年', '4.5年', '5.5年', '6.5年以上'];
+
+// 継続勤務年数から、付与日数表の区分インデックス（0〜6）を返す。0.5年未満はnull（付与なし）
+function paidLeaveYearIndex(continuousYears) {
+  if (continuousYears === null || continuousYears === undefined || continuousYears < 0.5) return null;
+  if (continuousYears < 1.5) return 0;
+  if (continuousYears < 2.5) return 1;
+  if (continuousYears < 3.5) return 2;
+  if (continuousYears < 4.5) return 3;
+  if (continuousYears < 5.5) return 4;
+  if (continuousYears < 6.5) return 5;
+  return 6;
+}
+
+// 法定最低付与日数（週所定労働日数が4日以下かつ週所定労働時間が30時間未満の場合は比例付与）
+function calcPaidLeaveGrantDays(weeklyScheduledDays, standardDailyHours, continuousYears) {
+  const idx = paidLeaveYearIndex(continuousYears);
+  if (idx === null) return 0;
+  const days = Number(weeklyScheduledDays) || 5;
+  const weeklyHours = (Number(standardDailyHours) || 0) * days;
+  const isProportional = days >= 1 && days <= 4 && weeklyHours < 30;
+  if (isProportional) return PAID_LEAVE_PROPORTIONAL_GRANT_DAYS[days][idx];
+  return PAID_LEAVE_STANDARD_GRANT_DAYS[idx];
+}
+
+// 入社日から、基準日（付与日：雇入れの日から6か月継続勤務した日、以後1年ごと）
+// のうち指定日（省略時は現在日時）以前に到来したものを一覧で返す。各要素の
+// continuousYearsは付与日数表の区分（0.5, 1.5, 2.5...）と対応する
+function calcPaidLeaveGrantSchedule(hireDate, asOfDate) {
+  if (!hireDate) return [];
+  const parts = hireDate.split('-').map(Number);
+  if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return [];
+  const [hy, hm, hd] = parts;
+  const asOf = asOfDate || getJstNow();
+  const schedule = [];
+  for (let i = 0; i < 40; i++) {
+    const grantDate = new Date(hy, hm - 1 + 6 + i * 12, hd);
+    if (grantDate > asOf) break;
+    schedule.push({ grantDate, continuousYears: 0.5 + i });
+  }
+  return schedule;
+}
+
 // 社会保険の加入区分に用いる年齢区分（40歳以上：介護保険、70歳以上：厚生年金対象外、75歳以上：後期高齢者医療）
 function ageGroupFromAge(age) {
   if (age === null || age === undefined) return 'under40';

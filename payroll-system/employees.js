@@ -328,6 +328,7 @@ function resetForm() {
   document.getElementById('employeeCode').value = '';
   document.getElementById('employeeLoginPassword').value = '';
   document.getElementById('employmentType').value = '正社員';
+  document.getElementById('hireDate').value = '2020-04-01';
   document.getElementById('birthDate').value = '1990-01-01';
   document.getElementById('baseSalary').value = '280,000';
   document.getElementById('fixedOvertimeEnabled').value = 'no';
@@ -345,6 +346,7 @@ function resetForm() {
   document.getElementById('workStart').value = '09:00';
   document.getElementById('workEnd').value = '18:00';
   document.getElementById('standardDailyHours').value = '8';
+  document.getElementById('weeklyScheduledDays').value = '5';
   document.getElementById('monthlyStandardHours').value = '160';
   document.getElementById('monthlyStandardDays').value = '20';
   renderOvertimeRatesList(defaultOvertimeRates());
@@ -364,6 +366,7 @@ function loadFormFromEmployee(emp) {
   document.getElementById('employeeCode').value = emp.employeeCode || '';
   document.getElementById('employeeLoginPassword').value = emp.loginPassword || '';
   document.getElementById('employmentType').value = emp.employmentType;
+  document.getElementById('hireDate').value = emp.hireDate || '2020-04-01';
   document.getElementById('birthDate').value = emp.birthDate || '1990-01-01';
   document.getElementById('baseSalary').value = formatThousands(emp.baseSalary);
   document.getElementById('fixedOvertimeEnabled').value = emp.fixedOvertimeEnabled ? 'yes' : 'no';
@@ -388,6 +391,7 @@ function loadFormFromEmployee(emp) {
   document.getElementById('workStart').value = emp.workStart || '09:00';
   document.getElementById('workEnd').value = emp.workEnd || '18:00';
   document.getElementById('standardDailyHours').value = emp.standardDailyHours || 8;
+  document.getElementById('weeklyScheduledDays').value = emp.weeklyScheduledDays || 5;
   document.getElementById('monthlyStandardHours').value = emp.monthlyStandardHours || 160;
   document.getElementById('monthlyStandardDays').value = emp.monthlyStandardDays || 20;
   const storedRates = Object.assign({}, defaultOvertimeRates());
@@ -412,6 +416,7 @@ function collectFormAsEmployee() {
     employeeCode: document.getElementById('employeeCode').value.trim(),
     loginPassword: document.getElementById('employeeLoginPassword').value,
     employmentType: document.getElementById('employmentType').value,
+    hireDate: document.getElementById('hireDate').value || null,
     birthDate: document.getElementById('birthDate').value || null,
     baseSalary: getNumInputValue('baseSalary'),
     fixedOvertimeEnabled: document.getElementById('fixedOvertimeEnabled').value === 'yes',
@@ -430,6 +435,7 @@ function collectFormAsEmployee() {
     workStart: document.getElementById('workStart').value || '09:00',
     workEnd: document.getElementById('workEnd').value || '18:00',
     standardDailyHours: Number(document.getElementById('standardDailyHours').value) || 8,
+    weeklyScheduledDays: Number(document.getElementById('weeklyScheduledDays').value) || 5,
     monthlyStandardHours: Number(document.getElementById('monthlyStandardHours').value) || 160,
     monthlyStandardDays: Number(document.getElementById('monthlyStandardDays').value) || 20,
   }, rates);
