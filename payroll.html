@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>給与計算 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -77,7 +77,6 @@
       <section class="card payslip is-sticky" id="resultCard" aria-label="計算結果">
         <div class="payslip-head">
           <span class="title">給与明細</span>
-          <span class="stamp-badge">試算</span>
         </div>
         <table class="result-table" id="resultTable"><tbody></tbody></table>
         <div class="net-block">
@@ -123,6 +122,24 @@
       </div>
       <div class="empty-state" id="historyEmptyState" style="display:none;">この従業員の保存済み明細はまだありません。</div>
     </section>
+
+    <section class="card form-card" id="wageLedgerCard" style="margin-top:24px;">
+      <h2>賃金台帳</h2>
+      <p class="field-note">※ 様式第20号（労働基準法施行規則第55条）の賃金台帳の記載事項を参考に、保存済みの給与明細から自動作成しています。臨時の給与・賞与・実物給与は本システムでは扱っていないため常に0円です（賞与は<a href="bonus.html">賞与計算</a>で別途管理してください）。</p>
+      <div class="data-table-wrap">
+        <table class="data-table" id="wageLedgerTable">
+          <thead><tr></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="export-row">
+        <button type="button" class="export-btn pc-only" id="exportLedgerPdfBtn">🖨 印刷</button>
+        <button type="button" class="export-btn pc-only" id="exportLedgerExcelBtn">📊 Excel出力</button>
+        <button type="button" class="export-btn" id="exportLedgerCopyBtn">📋 テキスト(.txt)コピー</button>
+      </div>
+      <p class="export-status" id="exportLedgerStatus"></p>
+      <div class="empty-state" id="wageLedgerEmptyState" style="display:none;">この従業員の保存済み明細はまだありません。</div>
+    </section>
   </div>
 
   <footer>個人・小規模事業向けの概算ツールです。正式な給与計算には給与計算ソフトまたは専門家をご利用ください。</footer>
@@ -135,7 +152,7 @@
 <script src="auth.js?v=2"></script>
 <script src="calc.js?v=13"></script>
 <script src="data.js?v=14"></script>
-<script src="common.js?v=8"></script>
-<script src="payroll.js?v=13"></script>
+<script src="common.js?v=9"></script>
+<script src="payroll.js?v=14"></script>
 </body>
 </html>

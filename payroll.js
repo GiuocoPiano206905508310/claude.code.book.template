@@ -321,8 +321,129 @@ async function renderHistoryTable() {
       if (!confirm(`${ymLabel(btn.dataset.ym)}分の給与明細を削除します。よろしいですか？`)) return;
       await deletePayslip(employee.id, btn.dataset.ym);
       await renderHistoryTable();
+      await renderWageLedgerTable();
     });
   });
+}
+
+// 賃金台帳（様式第20号・労働基準法施行規則第55条）の記載事項を参考にした行定義。
+// hours/日単位の行は小数第1位まで、円単位の行は千円区切りで表示する
+const WAGE_LEDGER_ROWS = [
+  { key: 'workDays', label: '労働日数', unit: '日' },
+  { key: 'workedHours', label: '労働時間数', unit: '時間' },
+  { key: 'holidayHours', label: '休日労働時間数', unit: '時間' },
+  { key: 'overtimeHours', label: '早出残業時間数', unit: '時間' },
+  { key: 'nightHours', label: '深夜労働時間数', unit: '時間' },
+  { key: 'baseSalary', label: '基本賃金', unit: '円' },
+  { key: 'overtimePayTotal', label: '所定時間外割増賃金', unit: '円' },
+  { key: 'taxableAllowance', label: '手当', unit: '円' },
+  { key: 'subtotal1', label: '小　計', unit: '円', bold: true },
+  { key: 'commuteAllowance', label: '非課税分賃金額', unit: '円' },
+  { key: 'specialPay', label: '臨時の給与', unit: '円' },
+  { key: 'bonus', label: '賞与', unit: '円' },
+  { key: 'total', label: '合　計', unit: '円', bold: true },
+  { key: 'healthInsurance', label: '健康保険料', unit: '円' },
+  { key: 'careInsurance', label: '介護保険料', unit: '円' },
+  { key: 'childSupportLevy', label: '子ども・子育て支援金', unit: '円' },
+  { key: 'pensionInsurance', label: '厚生年金保険料', unit: '円' },
+  { key: 'employmentInsurance', label: '雇用保険料', unit: '円' },
+  { key: 'socialInsuranceTotal', label: '社会保険料控除計', unit: '円', bold: true },
+  { key: 'afterSocialInsurance', label: '差引残', unit: '円', bold: true },
+  { key: 'monthlyIncomeTax', label: '源泉所得税', unit: '円' },
+  { key: 'residentTax', label: '住民税', unit: '円' },
+  { key: 'absenceDeduction', label: '欠勤控除', unit: '円' },
+  { key: 'deductionTotal', label: '控除計', unit: '円', bold: true },
+  { key: 'inKindPay', label: '実物給与', unit: '円' },
+  { key: 'netPay', label: '差引支払金', unit: '円', bold: true },
+];
+
+// 保存済みの給与明細（ym単位）から、賃金台帳の1か月分の列を組み立てる。
+// 労働日数・労働時間数等の勤怠由来の項目は、当時の勤怠入力から都度再集計する
+async function buildWageLedgerColumns(employee, company) {
+  const slips = await listPayslips(employee.id);
+  const yms = Object.keys(slips).sort();
+  const columns = [];
+  for (const ym of yms) {
+    const r = slips[ym].result;
+    // eslint-disable-next-line no-await-in-loop
+    const summary = await computeMonthSummary(employee, ym, company);
+    const t = summary.overtimeCategoryMonthTotals;
+    const holidayMin = (t.scheduledHoliday || 0) + (t.statutoryHoliday || 0) + (t.statutoryHolidayNight || 0);
+    const overtimeMin = (t.overtimeWithin60 || 0) + (t.weeklyOvertime || 0) + (t.overtimeOver60 || 0)
+      + (t.overtimeWithin60Night || 0) + (t.overtimeOver60Night || 0);
+    const nightMin = (t.lateNight || 0) + (t.weeklyOvertimeNight || 0) + (t.overtimeWithin60Night || 0)
+      + (t.overtimeOver60Night || 0) + (t.statutoryHolidayNight || 0);
+
+    const subtotal1 = r.baseSalary + r.overtimePay + r.fixedOvertimePay + r.taxableAllowance;
+    const total = subtotal1 + r.commuteAllowance;
+    const afterSocialInsurance = total - r.socialInsuranceTotal;
+    const absenceDeduction = r.absenceDeduction || 0;
+    const deductionTotal = r.monthlyIncomeTax + r.residentTax + absenceDeduction;
+    const netPay = afterSocialInsurance - deductionTotal;
+
+    columns.push({
+      ym,
+      workDays: summary.workDays,
+      workedHours: summary.workedHours,
+      holidayHours: holidayMin / 60,
+      overtimeHours: overtimeMin / 60,
+      nightHours: nightMin / 60,
+      baseSalary: r.baseSalary,
+      overtimePayTotal: r.overtimePay + r.fixedOvertimePay,
+      taxableAllowance: r.taxableAllowance,
+      subtotal1,
+      commuteAllowance: r.commuteAllowance,
+      specialPay: 0,
+      bonus: 0,
+      total,
+      healthInsurance: r.healthInsurance,
+      careInsurance: r.careInsurance,
+      childSupportLevy: r.childSupportLevy,
+      pensionInsurance: r.pensionInsurance,
+      employmentInsurance: r.employmentInsurance,
+      socialInsuranceTotal: r.socialInsuranceTotal,
+      afterSocialInsurance,
+      monthlyIncomeTax: r.monthlyIncomeTax,
+      residentTax: r.residentTax,
+      absenceDeduction,
+      deductionTotal,
+      inKindPay: 0,
+      netPay,
+    });
+  }
+  return columns;
+}
+
+async function renderWageLedgerTable() {
+  const employee = await currentEmployee();
+  const theadRow = document.querySelector('#wageLedgerTable thead tr');
+  const tbody = document.querySelector('#wageLedgerTable tbody');
+  theadRow.innerHTML = '';
+  tbody.innerHTML = '';
+  if (!employee) {
+    document.getElementById('wageLedgerEmptyState').style.display = '';
+    document.querySelector('#wageLedgerCard .data-table-wrap').style.display = 'none';
+    document.querySelector('#wageLedgerCard .export-row').style.display = 'none';
+    return;
+  }
+
+  const company = await getCompany();
+  const columns = await buildWageLedgerColumns(employee, company);
+  const hasData = columns.length > 0;
+  document.getElementById('wageLedgerEmptyState').style.display = hasData ? 'none' : '';
+  document.querySelector('#wageLedgerCard .data-table-wrap').style.display = hasData ? '' : 'none';
+  document.querySelector('#wageLedgerCard .export-row').style.display = hasData ? '' : 'none';
+  if (!hasData) return;
+
+  theadRow.innerHTML = `<th>項目</th>${columns.map((c) => `<th>${ymLabel(c.ym)}</th>`).join('')}`;
+  tbody.innerHTML = WAGE_LEDGER_ROWS.map((rowDef) => {
+    const cells = columns.map((c) => {
+      const v = c[rowDef.key];
+      const text = rowDef.unit === '時間' ? `${v.toFixed(1)} 時間` : (rowDef.unit === '日' ? `${v} 日` : `${formatThousands(Math.round(v))} 円`);
+      return `<td class="num">${text}</td>`;
+    }).join('');
+    return `<tr${rowDef.bold ? ' class="total"' : ''}><td>${rowDef.label}</td>${cells}</tr>`;
+  }).join('');
 }
 
 async function refreshAll() {
@@ -330,6 +451,7 @@ async function refreshAll() {
   const ym = document.getElementById('monthInput').value;
   await loadFormForEmployeeMonth();
   await renderHistoryTable();
+  await renderWageLedgerTable();
   document.getElementById('goAttendanceBtn').href = employee && ym
     ? `attendance.html?emp=${encodeURIComponent(employee.id)}&ym=${encodeURIComponent(ym)}`
     : 'attendance.html';
@@ -350,6 +472,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     await savePayslip(employee.id, ym, { input, result });
     showExportStatus('exportStatus', `${ymLabel(ym)}分の給与明細を保存しました。`, false);
     await renderHistoryTable();
+    await renderWageLedgerTable();
   } catch (e) {
     showExportStatus('exportStatus', '保存に失敗しました：' + e.message, true);
   } finally {
@@ -368,6 +491,10 @@ document.getElementById('exportCopyBtn').addEventListener('click', () => copyRes
   ['差引支給額（手取り）', document.getElementById('netValue').textContent.trim()],
   'exportStatus'
 ));
+
+document.getElementById('exportLedgerPdfBtn').addEventListener('click', () => printSection('wageLedgerCard'));
+document.getElementById('exportLedgerExcelBtn').addEventListener('click', () => exportFullTableToExcel('wageLedgerTable', '賃金台帳.xls', 'exportLedgerStatus'));
+document.getElementById('exportLedgerCopyBtn').addEventListener('click', () => copyFullTableToClipboard('wageLedgerTable', 'exportLedgerStatus'));
 
 ['overtimePay', 'residentTax'].forEach(attachThousandsFormatting);
 

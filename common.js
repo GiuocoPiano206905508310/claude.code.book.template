@@ -225,3 +225,44 @@ async function copyResultToClipboard(tableId, extraRow, statusId) {
     showExportStatus(statusId, 'コピーに失敗しました：' + (e && e.message ? e.message : e), true);
   }
 }
+
+// Excelで開けるHTMLテーブル形式の.xlsを生成、格子状の罫線付き（見出し行の列数・内容は
+// 対象テーブルのtheadからそのまま読み取るため、2列の明細に限らず任意の列数で使える）
+function exportFullTableToExcel(tableId, filename, statusId) {
+  const cellStyle = 'border:1px solid #000;padding:5px 10px;';
+  const headStyle = cellStyle + 'background:#eee;font-weight:bold;';
+  const table = document.getElementById(tableId);
+  const headCells = Array.from(table.querySelectorAll('thead th'))
+    .map((th) => `<th style="${headStyle}">${th.textContent.trim()}</th>`).join('');
+  let rows = '';
+  table.querySelectorAll('tbody tr').forEach((tr) => {
+    const cells = Array.from(tr.querySelectorAll('td')).map((td) => `<td style="${cellStyle}">${td.textContent.trim()}</td>`).join('');
+    rows += `<tr>${cells}</tr>`;
+  });
+  const html = `<html><head><meta charset="UTF-8"></head><body><table style="border-collapse:collapse;"><thead><tr>${headCells}</tr></thead><tbody>${rows}</tbody></table></body></html>`;
+  const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showExportStatus(statusId, '保存しました。');
+}
+
+// 見出し行を含め、タブ区切りテキストとしてクリップボードにコピー（任意の列数で使える）
+async function copyFullTableToClipboard(tableId, statusId) {
+  const table = document.getElementById(tableId);
+  let text = Array.from(table.querySelectorAll('thead th')).map((th) => th.textContent.trim()).join('\t') + '\n';
+  table.querySelectorAll('tbody tr').forEach((tr) => {
+    text += Array.from(tr.querySelectorAll('td')).map((td) => td.textContent.trim()).join('\t') + '\n';
+  });
+  try {
+    await navigator.clipboard.writeText(text);
+    showExportStatus(statusId, 'コピーしました。Excelなどに貼り付けてください。', false);
+  } catch (e) {
+    showExportStatus(statusId, 'コピーに失敗しました：' + (e && e.message ? e.message : e), true);
+  }
+}

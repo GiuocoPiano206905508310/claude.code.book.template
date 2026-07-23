@@ -570,10 +570,12 @@ footer {
   #printArea .export-row, #printArea .export-status { display: none !important; }
   #printArea .payslip-head { border-bottom: none !important; }
   #printArea table { width: 100%; border-collapse: collapse; }
-  #printArea td { border: 1pt solid var(--border); }
+  #printArea td, #printArea th { border: 1pt solid var(--border); }
   #printArea table td:first-child { border-left: none; }
   #printArea table td:last-child { border-right: none; }
   #printArea .net-value { font-size: 24px; }
+  #printArea .data-table-wrap { overflow-x: visible; }
+  #printArea .field-note { display: none; }
 }
 
 /* ---------- 打刻（timeclock） ---------- */
