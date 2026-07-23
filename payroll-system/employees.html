@@ -51,6 +51,19 @@
         <p class="field-note">※ 氏名を日本語入力（IME）で変換すると自動でフリガナが入力されます。正しく入らない場合は直接修正してください。</p>
       </div>
       <div class="field-row">
+        <label for="gender">性別</label>
+        <div class="field-input">
+          <select id="gender">
+            <option value="男性">男性</option>
+            <option value="女性">女性</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div class="field-input" id="genderOtherWrap" style="display:none; margin-top:6px;">
+          <input type="text" id="genderOther" placeholder="性別を入力">
+        </div>
+      </div>
+      <div class="field-row">
         <label for="employeeCode">勤怠打刻用ユーザーID</label>
         <div class="field-input">
           <input type="text" id="employeeCode" placeholder="例：yamada01">
@@ -328,8 +341,8 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
 <script src="calc.js?v=13"></script>
-<script src="data.js?v=14"></script>
-<script src="common.js?v=9"></script>
-<script src="employees.js?v=16"></script>
+<script src="data.js?v=15"></script>
+<script src="common.js?v=10"></script>
+<script src="employees.js?v=17"></script>
 </body>
 </html>

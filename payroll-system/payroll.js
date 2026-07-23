@@ -332,7 +332,7 @@ const WAGE_LEDGER_ROWS = [
   { key: 'workDays', label: '労働日数', unit: '日' },
   { key: 'workedHours', label: '労働時間数', unit: '時間' },
   { key: 'holidayHours', label: '休日労働時間数', unit: '時間' },
-  { key: 'overtimeHours', label: '早出残業時間数', unit: '時間' },
+  { key: 'overtimeHours', label: '時間外労働時間数', unit: '時間' },
   { key: 'nightHours', label: '深夜労働時間数', unit: '時間' },
   { key: 'baseSalary', label: '基本賃金', unit: '円' },
   { key: 'overtimePayTotal', label: '所定時間外割増賃金', unit: '円' },
@@ -436,7 +436,17 @@ async function renderWageLedgerTable() {
   if (!hasData) return;
 
   theadRow.innerHTML = `<th>項目</th>${columns.map((c) => `<th>${ymLabel(c.ym)}</th>`).join('')}`;
-  tbody.innerHTML = WAGE_LEDGER_ROWS.map((rowDef) => {
+
+  // 労働基準法上、賃金台帳への記載が必須の「労働者氏名」「性別」を先頭行に記載する
+  // （全期間で共通の情報のため、各月の列にそれぞれ同じ値を表示する）
+  const identityRows = [
+    ['労働者氏名', escapeHtml(employee.name)],
+    ['性別', escapeHtml(employeeGenderLabel(employee))],
+    ['従業員番号', escapeHtml(employee.employeeNumber || '—')],
+    ['所属', escapeHtml(employee.department || '—')],
+  ].map(([label, value]) => `<tr><td>${label}</td>${columns.map(() => `<td>${value}</td>`).join('')}</tr>`).join('');
+
+  const dataRows = WAGE_LEDGER_ROWS.map((rowDef) => {
     const cells = columns.map((c) => {
       const v = c[rowDef.key];
       const text = rowDef.unit === '時間' ? `${v.toFixed(1)} 時間` : (rowDef.unit === '日' ? `${v} 日` : `${formatThousands(Math.round(v))} 円`);
@@ -444,6 +454,8 @@ async function renderWageLedgerTable() {
     }).join('');
     return `<tr${rowDef.bold ? ' class="total"' : ''}><td>${rowDef.label}</td>${cells}</tr>`;
   }).join('');
+
+  tbody.innerHTML = identityRows + dataRows;
 }
 
 async function refreshAll() {
@@ -492,7 +504,7 @@ document.getElementById('exportCopyBtn').addEventListener('click', () => copyRes
   'exportStatus'
 ));
 
-document.getElementById('exportLedgerPdfBtn').addEventListener('click', () => printSection('wageLedgerCard'));
+document.getElementById('exportLedgerPdfBtn').addEventListener('click', () => printSection('wageLedgerCard', 'landscape'));
 document.getElementById('exportLedgerExcelBtn').addEventListener('click', () => exportFullTableToExcel('wageLedgerTable', '賃金台帳.xls', 'exportLedgerStatus'));
 document.getElementById('exportLedgerCopyBtn').addEventListener('click', () => copyFullTableToClipboard('wageLedgerTable', 'exportLedgerStatus'));
 

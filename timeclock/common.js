@@ -168,12 +168,24 @@ function populateDayOfMonthSelect(selectId, selected) {
 // ---------------------------------------------------------------------------
 
 // 印刷対象の内容を専用の印刷用エリアに複製し、他の要素を印刷から完全に除外する
-// （visibility:hiddenだけでは要素が高さを占有したままになり、余分な白紙ページが出るため）
-function printSection(targetId) {
+// （visibility:hiddenだけでは要素が高さを占有したままになり、余分な白紙ページが出るため）。
+// orientationに'landscape'を指定すると、賃金台帳のような横に長い表を印刷する際に
+// 用紙を横向きにする（印刷後は@pageの上書きを取り除き、他の印刷を portrait のまま保つ）
+function printSection(targetId, orientation) {
   const printArea = document.getElementById('printArea');
   printArea.innerHTML = document.getElementById(targetId).innerHTML;
   printArea.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+
+  let orientationStyle = null;
+  if (orientation === 'landscape') {
+    orientationStyle = document.createElement('style');
+    orientationStyle.textContent = '@page { size: A4 landscape; margin: 10mm; }';
+    document.head.appendChild(orientationStyle);
+  }
   window.print();
+  if (orientationStyle) {
+    window.addEventListener('afterprint', () => orientationStyle.remove(), { once: true });
+  }
 }
 
 function showExportStatus(statusId, message, isError) {
