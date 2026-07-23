@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>有給休暇管理簿 | 給与・勤怠管理システム</title>
+<link rel="stylesheet" href="style.css?v=8">
+</head>
+<body>
+<nav class="navbar" id="navbar"></nav>
+
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">Paid Leave Ledger</p>
+    <h1>有給休暇管理簿</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="notice">
+    <p>※ 年次有給休暇の付与日数（法定最低日数）は、<a href="employees.html">従業員マスタ管理</a>で設定した入社日・週の所定労働日数・1日の所定労働時間から自動計算しています。</p>
+    <p>※ 取得日数は、<a href="attendance.html">勤怠管理</a>画面でステータスを「有給休暇」に設定した日を自動集計したものです（半日単位・時間単位の取得記録には対応していません）。</p>
+    <p>※ 年10日以上の年次有給休暇が付与される労働者については、基準日から1年以内に5日以上取得させることが法律上の義務です（労働基準法第39条第7項）。</p>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-field">
+      <label for="employeeSelect">従業員</label>
+      <div class="field-input"><select id="employeeSelect"></select></div>
+    </div>
+  </div>
+
+  <div id="noEmployeeState" class="empty-state" style="display:none;">
+    従業員が登録されていません。先に<a href="employees.html">従業員マスタ管理</a>から従業員を登録してください。
+  </div>
+
+  <div id="leaveContent">
+    <div class="summary-grid" id="employeeInfoGrid"></div>
+
+    <div id="noHireDateState" class="empty-state" style="display:none;">
+      入社日が未設定です。<a href="employees.html">従業員マスタ管理</a>で入社日を設定してください。
+    </div>
+    <div id="notYetGrantedState" class="empty-state" style="display:none;"></div>
+
+    <section class="card form-card" id="currentCycleCard" style="display:none;">
+      <h2>現在の基準日サイクル</h2>
+      <div class="summary-grid" id="currentCycleGrid"></div>
+      <p class="field-note" id="fiveDayComplianceNote"></p>
+    </section>
+
+    <section class="card form-card" id="ledgerCard" style="margin-top:24px; display:none;">
+      <h2>年次有給休暇管理簿</h2>
+      <div class="data-table-wrap">
+        <table class="data-table" id="ledgerTable">
+          <thead>
+            <tr>
+              <th>基準日</th>
+              <th>継続勤務年数</th>
+              <th>付与区分</th>
+              <th class="num">前年度繰越</th>
+              <th class="num">本年度付与</th>
+              <th class="num">取得日数</th>
+              <th class="num">残日数</th>
+              <th class="num">翌年度繰越</th>
+              <th>期限（次の基準日前日）</th>
+              <th>年5日取得義務</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <details class="dependents-note">
+        <summary>※ 年次有給休暇の付与日数（法定最低日数）</summary>
+        <img src="yukyu-fuyo-nissu.jpg" alt="年次有給休暇の付与日数（厚生労働省・都道府県労働局・労働基準監督署）">
+      </details>
+    </section>
+  </div>
+
+  <footer>個人・小規模事業向けの概算ツールです。正式な有給休暇管理には専門家・社会保険労務士にご確認ください。</footer>
+</div>
+
+<script src="supabase-sdk.js?v=1"></script>
+<script src="supabase-client.js?v=2"></script>
+<script src="auth.js?v=2"></script>
+<script src="calc.js?v=13"></script>
+<script src="data.js?v=14"></script>
+<script src="common.js?v=8"></script>
+<script src="leave.js?v=1"></script>
+</body>
+</html>

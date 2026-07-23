@@ -28,6 +28,7 @@ function employeeRowToObj(row) {
     employeeCode: row.employee_code || '',
     loginPassword: row.login_password || '',
     employmentType: row.employment_type,
+    hireDate: row.hire_date,
     birthDate: row.birth_date,
     baseSalary: row.base_salary,
     allowances: row.allowances || [],
@@ -38,6 +39,7 @@ function employeeRowToObj(row) {
     workStart: row.work_start,
     workEnd: row.work_end,
     standardDailyHours: Number(row.standard_daily_hours),
+    weeklyScheduledDays: Number(row.weekly_scheduled_days) || 5,
     monthlyStandardHours: Number(row.monthly_standard_hours),
     monthlyStandardDays: Number(row.monthly_standard_days),
   };
@@ -77,6 +79,7 @@ function employeeObjToRow(emp, userId) {
     employee_code: emp.employeeCode || null,
     login_password: emp.loginPassword || null,
     employment_type: emp.employmentType,
+    hire_date: emp.hireDate || null,
     birth_date: emp.birthDate || null,
     base_salary: emp.baseSalary,
     allowances: emp.allowances || [],
@@ -87,6 +90,7 @@ function employeeObjToRow(emp, userId) {
     work_start: emp.workStart,
     work_end: emp.workEnd,
     standard_daily_hours: emp.standardDailyHours,
+    weekly_scheduled_days: emp.weeklyScheduledDays,
     monthly_standard_hours: emp.monthlyStandardHours,
     monthly_standard_days: emp.monthlyStandardDays,
     overtime_rates: rates,
@@ -201,6 +205,19 @@ async function setDayAttendance(employeeId, ym, day, record) {
     status: record.status || 'normal',
   }, { onConflict: 'employee_id,ym,day' });
   if (error) throw error;
+}
+
+// 指定期間（両端含む、'YYYY-MM-DD'形式）に日次勤怠入力でステータスが「有給休暇」
+// となっている日数を数える（有給休暇管理簿の取得日数の算定に使用。半日単位には
+// 対応していないため、1日単位の取得としてカウントする）
+async function countPaidLeaveDaysBetween(employeeId, startDateStr, endDateStr) {
+  const { data, error } = await supabaseClient.from('attendance_records').select('ym, day, status')
+    .eq('employee_id', employeeId).eq('status', 'paid_leave');
+  if (error) throw error;
+  return data.filter((row) => {
+    const dateStr = `${row.ym}-${String(row.day).padStart(2, '0')}`;
+    return dateStr >= startDateStr && dateStr <= endDateStr;
+  }).length;
 }
 
 function timeToMinutes(t) {

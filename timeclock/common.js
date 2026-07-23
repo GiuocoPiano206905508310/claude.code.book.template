@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: 'attendance.html', label: '勤怠' },
   { href: 'payroll.html', label: '給与計算' },
   { href: 'bonus.html', label: '賞与計算' },
+  { href: 'leave.html', label: '有給休暇管理簿' },
 ];
 
 function renderNavbar(activeHref) {
