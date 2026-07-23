@@ -441,6 +441,13 @@ function collectFormAsEmployee() {
   }, rates);
 }
 
+const INSURANCE_ENROLLMENT_LABELS = {
+  '正社員': '雇用・社保',
+  '役員': '社保',
+  'アルバイト・パート': '雇用',
+  'アルバイト・パート（雇用保険対象外）': 'なし',
+};
+
 async function renderEmployeeTable() {
   const employees = await listEmployees();
   const tbody = document.querySelector('#employeeTable tbody');
@@ -451,14 +458,14 @@ async function renderEmployeeTable() {
   for (const emp of employees) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${escapeHtml(emp.employeeNumber)}</td>
-      <td>${escapeHtml(emp.name)}${emp.nameKana ? `<br><span style="font-size:11px;color:var(--ink-faint);">${escapeHtml(emp.nameKana)}</span>` : ''}</td>
-      <td>${escapeHtml(emp.employmentType)}</td>
-      <td class="num">${formatThousands(emp.baseSalary)} 円</td>
       <td class="actions">
         <button type="button" class="btn btn-sm btn-outline" data-action="edit" data-id="${emp.id}">編集</button>
         <button type="button" class="btn btn-sm btn-danger" data-action="delete" data-id="${emp.id}">削除</button>
       </td>
+      <td>${escapeHtml(emp.employeeNumber)}</td>
+      <td>${escapeHtml(emp.name)}${emp.nameKana ? `<br><span style="font-size:11px;color:var(--ink-faint);">${escapeHtml(emp.nameKana)}</span>` : ''}</td>
+      <td>${escapeHtml(emp.employmentType)}</td>
+      <td>${escapeHtml(INSURANCE_ENROLLMENT_LABELS[emp.employmentType] || '')}</td>
     `;
     tbody.appendChild(tr);
   }
