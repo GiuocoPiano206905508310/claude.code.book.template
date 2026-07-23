@@ -491,6 +491,14 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     return;
   }
   const emp = collectFormAsEmployee();
+  if (emp.employeeNumber) {
+    const employees = await listEmployees();
+    const dup = employees.some((e) => e.id !== emp.id && e.employeeNumber === emp.employeeNumber);
+    if (dup) {
+      alert(`従業員番号「${emp.employeeNumber}」は既に他の従業員で使用されています。重複しない番号を入力してください。`);
+      return;
+    }
+  }
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
   try {
