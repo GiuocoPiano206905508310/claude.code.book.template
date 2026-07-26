@@ -53,6 +53,8 @@
         <table class="data-table" id="ledgerTable">
           <thead>
             <tr>
+              <th>氏名</th>
+              <th>性別</th>
               <th>基準日</th>
               <th>継続勤務年数</th>
               <th>付与区分</th>
@@ -72,11 +74,19 @@
         <summary>※ 年次有給休暇の付与日数（法定最低日数）</summary>
         <img src="yukyu-fuyo-nissu.jpg" alt="年次有給休暇の付与日数（厚生労働省・都道府県労働局・労働基準監督署）">
       </details>
+      <div class="export-row">
+        <button type="button" class="export-btn pc-only" id="exportLedgerPdfBtn">🖨 印刷</button>
+        <button type="button" class="export-btn pc-only" id="exportLedgerExcelBtn">📊 Excel出力</button>
+        <button type="button" class="export-btn" id="exportLedgerCopyBtn">📋 テキスト(.txt)コピー</button>
+      </div>
+      <p class="export-status" id="exportLedgerStatus"></p>
     </section>
   </div>
 
   <footer>個人・小規模事業向けの概算ツールです。正式な有給休暇管理には専門家・社会保険労務士にご確認ください。</footer>
 </div>
+
+<section class="card payslip" id="printArea" aria-hidden="true"></section>
 
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
@@ -84,6 +94,6 @@
 <script src="calc.js?v=13"></script>
 <script src="data.js?v=15"></script>
 <script src="common.js?v=10"></script>
-<script src="leave.js?v=1"></script>
+<script src="leave.js?v=2"></script>
 </body>
 </html>
