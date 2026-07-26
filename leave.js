@@ -92,9 +92,15 @@ async function renderLedger() {
     carryIn = carryOut;
   }
 
+  // 氏名・性別は印刷・Excel出力・テキストコピーでも単独で成立する書類となるよう、
+  // 各行（各基準日サイクル）に共通して繰り返し記載する
+  const nameCell = escapeHtml(employee.name);
+  const genderCell = escapeHtml(employeeGenderLabel(employee));
   const tbody = document.querySelector('#ledgerTable tbody');
   tbody.innerHTML = rows.map((r) => `
     <tr class="${r.isCurrent ? 'total' : ''}">
+      <td>${nameCell}</td>
+      <td>${genderCell}</td>
       <td>${formatDateYmd(r.grantDate)}${r.isCurrent ? '（現在）' : ''}</td>
       <td>${r.yearLabel}</td>
       <td>${r.grantType}</td>
@@ -127,6 +133,10 @@ async function renderLedger() {
 }
 
 document.getElementById('employeeSelect').addEventListener('change', renderLedger);
+
+document.getElementById('exportLedgerPdfBtn').addEventListener('click', () => printSection('ledgerCard', 'landscape'));
+document.getElementById('exportLedgerExcelBtn').addEventListener('click', () => exportFullTableToExcel('ledgerTable', '有給休暇管理簿.xls', 'exportLedgerStatus'));
+document.getElementById('exportLedgerCopyBtn').addEventListener('click', () => copyFullTableToClipboard('ledgerTable', 'exportLedgerStatus'));
 
 (async () => {
   const user = await requireAuth();
