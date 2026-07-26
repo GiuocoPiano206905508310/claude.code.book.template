@@ -12,6 +12,12 @@ const NAV_ITEMS = [
   { href: 'leave.html', label: '有給休暇管理簿' },
 ];
 
+// 表示用の性別ラベル（「その他」選択時は自由入力欄の値、未入力なら「その他」）
+function employeeGenderLabel(emp) {
+  if (emp.gender === 'その他') return emp.genderOther || 'その他';
+  return emp.gender || '';
+}
+
 function renderNavbar(activeHref) {
   const nav = document.getElementById('navbar');
   if (!nav) return;
@@ -179,7 +185,7 @@ function printSection(targetId, orientation) {
   let orientationStyle = null;
   if (orientation === 'landscape') {
     orientationStyle = document.createElement('style');
-    orientationStyle.textContent = '@page { size: A4 landscape; margin: 10mm; }';
+    orientationStyle.textContent = '@page { size: landscape; margin: 10mm; }';
     document.head.appendChild(orientationStyle);
   }
   window.print();

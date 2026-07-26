@@ -185,7 +185,7 @@ function printSection(targetId, orientation) {
   let orientationStyle = null;
   if (orientation === 'landscape') {
     orientationStyle = document.createElement('style');
-    orientationStyle.textContent = '@page { size: A4 landscape; margin: 10mm; }';
+    orientationStyle.textContent = '@page { size: landscape; margin: 10mm; }';
     document.head.appendChild(orientationStyle);
   }
   window.print();
