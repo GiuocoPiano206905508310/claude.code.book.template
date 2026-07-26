@@ -576,6 +576,19 @@ footer {
   #printArea .net-value { font-size: 24px; }
   #printArea .data-table-wrap { overflow-x: visible; }
   #printArea .field-note { display: none; }
+  /* 賃金台帳・有給休暇管理簿など列数の多い表は、white-space:nowrapのままだと
+     内容の最小幅が用紙幅を超えて右側が印刷から切れてしまう。table-layout:fixed
+     と折り返し許可・小さめのフォントで、列数に関わらず必ず用紙の横幅1枚に収める */
+  #printArea table.data-table {
+    table-layout: fixed;
+    font-size: 8.5pt;
+  }
+  #printArea table.data-table th,
+  #printArea table.data-table td {
+    white-space: normal;
+    word-break: break-word;
+    padding: 4px 5px;
+  }
 }
 
 /* ---------- 打刻（timeclock） ---------- */
