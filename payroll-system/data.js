@@ -224,6 +224,71 @@ async function countPaidLeaveDaysBetween(employeeId, startDateStr, endDateStr) {
   }).length;
 }
 
+function ymKey(y, m) {
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+// 期間内の各日について実際の(ym, day)に対応する勤怠レコードを取得し、
+// 1始まりの連番でまとめ直す（月をまたぐ期間の場合は関係する月の分だけ
+// getMonthAttendanceを呼び出してマージする）
+async function fetchPeriodRecords(employeeId, periodDates) {
+  const yms = [...new Set(periodDates.map((date) => ymKey(date.y, date.m)))];
+  const byYm = {};
+  for (const ym of yms) {
+    byYm[ym] = await getMonthAttendance(employeeId, ym);
+  }
+  const records = {};
+  periodDates.forEach((date, i) => {
+    const rec = byYm[ymKey(date.y, date.m)][String(date.d)];
+    if (rec) records[String(i + 1)] = rec;
+  });
+  return records;
+}
+
+// periodDatesの週残業・週深夜残業を、月・期間をまたぐ週も正しく計上できるよう
+// 計算する。periodDatesの先頭が週の途中から始まる場合、その週の起算日まで
+// 遡って前月分の実績を取得・合算した上でcomputeWeeklyOvertimeByDayを呼び出す
+// （calcLeadingWeekPadDates参照。末尾が週の途中で終わる場合はcomputeWeeklyOvertimeByDay
+// 側の仕様によりその週は0として返され、その週の最終日を含む次の期間の計算時に
+// 同様の遡り処理によって正しく計上される）。
+// records: 呼び出し側がすでに取得済みのperiodDates分の勤怠記録（fetchPeriodRecordsの
+// 戻り値と同じ形式）。ここでは前月分の追加取得のみ行い、二重取得はしない。
+async function computeWeeklyOvertimeWithPadding(employeeId, periodDates, records, overtimeCategoryPerDay, weekStartDay, weeklyOvertimeThreshold) {
+  if (!periodDates.length) return {};
+  const leadingPad = calcLeadingWeekPadDates(periodDates[0], weekStartDay);
+  if (!leadingPad.length) {
+    return computeWeeklyOvertimeByDay(records, overtimeCategoryPerDay, periodDates, weekStartDay, weeklyOvertimeThreshold);
+  }
+
+  const padYm = ymKey(leadingPad[0].y, leadingPad[0].m);
+  const padMonthRecords = await getMonthAttendance(employeeId, padYm);
+  const padDaysInMonth = new Date(leadingPad[0].y, leadingPad[0].m, 0).getDate();
+  const { perDay: padMonthPerDay } = computeOvertimeCategoryBreakdown(padMonthRecords, padDaysInMonth);
+
+  const extendedDates = leadingPad.concat(periodDates);
+  const extendedRecords = {};
+  const extendedPerDay = {};
+  leadingPad.forEach((date, i) => {
+    const rec = padMonthRecords[String(date.d)];
+    if (rec) extendedRecords[String(i + 1)] = rec;
+    extendedPerDay[i + 1] = padMonthPerDay[date.d];
+  });
+  periodDates.forEach((date, i) => {
+    const idx = leadingPad.length + i + 1;
+    const rec = records[String(i + 1)];
+    if (rec) extendedRecords[String(idx)] = rec;
+    extendedPerDay[idx] = overtimeCategoryPerDay[i + 1];
+  });
+
+  const extendedResult = computeWeeklyOvertimeByDay(extendedRecords, extendedPerDay, extendedDates, weekStartDay, weeklyOvertimeThreshold);
+
+  const result = {};
+  periodDates.forEach((date, i) => {
+    result[i + 1] = extendedResult[leadingPad.length + i + 1];
+  });
+  return result;
+}
+
 function timeToMinutes(t) {
   if (!t) return null;
   const parts = t.split(':').map(Number);
@@ -296,8 +361,8 @@ async function computeMonthSummary(employee, ym, company) {
 
   if (company) {
     const periodDates = buildCalendarMonthDates(y, m);
-    const weeklyByDay = computeWeeklyOvertimeByDay(
-      records, overtimeCategoryPerDay, periodDates, company.weekStartDay, company.weeklyOvertimeThreshold
+    const weeklyByDay = await computeWeeklyOvertimeWithPadding(
+      employee.id, periodDates, records, overtimeCategoryPerDay, company.weekStartDay, company.weeklyOvertimeThreshold
     );
     let weeklyOvertimeMonthTotal = 0;
     let weeklyOvertimeNightMonthTotal = 0;

@@ -1000,7 +1000,12 @@ function computeOvertimeCategoryBreakdown(records, daysInMonth) {
 // 休日出勤は対象に含める（法定休日以外の労働は通常どおり週の基準の枠内として
 // 扱うため）。所定休日の時間は日次の法定外区分に計上されないため、この時間を
 // 含めてもweekDailyOvertimeMin側との二重計上にはならない。
-// 対象期間の外の週データは参照しない概算（前月・前期間分までは遡らない）。
+// この関数自体は渡されたperiodDatesの範囲しか見ないため、期間の先頭が週の途中
+// から始まる場合はその週の合計が過小になる。月・期間をまたぐ週も正しく計上する
+// には、呼び出し側でdata.jsのcomputeWeeklyOvertimeWithPadding()を使い、週の起算日
+// まで遡った実績を補ったrecords/perDay/periodDatesを渡すこと。期間の末尾が週の
+// 途中で終わる場合は、その週はここでは計上せず（0を返し）、その週の最終日を含む
+// 次の期間の計算時に（同様に遡って）正しく計上される。
 // records/perDay: computeOvertimeCategoryBreakdownの引数・戻り値のperDayと同じ
 // （キーは1始まりの連番。periodDatesとインデックスが対応する）
 // periodDates: buildCalendarMonthDates/buildPayPeriodDatesの戻り値（日付昇順の配列）
@@ -1033,7 +1038,7 @@ function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay, 
     }
 
     const isLastDayOfWeek = dow === (weekStartDay + 6) % 7;
-    if (isLastDayOfWeek || i === periodDates.length - 1) {
+    if (isLastDayOfWeek) {
       const weeklyOvertimeMin = Math.max(0, weekWorkedMin - thresholdMin);
       const weekOnlyOvertimeMin = Math.max(0, weeklyOvertimeMin - weekDailyOvertimeMin);
       const nightMin = Math.min(weekLateNightMin, weekOnlyOvertimeMin);
@@ -1042,11 +1047,30 @@ function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay, 
       weekDailyOvertimeMin = 0;
       weekLateNightMin = 0;
     } else {
+      // 期間の末尾で週の途中までしかデータがない場合、この週の集計はここでは
+      // 打ち切らず0とする（週の最終日を含む期間を計算する際に、その週の起算日
+      // まで遡って正しく合算・計上される。calcLeadingWeekPadDates参照）
       result[idx] = { weeklyOvertime: 0, weeklyOvertimeNight: 0 };
     }
   }
 
   return result;
+}
+
+// firstDateが属する週の起算日（weekStartDayの曜日）までの不足分の日付を
+// 古い順に返す（firstDateがすでに週の起算日なら空配列）。computeWeeklyOvertimeByDay
+// に渡すperiodDatesの先頭を、月・期間をまたいでも週単位で正しく計上できるよう
+// 補うために使う（data.jsのcomputeWeeklyOvertimeWithPadding参照）。
+function calcLeadingWeekPadDates(firstDate, weekStartDay) {
+  const dow = new Date(firstDate.y, firstDate.m - 1, firstDate.d).getDay();
+  const daysBack = (dow - weekStartDay + 7) % 7;
+  const dates = [];
+  for (let i = daysBack; i >= 1; i--) {
+    const d = new Date(firstDate.y, firstDate.m - 1, firstDate.d);
+    d.setDate(d.getDate() - i);
+    dates.push({ y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() });
+  }
+  return dates;
 }
 
 // ----------------------------------------------------------------------
