@@ -75,27 +75,6 @@ function renderMonthTotalRow(rowId, totals) {
   });
 }
 
-function ymKey(y, m) {
-  return `${y}-${String(m).padStart(2, '0')}`;
-}
-
-// 期間内の各日について実際の(ym, day)に対応する勤怠レコードを取得し、
-// 1始まりの連番でまとめ直す（月をまたぐ期間の場合は関係する月の分だけ
-// getMonthAttendanceを呼び出してマージする）
-async function fetchPeriodRecords(employeeId, periodDates) {
-  const yms = [...new Set(periodDates.map((date) => ymKey(date.y, date.m)))];
-  const byYm = {};
-  for (const ym of yms) {
-    byYm[ym] = await getMonthAttendance(employeeId, ym);
-  }
-  const records = {};
-  periodDates.forEach((date, i) => {
-    const rec = byYm[ymKey(date.y, date.m)][String(date.d)];
-    if (rec) records[String(i + 1)] = rec;
-  });
-  return records;
-}
-
 async function renderDayTable() {
   const employee = await currentEmployee();
   const ym = document.getElementById('monthInput').value;
@@ -112,7 +91,7 @@ async function renderDayTable() {
     `※ 対象期間：${first.y}/${first.m}/${first.d} 〜 ${last.y}/${last.m}/${last.d}（会社マスタ管理の賃金締日に基づく）`;
   const records = await fetchPeriodRecords(employee.id, periodDates);
   const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, periodDates.length);
-  const weeklyByDay = computeWeeklyOvertimeByDay(records, overtimeByDay, periodDates, company.weekStartDay, company.weeklyOvertimeThreshold);
+  const weeklyByDay = await computeWeeklyOvertimeWithPadding(employee.id, periodDates, records, overtimeByDay, company.weekStartDay, company.weeklyOvertimeThreshold);
   const showMidHeader = document.getElementById('showMidHeaderCheckbox').checked;
   const midHeaderInsertAt = showMidHeader ? computeMidHeaderInsertIndex(periodDates) : -1;
   const headerRowTemplate = document.getElementById('dayTableHeaderRow');
