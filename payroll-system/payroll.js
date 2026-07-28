@@ -400,10 +400,15 @@ async function buildWageLedgerColumns(employee, company) {
       overtimePayTotal: r.overtimePay + r.fixedOvertimePay,
       taxableAllowance: r.taxableAllowance,
       // 手当は様式第20号にならい名称ごとに1行ずつ表示する。計算時点の従業員マスタの
-      // 手当構成を保存したallowanceItemsがあればそれを使い、それ以前に保存された
-      // 明細（この項目を保存していない）には合計額のみの1行にフォールバックする
+      // 手当構成を保存したallowanceItemsがあればそれを使う。この項目を保存していない
+      // 過去の明細は、氏名・性別など他の識別項目と同様に現在の従業員マスタの手当構成
+      // （名称）を参照してフォールバックする（従業員マスタに手当が1件も無い場合のみ
+      // 「手当」という汎用ラベルの1行にする）
       allowanceItems: (input && input.allowanceItems && input.allowanceItems.length)
-        ? input.allowanceItems : [{ name: '手当', amount: r.taxableAllowance || 0 }],
+        ? input.allowanceItems
+        : ((employee.allowances && employee.allowances.length)
+          ? employee.allowances.map((a) => ({ name: a.name || '手当', amount: Number(a.amount) || 0 }))
+          : [{ name: '手当', amount: r.taxableAllowance || 0 }]),
       subtotal1,
       commuteAllowance: r.commuteAllowance,
       specialPay: 0,
