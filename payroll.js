@@ -444,7 +444,7 @@ async function renderWageLedgerTable() {
     ['性別', escapeHtml(employeeGenderLabel(employee))],
     ['従業員番号', escapeHtml(employee.employeeNumber || '—')],
     ['所属', escapeHtml(employee.department || '—')],
-  ].map(([label, value]) => `<tr><td>${label}</td>${columns.map(() => `<td>${value}</td>`).join('')}</tr>`).join('');
+  ].map(([label, value]) => `<tr><td>${label}</td>${columns.map(() => `<td class="num">${value}</td>`).join('')}</tr>`).join('');
 
   const dataRows = WAGE_LEDGER_ROWS.map((rowDef) => {
     const cells = columns.map((c) => {
