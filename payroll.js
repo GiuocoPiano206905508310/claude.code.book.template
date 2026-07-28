@@ -339,8 +339,10 @@ const WAGE_LEDGER_ROWS = [
   { key: 'overtimeHours', label: '時間外労働時間数', unit: '時間' },
   { key: 'nightHours', label: '深夜労働時間数', unit: '時間' },
   { key: 'baseSalary', label: '基本賃金', unit: '円' },
-  { key: 'overtimePayTotal', label: '所定時間外割増賃金', unit: '円' },
-  { key: '__section', label: '手当' }, // 手当・社会保険料控除・控除金は様式第20号にならい、区分見出し行＋内訳行で表示する
+  { key: '__section', label: '所定時間外割増賃金' }, // 手当・社会保険料控除・控除金は様式第20号にならい、区分見出し行＋内訳行で表示する
+  { key: '__fixedOvertimePay', label: '固定残業代', unit: '円', indent: true }, // ラベルは従業員マスタの手当名称を使う（renderWageLedgerTable参照）
+  { key: '__overtimePay', label: '割増手当', unit: '円', indent: true }, // 割増手当本体＋区分別内訳（renderWageLedgerTable参照）
+  { key: '__section', label: '手当' },
   { key: '__allowanceItems', label: '手当', unit: '円', indent: true }, // 手当は名称ごとに複数行へ展開して表示する（renderWageLedgerTable参照）
   { key: 'subtotal1', label: '小　計', unit: '円', bold: true },
   { key: 'commuteAllowance', label: '非課税分賃金額', unit: '円' },
@@ -397,7 +399,11 @@ async function buildWageLedgerColumns(employee, company) {
       overtimeHours: overtimeMin / 60,
       nightHours: nightMin / 60,
       baseSalary: r.baseSalary,
-      overtimePayTotal: r.overtimePay + r.fixedOvertimePay,
+      fixedOvertimePay: r.fixedOvertimePay || 0,
+      overtimePay: r.overtimePay,
+      // 割増手当の区分別内訳（給与明細と同じ7区分）。保存済みの明細にあればそれを使い、
+      // 無い場合は内訳なしとして扱う（割増手当本体の合計額は上のoverimePayに含まれる）
+      overtimeBreakdownItems: (r.overtimeBreakdown && r.overtimeBreakdown.length) ? r.overtimeBreakdown : [],
       taxableAllowance: r.taxableAllowance,
       // 手当は様式第20号にならい名称ごとに1行ずつ表示する。計算時点の従業員マスタの
       // 手当構成を保存したallowanceItemsがあればそれを使う。この項目を保存していない
@@ -467,11 +473,32 @@ async function renderWageLedgerTable() {
   // 手当は様式第20号にならい名称ごとに1行ずつ表示する。表示期間中に登場した
   // すべての手当名称を対象に、その月に無ければ0円として表示する
   const allowanceNames = [...new Set(columns.flatMap((c) => c.allowanceItems.map((a) => a.name)))];
+  // 割増手当の区分別内訳も同様に、表示期間中に登場したすべての区分を対象にする
+  const overtimeBreakdownLabels = [...new Set(columns.flatMap((c) => c.overtimeBreakdownItems.map((it) => it.label)))];
 
   const dataRows = WAGE_LEDGER_ROWS.flatMap((rowDef) => {
     if (rowDef.key === '__section') {
       // 様式第20号にならい、手当・社会保険料控除・控除金は区分見出し行を挟んで内訳を表示する
       return [`<tr class="ledger-section"><td colspan="${columns.length + 1}">${rowDef.label}</td></tr>`];
+    }
+    if (rowDef.key === '__fixedOvertimePay') {
+      // 固定残業代（みなし残業代）。手当名は従業員マスタの設定名称を使う
+      const label = escapeHtml(employee.fixedOvertimeAllowanceName || '固定残業代');
+      const cells = columns.map((c) => `<td class="num">${formatThousands(Math.round(c.fixedOvertimePay))} 円</td>`).join('');
+      return [`<tr><td class="indent">${label}</td>${cells}</tr>`];
+    }
+    if (rowDef.key === '__overtimePay') {
+      // 割増手当本体（固定残業代を除く実績分の合計）と、その区分別内訳（給与明細と同じ7区分）
+      const totalCells = columns.map((c) => `<td class="num">${formatThousands(Math.round(c.overtimePay))} 円</td>`).join('');
+      const totalRow = `<tr><td class="indent">割増手当</td>${totalCells}</tr>`;
+      const breakdownRows = overtimeBreakdownLabels.map((label) => {
+        const cells = columns.map((c) => {
+          const item = c.overtimeBreakdownItems.find((it) => it.label === label);
+          return `<td class="num">${formatThousands(Math.round(item ? item.pay : 0))} 円</td>`;
+        }).join('');
+        return `<tr><td class="indent indent-2">　└ ${escapeHtml(label)}</td>${cells}</tr>`;
+      });
+      return [totalRow, ...breakdownRows];
     }
     if (rowDef.key === '__allowanceItems') {
       return allowanceNames.map((name) => {
