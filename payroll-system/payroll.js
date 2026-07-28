@@ -464,9 +464,9 @@ async function renderWageLedgerTable() {
   // 労働基準法上、賃金台帳への記載が必須の「労働者氏名」「性別」を先頭行に記載する
   // （全期間で共通の情報のため、各月の列にそれぞれ同じ値を表示する）
   const identityRows = [
+    ['従業員番号', escapeHtml(employee.employeeNumber || '—')],
     ['労働者氏名', escapeHtml(employee.name)],
     ['性別', escapeHtml(employeeGenderLabel(employee))],
-    ['従業員番号', escapeHtml(employee.employeeNumber || '—')],
     ['所属', escapeHtml(employee.department || '—')],
   ].map(([label, value]) => `<tr><td>${label}</td>${columns.map(() => `<td class="num">${value}</td>`).join('')}</tr>`).join('');
 
