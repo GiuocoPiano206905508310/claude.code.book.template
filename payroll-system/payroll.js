@@ -340,22 +340,25 @@ const WAGE_LEDGER_ROWS = [
   { key: 'nightHours', label: '深夜労働時間数', unit: '時間' },
   { key: 'baseSalary', label: '基本賃金', unit: '円' },
   { key: 'overtimePayTotal', label: '所定時間外割増賃金', unit: '円' },
-  { key: '__allowanceItems', label: '手当', unit: '円' }, // 手当は名称ごとに複数行へ展開して表示する（renderWageLedgerTable参照）
+  { key: '__section', label: '手当' }, // 手当・社会保険料控除・控除金は様式第20号にならい、区分見出し行＋内訳行で表示する
+  { key: '__allowanceItems', label: '手当', unit: '円', indent: true }, // 手当は名称ごとに複数行へ展開して表示する（renderWageLedgerTable参照）
   { key: 'subtotal1', label: '小　計', unit: '円', bold: true },
   { key: 'commuteAllowance', label: '非課税分賃金額', unit: '円' },
   { key: 'specialPay', label: '臨時の給与', unit: '円' },
   { key: 'bonus', label: '賞与', unit: '円' },
   { key: 'total', label: '合　計', unit: '円', bold: true },
-  { key: 'healthInsurance', label: '健康保険料', unit: '円' },
-  { key: 'careInsurance', label: '介護保険料', unit: '円' },
-  { key: 'childSupportLevy', label: '子ども・子育て支援金', unit: '円' },
-  { key: 'pensionInsurance', label: '厚生年金保険料', unit: '円' },
-  { key: 'employmentInsurance', label: '雇用保険料', unit: '円' },
+  { key: '__section', label: '社会保険料控除' },
+  { key: 'healthInsurance', label: '健康保険料', unit: '円', indent: true },
+  { key: 'careInsurance', label: '介護保険料', unit: '円', indent: true },
+  { key: 'childSupportLevy', label: '子ども・子育て支援金', unit: '円', indent: true },
+  { key: 'pensionInsurance', label: '厚生年金保険料', unit: '円', indent: true },
+  { key: 'employmentInsurance', label: '雇用保険料', unit: '円', indent: true },
   { key: 'socialInsuranceTotal', label: '社会保険料控除計', unit: '円', bold: true },
   { key: 'afterSocialInsurance', label: '差引残', unit: '円', bold: true },
-  { key: 'monthlyIncomeTax', label: '源泉所得税', unit: '円' },
-  { key: 'residentTax', label: '住民税', unit: '円' },
-  { key: 'absenceDeduction', label: '欠勤控除', unit: '円' },
+  { key: '__section', label: '控除金' },
+  { key: 'monthlyIncomeTax', label: '源泉所得税', unit: '円', indent: true },
+  { key: 'residentTax', label: '住民税', unit: '円', indent: true },
+  { key: 'absenceDeduction', label: '欠勤控除', unit: '円', indent: true },
   { key: 'deductionTotal', label: '控除計', unit: '円', bold: true },
   { key: 'inKindPay', label: '実物給与', unit: '円' },
   { key: 'netPay', label: '差引支払金', unit: '円', bold: true },
@@ -461,13 +464,17 @@ async function renderWageLedgerTable() {
   const allowanceNames = [...new Set(columns.flatMap((c) => c.allowanceItems.map((a) => a.name)))];
 
   const dataRows = WAGE_LEDGER_ROWS.flatMap((rowDef) => {
+    if (rowDef.key === '__section') {
+      // 様式第20号にならい、手当・社会保険料控除・控除金は区分見出し行を挟んで内訳を表示する
+      return [`<tr class="ledger-section"><td colspan="${columns.length + 1}">${rowDef.label}</td></tr>`];
+    }
     if (rowDef.key === '__allowanceItems') {
       return allowanceNames.map((name) => {
         const cells = columns.map((c) => {
           const item = c.allowanceItems.find((a) => a.name === name);
           return `<td class="num">${formatThousands(Math.round(item ? item.amount : 0))} 円</td>`;
         }).join('');
-        return `<tr><td>${escapeHtml(name)}</td>${cells}</tr>`;
+        return `<tr><td class="indent">${escapeHtml(name)}</td>${cells}</tr>`;
       });
     }
     const cells = columns.map((c) => {
@@ -475,7 +482,7 @@ async function renderWageLedgerTable() {
       const text = rowDef.unit === '時間' ? `${v.toFixed(1)} 時間` : (rowDef.unit === '日' ? `${v} 日` : `${formatThousands(Math.round(v))} 円`);
       return `<td class="num">${text}</td>`;
     }).join('');
-    return [`<tr${rowDef.bold ? ' class="total"' : ''}><td>${rowDef.label}</td>${cells}</tr>`];
+    return [`<tr${rowDef.bold ? ' class="total"' : ''}><td${rowDef.indent ? ' class="indent"' : ''}>${rowDef.label}</td>${cells}</tr>`];
   }).join('');
 
   tbody.innerHTML = identityRows + dataRows;

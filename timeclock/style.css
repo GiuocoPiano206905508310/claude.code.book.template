@@ -380,6 +380,9 @@ table.data-table tr.filter-row input { padding-right: 6px; }
 #wageLedgerTable th, #wageLedgerTable td { border: 1px solid var(--border); }
 #wageLedgerTable th:first-child, #wageLedgerTable td:first-child { border-left: none; }
 #wageLedgerTable th:last-child, #wageLedgerTable td:last-child { border-right: none; }
+/* 手当・社会保険料控除・控除金の区分見出し行（様式第20号の左端の区分ラベルに相当） */
+#wageLedgerTable tr.ledger-section td { background: var(--surface-line); font-weight: 600; }
+#wageLedgerTable td.indent { padding-left: 32px; color: var(--ink-soft); }
 
 .empty-state {
   text-align: center;
