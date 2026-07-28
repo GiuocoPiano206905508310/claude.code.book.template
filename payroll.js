@@ -114,6 +114,9 @@ async function loadFormForEmployeeMonth() {
     }
   }
 
+  document.getElementById('specialPay').value = formatThousands(input ? (input.specialPay || 0) : 0);
+  document.getElementById('inKindPay').value = formatThousands(input ? (input.inKindPay || 0) : 0);
+
   currentCompanyFields = {
     calcMethod: input ? input.calcMethod : company.calcMethod,
     healthRate: input ? input.healthRate : Number(company.healthRate) / 100,
@@ -219,6 +222,8 @@ function collectInput(employee) {
     ...currentCompanyFields,
     overtimePay: getNumInputValue('overtimePay'),
     residentTax: getNumInputValue('residentTax'),
+    specialPay: getNumInputValue('specialPay'),
+    inKindPay: getNumInputValue('inKindPay'),
     applyAbsenceDeduction: document.getElementById('applyAbsenceDeduction').checked,
     fixedOvertimeEnabled: currentFixedOvertime.enabled,
     fixedOvertimeAllowanceName: currentFixedOvertime.allowanceName,
@@ -260,6 +265,14 @@ function renderResult(r) {
   rows.push(
     ['その他手当（課税）', r.taxableAllowance, 'plain', true],
     ['通勤手当（非課税）', r.commuteAllowance, 'plain', true],
+  );
+  if (r.specialPay) {
+    rows.push(['臨時の給与', r.specialPay, 'plain', true]);
+  }
+  if (r.inKindPay) {
+    rows.push(['実物給与', r.inKindPay, 'plain', true]);
+  }
+  rows.push(
     ['総支給額', r.grossPay, 'total', true],
     ['健康保険料', -r.healthInsurance, 'deduction', r.hasHealth],
     ['子ども・子育て支援金', -r.childSupportLevy, 'deduction', r.hasHealth],
@@ -272,6 +285,9 @@ function renderResult(r) {
   );
   if (r.absenceDeduction) {
     rows.push(['欠勤控除', -r.absenceDeduction, 'deduction', true]);
+  }
+  if (r.inKindPay) {
+    rows.push(['実物給与（現物支給のため差引）', -r.inKindPay, 'deduction', true]);
   }
 
   const tbody = document.querySelector('#resultTable tbody');
@@ -370,6 +386,9 @@ const WAGE_LEDGER_ROWS = [
 // 労働日数・労働時間数等の勤怠由来の項目は、当時の勤怠入力から都度再集計する
 async function buildWageLedgerColumns(employee, company) {
   const slips = await listPayslips(employee.id);
+  // 賞与は「賞与計算」で保存した明細から、支給日が同じ年月のものを合算する
+  // （社会保険料・源泉所得税もその月の給与分と合算し、差引支払金に正しく反映する）
+  const bonuses = await listBonuses(employee.id);
   const yms = Object.keys(slips).sort();
   const columns = [];
   for (const ym of yms) {
@@ -384,12 +403,34 @@ async function buildWageLedgerColumns(employee, company) {
     const nightMin = (t.lateNight || 0) + (t.weeklyOvertimeNight || 0) + (t.overtimeWithin60Night || 0)
       + (t.overtimeOver60Night || 0) + (t.statutoryHolidayNight || 0);
 
+    const monthBonuses = bonuses.filter((b) => (b.date || '').slice(0, 7) === ym);
+    const bonus = monthBonuses.reduce((sum, b) => sum + (b.result.bonusAmount || 0), 0);
+    const bonusHealthInsurance = monthBonuses.reduce((sum, b) => sum + (b.result.healthInsurance || 0), 0);
+    const bonusCareInsurance = monthBonuses.reduce((sum, b) => sum + (b.result.careInsurance || 0), 0);
+    const bonusPensionInsurance = monthBonuses.reduce((sum, b) => sum + (b.result.pensionInsurance || 0), 0);
+    const bonusEmploymentInsurance = monthBonuses.reduce((sum, b) => sum + (b.result.employmentInsurance || 0), 0);
+    const bonusChildSupportLevy = monthBonuses.reduce((sum, b) => sum + (b.result.childSupportLevy || 0), 0);
+    const bonusIncomeTax = monthBonuses.reduce((sum, b) => sum + (b.result.incomeTax || 0), 0);
+
+    const healthInsurance = r.healthInsurance + bonusHealthInsurance;
+    const careInsurance = r.careInsurance + bonusCareInsurance;
+    const pensionInsurance = r.pensionInsurance + bonusPensionInsurance;
+    const employmentInsurance = r.employmentInsurance + bonusEmploymentInsurance;
+    const childSupportLevy = r.childSupportLevy + bonusChildSupportLevy;
+    const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
+    const monthlyIncomeTax = r.monthlyIncomeTax + bonusIncomeTax;
+
+    const specialPay = r.specialPay || 0;
+    const inKindPay = r.inKindPay || 0;
+
     const subtotal1 = r.baseSalary + r.overtimePay + r.fixedOvertimePay + r.taxableAllowance;
-    const total = subtotal1 + r.commuteAllowance;
-    const afterSocialInsurance = total - r.socialInsuranceTotal;
+    // 実物給与は総支給額には算入するが、現物支給のため差引支払金では改めて差し引く
+    // （給与明細画面と同じ、総支給額には加算・差引支給額には反映しない扱い）
+    const total = subtotal1 + r.commuteAllowance + specialPay + bonus + inKindPay;
+    const afterSocialInsurance = total - socialInsuranceTotal;
     const absenceDeduction = r.absenceDeduction || 0;
-    const deductionTotal = r.monthlyIncomeTax + r.residentTax + absenceDeduction;
-    const netPay = afterSocialInsurance - deductionTotal;
+    const deductionTotal = monthlyIncomeTax + r.residentTax + absenceDeduction;
+    const netPay = afterSocialInsurance - deductionTotal - inKindPay;
 
     columns.push({
       ym,
@@ -417,21 +458,21 @@ async function buildWageLedgerColumns(employee, company) {
           : [{ name: '手当', amount: r.taxableAllowance || 0 }]),
       subtotal1,
       commuteAllowance: r.commuteAllowance,
-      specialPay: 0,
-      bonus: 0,
+      specialPay,
+      bonus,
       total,
-      healthInsurance: r.healthInsurance,
-      careInsurance: r.careInsurance,
-      childSupportLevy: r.childSupportLevy,
-      pensionInsurance: r.pensionInsurance,
-      employmentInsurance: r.employmentInsurance,
-      socialInsuranceTotal: r.socialInsuranceTotal,
+      healthInsurance,
+      careInsurance,
+      childSupportLevy,
+      pensionInsurance,
+      employmentInsurance,
+      socialInsuranceTotal,
       afterSocialInsurance,
-      monthlyIncomeTax: r.monthlyIncomeTax,
+      monthlyIncomeTax,
       residentTax: r.residentTax,
       absenceDeduction,
       deductionTotal,
-      inKindPay: 0,
+      inKindPay,
       netPay,
     });
   }
@@ -570,7 +611,7 @@ document.getElementById('exportLedgerPdfBtn').addEventListener('click', () => pr
 document.getElementById('exportLedgerExcelBtn').addEventListener('click', () => exportFullTableToExcel('wageLedgerTable', '賃金台帳.xls', 'exportLedgerStatus'));
 document.getElementById('exportLedgerCopyBtn').addEventListener('click', () => copyFullTableToClipboard('wageLedgerTable', 'exportLedgerStatus'));
 
-['overtimePay', 'residentTax'].forEach(attachThousandsFormatting);
+['overtimePay', 'residentTax', 'specialPay', 'inKindPay'].forEach(attachThousandsFormatting);
 
 (async () => {
   const user = await requireAuth();

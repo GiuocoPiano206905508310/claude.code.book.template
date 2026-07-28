@@ -566,6 +566,7 @@ function calculateMonthlyPayroll(input) {
     dependents, residentTax,
     healthRate, careRate, pensionRate, employmentRate,
     fixedOvertimePay, employmentInsuranceExcludedAllowance,
+    specialPay, inKindPay,
   } = input;
 
   const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
@@ -576,9 +577,12 @@ function calculateMonthlyPayroll(input) {
   const hasCare = subjectSocialInsurance && ageRule.care;
   const hasPension = subjectSocialInsurance && ageRule.pension;
 
-  const grossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance + (fixedOvertimePay || 0);
-  const socialInsuranceBase = grossPay;
-  const employmentInsuranceBase = Math.max(0, grossPay - (employmentInsuranceExcludedAllowance || 0));
+  // 社会保険料・源泉所得税は、通常の給与（基本給・割増手当・手当・通勤手当・固定残業代）
+  // のみを基礎に計算する（臨時の給与・実物給与は本システムでは自動再計算の対象外のため、
+  // 総支給額・差引支給額にのみ加算する概算値として扱う）
+  const regularGrossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance + (fixedOvertimePay || 0);
+  const socialInsuranceBase = regularGrossPay;
+  const employmentInsuranceBase = Math.max(0, regularGrossPay - (employmentInsuranceExcludedAllowance || 0));
 
   const healthInsurance = hasHealth ? Math.round(socialInsuranceBase * healthRate / 2) : 0;
   const careInsurance = hasCare ? Math.round(socialInsuranceBase * careRate / 2) : 0;
@@ -588,23 +592,28 @@ function calculateMonthlyPayroll(input) {
 
   const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
 
-  const monthlyTaxableIncome = grossPay - commuteAllowance;
+  const monthlyTaxableIncome = regularGrossPay - commuteAllowance;
   const isTaxExempt = (employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）') && monthlyTaxableIncome < PART_TIME_TAX_EXEMPT_THRESHOLD;
 
   let monthlyIncomeTax = 0;
   if (!isTaxExempt) {
-    const taxBase = grossPay - commuteAllowance - socialInsuranceTotal;
+    const taxBase = regularGrossPay - commuteAllowance - socialInsuranceTotal;
     monthlyIncomeTax = (calcMethod === 'machine' && taxTable === '甲')
       ? calcMachineWithholdingTax(taxBase, dependents)
       : calcWithholdingTax(taxBase, dependents, taxTable);
   }
 
-  const netPay = grossPay - socialInsuranceTotal - monthlyIncomeTax - residentTax;
+  // 実物給与は現物支給のため、総支給額には加算するが差引支給額（振込・現金支給額）には
+  // 影響しない（加算した分をそのまま差し引く）。臨時の給与は現金支給のためそのまま加算する。
+  const grossPay = regularGrossPay + (specialPay || 0) + (inKindPay || 0);
+  const netPay = regularGrossPay - socialInsuranceTotal - monthlyIncomeTax - residentTax + (specialPay || 0);
 
   return {
     grossPay,
     baseSalary, overtimePay, taxableAllowance, commuteAllowance,
     fixedOvertimePay: fixedOvertimePay || 0,
+    specialPay: specialPay || 0,
+    inKindPay: inKindPay || 0,
     healthInsurance, hasHealth,
     careInsurance, hasCare,
     pensionInsurance, hasPension,

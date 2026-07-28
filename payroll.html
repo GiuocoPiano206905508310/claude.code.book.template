@@ -66,6 +66,22 @@
           </div>
           <p class="field-note" id="residentTaxNote"></p>
         </div>
+        <div class="field-row">
+          <label for="specialPay">臨時の給与</label>
+          <div class="field-input">
+            <input type="text" inputmode="numeric" id="specialPay">
+            <span class="unit">円</span>
+          </div>
+          <p class="field-note">※ 総支給額・差引支給額の両方に加算されます。</p>
+        </div>
+        <div class="field-row">
+          <label for="inKindPay">実物給与</label>
+          <div class="field-input">
+            <input type="text" inputmode="numeric" id="inKindPay">
+            <span class="unit">円</span>
+          </div>
+          <p class="field-note">※ 現物支給のため、総支給額には加算されますが差引支給額（振込・現金支給額）には反映されません。</p>
+        </div>
         <div class="checkbox-row">
           <input type="checkbox" id="applyAbsenceDeduction">
           <label for="applyAbsenceDeduction">欠勤控除を適用する（<span id="absenceDeductionPreview">0 円</span>）</label>
@@ -125,7 +141,7 @@
 
     <section class="card form-card" id="wageLedgerCard" style="margin-top:24px;">
       <h2>賃金台帳</h2>
-      <p class="field-note">※ 様式第20号（労働基準法施行規則第55条）の賃金台帳の記載事項を参考に、保存済みの給与明細から自動作成しています。臨時の給与・賞与・実物給与は本システムでは扱っていないため常に0円です（賞与は<a href="bonus.html">賞与計算</a>で別途管理してください）。</p>
+      <p class="field-note">※ 様式第20号（労働基準法施行規則第55条）の賃金台帳の記載事項を参考に、保存済みの給与明細から自動作成しています。臨時の給与・実物給与は給与計算画面の「支給項目（当月分）」で入力した金額を反映します。賞与は<a href="bonus.html">賞与計算</a>で保存した明細のうち、支給日が同じ年月のものを合算して反映します。</p>
       <div class="data-table-wrap">
         <table class="data-table" id="wageLedgerTable">
           <thead><tr></tr></thead>
@@ -150,9 +166,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
-<script src="calc.js?v=14"></script>
+<script src="calc.js?v=15"></script>
 <script src="data.js?v=16"></script>
 <script src="common.js?v=11"></script>
-<script src="payroll.js?v=21"></script>
+<script src="payroll.js?v=22"></script>
 </body>
 </html>
