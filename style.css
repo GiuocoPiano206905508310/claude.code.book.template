@@ -376,6 +376,11 @@ table.data-table tr.filter-row input, table.data-table tr.filter-row select {
 }
 table.data-table tr.filter-row input { padding-right: 6px; }
 
+/* 賃金台帳は様式第20号にならい、罫線で区切られた台帳らしい見た目にする（縦罫線も表示） */
+#wageLedgerTable th, #wageLedgerTable td { border: 1px solid var(--border); }
+#wageLedgerTable th:first-child, #wageLedgerTable td:first-child { border-left: none; }
+#wageLedgerTable th:last-child, #wageLedgerTable td:last-child { border-right: none; }
+
 .empty-state {
   text-align: center;
   padding: 48px 20px;
