@@ -210,7 +210,10 @@ function renderOvertimeBreakdownTiles(s) {
   `).join('');
 }
 
-function collectInput() {
+// allowanceItems: 賃金台帳で手当を項目別に表示するため、計算時点の従業員マスタの
+// 手当構成（名称・金額）をスナップショットとして明細に保存する。taxableAllowance
+// （その他手当の合計額）を編集した場合でも、個々の内訳表示はこの構成をそのまま使う
+function collectInput(employee) {
   return {
     ...currentEmployeeFields,
     ...currentCompanyFields,
@@ -222,15 +225,16 @@ function collectInput() {
     fixedOvertimeMonthlyHours: currentFixedOvertime.monthlyHours,
     fixedOvertimePay: currentFixedOvertime.fixedPay,
     overtimeBreakdown: currentOvertimeBreakdown,
+    allowanceItems: ((employee && employee.allowances) || []).map((a) => ({ name: a.name || '手当', amount: Number(a.amount) || 0 })),
   };
 }
 
 async function calculate() {
-  const input = collectInput();
+  const employee = await currentEmployee();
+  const input = collectInput(employee);
   const result = calculateMonthlyPayroll(input);
   result.overtimeBreakdown = input.overtimeBreakdown;
 
-  const employee = await currentEmployee();
   result.absenceDeduction = 0;
   if (input.applyAbsenceDeduction && employee && currentAttendanceSummary) {
     result.absenceDeduction = calcAbsenceDeduction(employee.baseSalary, employee.monthlyStandardDays, currentAttendanceSummary.absenceDays);
@@ -336,7 +340,7 @@ const WAGE_LEDGER_ROWS = [
   { key: 'nightHours', label: '深夜労働時間数', unit: '時間' },
   { key: 'baseSalary', label: '基本賃金', unit: '円' },
   { key: 'overtimePayTotal', label: '所定時間外割増賃金', unit: '円' },
-  { key: 'taxableAllowance', label: '手当', unit: '円' },
+  { key: '__allowanceItems', label: '手当', unit: '円' }, // 手当は名称ごとに複数行へ展開して表示する（renderWageLedgerTable参照）
   { key: 'subtotal1', label: '小　計', unit: '円', bold: true },
   { key: 'commuteAllowance', label: '非課税分賃金額', unit: '円' },
   { key: 'specialPay', label: '臨時の給与', unit: '円' },
@@ -365,6 +369,7 @@ async function buildWageLedgerColumns(employee, company) {
   const columns = [];
   for (const ym of yms) {
     const r = slips[ym].result;
+    const input = slips[ym].input;
     // eslint-disable-next-line no-await-in-loop
     const summary = await computeMonthSummary(employee, ym, company);
     const t = summary.overtimeCategoryMonthTotals;
@@ -391,6 +396,11 @@ async function buildWageLedgerColumns(employee, company) {
       baseSalary: r.baseSalary,
       overtimePayTotal: r.overtimePay + r.fixedOvertimePay,
       taxableAllowance: r.taxableAllowance,
+      // 手当は様式第20号にならい名称ごとに1行ずつ表示する。計算時点の従業員マスタの
+      // 手当構成を保存したallowanceItemsがあればそれを使い、それ以前に保存された
+      // 明細（この項目を保存していない）には合計額のみの1行にフォールバックする
+      allowanceItems: (input && input.allowanceItems && input.allowanceItems.length)
+        ? input.allowanceItems : [{ name: '手当', amount: r.taxableAllowance || 0 }],
       subtotal1,
       commuteAllowance: r.commuteAllowance,
       specialPay: 0,
@@ -446,13 +456,26 @@ async function renderWageLedgerTable() {
     ['所属', escapeHtml(employee.department || '—')],
   ].map(([label, value]) => `<tr><td>${label}</td>${columns.map(() => `<td class="num">${value}</td>`).join('')}</tr>`).join('');
 
-  const dataRows = WAGE_LEDGER_ROWS.map((rowDef) => {
+  // 手当は様式第20号にならい名称ごとに1行ずつ表示する。表示期間中に登場した
+  // すべての手当名称を対象に、その月に無ければ0円として表示する
+  const allowanceNames = [...new Set(columns.flatMap((c) => c.allowanceItems.map((a) => a.name)))];
+
+  const dataRows = WAGE_LEDGER_ROWS.flatMap((rowDef) => {
+    if (rowDef.key === '__allowanceItems') {
+      return allowanceNames.map((name) => {
+        const cells = columns.map((c) => {
+          const item = c.allowanceItems.find((a) => a.name === name);
+          return `<td class="num">${formatThousands(Math.round(item ? item.amount : 0))} 円</td>`;
+        }).join('');
+        return `<tr><td>${escapeHtml(name)}</td>${cells}</tr>`;
+      });
+    }
     const cells = columns.map((c) => {
       const v = c[rowDef.key];
       const text = rowDef.unit === '時間' ? `${v.toFixed(1)} 時間` : (rowDef.unit === '日' ? `${v} 日` : `${formatThousands(Math.round(v))} 円`);
       return `<td class="num">${text}</td>`;
     }).join('');
-    return `<tr${rowDef.bold ? ' class="total"' : ''}><td>${rowDef.label}</td>${cells}</tr>`;
+    return [`<tr${rowDef.bold ? ' class="total"' : ''}><td>${rowDef.label}</td>${cells}</tr>`];
   }).join('');
 
   tbody.innerHTML = identityRows + dataRows;
