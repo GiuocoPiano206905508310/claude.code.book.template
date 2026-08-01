@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>会社マスタ管理 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -21,7 +21,12 @@
     <p>※ 入力していただいた情報は、あなたの会社アカウントにのみ保存され、他の会社アカウントからは見えません。</p>
   </div>
 
-  <section class="card form-card" aria-label="会社の保険料率・源泉徴収設定">
+  <section class="card form-card" aria-label="会社の保険料率・源泉徴収設定" id="companyFormCard">
+    <div class="edit-toggle-row">
+      <button id="editBtn" type="button" class="btn btn-outline">✏️ 編集する</button>
+      <p class="field-note" id="editModeNote" style="display:none; margin:0;">編集中です。内容を確認のうえ「保存する」を押してください。</p>
+    </div>
+
     <h2>休日設定</h2>
     <div class="field-row">
       <label for="statutoryHolidayWeekday">法定休日</label>
@@ -290,7 +295,10 @@
       <label for="paymentFractionCarryOver1000">(2) 1か月の賃金支払額に生じた1,000円未満の端数を翌月の賃金支払日に繰り越して支払う</label>
     </div>
 
-    <button id="saveBtn" type="button" class="btn btn-block">保存する</button>
+    <div class="edit-save-row" id="editSaveRow" style="display:none;">
+      <button id="cancelEditBtn" type="button" class="btn btn-outline">キャンセル</button>
+      <button id="saveBtn" type="button" class="btn btn-block">保存する</button>
+    </div>
     <p class="export-status" id="saveStatus"></p>
   </section>
 
@@ -302,7 +310,7 @@
 <script src="auth.js?v=2"></script>
 <script src="calc.js?v=16"></script>
 <script src="data.js?v=17"></script>
-<script src="common.js?v=11"></script>
-<script src="company.js?v=7"></script>
+<script src="common.js?v=12"></script>
+<script src="company.js?v=8"></script>
 </body>
 </html>
