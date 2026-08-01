@@ -284,3 +284,24 @@ async function copyFullTableToClipboard(tableId, statusId) {
     showExportStatus(statusId, 'コピーに失敗しました：' + (e && e.message ? e.message : e), true);
   }
 }
+
+// ページ最上部・最下部へ移動するボタンを画面右下に固定表示する（全ページ共通）
+function renderScrollButtons() {
+  if (document.getElementById('scrollButtons')) return;
+  const container = document.createElement('div');
+  container.id = 'scrollButtons';
+  container.className = 'scroll-buttons';
+  container.innerHTML = `
+    <button type="button" id="scrollTopBtn" class="scroll-btn" title="ページ最上部へ" aria-label="ページ最上部へ">▲</button>
+    <button type="button" id="scrollBottomBtn" class="scroll-btn" title="ページ最下部へ" aria-label="ページ最下部へ">▼</button>
+  `;
+  document.body.appendChild(container);
+  document.getElementById('scrollTopBtn').addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  document.getElementById('scrollBottomBtn').addEventListener('click', () => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  });
+}
+
+renderScrollButtons();

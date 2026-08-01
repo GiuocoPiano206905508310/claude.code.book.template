@@ -148,12 +148,33 @@ document.getElementById('industryType').addEventListener('change', applyIndustry
 document.getElementById('roundingEnabled').addEventListener('change', applyRoundingEnabledToForm);
 attachRoundingRowEvents();
 
+// ---------------------------------------------------------------------------
+// 編集ロック: 「編集する」を押すまで入力・変更できないようにする
+// ---------------------------------------------------------------------------
+function setEditMode(editing) {
+  document.querySelectorAll('#companyFormCard select, #companyFormCard input').forEach((el) => {
+    el.disabled = !editing;
+  });
+  document.getElementById('editBtn').style.display = editing ? 'none' : '';
+  document.getElementById('editModeNote').style.display = editing ? '' : 'none';
+  document.getElementById('editSaveRow').style.display = editing ? '' : 'none';
+}
+
+document.getElementById('editBtn').addEventListener('click', () => setEditMode(true));
+
+document.getElementById('cancelEditBtn').addEventListener('click', async () => {
+  await loadFormFromCompany();
+  setEditMode(false);
+  showExportStatus('saveStatus', '', false);
+});
+
 document.getElementById('saveBtn').addEventListener('click', async () => {
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
   try {
     await saveCompany(collectFormAsCompany());
     showExportStatus('saveStatus', '会社マスタ情報を保存しました。', false);
+    setEditMode(false);
   } catch (e) {
     showExportStatus('saveStatus', '保存に失敗しました：' + e.message, true);
   } finally {
@@ -167,4 +188,5 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   renderNavbar('company.html');
   renderNavbarUser(user);
   await loadFormFromCompany();
+  setEditMode(false);
 })();
