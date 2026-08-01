@@ -253,17 +253,18 @@ async function fetchPeriodRecords(employeeId, periodDates) {
 // 同様の遡り処理によって正しく計上される）。
 // records: 呼び出し側がすでに取得済みのperiodDates分の勤怠記録（fetchPeriodRecordsの
 // 戻り値と同じ形式）。ここでは前月分の追加取得のみ行い、二重取得はしない。
-async function computeWeeklyOvertimeWithPadding(employeeId, periodDates, records, overtimeCategoryPerDay, weekStartDay, weeklyOvertimeThreshold) {
+// company: 渡された場合、打刻の丸め設定を出勤・退勤時刻に適用する
+async function computeWeeklyOvertimeWithPadding(employeeId, periodDates, records, overtimeCategoryPerDay, weekStartDay, weeklyOvertimeThreshold, company) {
   if (!periodDates.length) return {};
   const leadingPad = calcLeadingWeekPadDates(periodDates[0], weekStartDay);
   if (!leadingPad.length) {
-    return computeWeeklyOvertimeByDay(records, overtimeCategoryPerDay, periodDates, weekStartDay, weeklyOvertimeThreshold);
+    return computeWeeklyOvertimeByDay(records, overtimeCategoryPerDay, periodDates, weekStartDay, weeklyOvertimeThreshold, company);
   }
 
   const padYm = ymKey(leadingPad[0].y, leadingPad[0].m);
   const padMonthRecords = await getMonthAttendance(employeeId, padYm);
   const padDaysInMonth = new Date(leadingPad[0].y, leadingPad[0].m, 0).getDate();
-  const { perDay: padMonthPerDay } = computeOvertimeCategoryBreakdown(padMonthRecords, padDaysInMonth);
+  const { perDay: padMonthPerDay } = computeOvertimeCategoryBreakdown(padMonthRecords, padDaysInMonth, company);
 
   const extendedDates = leadingPad.concat(periodDates);
   const extendedRecords = {};
@@ -280,7 +281,7 @@ async function computeWeeklyOvertimeWithPadding(employeeId, periodDates, records
     extendedPerDay[idx] = overtimeCategoryPerDay[i + 1];
   });
 
-  const extendedResult = computeWeeklyOvertimeByDay(extendedRecords, extendedPerDay, extendedDates, weekStartDay, weeklyOvertimeThreshold);
+  const extendedResult = computeWeeklyOvertimeByDay(extendedRecords, extendedPerDay, extendedDates, weekStartDay, weeklyOvertimeThreshold, company);
 
   const result = {};
   periodDates.forEach((date, i) => {
@@ -334,8 +335,8 @@ async function computeMonthSummary(employee, ym, company) {
     if (rec.status === 'absence') { absenceDays++; continue; }
     if (rec.status === 'paid_leave') { paidLeaveDays++; continue; }
 
-    const inMin = timeToMinutes(rec.clockIn);
-    const outMin = timeToMinutes(rec.clockOut);
+    const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company);
+    const outMin = roundClockOutMinutes(timeToMinutes(rec.clockOut), company);
     if (inMin === null || outMin === null) continue;
 
     const breakMin = Number(rec.breakMinutes) || 0;
@@ -357,12 +358,12 @@ async function computeMonthSummary(employee, ym, company) {
   }
 
   const { perDay: overtimeCategoryPerDay, monthTotals: overtimeCategoryMonthTotals } =
-    computeOvertimeCategoryBreakdown(records, daysInMonth);
+    computeOvertimeCategoryBreakdown(records, daysInMonth, company);
 
   if (company) {
     const periodDates = buildCalendarMonthDates(y, m);
     const weeklyByDay = await computeWeeklyOvertimeWithPadding(
-      employee.id, periodDates, records, overtimeCategoryPerDay, company.weekStartDay, company.weeklyOvertimeThreshold
+      employee.id, periodDates, records, overtimeCategoryPerDay, company.weekStartDay, company.weeklyOvertimeThreshold, company
     );
     let weeklyOvertimeMonthTotal = 0;
     let weeklyOvertimeNightMonthTotal = 0;
@@ -473,6 +474,16 @@ async function deleteBonusRecord(employeeId, bonusId) {
 // ---------------------------------------------------------------------------
 // 会社マスタ（保険料率設定。ログインユーザー1人＝会社1社の単一レコード）
 // ---------------------------------------------------------------------------
+// 勤怠丸め設定のデフォルト（打刻の丸め設定を参照。単位は分、method: 'up'=切り上げ/'down'=切り捨て）
+function defaultRoundingRules() {
+  return {
+    clockIn: { minutes: 15, method: 'up' },
+    clockOut: { minutes: 15, method: 'down' },
+    breakStart: { minutes: 15, method: 'up' },
+    breakEnd: { minutes: 15, method: 'down' },
+  };
+}
+
 function defaultCompany() {
   return {
     companyName: '',
@@ -490,6 +501,21 @@ function defaultCompany() {
     industryType: '一般の事業',
     employmentRate: EMPLOYMENT_RATES_BY_INDUSTRY['一般の事業'],
     calcMethod: 'table',
+    // 勤怠丸め設定（デフォルト無＝1分単位で計算。出勤・退勤のみ実際の計算に反映され、
+    // 休憩開始・休憩終了は設定を保存するのみで計算には未反映）
+    roundingEnabled: false,
+    roundingRules: defaultRoundingRules(),
+    // 割増賃金計算における端数処理設定（労働基準局通達に基づく3項目。デフォルト適用なし）
+    overtimeFractionRules: {
+      monthlyHoursRounding: false, // (1) 月間の時間外・休日・深夜業時間数の30分未満切捨て・以上切上げ
+      hourlyWageRounding: false, // (2) 時給・割増単価の50銭未満切捨て・以上切上げ
+      monthlyPayRounding: false, // (3) 月間の時間外・休日・深夜業の割増賃金総額の50銭未満切捨て・以上切上げ
+    },
+    // 1か月の賃金支払額における端数処理設定（デフォルト適用なし）
+    monthlyPaymentFractionRules: {
+      round100: false, // (1) 賃金支払額の100円未満端数を50円未満切捨て・以上切上げ
+      carryOver1000: false, // (2) 1,000円未満の端数を翌月の賃金支払日に繰り越して支払う
+    },
   };
 }
 
@@ -518,6 +544,10 @@ async function getCompany() {
     industryType: data.industry_type || defaults.industryType,
     employmentRate: orNum(data.employment_rate, defaults.employmentRate),
     calcMethod: data.calc_method || defaults.calcMethod,
+    roundingEnabled: data.rounding_enabled !== null && data.rounding_enabled !== undefined ? !!data.rounding_enabled : defaults.roundingEnabled,
+    roundingRules: data.rounding_rules || defaults.roundingRules,
+    overtimeFractionRules: data.overtime_fraction_rules || defaults.overtimeFractionRules,
+    monthlyPaymentFractionRules: data.monthly_payment_fraction_rules || defaults.monthlyPaymentFractionRules,
   };
 }
 
@@ -540,6 +570,10 @@ async function saveCompany(company) {
     industry_type: company.industryType,
     employment_rate: company.employmentRate,
     calc_method: company.calcMethod,
+    rounding_enabled: !!company.roundingEnabled,
+    rounding_rules: company.roundingRules || defaultRoundingRules(),
+    overtime_fraction_rules: company.overtimeFractionRules || {},
+    monthly_payment_fraction_rules: company.monthlyPaymentFractionRules || {},
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;

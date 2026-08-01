@@ -16,6 +16,8 @@ let currentCompanyFields = null;
 // 固定残業代（みなし残業代）。保存済み明細を表示中の場合はその当時の値、
 // 新規計算の場合は従業員マスタの設定と当月の勤怠集計から算出する
 let currentFixedOvertime = null;
+// 会社マスタ管理の設定全体（勤怠丸め・端数処理設定など、計算に使う値を都度取得し直さずに済むよう保持する）
+let currentCompany = null;
 
 async function currentEmployee() {
   const id = document.getElementById('employeeSelect').value;
@@ -74,6 +76,7 @@ async function loadFormForEmployeeMonth() {
   if (!employee || !ym) return;
 
   const company = await getCompany();
+  currentCompany = company;
   currentAttendanceSummary = await computeMonthSummary(employee, ym, company);
   const commuteAllowanceForOvertimeBase = employee.commuteAllowanceExcludeFromOvertimeBase === false ? (employee.commuteAllowance || 0) : 0;
   const overtimeBaseWage = employee.baseSalary + sumNonExcludedAllowances(employee.allowances) + commuteAllowanceForOvertimeBase;
@@ -150,7 +153,8 @@ async function loadFormForEmployeeMonth() {
 
   currentOvertimeBreakdown = (input && input.overtimeBreakdown) ? input.overtimeBreakdown : calcOvertimeBreakdown(
     hourlyWage, employee, currentAttendanceSummary.overtimeCategoryMonthTotals,
-    !!employee.fixedOvertimeEnabled, employee.fixedOvertimeMonthlyHours, employee.fixedOvertimeBaseCategories
+    !!employee.fixedOvertimeEnabled, employee.fixedOvertimeMonthlyHours, employee.fixedOvertimeBaseCategories,
+    company.overtimeFractionRules
   ).items;
   currentAutoOvertimePay = currentOvertimeBreakdown.reduce((sum, it) => sum + it.pay, 0);
 
@@ -234,8 +238,32 @@ function collectInput(employee) {
   };
 }
 
+// 会社マスタ管理の「1か月の賃金支払額における端数処理設定」を差引支給額に適用する。
+// (2)繰越が有効な場合、前月に繰り越された端数（前月の保存済み明細のcarryOutFraction）
+// を合算した上で1,000円未満を切り捨て、今月分の端数は次月へ繰り越す。(1)は単純に
+// 100円未満を切り捨て・切り上げる（四捨五入と同じ）。両方有効な場合は繰越を優先する
+async function applyMonthlyPaymentFractionRules(result, employee, ym, company) {
+  const rules = (company && company.monthlyPaymentFractionRules) || {};
+  result.carryInFraction = 0;
+  result.carryOutFraction = 0;
+  if (!rules.round100 && !rules.carryOver1000) return result;
+
+  if (rules.carryOver1000 && employee && ym) {
+    const prevSlip = await getPayslip(employee.id, previousYm(ym));
+    result.carryInFraction = (prevSlip && prevSlip.result && prevSlip.result.carryOutFraction) || 0;
+    const adjusted = result.netPay + result.carryInFraction;
+    const rem = ((adjusted % 1000) + 1000) % 1000;
+    result.carryOutFraction = rem;
+    result.netPay = adjusted - rem;
+  } else if (rules.round100) {
+    result.netPay = Math.round(result.netPay / 100) * 100;
+  }
+  return result;
+}
+
 async function calculate() {
   const employee = await currentEmployee();
+  const ym = document.getElementById('monthInput').value;
   const input = collectInput(employee);
   const result = calculateMonthlyPayroll(input);
   result.overtimeBreakdown = input.overtimeBreakdown;
@@ -245,6 +273,8 @@ async function calculate() {
     result.absenceDeduction = calcAbsenceDeduction(employee.baseSalary, employee.monthlyStandardDays, currentAttendanceSummary.absenceDays);
     result.netPay -= result.absenceDeduction;
   }
+
+  await applyMonthlyPaymentFractionRules(result, employee, ym, currentCompany);
 
   renderResult(result);
   return { input, result };
@@ -288,6 +318,12 @@ function renderResult(r) {
   }
   if (r.inKindPay) {
     rows.push(['実物給与（現物支給のため差引）', -r.inKindPay, 'deduction', true]);
+  }
+  if (r.carryInFraction) {
+    rows.push(['前月繰越端数', r.carryInFraction, 'plain', true]);
+  }
+  if (r.carryOutFraction) {
+    rows.push(['翌月繰越端数（1,000円未満）', -r.carryOutFraction, 'deduction', true]);
   }
 
   const tbody = document.querySelector('#resultTable tbody');
@@ -391,17 +427,26 @@ async function buildWageLedgerColumns(employee, company) {
   const bonuses = await listBonuses(employee.id);
   const yms = Object.keys(slips).sort();
   const columns = [];
+  const paymentFractionRules = company.monthlyPaymentFractionRules || {};
+  let carryFraction = 0; // (2) 1,000円未満繰越: 表示する月の並び順に沿って繰り越し額を引き継ぐ
   for (const ym of yms) {
     const r = slips[ym].result;
     const input = slips[ym].input;
     // eslint-disable-next-line no-await-in-loop
     const summary = await computeMonthSummary(employee, ym, company);
     const t = summary.overtimeCategoryMonthTotals;
-    const holidayMin = (t.scheduledHoliday || 0) + (t.statutoryHoliday || 0) + (t.statutoryHolidayNight || 0);
-    const overtimeMin = (t.overtimeWithin60 || 0) + (t.weeklyOvertime || 0) + (t.overtimeOver60 || 0)
+    let holidayMin = (t.scheduledHoliday || 0) + (t.statutoryHoliday || 0) + (t.statutoryHolidayNight || 0);
+    let overtimeMin = (t.overtimeWithin60 || 0) + (t.weeklyOvertime || 0) + (t.overtimeOver60 || 0)
       + (t.overtimeWithin60Night || 0) + (t.overtimeOver60Night || 0);
-    const nightMin = (t.lateNight || 0) + (t.weeklyOvertimeNight || 0) + (t.overtimeWithin60Night || 0)
+    let nightMin = (t.lateNight || 0) + (t.weeklyOvertimeNight || 0) + (t.overtimeWithin60Night || 0)
       + (t.overtimeOver60Night || 0) + (t.statutoryHolidayNight || 0);
+    // (1) 1か月における時間外労働・休日労働・深夜業の各々の時間数の合計に、
+    // 30分未満切り捨て・以上を1時間に切り上げの端数処理を適用する
+    if (company.overtimeFractionRules && company.overtimeFractionRules.monthlyHoursRounding) {
+      holidayMin = roundMinutesToHour(holidayMin);
+      overtimeMin = roundMinutesToHour(overtimeMin);
+      nightMin = roundMinutesToHour(nightMin);
+    }
 
     const monthBonuses = bonuses.filter((b) => (b.date || '').slice(0, 7) === ym);
     const bonus = monthBonuses.reduce((sum, b) => sum + (b.result.bonusAmount || 0), 0);
@@ -430,7 +475,18 @@ async function buildWageLedgerColumns(employee, company) {
     const afterSocialInsurance = total - socialInsuranceTotal;
     const absenceDeduction = r.absenceDeduction || 0;
     const deductionTotal = monthlyIncomeTax + r.residentTax + absenceDeduction;
-    const netPay = afterSocialInsurance - deductionTotal - inKindPay;
+    let netPay = afterSocialInsurance - deductionTotal - inKindPay;
+
+    // 1か月の賃金支払額における端数処理設定を適用する。(2)繰越が有効な場合は
+    // 前月からの繰越額を合算した上で1,000円未満を切り捨て、端数は翌月へ繰り越す
+    if (paymentFractionRules.carryOver1000) {
+      const adjusted = netPay + carryFraction;
+      const rem = ((adjusted % 1000) + 1000) % 1000;
+      netPay = adjusted - rem;
+      carryFraction = rem;
+    } else if (paymentFractionRules.round100) {
+      netPay = Math.round(netPay / 100) * 100;
+    }
 
     columns.push({
       ym,

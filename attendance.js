@@ -22,10 +22,10 @@ async function populateEmployeeSelect() {
 
 const OVERTIME_MINUTE_COLUMNS = OVERTIME_RATE_CATEGORIES.map((c) => overtimeMinuteKey(c.key));
 
-function computeWorkedMinutes(rec) {
+function computeWorkedMinutes(rec, company) {
   if (!rec || rec.status === 'absence' || rec.status === 'paid_leave') return null;
-  const inMin = timeToMinutes(rec.clockIn);
-  const outMin = timeToMinutes(rec.clockOut);
+  const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company);
+  const outMin = roundClockOutMinutes(timeToMinutes(rec.clockOut), company);
   if (inMin === null || outMin === null) return null;
   const breakMin = Number(rec.breakMinutes) || 0;
   const rawEnd = outMin <= inMin ? outMin + 24 * 60 : outMin;
@@ -90,8 +90,8 @@ async function renderDayTable() {
   document.getElementById('periodRangeLabel').textContent =
     `※ 対象期間：${first.y}/${first.m}/${first.d} 〜 ${last.y}/${last.m}/${last.d}（会社マスタ管理の賃金締日に基づく）`;
   const records = await fetchPeriodRecords(employee.id, periodDates);
-  const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, periodDates.length);
-  const weeklyByDay = await computeWeeklyOvertimeWithPadding(employee.id, periodDates, records, overtimeByDay, company.weekStartDay, company.weeklyOvertimeThreshold);
+  const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, periodDates.length, company);
+  const weeklyByDay = await computeWeeklyOvertimeWithPadding(employee.id, periodDates, records, overtimeByDay, company.weekStartDay, company.weeklyOvertimeThreshold, company);
   const showMidHeader = document.getElementById('showMidHeaderCheckbox').checked;
   const midHeaderInsertAt = showMidHeader ? computeMidHeaderInsertIndex(periodDates) : -1;
   const headerRowTemplate = document.getElementById('dayTableHeaderRow');
@@ -113,7 +113,7 @@ async function renderDayTable() {
     const rec = records[String(idx)] || { clockIn: '', clockOut: '', breakMinutes: 60, status: defaultStatusForWeekday(dow, company) };
     const scheduledStart = rec.scheduledStart || employee.workStart || '';
     const scheduledEnd = rec.scheduledEnd || employee.workEnd || '';
-    const worked = computeWorkedMinutes(rec);
+    const worked = computeWorkedMinutes(rec, company);
     workedTotal += worked || 0;
     weeklyOvertimeTotal += weeklyByDay[idx].weeklyOvertime;
     weeklyOvertimeNightTotal += weeklyByDay[idx].weeklyOvertimeNight;

@@ -82,6 +82,108 @@
       ●接客娯楽業･･･旅館、飲食店、ゴルフ場、公園・遊園地、その他の接客娯楽業
     </p>
 
+    <h2 class="section-2">勤怠丸め設定</h2>
+    <div class="field-row">
+      <label for="roundingEnabled">打刻時刻の丸め</label>
+      <div class="field-input">
+        <select id="roundingEnabled">
+          <option value="false">無（1分単位で計算）</option>
+          <option value="true">有</option>
+        </select>
+      </div>
+    </div>
+    <div id="roundingRulesSection" style="display:none;">
+      <div class="data-table-wrap">
+        <table class="data-table" id="roundingRulesTable">
+          <thead><tr><th>状態</th><th>丸め単位</th><th>計算方法</th></tr></thead>
+          <tbody>
+            <tr data-kind="clockIn">
+              <td>出勤</td>
+              <td>
+                <select class="rounding-unit-select">
+                  <option value="5">5分</option>
+                  <option value="10">10分</option>
+                  <option value="15">15分</option>
+                  <option value="20">20分</option>
+                  <option value="30">30分</option>
+                  <option value="custom">手動入力</option>
+                </select>
+                <input type="number" class="rounding-custom-input" min="1" max="60" style="display:none; width:70px; margin-top:4px;">
+              </td>
+              <td>
+                <select class="rounding-method-select">
+                  <option value="up">切り上げ</option>
+                  <option value="down">切り捨て</option>
+                </select>
+              </td>
+            </tr>
+            <tr data-kind="clockOut">
+              <td>退勤</td>
+              <td>
+                <select class="rounding-unit-select">
+                  <option value="5">5分</option>
+                  <option value="10">10分</option>
+                  <option value="15">15分</option>
+                  <option value="20">20分</option>
+                  <option value="30">30分</option>
+                  <option value="custom">手動入力</option>
+                </select>
+                <input type="number" class="rounding-custom-input" min="1" max="60" style="display:none; width:70px; margin-top:4px;">
+              </td>
+              <td>
+                <select class="rounding-method-select">
+                  <option value="up">切り上げ</option>
+                  <option value="down">切り捨て</option>
+                </select>
+              </td>
+            </tr>
+            <tr data-kind="breakStart">
+              <td>休憩開始</td>
+              <td>
+                <select class="rounding-unit-select">
+                  <option value="5">5分</option>
+                  <option value="10">10分</option>
+                  <option value="15">15分</option>
+                  <option value="20">20分</option>
+                  <option value="30">30分</option>
+                  <option value="custom">手動入力</option>
+                </select>
+                <input type="number" class="rounding-custom-input" min="1" max="60" style="display:none; width:70px; margin-top:4px;">
+              </td>
+              <td>
+                <select class="rounding-method-select">
+                  <option value="up">切り上げ</option>
+                  <option value="down">切り捨て</option>
+                </select>
+              </td>
+            </tr>
+            <tr data-kind="breakEnd">
+              <td>休憩終了</td>
+              <td>
+                <select class="rounding-unit-select">
+                  <option value="5">5分</option>
+                  <option value="10">10分</option>
+                  <option value="15">15分</option>
+                  <option value="20">20分</option>
+                  <option value="30">30分</option>
+                  <option value="custom">手動入力</option>
+                </select>
+                <input type="number" class="rounding-custom-input" min="1" max="60" style="display:none; width:70px; margin-top:4px;">
+              </td>
+              <td>
+                <select class="rounding-method-select">
+                  <option value="up">切り上げ</option>
+                  <option value="down">切り捨て</option>
+                </select>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="field-note">※ 出勤・退勤の丸めは日次勤怠入力・給与計算に実際に反映されます。休憩開始・休憩終了の丸めは、休憩を時刻ではなく分数で入力する現在の勤怠入力方式では計算に反映できないため、設定の保存のみとなります。</p>
+      <p class="field-note">※ 丸めの考え方については<a href="https://help-timecard.smaregi.jp/hc/ja/articles/360037004153-打刻の丸めを設定する-勤怠丸め単位" target="_blank" rel="noopener">こちら</a>もご参照ください（例：8:05を15分単位・切り上げで丸めると8:15、切り捨てで丸めると8:00になります）。</p>
+    </div>
+
     <h2 class="section-2">給与計算期間設定</h2>
     <div class="field-row">
       <label for="paycheckClosingDay">賃金締日</label>
@@ -162,6 +264,32 @@
       </div>
     </div>
 
+    <h2 class="section-2">割増賃金計算における端数処理設定</h2>
+    <p class="field-note">※ 未チェックの場合は端数処理を行いません（デフォルト）。</p>
+    <div class="checkbox-row">
+      <input type="checkbox" id="overtimeFractionMonthlyHours">
+      <label for="overtimeFractionMonthlyHours">(1) 1か月における時間外労働、休日労働及び深夜業の各々の時間数の合計に1時間未満の端数がある場合に、30分未満の端数を切り捨て、それ以上を1時間に切り上げる</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="overtimeFractionHourlyWage">
+      <label for="overtimeFractionHourlyWage">(2) 1時間当たりの賃金額及び割増賃金額に円未満の端数が生じた場合、50銭未満の端数を切り捨て、それ以上を1円に切り上げる</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="overtimeFractionMonthlyPay">
+      <label for="overtimeFractionMonthlyPay">(3) 1か月における時間外労働、休日労働、深夜業の各々の割増賃金の総額に1円未満の端数が生じた場合、50銭未満の端数を切り捨て、それ以上を1円に切り上げる</label>
+    </div>
+
+    <h2 class="section-2">1か月の賃金支払額における端数処理設定</h2>
+    <p class="field-note">※ 未チェックの場合は端数処理を行いません（デフォルト）。(1)(2)を両方チェックした場合は(2)の繰越処理を優先します。</p>
+    <div class="checkbox-row">
+      <input type="checkbox" id="paymentFractionRound100">
+      <label for="paymentFractionRound100">(1) 1か月の賃金支払額（賃金の一部を控除して支払う場合には控除した額）に100円未満の端数が生じた場合、50円未満の端数を切り捨て、それ以上を100円に切り上げる</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="paymentFractionCarryOver1000">
+      <label for="paymentFractionCarryOver1000">(2) 1か月の賃金支払額に生じた1,000円未満の端数を翌月の賃金支払日に繰り越して支払う</label>
+    </div>
+
     <button id="saveBtn" type="button" class="btn btn-block">保存する</button>
     <p class="export-status" id="saveStatus"></p>
   </section>
@@ -172,9 +300,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
-<script src="calc.js?v=15"></script>
-<script src="data.js?v=16"></script>
+<script src="calc.js?v=16"></script>
+<script src="data.js?v=17"></script>
 <script src="common.js?v=11"></script>
-<script src="company.js?v=6"></script>
+<script src="company.js?v=7"></script>
 </body>
 </html>

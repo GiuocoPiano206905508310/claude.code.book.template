@@ -852,6 +852,19 @@ const FIXED_OVERTIME_BASE_CATEGORIES = [
 ];
 const DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES = ['within60Combined'];
 
+// FIXED_OVERTIME_BASE_CATEGORIES（7区分）を「時間外労働・休日労働・深夜業」の3区分に
+// 分類する。会社マスタ管理の「割増賃金計算における端数処理設定」(1)(3)（1か月における
+// 時間外労働・休日労働・深夜業の各々の時間数・割増賃金総額の端数処理）に使用する
+const OVERTIME_BUCKET_BY_KEY = {
+  within60Combined: 'overtime',
+  over60: 'overtime',
+  statutoryHoliday: 'holiday',
+  lateNightCombined: 'night',
+  within60Night: 'night',
+  over60Night: 'night',
+  statutoryHolidayNight: 'night',
+};
+
 // 割増区分ごとの割増手当（7区分）を計算する。固定残業代が設定されている場合、
 // 「固定残業代の計算の基礎」で選択された区分は、選択区分の合計実労働時間のうち
 // 固定残業時間数を超えた分（超過分）のみを計上する（固定残業代の対象内の金額は
@@ -865,27 +878,60 @@ const DEFAULT_FIXED_OVERTIME_BASE_CATEGORIES = ['within60Combined'];
 // fixedOvertimeEnabled: 固定残業代が有効かどうか
 // fixedHours: 従業員マスタの「月固定残業時間数」
 // selectedKeys: 従業員マスタの「固定残業代の計算の基礎」で選択されたキーの配列
-function calcOvertimeBreakdown(hourlyWage, employeeRates, monthlyMinutesByKey, fixedOvertimeEnabled, fixedHours, selectedKeys) {
+// fractionRules: 会社マスタ管理の「割増賃金計算における端数処理設定」
+// （{ hourlyWageRounding, monthlyPayRounding }。省略時はいずれも無効＝端数処理なし）
+function calcOvertimeBreakdown(hourlyWage, employeeRates, monthlyMinutesByKey, fixedOvertimeEnabled, fixedHours, selectedKeys, fractionRules) {
   const selectedSet = new Set(fixedOvertimeEnabled && selectedKeys ? selectedKeys : []);
+  const rules = fractionRules || {};
+  // (2) 1時間当たりの賃金額に50銭未満切り捨て・以上切り上げの端数処理を適用する
+  const effectiveHourlyWage = rules.hourlyWageRounding ? roundYenBySen(hourlyWage) : hourlyWage;
 
   const raw = FIXED_OVERTIME_BASE_CATEGORIES.map((cat) => {
     const minutes = cat.minuteKeys.reduce((sum, k) => sum + (Number(monthlyMinutesByKey[k]) || 0), 0);
     const hours = minutes / 60;
     const rate = Number(employeeRates[cat.rateKey]) || 0;
-    return { key: cat.key, label: cat.payLabel, hours, grossPay: hours * hourlyWage * rate };
+    return { key: cat.key, label: cat.payLabel, hours, grossPay: hours * effectiveHourlyWage * rate };
   });
 
   const selectedHours = raw.filter((it) => selectedSet.has(it.key)).reduce((sum, it) => sum + it.hours, 0);
   const excessHours = Math.max(0, selectedHours - (Number(fixedHours) || 0));
   const excessRatio = selectedHours > 0 ? excessHours / selectedHours : 0;
 
-  let total = 0;
-  const items = raw.map((it) => {
+  const rawItems = raw.map((it) => {
     const ratio = selectedSet.has(it.key) ? excessRatio : 1;
-    const pay = Math.round(it.grossPay * ratio);
-    total += pay;
-    return { key: it.key, label: it.label, hours: it.hours * ratio, pay };
+    return { key: it.key, label: it.label, hours: it.hours * ratio, rawPay: it.grossPay * ratio };
   });
+
+  let items;
+  if (rules.monthlyPayRounding) {
+    // (3) 1か月における時間外労働・休日労働・深夜業の各々の割増賃金の総額に、
+    // 個別項目ごとではなく区分（時間外/休日/深夜）合計に対して1度だけ
+    // 50銭未満切り捨て・以上切り上げの端数処理を適用する。表示用の内訳項目は
+    // 通常どおり丸めた上で、丸め誤差の差額は区分内で最も時間数の多い項目に寄せる
+    const bucketKeys = ['overtime', 'holiday', 'night'];
+    const bucketed = { overtime: [], holiday: [], night: [] };
+    rawItems.forEach((it) => { bucketed[OVERTIME_BUCKET_BY_KEY[it.key]].push(it); });
+    const itemsByKey = {};
+    bucketKeys.forEach((bucketKey) => {
+      const bucketItems = bucketed[bucketKey];
+      if (!bucketItems.length) return;
+      const rawTotal = bucketItems.reduce((sum, it) => sum + it.rawPay, 0);
+      const roundedTotal = roundYenBySen(rawTotal);
+      const roundedItems = bucketItems.map((it) => ({ key: it.key, label: it.label, hours: it.hours, pay: Math.round(it.rawPay) }));
+      const sumRounded = roundedItems.reduce((sum, it) => sum + it.pay, 0);
+      const diff = roundedTotal - sumRounded;
+      if (diff !== 0) {
+        const target = roundedItems.reduce((a, b) => (b.hours > a.hours ? b : a), roundedItems[0]);
+        target.pay += diff;
+      }
+      roundedItems.forEach((it) => { itemsByKey[it.key] = it; });
+    });
+    items = FIXED_OVERTIME_BASE_CATEGORIES.map((cat) => itemsByKey[cat.key]).filter(Boolean);
+  } else {
+    items = rawItems.map((it) => ({ key: it.key, label: it.label, hours: it.hours, pay: Math.round(it.rawPay) }));
+  }
+
+  const total = items.reduce((sum, it) => sum + it.pay, 0);
   return { items, total };
 }
 
@@ -928,9 +974,49 @@ function isStatutoryHolidayStatus(status) {
   return status === 'statutory_holiday_work';
 }
 
+// ----------------------------------------------------------------------
+// 勤怠丸め・端数処理ヘルパー（会社マスタ管理の設定に基づく）
+// ----------------------------------------------------------------------
+// 時刻（0時からの経過分）を指定の分単位・方法で丸める。
+// 参考: https://help-timecard.smaregi.jp/hc/ja/articles/360037004153
+// 例）8:05を15分単位で切り上げ→8:15、切り捨て→8:00
+//     17:20を15分単位で切り上げ→17:30、切り捨て→17:15
+function roundClockMinutes(minutes, unit, method) {
+  if (minutes === null || minutes === undefined) return minutes;
+  const u = Number(unit) || 1;
+  if (u <= 1) return minutes;
+  const rem = minutes % u;
+  if (rem === 0) return minutes;
+  return method === 'up' ? minutes + (u - rem) : minutes - rem;
+}
+
+// company.roundingEnabled/roundingRulesに基づき、出勤・退勤の打刻時刻（分）を丸める。
+// 丸め設定が無効の場合はそのまま返す（1分単位で計算）
+function roundClockInMinutes(minutes, company) {
+  const rule = company && company.roundingEnabled && company.roundingRules && company.roundingRules.clockIn;
+  return rule ? roundClockMinutes(minutes, rule.minutes, rule.method) : minutes;
+}
+function roundClockOutMinutes(minutes, company) {
+  const rule = company && company.roundingEnabled && company.roundingRules && company.roundingRules.clockOut;
+  return rule ? roundClockMinutes(minutes, rule.minutes, rule.method) : minutes;
+}
+
+// 50銭未満切り捨て・50銭以上を1円に切り上げ（円未満の端数処理。四捨五入と同じ結果になる）
+function roundYenBySen(value) {
+  return Math.floor(value + 0.5);
+}
+
+// 30分未満切り捨て・30分以上を1時間に切り上げ（分単位の値を、1時間未満の端数処理をした分単位で返す）
+function roundMinutesToHour(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes - hours * 60;
+  return (rem >= 30 ? hours + 1 : hours) * 60;
+}
+
 // records: getMonthAttendanceの戻り値（{日: {clockIn, clockOut, breakMinutes, status}}）
+// company: 会社マスタ管理の設定（渡された場合、打刻の丸め設定を出勤・退勤時刻に適用する）
 // 戻り値: { perDay: {日: {区分キー: 分}}, monthTotals: {区分キー: 分} }
-function computeOvertimeCategoryBreakdown(records, daysInMonth) {
+function computeOvertimeCategoryBreakdown(records, daysInMonth, company) {
   const perDay = {};
   const monthTotals = emptyOvertimeMinutes();
   let cumulativeOvertimeMin = 0;
@@ -940,8 +1026,8 @@ function computeOvertimeCategoryBreakdown(records, daysInMonth) {
     const dayMinutes = emptyOvertimeMinutes();
 
     if (rec && rec.status !== 'absence' && rec.status !== 'paid_leave') {
-      const inMin = timeToMinutes(rec.clockIn);
-      const outMin = timeToMinutes(rec.clockOut);
+      const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company);
+      const outMin = roundClockOutMinutes(timeToMinutes(rec.clockOut), company);
       if (inMin !== null && outMin !== null) {
         const rawStart = inMin;
         const rawEnd = outMin <= inMin ? outMin + 24 * 60 : outMin;
@@ -1019,8 +1105,9 @@ function computeOvertimeCategoryBreakdown(records, daysInMonth) {
 // （キーは1始まりの連番。periodDatesとインデックスが対応する）
 // periodDates: buildCalendarMonthDates/buildPayPeriodDatesの戻り値（日付昇順の配列）
 // weeklyThresholdHours: 40 または 44（会社マスタ管理の「週法定外労働時間」設定）
+// company: 会社マスタ管理の設定（渡された場合、打刻の丸め設定を出勤・退勤時刻に適用する）
 // 戻り値: { [連番]: { weeklyOvertime: 分, weeklyOvertimeNight: 分 } }
-function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay, weeklyThresholdHours) {
+function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay, weeklyThresholdHours, company) {
   const thresholdMin = (Number(weeklyThresholdHours) || 40) * 60;
   const result = {};
   let weekWorkedMin = 0;
@@ -1033,8 +1120,8 @@ function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay, 
     const dow = new Date(y, m - 1, d).getDay();
     const rec = records[String(idx)];
     if (rec && (rec.status === 'normal' || isScheduledHolidayStatus(rec.status))) {
-      const inMin = timeToMinutes(rec.clockIn);
-      const outMin = timeToMinutes(rec.clockOut);
+      const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company);
+      const outMin = roundClockOutMinutes(timeToMinutes(rec.clockOut), company);
       if (inMin !== null && outMin !== null) {
         const rawEnd = outMin <= inMin ? outMin + 24 * 60 : outMin;
         const breakMin = Number(rec.breakMinutes) || 0;
