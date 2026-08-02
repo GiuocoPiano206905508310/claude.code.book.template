@@ -42,7 +42,7 @@
     <div class="summary-grid" id="summaryGrid"></div>
 
     <section class="card form-card">
-      <h2>日次勤怠入力</h2>
+      <h2>勤怠管理</h2>
       <div class="checkbox-row">
         <input type="checkbox" id="showMidHeaderCheckbox" checked>
         <label for="showMidHeaderCheckbox">列見出しを期間の中間にも表示する</label>
@@ -53,8 +53,10 @@
             <tr id="dayTableHeaderRow">
               <th>日付</th>
               <th>ステータス</th>
-              <th>出勤</th>
-              <th>退勤</th>
+              <th>出勤(打刻)</th>
+              <th title="会社マスタ管理の勤怠丸め設定を適用した後の出勤時刻。丸め設定が無の場合は表示されません">出勤(丸め後)</th>
+              <th>退勤(打刻)</th>
+              <th title="会社マスタ管理の勤怠丸め設定を適用した後の退勤時刻。丸め設定が無の場合は表示されません">退勤(丸め後)</th>
               <th title="従業員マスタ管理で設定した所定始業時刻">所定始業時刻</th>
               <th title="従業員マスタ管理で設定した所定終業時刻">所定終業時刻</th>
               <th>休憩(分)</th>
@@ -72,7 +74,7 @@
               <th title="法定休日労働時間 + 深夜労働時間">法定休日+深夜</th>
             </tr>
             <tr class="month-total-row" id="monthTotalTopRow">
-              <td>月合計</td><td></td><td></td><td></td><td></td><td></td><td></td>
+              <td>月合計</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
               <td class="computed" data-role="worked"></td>
               <td class="computed" data-role="legalWithin"></td>
               <td class="computed" data-role="overtimeWithin60"></td>
@@ -90,7 +92,7 @@
           <tbody></tbody>
           <tfoot>
             <tr class="month-total-row" id="monthTotalBottomRow">
-              <td>月合計</td><td></td><td></td><td></td><td></td><td></td><td></td>
+              <td>月合計</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
               <td class="computed" data-role="worked"></td>
               <td class="computed" data-role="legalWithin"></td>
               <td class="computed" data-role="overtimeWithin60"></td>
@@ -120,6 +122,6 @@
 <script src="calc.js?v=16"></script>
 <script src="data.js?v=17"></script>
 <script src="common.js?v=12"></script>
-<script src="attendance.js?v=9"></script>
+<script src="attendance.js?v=10"></script>
 </body>
 </html>
