@@ -39,6 +39,16 @@ function fmtHm(minutes) {
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
+// 丸め後の出勤・退勤時刻（0時からの経過分）を時刻表示（HH:MM）にする。
+// 24時（1440分）以上・0分未満に丸められた場合は日をまたいだ時刻として折り返す
+function fmtClockTime(minutes) {
+  if (minutes === null || minutes === undefined) return '—';
+  const wrapped = ((minutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(wrapped / 60);
+  const m = wrapped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 // 「法定外60内」の直後に「週残業」、「深夜」の直後に「週深夜残業時間」を挿入した表示順
 const OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY = (() => {
   const cols = OVERTIME_MINUTE_COLUMNS.slice();
@@ -115,6 +125,9 @@ async function renderDayTable() {
     const scheduledEnd = rec.scheduledEnd || employee.workEnd || '';
     const worked = computeWorkedMinutes(rec, company);
     workedTotal += worked || 0;
+    // 丸め後の出勤・退勤時刻は、会社マスタ管理で丸め設定が有効な場合のみ表示する
+    const roundedClockIn = company.roundingEnabled ? roundClockInMinutes(timeToMinutes(rec.clockIn), company) : null;
+    const roundedClockOut = company.roundingEnabled ? roundClockOutMinutes(timeToMinutes(rec.clockOut), company) : null;
     weeklyOvertimeTotal += weeklyByDay[idx].weeklyOvertime;
     weeklyOvertimeNightTotal += weeklyByDay[idx].weeklyOvertimeNight;
     const dayValues = Object.assign({}, overtimeByDay[idx], weeklyByDay[idx]);
@@ -137,7 +150,9 @@ async function renderDayTable() {
         </select>
       </td>
       <td><input type="time" data-field="clockIn" value="${rec.clockIn || ''}" ${isTimeless ? 'disabled' : ''}></td>
+      <td class="computed" data-role="clockInRounded">${fmtClockTime(roundedClockIn)}</td>
       <td><input type="time" data-field="clockOut" value="${rec.clockOut || ''}" ${isTimeless ? 'disabled' : ''}></td>
+      <td class="computed" data-role="clockOutRounded">${fmtClockTime(roundedClockOut)}</td>
       <td><input type="time" data-field="scheduledStart" value="${escapeHtml(scheduledStart)}" ${isTimeless ? 'disabled' : ''}></td>
       <td><input type="time" data-field="scheduledEnd" value="${escapeHtml(scheduledEnd)}" ${isTimeless ? 'disabled' : ''}></td>
       <td><input type="number" min="0" step="5" data-field="breakMinutes" value="${rec.breakMinutes ?? 60}" ${isTimeless ? 'disabled' : ''}></td>
