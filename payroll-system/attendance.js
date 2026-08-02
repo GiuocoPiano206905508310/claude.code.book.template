@@ -150,8 +150,8 @@ async function renderDayTable() {
         </select>
       </td>
       <td><input type="time" data-field="clockIn" value="${rec.clockIn || ''}" ${isTimeless ? 'disabled' : ''}></td>
-      <td class="computed" data-role="clockInRounded">${fmtClockTime(roundedClockIn)}</td>
       <td><input type="time" data-field="clockOut" value="${rec.clockOut || ''}" ${isTimeless ? 'disabled' : ''}></td>
+      <td class="computed" data-role="clockInRounded">${fmtClockTime(roundedClockIn)}</td>
       <td class="computed" data-role="clockOutRounded">${fmtClockTime(roundedClockOut)}</td>
       <td><input type="time" data-field="scheduledStart" value="${escapeHtml(scheduledStart)}" ${isTimeless ? 'disabled' : ''}></td>
       <td><input type="time" data-field="scheduledEnd" value="${escapeHtml(scheduledEnd)}" ${isTimeless ? 'disabled' : ''}></td>
