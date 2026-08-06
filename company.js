@@ -239,18 +239,15 @@ document.getElementById('roundingEnabled').addEventListener('change', applyRound
 attachRoundingRowEvents();
 
 // ---------------------------------------------------------------------------
-// 編集ロック: 「編集する」を押すまで入力・変更できないようにする
+// 編集ロック: 支社選択の「編集」を押すまで入力・変更できないようにする
 // ---------------------------------------------------------------------------
 function setEditMode(editing) {
   document.querySelectorAll('#companyFormCard select, #companyFormCard input').forEach((el) => {
     el.disabled = !editing;
   });
-  document.getElementById('editBtn').style.display = editing ? 'none' : '';
   document.getElementById('editModeNote').style.display = editing ? '' : 'none';
   document.getElementById('editSaveRow').style.display = editing ? '' : 'none';
 }
-
-document.getElementById('editBtn').addEventListener('click', () => setEditMode(true));
 
 document.getElementById('cancelEditBtn').addEventListener('click', async () => {
   await loadFormFromCompany();
@@ -288,7 +285,7 @@ async function switchToBranch(branchId) {
   currentBranchId = branchId;
   renderBranchList();
   await loadFormFromCompany();
-  setEditMode(false);
+  setEditMode(true);
   showExportStatus('saveStatus', '', false);
   showExportStatus('branchStatus', '', false);
 }
