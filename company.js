@@ -8,18 +8,24 @@
 let companyBranches = [];
 let currentBranchId = null;
 
-function populateBranchSelect() {
-  const select = document.getElementById('branchSelect');
-  select.innerHTML = companyBranches.map((b) =>
-    `<option value="${b.id}">${escapeHtml(b.branchName)}${b.isHeadOffice ? '（本社）' : ''}</option>`
-  ).join('');
-  select.value = currentBranchId;
+function renderBranchList() {
+  const tbody = document.querySelector('#branchListTable tbody');
+  tbody.innerHTML = companyBranches.map((b) => `
+    <tr data-branch-id="${b.id}"${b.id === currentBranchId ? ' style="background:var(--surface-line);"' : ''}>
+      <td>${escapeHtml(b.branchName)}</td>
+      <td>${b.isHeadOffice ? '本社' : '支社'}</td>
+      <td class="actions">
+        <button type="button" class="btn btn-sm btn-outline" data-action="edit-branch" data-id="${b.id}">編集</button>
+        <button type="button" class="btn btn-sm btn-danger" data-action="delete-branch" data-id="${b.id}"${b.isHeadOffice ? ' disabled title="本社は削除できません"' : ''}>削除</button>
+      </td>
+    </tr>
+  `).join('');
 }
 
 async function refreshBranchList(selectId) {
   companyBranches = await listBranches();
   currentBranchId = selectId || (companyBranches.find((b) => b.isHeadOffice) || companyBranches[0]).id;
-  populateBranchSelect();
+  renderBranchList();
 }
 
 // ---------------------------------------------------------------------------
@@ -271,30 +277,59 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 });
 
 // ---------------------------------------------------------------------------
-// 支社の切り替え・追加
+// 支社の切り替え・追加・削除
 // ---------------------------------------------------------------------------
-document.getElementById('branchSelect').addEventListener('change', async (e) => {
+async function switchToBranch(branchId) {
   const wasEditing = document.getElementById('editModeNote').style.display !== 'none';
   if (wasEditing && !confirm('編集中の内容は保存されていません。破棄して支社を切り替えますか？')) {
-    e.target.value = currentBranchId;
     return;
   }
-  currentBranchId = e.target.value;
+  currentBranchId = branchId;
+  renderBranchList();
   await loadFormFromCompany();
   setEditMode(false);
   showExportStatus('saveStatus', '', false);
   showExportStatus('branchStatus', '', false);
+}
+
+document.querySelector('#branchListTable tbody').addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('[data-action="edit-branch"]');
+  if (editBtn) {
+    await switchToBranch(editBtn.dataset.id);
+    return;
+  }
+  const deleteBtn = e.target.closest('[data-action="delete-branch"]');
+  if (deleteBtn) {
+    const branch = companyBranches.find((b) => b.id === deleteBtn.dataset.id);
+    if (!branch || branch.isHeadOffice) return;
+    const ok = confirm(`支社「${branch.branchName}」を削除します。この支社に所属している従業員は所属支社が未設定になります。よろしいですか？`);
+    if (!ok) return;
+    deleteBtn.disabled = true;
+    try {
+      await deleteBranch(branch.id);
+      const wasCurrent = branch.id === currentBranchId;
+      await refreshBranchList(wasCurrent ? null : currentBranchId);
+      if (wasCurrent) {
+        await loadFormFromCompany();
+        setEditMode(false);
+      }
+      showExportStatus('branchStatus', `支社「${branch.branchName}」を削除しました。`, false);
+    } catch (err) {
+      showExportStatus('branchStatus', '支社の削除に失敗しました：' + err.message, true);
+      deleteBtn.disabled = false;
+    }
+  }
 });
 
 document.getElementById('addBranchBtn').addEventListener('click', async () => {
   const nameInput = document.getElementById('newBranchNameInput');
   const name = nameInput.value.trim();
   if (!name) {
-    alert('新しい支社名を入力してください。');
+    showExportStatus('branchStatus', '新しい支社名を入力してください。', true);
     return;
   }
   if (companyBranches.some((b) => b.branchName === name)) {
-    alert(`支社名「${name}」は既に使用されています。別の名称を入力してください。`);
+    showExportStatus('branchStatus', `支社名「${name}」は既に登録された支社です。別の名称を入力してください。`, true);
     return;
   }
   const btn = document.getElementById('addBranchBtn');

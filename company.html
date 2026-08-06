@@ -23,12 +23,14 @@
 
   <section class="card form-card" aria-label="支社選択" id="branchCard">
     <h2>支社選択</h2>
-    <div class="field-row">
-      <label for="branchSelect">設定を表示・編集する支社</label>
-      <div class="field-input"><select id="branchSelect"></select></div>
-      <p class="field-note">※ 支社ごとに休日・保険料率・割増率・勤怠丸め設定などをすべて個別に設定できます。</p>
+    <p class="field-note">※ 登録した順に表示されます。「編集」を押すと、下の会社マスタ情報にその支社の設定を表示・編集できます。支社ごとに休日・保険料率・割増率・勤怠丸め設定などをすべて個別に設定できます。</p>
+    <div class="data-table-wrap">
+      <table class="data-table" id="branchListTable">
+        <thead><tr><th>支社名</th><th>区分</th><th>操作</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px;">
       <input type="text" id="newBranchNameInput" placeholder="例：〇〇支社" style="flex:1; min-width:200px;">
       <button id="addBranchBtn" type="button" class="btn btn-outline">＋ 新しい支社を追加（本社の設定をコピー）</button>
     </div>
@@ -337,8 +339,8 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
 <script src="calc.js?v=16"></script>
-<script src="data.js?v=18"></script>
+<script src="data.js?v=19"></script>
 <script src="common.js?v=12"></script>
-<script src="company.js?v=9"></script>
+<script src="company.js?v=10"></script>
 </body>
 </html>
