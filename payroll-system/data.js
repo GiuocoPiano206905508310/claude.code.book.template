@@ -589,7 +589,7 @@ async function ensureHeadOfficeBranch() {
 
 async function listBranches() {
   const { data, error } = await supabaseClient.from('company_branches').select('*')
-    .order('is_head_office', { ascending: false }).order('branch_name');
+    .order('created_at', { ascending: true });
   if (error) throw error;
   if (!data || !data.length) {
     const head = await ensureHeadOfficeBranch();
