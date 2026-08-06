@@ -32,15 +32,15 @@
         </div>
       </div>
       <div class="field-row">
+        <label for="branchSelect">所属支社</label>
+        <div class="field-input"><select id="branchSelect"></select></div>
+        <p class="field-note">※ 保険料率・割増率・勤怠丸め設定など<a href="company.html">会社マスタ管理</a>の設定は、ここで選択した支社の内容が使用されます。</p>
+      </div>
+      <div class="field-row">
         <label for="department">部署名</label>
         <div class="field-input">
           <input type="text" id="department" placeholder="例：営業部">
         </div>
-      </div>
-      <div class="field-row">
-        <label for="branchSelect">所属支社</label>
-        <div class="field-input"><select id="branchSelect"></select></div>
-        <p class="field-note">※ 保険料率・割増率・勤怠丸め設定など<a href="company.html">会社マスタ管理</a>の設定は、ここで選択した支社の内容が使用されます。</p>
       </div>
       <div class="field-row">
         <label for="empName">氏名</label>
@@ -300,6 +300,8 @@
               <th>操作</th>
               <th class="sortable" data-sort="employeeNumber">従業員番号<span class="sort-indicator"></span></th>
               <th class="sortable" data-sort="name">氏名<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort="branchName">所属支社<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort="department">部署<span class="sort-indicator"></span></th>
               <th class="sortable" data-sort="employmentType">雇用形態<span class="sort-indicator"></span></th>
               <th class="sortable" data-sort="insurance">取得保険<span class="sort-indicator"></span></th>
             </tr>
@@ -307,6 +309,8 @@
               <th></th>
               <th><input type="text" id="filterEmployeeNumber" placeholder="絞り込み"></th>
               <th><input type="text" id="filterName" placeholder="絞り込み"></th>
+              <th></th>
+              <th></th>
               <th>
                 <select id="filterEmploymentType">
                   <option value="">すべて</option>
@@ -345,6 +349,6 @@
 <script src="calc.js?v=16"></script>
 <script src="data.js?v=18"></script>
 <script src="common.js?v=12"></script>
-<script src="employees.js?v=18"></script>
+<script src="employees.js?v=19"></script>
 </body>
 </html>
