@@ -193,6 +193,11 @@ function headOfficeBranchId() {
   return head ? head.id : '';
 }
 
+function employeeBranchName(emp) {
+  const branch = employeeBranches.find((b) => b.id === emp.branchId);
+  return branch ? branch.branchName : '';
+}
+
 // ---------------------------------------------------------------------------
 // その他手当（複数行、割増賃金基礎からの除外チェック付き）
 // ---------------------------------------------------------------------------
@@ -443,11 +448,12 @@ function filterAndSortEmployees(employees) {
   });
 
   if (employeeSortKey) {
-    result = result.slice().sort((a, b) => {
-      const va = employeeSortKey === 'insurance' ? employeeInsuranceLabel(a) : String(a[employeeSortKey] || '');
-      const vb = employeeSortKey === 'insurance' ? employeeInsuranceLabel(b) : String(b[employeeSortKey] || '');
-      return va.localeCompare(vb, 'ja', { numeric: true }) * employeeSortDir;
-    });
+    const sortValue = (emp) => {
+      if (employeeSortKey === 'insurance') return employeeInsuranceLabel(emp);
+      if (employeeSortKey === 'branchName') return employeeBranchName(emp);
+      return String(emp[employeeSortKey] || '');
+    };
+    result = result.slice().sort((a, b) => sortValue(a).localeCompare(sortValue(b), 'ja', { numeric: true }) * employeeSortDir);
   }
   return result;
 }
@@ -472,7 +478,7 @@ async function renderEmployeeTable() {
   tbody.innerHTML = '';
 
   if (!employees.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--ink-faint);">絞り込み条件に一致する従業員がいません。</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--ink-faint);">絞り込み条件に一致する従業員がいません。</td></tr>';
     return;
   }
 
@@ -485,6 +491,8 @@ async function renderEmployeeTable() {
       </td>
       <td>${escapeHtml(emp.employeeNumber)}</td>
       <td>${escapeHtml(emp.name)}${emp.nameKana ? `<br><span style="font-size:11px;color:var(--ink-faint);">${escapeHtml(emp.nameKana)}</span>` : ''}</td>
+      <td>${escapeHtml(employeeBranchName(emp))}</td>
+      <td>${escapeHtml(emp.department)}</td>
       <td>${escapeHtml(emp.employmentType)}</td>
       <td>${escapeHtml(employeeInsuranceLabel(emp))}</td>
     `;
