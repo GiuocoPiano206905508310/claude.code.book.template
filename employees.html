@@ -38,6 +38,11 @@
         </div>
       </div>
       <div class="field-row">
+        <label for="branchSelect">所属支社</label>
+        <div class="field-input"><select id="branchSelect"></select></div>
+        <p class="field-note">※ 保険料率・割増率・勤怠丸め設定など<a href="company.html">会社マスタ管理</a>の設定は、ここで選択した支社の内容が使用されます。</p>
+      </div>
+      <div class="field-row">
         <label for="empName">氏名</label>
         <div class="field-input">
           <input type="text" id="empName" placeholder="例：山田 太郎">
@@ -278,10 +283,7 @@
         </div>
         <p class="field-note">※ 月平均所定労働時間 = (365日または閏年366日 － 年間休日日数) × 1日の所定労働時間数 ÷ 12ヶ月)</p>
       </div>
-      <p class="field-note">※ 割増手当・欠勤控除は、勤怠管理画面の月次集計値と上記設定から給与計算画面で自動算出されます（給与計算画面で個別に上書きも可能）。</p>
-
-      <h2 class="section-2">割増率（デフォルトの割増率未満に設定不可）</h2>
-      <div id="overtimeRatesList"></div>
+      <p class="field-note">※ 割増手当・欠勤控除は、勤怠管理画面の月次集計値と上記設定から給与計算画面で自動算出されます（給与計算画面で個別に上書きも可能）。割増率は<a href="company.html">会社マスタ管理</a>で支社ごとに設定します。</p>
 
       <div style="display:flex; gap:10px; margin-top:22px;">
         <button id="saveBtn" type="button" class="btn btn-block">保存する</button>
@@ -341,8 +343,8 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
 <script src="calc.js?v=16"></script>
-<script src="data.js?v=17"></script>
+<script src="data.js?v=18"></script>
 <script src="common.js?v=12"></script>
-<script src="employees.js?v=17"></script>
+<script src="employees.js?v=18"></script>
 </body>
 </html>

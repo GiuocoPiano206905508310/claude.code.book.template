@@ -51,7 +51,7 @@ async function resetFormToNewBonus() {
   editingBonusId = null;
   const employee = await currentEmployee();
   if (!employee) return;
-  const company = await getCompany();
+  const company = await getCompany(employee.branchId);
 
   document.getElementById('bonusLabel').value = '';
   document.getElementById('bonusDate').value = new Date().toISOString().slice(0, 10);
@@ -98,7 +98,8 @@ async function loadFormFromBonusRecord(record) {
   };
   renderEmployeeInfoGrid(currentEmployeeFields);
 
-  const company = await getCompany();
+  const employee = await currentEmployee();
+  const company = await getCompany(employee ? employee.branchId : null);
   currentCompanyFields = {
     calcMethod: input.calcMethod,
     healthRate: input.healthRate,

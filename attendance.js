@@ -92,7 +92,7 @@ async function renderDayTable() {
   tbody.innerHTML = '';
   if (!employee || !ym) return;
 
-  const company = await getCompany();
+  const company = await getCompany(employee.branchId);
   const [y, m] = ym.split('-').map(Number);
   const periodDates = buildPayPeriodDates(y, m, company.paycheckClosingDay);
   const first = periodDates[0];

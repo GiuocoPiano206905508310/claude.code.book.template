@@ -44,11 +44,8 @@ function employeeRowToObj(row) {
     weeklyScheduledDays: Number(row.weekly_scheduled_days) || 5,
     monthlyStandardHours: Number(row.monthly_standard_hours),
     monthlyStandardDays: Number(row.monthly_standard_days),
+    branchId: row.branch_id || null,
   };
-  const rates = row.overtime_rates || {};
-  OVERTIME_RATE_CATEGORIES.forEach((c) => {
-    obj[c.key] = rates[c.key] !== undefined ? rates[c.key] : c.defaultRate;
-  });
   const fixedOT = row.fixed_overtime || {};
   obj.fixedOvertimeEnabled = !!fixedOT.enabled;
   obj.fixedOvertimeAllowanceName = fixedOT.allowanceName || '';
@@ -70,12 +67,11 @@ function employeeRowToObj(row) {
 }
 
 function employeeObjToRow(emp, userId) {
-  const rates = {};
-  OVERTIME_RATE_CATEGORIES.forEach((c) => { rates[c.key] = emp[c.key]; });
   return {
     user_id: userId,
     employee_number: emp.employeeNumber || null,
     department: emp.department || null,
+    branch_id: emp.branchId || null,
     name: emp.name,
     name_kana: emp.nameKana || null,
     gender: emp.gender || null,
@@ -97,7 +93,6 @@ function employeeObjToRow(emp, userId) {
     weekly_scheduled_days: emp.weeklyScheduledDays,
     monthly_standard_hours: emp.monthlyStandardHours,
     monthly_standard_days: emp.monthlyStandardDays,
-    overtime_rates: rates,
     fixed_overtime: {
       enabled: !!emp.fixedOvertimeEnabled,
       allowanceName: emp.fixedOvertimeAllowanceName || '',
@@ -486,6 +481,8 @@ function defaultRoundingRules() {
 
 function defaultCompany() {
   return {
+    branchName: '本社',
+    isHeadOffice: true,
     companyName: '',
     statutoryHolidayWeekday: 0, // 0=日曜日 〜 6=土曜日
     scheduledHolidayWeekday: 6, // 0=日曜日 〜 6=土曜日
@@ -516,45 +513,45 @@ function defaultCompany() {
       round100: false, // (1) 賃金支払額の100円未満端数を50円未満切捨て・以上切上げ
       carryOver1000: false, // (2) 1,000円未満の端数を翌月の賃金支払日に繰り越して支払う
     },
+    overtimeRates: defaultOvertimeRates(),
   };
 }
 
-// サインアップ時にuser_idのみのプレースホルダー行を作成しているため（login.js参照）、
-// 行自体は存在してもほとんどの列がnull/undefinedの場合がある。列ごとに未設定なら
-// defaultCompany()の値にフォールバックする（存在チェックを行全体ではなく列単位で行う）。
-async function getCompany() {
-  const { data, error } = await supabaseClient.from('company_settings').select('*').maybeSingle();
-  if (error) throw error;
+function companyRowToObj(row) {
   const defaults = defaultCompany();
-  if (!data) return defaults;
   const orNum = (v, fallback) => (v !== null && v !== undefined ? Number(v) : fallback);
   return {
-    companyName: data.company_name || defaults.companyName,
-    statutoryHolidayWeekday: orNum(data.statutory_holiday_weekday, defaults.statutoryHolidayWeekday),
-    scheduledHolidayWeekday: orNum(data.scheduled_holiday_weekday, defaults.scheduledHolidayWeekday),
-    weekStartDay: orNum(data.week_start_day, defaults.weekStartDay),
-    weeklyOvertimeThreshold: orNum(data.weekly_overtime_threshold, defaults.weeklyOvertimeThreshold),
-    paycheckClosingDay: data.paycheck_closing_day || defaults.paycheckClosingDay,
-    paycheckPaymentDay: data.paycheck_payment_day || defaults.paycheckPaymentDay,
-    healthInsuranceType: data.health_insurance_type || defaults.healthInsuranceType,
-    prefecture: data.prefecture || defaults.prefecture,
-    healthRate: orNum(data.health_rate, defaults.healthRate),
-    careRate: orNum(data.care_rate, defaults.careRate),
-    pensionRate: orNum(data.pension_rate, defaults.pensionRate),
-    industryType: data.industry_type || defaults.industryType,
-    employmentRate: orNum(data.employment_rate, defaults.employmentRate),
-    calcMethod: data.calc_method || defaults.calcMethod,
-    roundingEnabled: data.rounding_enabled !== null && data.rounding_enabled !== undefined ? !!data.rounding_enabled : defaults.roundingEnabled,
-    roundingRules: data.rounding_rules || defaults.roundingRules,
-    overtimeFractionRules: data.overtime_fraction_rules || defaults.overtimeFractionRules,
-    monthlyPaymentFractionRules: data.monthly_payment_fraction_rules || defaults.monthlyPaymentFractionRules,
+    id: row.id,
+    branchName: row.branch_name || defaults.branchName,
+    isHeadOffice: !!row.is_head_office,
+    companyName: row.company_name || defaults.companyName,
+    statutoryHolidayWeekday: orNum(row.statutory_holiday_weekday, defaults.statutoryHolidayWeekday),
+    scheduledHolidayWeekday: orNum(row.scheduled_holiday_weekday, defaults.scheduledHolidayWeekday),
+    weekStartDay: orNum(row.week_start_day, defaults.weekStartDay),
+    weeklyOvertimeThreshold: orNum(row.weekly_overtime_threshold, defaults.weeklyOvertimeThreshold),
+    paycheckClosingDay: row.paycheck_closing_day || defaults.paycheckClosingDay,
+    paycheckPaymentDay: row.paycheck_payment_day || defaults.paycheckPaymentDay,
+    healthInsuranceType: row.health_insurance_type || defaults.healthInsuranceType,
+    prefecture: row.prefecture || defaults.prefecture,
+    healthRate: orNum(row.health_rate, defaults.healthRate),
+    careRate: orNum(row.care_rate, defaults.careRate),
+    pensionRate: orNum(row.pension_rate, defaults.pensionRate),
+    industryType: row.industry_type || defaults.industryType,
+    employmentRate: orNum(row.employment_rate, defaults.employmentRate),
+    calcMethod: row.calc_method || defaults.calcMethod,
+    roundingEnabled: row.rounding_enabled !== null && row.rounding_enabled !== undefined ? !!row.rounding_enabled : defaults.roundingEnabled,
+    roundingRules: row.rounding_rules || defaults.roundingRules,
+    overtimeFractionRules: row.overtime_fraction_rules || defaults.overtimeFractionRules,
+    monthlyPaymentFractionRules: row.monthly_payment_fraction_rules || defaults.monthlyPaymentFractionRules,
+    overtimeRates: row.overtime_rates || defaultOvertimeRates(),
   };
 }
 
-async function saveCompany(company) {
-  const userId = await getCurrentUserId();
-  const { error } = await supabaseClient.from('company_settings').upsert({
+function companyObjToRow(company, userId) {
+  return {
     user_id: userId,
+    branch_name: company.branchName || '本社',
+    is_head_office: !!company.isHeadOffice,
     company_name: company.companyName || null,
     statutory_holiday_weekday: company.statutoryHolidayWeekday,
     scheduled_holiday_weekday: company.scheduledHolidayWeekday,
@@ -574,8 +571,71 @@ async function saveCompany(company) {
     rounding_rules: company.roundingRules || defaultRoundingRules(),
     overtime_fraction_rules: company.overtimeFractionRules || {},
     monthly_payment_fraction_rules: company.monthlyPaymentFractionRules || {},
+    overtime_rates: company.overtimeRates || defaultOvertimeRates(),
     updated_at: new Date().toISOString(),
-  });
+  };
+}
+
+// 会社マスタ（本社・支社ごとに複数レコードを持てる）。
+// サインアップ直後などまだ1件も登録がない場合は、本社レコードをデフォルト値で
+// 自動作成する（従来の単一会社設定と同じ挙動をユーザーが意識せず使えるようにするため）。
+async function ensureHeadOfficeBranch() {
+  const userId = await getCurrentUserId();
+  const row = companyObjToRow(defaultCompany(), userId);
+  const { data, error } = await supabaseClient.from('company_branches').insert(row).select().single();
+  if (error) throw error;
+  return companyRowToObj(data);
+}
+
+async function listBranches() {
+  const { data, error } = await supabaseClient.from('company_branches').select('*')
+    .order('is_head_office', { ascending: false }).order('branch_name');
+  if (error) throw error;
+  if (!data || !data.length) {
+    const head = await ensureHeadOfficeBranch();
+    return [head];
+  }
+  return data.map(companyRowToObj);
+}
+
+// branchIdを指定するとその支社の設定を返す（存在しなければ本社設定にフォールバック）。
+// 指定しない場合は本社の設定を返す。本社レコードが1件も無い場合は自動作成する。
+async function getCompany(branchId) {
+  if (branchId) {
+    const { data, error } = await supabaseClient.from('company_branches').select('*').eq('id', branchId).maybeSingle();
+    if (error) throw error;
+    if (data) return companyRowToObj(data);
+  }
+  const { data, error } = await supabaseClient.from('company_branches').select('*').eq('is_head_office', true).maybeSingle();
+  if (error) throw error;
+  if (data) return companyRowToObj(data);
+  return await ensureHeadOfficeBranch();
+}
+
+// branch.idが未設定なら新規追加、設定済みなら更新
+async function saveBranch(branch) {
+  const userId = await getCurrentUserId();
+  const row = companyObjToRow(branch, userId);
+  if (branch.id) {
+    const { data, error } = await supabaseClient.from('company_branches').update(row).eq('id', branch.id).select().single();
+    if (error) throw error;
+    return companyRowToObj(data);
+  }
+  const { data, error } = await supabaseClient.from('company_branches').insert(row).select().single();
+  if (error) throw error;
+  return companyRowToObj(data);
+}
+
+// 本社の設定内容をすべて引き継いだ新しい支社を作成する
+// （デフォルト反映後、各項目の変更・修正は通常のsaveBranchで行う）
+async function createBranchFromHeadOffice(branchName) {
+  const head = await getCompany();
+  const newBranch = Object.assign({}, head, { id: undefined, branchName: branchName || '', isHeadOffice: false });
+  return await saveBranch(newBranch);
+}
+
+async function deleteBranch(branchId) {
+  const { error } = await supabaseClient.from('company_branches').delete().eq('id', branchId);
   if (error) throw error;
 }
 

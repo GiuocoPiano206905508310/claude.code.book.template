@@ -1,6 +1,81 @@
 // ============================================================================
-// 会社マスタ管理画面のロジック（全従業員共通の保険料率設定）
+// 会社マスタ管理画面のロジック（本社・支社ごとの保険料率設定）
 // ============================================================================
+
+// ---------------------------------------------------------------------------
+// 支社選択
+// ---------------------------------------------------------------------------
+let companyBranches = [];
+let currentBranchId = null;
+
+function populateBranchSelect() {
+  const select = document.getElementById('branchSelect');
+  select.innerHTML = companyBranches.map((b) =>
+    `<option value="${b.id}">${escapeHtml(b.branchName)}${b.isHeadOffice ? '（本社）' : ''}</option>`
+  ).join('');
+  select.value = currentBranchId;
+}
+
+async function refreshBranchList(selectId) {
+  companyBranches = await listBranches();
+  currentBranchId = selectId || (companyBranches.find((b) => b.isHeadOffice) || companyBranches[0]).id;
+  populateBranchSelect();
+}
+
+// ---------------------------------------------------------------------------
+// 割増率（9区分）
+// ---------------------------------------------------------------------------
+function renderOvertimeRatesList(rates) {
+  const container = document.getElementById('overtimeRatesList');
+  container.innerHTML = OVERTIME_RATE_CATEGORIES.map((c) => `
+    <div class="field-row" data-rate-key="${c.key}">
+      <label for="rate_${c.key}">${c.label}</label>
+      <div class="field-input" id="rateInput_${c.key}">
+        <input type="number" id="rate_${c.key}" min="0" step="0.01" value="${Number(rates[c.key]).toFixed(2)}">
+        <span class="unit">倍</span>
+      </div>
+      <p class="rate-error" id="rateError_${c.key}"></p>
+    </div>
+  `).join('');
+
+  OVERTIME_RATE_CATEGORIES.forEach((c) => {
+    document.getElementById(`rate_${c.key}`).addEventListener('input', () => validateRateField(c.key));
+  });
+}
+
+function validateRateField(key) {
+  const category = OVERTIME_RATE_CATEGORIES.find((c) => c.key === key);
+  const input = document.getElementById(`rate_${key}`);
+  const errorEl = document.getElementById(`rateError_${key}`);
+  const wrap = document.getElementById(`rateInput_${key}`);
+  const value = Number(input.value);
+  const invalid = Number.isNaN(value) || value < category.defaultRate;
+  errorEl.textContent = invalid ? '法定の割増率を下回っています' : '';
+  wrap.classList.toggle('is-invalid', invalid);
+  return !invalid;
+}
+
+function validateAllRateFields() {
+  let allValid = true;
+  let firstInvalidKey = null;
+  OVERTIME_RATE_CATEGORIES.forEach((c) => {
+    const ok = validateRateField(c.key);
+    if (!ok && !firstInvalidKey) firstInvalidKey = c.key;
+    allValid = allValid && ok;
+  });
+  if (firstInvalidKey) {
+    document.getElementById(`rate_${firstInvalidKey}`).focus();
+  }
+  return allValid;
+}
+
+function collectRatesFromForm() {
+  const rates = {};
+  OVERTIME_RATE_CATEGORIES.forEach((c) => {
+    rates[c.key] = Number(document.getElementById(`rate_${c.key}`).value) || c.defaultRate;
+  });
+  return rates;
+}
 
 function applyPrefectureRateToForm() {
   const prefecture = document.getElementById('prefecture').value;
@@ -75,7 +150,8 @@ function attachRoundingRowEvents() {
 }
 
 async function loadFormFromCompany() {
-  const company = await getCompany();
+  const company = await getCompany(currentBranchId);
+  document.getElementById('branchNameInput').value = company.branchName || '';
   document.getElementById('statutoryHolidayWeekday').value = String(company.statutoryHolidayWeekday);
   document.getElementById('scheduledHolidayWeekday').value = String(company.scheduledHolidayWeekday);
   document.getElementById('weekStartDay').value = String(company.weekStartDay);
@@ -91,6 +167,8 @@ async function loadFormFromCompany() {
   document.getElementById('pensionRate').value = Number(company.pensionRate).toFixed(2);
   document.getElementById('employmentRate').value = Number(company.employmentRate).toFixed(2);
   document.getElementById('calcMethod').value = company.calcMethod;
+
+  renderOvertimeRatesList(company.overtimeRates || defaultOvertimeRates());
 
   document.getElementById('roundingEnabled').value = String(!!company.roundingEnabled);
   applyRoundingEnabledToForm();
@@ -108,7 +186,12 @@ async function loadFormFromCompany() {
 }
 
 function collectFormAsCompany() {
+  const branch = companyBranches.find((b) => b.id === currentBranchId);
   return {
+    id: currentBranchId,
+    branchName: document.getElementById('branchNameInput').value.trim() || '本社',
+    isHeadOffice: branch ? branch.isHeadOffice : false,
+    overtimeRates: collectRatesFromForm(),
     statutoryHolidayWeekday: Number(document.getElementById('statutoryHolidayWeekday').value),
     scheduledHolidayWeekday: Number(document.getElementById('scheduledHolidayWeekday').value),
     weekStartDay: Number(document.getElementById('weekStartDay').value),
@@ -169,14 +252,62 @@ document.getElementById('cancelEditBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('saveBtn').addEventListener('click', async () => {
+  if (!validateAllRateFields()) {
+    alert('割増率が法定の下限を下回っている項目があります。赤字のエラーを確認し、修正してください。');
+    return;
+  }
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
   try {
-    await saveCompany(collectFormAsCompany());
+    await saveBranch(collectFormAsCompany());
+    await refreshBranchList(currentBranchId);
     showExportStatus('saveStatus', '会社マスタ情報を保存しました。', false);
     setEditMode(false);
   } catch (e) {
     showExportStatus('saveStatus', '保存に失敗しました：' + e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 支社の切り替え・追加
+// ---------------------------------------------------------------------------
+document.getElementById('branchSelect').addEventListener('change', async (e) => {
+  const wasEditing = document.getElementById('editModeNote').style.display !== 'none';
+  if (wasEditing && !confirm('編集中の内容は保存されていません。破棄して支社を切り替えますか？')) {
+    e.target.value = currentBranchId;
+    return;
+  }
+  currentBranchId = e.target.value;
+  await loadFormFromCompany();
+  setEditMode(false);
+  showExportStatus('saveStatus', '', false);
+  showExportStatus('branchStatus', '', false);
+});
+
+document.getElementById('addBranchBtn').addEventListener('click', async () => {
+  const nameInput = document.getElementById('newBranchNameInput');
+  const name = nameInput.value.trim();
+  if (!name) {
+    alert('新しい支社名を入力してください。');
+    return;
+  }
+  if (companyBranches.some((b) => b.branchName === name)) {
+    alert(`支社名「${name}」は既に使用されています。別の名称を入力してください。`);
+    return;
+  }
+  const btn = document.getElementById('addBranchBtn');
+  btn.disabled = true;
+  try {
+    const created = await createBranchFromHeadOffice(name);
+    nameInput.value = '';
+    await refreshBranchList(created.id);
+    await loadFormFromCompany();
+    setEditMode(false);
+    showExportStatus('branchStatus', `支社「${name}」を追加しました（本社の設定をコピーしています）。`, false);
+  } catch (e) {
+    showExportStatus('branchStatus', '支社の追加に失敗しました：' + e.message, true);
   } finally {
     btn.disabled = false;
   }
@@ -187,6 +318,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   if (!user) return;
   renderNavbar('company.html');
   renderNavbarUser(user);
+  await refreshBranchList();
   await loadFormFromCompany();
   setEditMode(false);
 })();
