@@ -10,8 +10,9 @@ let currentBranchId = null;
 
 function renderBranchList() {
   const tbody = document.querySelector('#branchListTable tbody');
-  tbody.innerHTML = companyBranches.map((b) => `
+  tbody.innerHTML = companyBranches.map((b, i) => `
     <tr data-branch-id="${b.id}"${b.id === currentBranchId ? ' style="background:var(--surface-line);"' : ''}>
+      <td>${i + 1}</td>
       <td>${escapeHtml(b.branchName)}</td>
       <td>${b.isHeadOffice ? '本社' : '支社'}</td>
       <td class="actions">
