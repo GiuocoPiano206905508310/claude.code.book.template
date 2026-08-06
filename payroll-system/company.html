@@ -21,10 +21,31 @@
     <p>※ 入力していただいた情報は、あなたの会社アカウントにのみ保存され、他の会社アカウントからは見えません。</p>
   </div>
 
+  <section class="card form-card" aria-label="支社選択" id="branchCard">
+    <h2>支社選択</h2>
+    <div class="field-row">
+      <label for="branchSelect">設定を表示・編集する支社</label>
+      <div class="field-input"><select id="branchSelect"></select></div>
+      <p class="field-note">※ 支社ごとに休日・保険料率・割増率・勤怠丸め設定などをすべて個別に設定できます。</p>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <input type="text" id="newBranchNameInput" placeholder="例：〇〇支社" style="flex:1; min-width:200px;">
+      <button id="addBranchBtn" type="button" class="btn btn-outline">＋ 新しい支社を追加（本社の設定をコピー）</button>
+    </div>
+    <p class="export-status" id="branchStatus"></p>
+  </section>
+
   <section class="card form-card" aria-label="会社の保険料率・源泉徴収設定" id="companyFormCard">
     <div class="edit-toggle-row">
       <button id="editBtn" type="button" class="btn btn-outline">✏️ 編集する</button>
       <p class="field-note" id="editModeNote" style="display:none; margin:0;">編集中です。内容を確認のうえ「保存する」を押してください。</p>
+    </div>
+
+    <h2 class="section-2">支社名</h2>
+    <div class="field-row">
+      <label for="branchNameInput">支社名</label>
+      <div class="field-input"><input type="text" id="branchNameInput"></div>
+      <p class="field-note">※ 「編集する」を押すと支社名を変更できます。</p>
     </div>
 
     <h2>休日設定</h2>
@@ -273,6 +294,9 @@
       </div>
     </div>
 
+    <h2 class="section-2">割増率（デフォルトの割増率未満に設定不可）</h2>
+    <div id="overtimeRatesList"></div>
+
     <h2 class="section-2">割増賃金計算における端数処理設定</h2>
     <p class="field-note">※ 未チェックの場合は端数処理を行いません（デフォルト）。</p>
     <div class="checkbox-row">
@@ -313,8 +337,8 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
 <script src="calc.js?v=16"></script>
-<script src="data.js?v=17"></script>
+<script src="data.js?v=18"></script>
 <script src="common.js?v=12"></script>
-<script src="company.js?v=8"></script>
+<script src="company.js?v=9"></script>
 </body>
 </html>

@@ -75,7 +75,7 @@ async function loadFormForEmployeeMonth() {
   const ym = document.getElementById('monthInput').value;
   if (!employee || !ym) return;
 
-  const company = await getCompany();
+  const company = await getCompany(employee.branchId);
   currentCompany = company;
   currentAttendanceSummary = await computeMonthSummary(employee, ym, company);
   const commuteAllowanceForOvertimeBase = employee.commuteAllowanceExcludeFromOvertimeBase === false ? (employee.commuteAllowance || 0) : 0;
@@ -152,7 +152,7 @@ async function loadFormForEmployeeMonth() {
   renderFixedOvertimeCard(currentFixedOvertime);
 
   currentOvertimeBreakdown = (input && input.overtimeBreakdown) ? input.overtimeBreakdown : calcOvertimeBreakdown(
-    hourlyWage, employee, currentAttendanceSummary.overtimeCategoryMonthTotals,
+    hourlyWage, company.overtimeRates, currentAttendanceSummary.overtimeCategoryMonthTotals,
     !!employee.fixedOvertimeEnabled, employee.fixedOvertimeMonthlyHours, employee.fixedOvertimeBaseCategories,
     company.overtimeFractionRules
   ).items;
@@ -548,7 +548,7 @@ async function renderWageLedgerTable() {
     return;
   }
 
-  const company = await getCompany();
+  const company = await getCompany(employee.branchId);
   const columns = await buildWageLedgerColumns(employee, company);
   const hasData = columns.length > 0;
   document.getElementById('wageLedgerEmptyState').style.display = hasData ? 'none' : '';

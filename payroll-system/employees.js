@@ -177,58 +177,20 @@ function setupFuriganaAutoFill() {
 }
 
 // ---------------------------------------------------------------------------
-// 割増率（9区分）
+// 所属支社
 // ---------------------------------------------------------------------------
-function renderOvertimeRatesList(rates) {
-  const container = document.getElementById('overtimeRatesList');
-  container.innerHTML = OVERTIME_RATE_CATEGORIES.map((c) => `
-    <div class="field-row" data-rate-key="${c.key}">
-      <label for="rate_${c.key}">${c.label}</label>
-      <div class="field-input" id="rateInput_${c.key}">
-        <input type="number" id="rate_${c.key}" min="0" step="0.01" value="${Number(rates[c.key]).toFixed(2)}">
-        <span class="unit">倍</span>
-      </div>
-      <p class="rate-error" id="rateError_${c.key}"></p>
-    </div>
-  `).join('');
+let employeeBranches = [];
 
-  OVERTIME_RATE_CATEGORIES.forEach((c) => {
-    document.getElementById(`rate_${c.key}`).addEventListener('input', () => validateRateField(c.key));
-  });
+function populateBranchSelect() {
+  const select = document.getElementById('branchSelect');
+  select.innerHTML = employeeBranches.map((b) =>
+    `<option value="${b.id}">${escapeHtml(b.branchName)}${b.isHeadOffice ? '（本社）' : ''}</option>`
+  ).join('');
 }
 
-function validateRateField(key) {
-  const category = OVERTIME_RATE_CATEGORIES.find((c) => c.key === key);
-  const input = document.getElementById(`rate_${key}`);
-  const errorEl = document.getElementById(`rateError_${key}`);
-  const wrap = document.getElementById(`rateInput_${key}`);
-  const value = Number(input.value);
-  const invalid = Number.isNaN(value) || value < category.defaultRate;
-  errorEl.textContent = invalid ? '法定の割増率を下回っています' : '';
-  wrap.classList.toggle('is-invalid', invalid);
-  return !invalid;
-}
-
-function validateAllRateFields() {
-  let allValid = true;
-  let firstInvalidKey = null;
-  OVERTIME_RATE_CATEGORIES.forEach((c) => {
-    const ok = validateRateField(c.key);
-    if (!ok && !firstInvalidKey) firstInvalidKey = c.key;
-    allValid = allValid && ok;
-  });
-  if (firstInvalidKey) {
-    document.getElementById(`rate_${firstInvalidKey}`).focus();
-  }
-  return allValid;
-}
-
-function collectRatesFromForm() {
-  const rates = {};
-  OVERTIME_RATE_CATEGORIES.forEach((c) => {
-    rates[c.key] = Number(document.getElementById(`rate_${c.key}`).value) || c.defaultRate;
-  });
-  return rates;
+function headOfficeBranchId() {
+  const head = employeeBranches.find((b) => b.isHeadOffice) || employeeBranches[0];
+  return head ? head.id : '';
 }
 
 // ---------------------------------------------------------------------------
@@ -328,6 +290,7 @@ function resetForm() {
   document.getElementById('cancelEditBtn').style.display = 'none';
   document.getElementById('employeeNumber').value = '';
   document.getElementById('department').value = '';
+  document.getElementById('branchSelect').value = headOfficeBranchId();
   document.getElementById('empName').value = '';
   document.getElementById('empNameKana').value = '';
   document.getElementById('gender').value = '男性';
@@ -357,7 +320,6 @@ function resetForm() {
   document.getElementById('weeklyScheduledDays').value = '5';
   document.getElementById('monthlyStandardHours').value = '160';
   document.getElementById('monthlyStandardDays').value = '20';
-  renderOvertimeRatesList(defaultOvertimeRates());
   applyEmploymentTypeLabelToForm();
   updateAgeDisplay();
   refreshStandardMonthlyDefaults();
@@ -369,6 +331,8 @@ function loadFormFromEmployee(emp) {
   document.getElementById('cancelEditBtn').style.display = '';
   document.getElementById('employeeNumber').value = emp.employeeNumber || '';
   document.getElementById('department').value = emp.department || '';
+  document.getElementById('branchSelect').value = emp.branchId && employeeBranches.some((b) => b.id === emp.branchId)
+    ? emp.branchId : headOfficeBranchId();
   document.getElementById('empName').value = emp.name;
   document.getElementById('empNameKana').value = emp.nameKana || '';
   document.getElementById('gender').value = emp.gender || '男性';
@@ -405,11 +369,6 @@ function loadFormFromEmployee(emp) {
   document.getElementById('weeklyScheduledDays').value = emp.weeklyScheduledDays || 5;
   document.getElementById('monthlyStandardHours').value = emp.monthlyStandardHours || 160;
   document.getElementById('monthlyStandardDays').value = emp.monthlyStandardDays || 20;
-  const storedRates = Object.assign({}, defaultOvertimeRates());
-  OVERTIME_RATE_CATEGORIES.forEach((c) => {
-    if (emp[c.key] !== undefined) storedRates[c.key] = emp[c.key];
-  });
-  renderOvertimeRatesList(storedRates);
   applyEmploymentTypeLabelToForm();
   updateAgeDisplay();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -417,11 +376,11 @@ function loadFormFromEmployee(emp) {
 
 function collectFormAsEmployee() {
   const name = document.getElementById('empName').value.trim();
-  const rates = collectRatesFromForm();
-  return Object.assign({
+  return {
     id: editingId,
     employeeNumber: document.getElementById('employeeNumber').value.trim(),
     department: document.getElementById('department').value.trim(),
+    branchId: document.getElementById('branchSelect').value || null,
     name: name || '(氏名未入力)',
     nameKana: document.getElementById('empNameKana').value.trim(),
     gender: document.getElementById('gender').value,
@@ -451,7 +410,7 @@ function collectFormAsEmployee() {
     weeklyScheduledDays: Number(document.getElementById('weeklyScheduledDays').value) || 5,
     monthlyStandardHours: Number(document.getElementById('monthlyStandardHours').value) || 160,
     monthlyStandardDays: Number(document.getElementById('monthlyStandardDays').value) || 20,
-  }, rates);
+  };
 }
 
 const INSURANCE_ENROLLMENT_LABELS = {
@@ -576,10 +535,6 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     alert('氏名を入力してください。');
     return;
   }
-  if (!validateAllRateFields()) {
-    alert('割増率が法定の下限を下回っている項目があります。赤字のエラーを確認し、修正してください。');
-    return;
-  }
   const emp = collectFormAsEmployee();
   if (emp.employeeNumber) {
     const employees = await listEmployees();
@@ -632,6 +587,8 @@ document.getElementById('addAllowanceBtn').addEventListener('click', refreshStan
   if (!user) return;
   renderNavbar('employees.html');
   renderNavbarUser(user);
+  employeeBranches = await listBranches();
+  populateBranchSelect();
   resetForm();
   await renderEmployeeTable();
 })();
