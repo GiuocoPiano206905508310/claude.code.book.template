@@ -433,15 +433,38 @@ function employeeInsuranceLabel(emp) {
 let employeeSortKey = null;
 let employeeSortDir = 1;
 
+// 所属支社・部署の絞り込み用プルダウンの選択肢を、現在登録されている
+// 従業員の値から動的に作り直す（選択中の値はできる限り保持する）
+function populateEmployeeDynamicFilterOptions(allEmployees) {
+  const branchSelect = document.getElementById('filterBranch');
+  const currentBranch = branchSelect.value;
+  const branchNames = employeeBranches.map((b) => b.branchName);
+  branchSelect.innerHTML = '<option value="">すべて</option>'
+    + branchNames.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+  if (branchNames.includes(currentBranch)) branchSelect.value = currentBranch;
+
+  const deptSelect = document.getElementById('filterDepartment');
+  const currentDept = deptSelect.value;
+  const departments = [...new Set(allEmployees.map((emp) => emp.department).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'ja', { numeric: true }));
+  deptSelect.innerHTML = '<option value="">すべて</option>'
+    + departments.map((d) => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+  if (departments.includes(currentDept)) deptSelect.value = currentDept;
+}
+
 function filterAndSortEmployees(employees) {
   const numberFilter = document.getElementById('filterEmployeeNumber').value.trim().toLowerCase();
   const nameFilter = document.getElementById('filterName').value.trim().toLowerCase();
+  const branchFilter = document.getElementById('filterBranch').value;
+  const departmentFilter = document.getElementById('filterDepartment').value;
   const employmentTypeFilter = document.getElementById('filterEmploymentType').value;
   const insuranceFilter = document.getElementById('filterInsurance').value;
 
   let result = employees.filter((emp) => {
     if (numberFilter && !(emp.employeeNumber || '').toLowerCase().includes(numberFilter)) return false;
     if (nameFilter && !`${emp.name || ''}${emp.nameKana || ''}`.toLowerCase().includes(nameFilter)) return false;
+    if (branchFilter && employeeBranchName(emp) !== branchFilter) return false;
+    if (departmentFilter && (emp.department || '') !== departmentFilter) return false;
     if (employmentTypeFilter && emp.employmentType !== employmentTypeFilter) return false;
     if (insuranceFilter && employeeInsuranceLabel(emp) !== insuranceFilter) return false;
     return true;
@@ -471,6 +494,7 @@ async function renderEmployeeTable() {
   document.getElementById('employeeTable').style.display = allEmployees.length ? '' : 'none';
   if (!allEmployees.length) return;
 
+  populateEmployeeDynamicFilterOptions(allEmployees);
   const employees = filterAndSortEmployees(allEmployees);
   updateEmployeeSortIndicators();
 
@@ -528,7 +552,7 @@ document.querySelectorAll('#employeeTable thead th.sortable').forEach((th) => {
 ['filterEmployeeNumber', 'filterName'].forEach((id) => {
   document.getElementById(id).addEventListener('input', renderEmployeeTable);
 });
-['filterEmploymentType', 'filterInsurance'].forEach((id) => {
+['filterBranch', 'filterDepartment', 'filterEmploymentType', 'filterInsurance'].forEach((id) => {
   document.getElementById(id).addEventListener('change', renderEmployeeTable);
 });
 

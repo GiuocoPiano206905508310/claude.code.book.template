@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>従業員マスタ管理 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 <nav class="navbar wide" id="navbar"></nav>
@@ -40,8 +40,8 @@
               <th></th>
               <th><input type="text" id="filterEmployeeNumber" placeholder="絞り込み"></th>
               <th><input type="text" id="filterName" placeholder="絞り込み"></th>
-              <th></th>
-              <th></th>
+              <th><select id="filterBranch"><option value="">すべて</option></select></th>
+              <th><select id="filterDepartment"><option value="">すべて</option></select></th>
               <th>
                 <select id="filterEmploymentType">
                   <option value="">すべて</option>
@@ -349,6 +349,6 @@
 <script src="calc.js?v=16"></script>
 <script src="data.js?v=20"></script>
 <script src="common.js?v=12"></script>
-<script src="employees.js?v=19"></script>
+<script src="employees.js?v=20"></script>
 </body>
 </html>
