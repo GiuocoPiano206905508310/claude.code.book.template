@@ -280,6 +280,10 @@ select option { color: var(--ink); background: var(--surface); }
   color: var(--stamp);
 }
 
+/* 従業員マスタは.page.wideで幅広になるが、1項目ずつの入力欄まで間延びしないよう、
+   通常の項目（その他手当の複数列レイアウトを除く）は幅を抑える */
+#employeeFormCard .field-row > .field-input { max-width: 480px; }
+
 .allowance-row {
   display: grid;
   grid-template-columns: 1.3fr 1fr auto auto;
