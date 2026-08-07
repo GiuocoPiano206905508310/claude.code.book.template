@@ -12,7 +12,11 @@ function renderBranchList() {
   const tbody = document.querySelector('#branchListTable tbody');
   tbody.innerHTML = companyBranches.map((b, i) => `
     <tr data-branch-id="${b.id}"${b.id === currentBranchId ? ' style="background:var(--surface-line);"' : ''}>
-      <td>${i + 1}</td>
+      <td>
+        <span class="branch-no">${i + 1}</span>
+        <button type="button" class="btn btn-sm btn-outline" data-action="move-up" data-id="${b.id}" title="上へ移動"${i === 0 ? ' disabled' : ''}>▲</button>
+        <button type="button" class="btn btn-sm btn-outline" data-action="move-down" data-id="${b.id}" title="下へ移動"${i === companyBranches.length - 1 ? ' disabled' : ''}>▼</button>
+      </td>
       <td>${escapeHtml(b.branchName)}</td>
       <td>${b.isHeadOffice ? '本社' : '支社'}</td>
       <td class="actions">
@@ -21,6 +25,24 @@ function renderBranchList() {
       </td>
     </tr>
   `).join('');
+}
+
+// 隣接する支社とNo.（並び順）を入れ替える
+async function moveBranch(branchId, direction) {
+  const idx = companyBranches.findIndex((b) => b.id === branchId);
+  const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (idx < 0 || targetIdx < 0 || targetIdx >= companyBranches.length) return;
+  const current = companyBranches[idx];
+  const target = companyBranches[targetIdx];
+  const currentOrder = current.sortOrder;
+  const targetOrder = target.sortOrder;
+  try {
+    await updateBranchSortOrder(current.id, targetOrder);
+    await updateBranchSortOrder(target.id, currentOrder);
+    await refreshBranchList(currentBranchId);
+  } catch (e) {
+    showExportStatus('branchStatus', '並び順の変更に失敗しました：' + e.message, true);
+  }
 }
 
 async function refreshBranchList(selectId) {
@@ -198,6 +220,7 @@ function collectFormAsCompany() {
     id: currentBranchId,
     branchName: document.getElementById('branchNameInput').value.trim() || '本社',
     isHeadOffice: branch ? branch.isHeadOffice : false,
+    sortOrder: branch ? branch.sortOrder : undefined,
     overtimeRates: collectRatesFromForm(),
     statutoryHolidayWeekday: Number(document.getElementById('statutoryHolidayWeekday').value),
     scheduledHolidayWeekday: Number(document.getElementById('scheduledHolidayWeekday').value),
@@ -291,6 +314,18 @@ async function switchToBranch(branchId) {
 }
 
 document.querySelector('#branchListTable tbody').addEventListener('click', async (e) => {
+  const moveUpBtn = e.target.closest('[data-action="move-up"]');
+  if (moveUpBtn) {
+    moveUpBtn.disabled = true;
+    await moveBranch(moveUpBtn.dataset.id, 'up');
+    return;
+  }
+  const moveDownBtn = e.target.closest('[data-action="move-down"]');
+  if (moveDownBtn) {
+    moveDownBtn.disabled = true;
+    await moveBranch(moveDownBtn.dataset.id, 'down');
+    return;
+  }
   const editBtn = e.target.closest('[data-action="edit-branch"]');
   if (editBtn) {
     await switchToBranch(editBtn.dataset.id);
