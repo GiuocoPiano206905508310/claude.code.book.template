@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>勤怠管理 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
-<nav class="navbar" id="navbar"></nav>
+<nav class="navbar wide" id="navbar"></nav>
 
-<div class="page">
+<div class="page wide">
   <header class="masthead">
     <p class="eyebrow">Attendance Management</p>
     <h1>勤怠管理</h1>
@@ -47,7 +47,8 @@
         <input type="checkbox" id="showMidHeaderCheckbox" checked>
         <label for="showMidHeaderCheckbox">列見出しを期間の中間にも表示する</label>
       </div>
-      <div class="data-table-wrap">
+      <div class="table-scroll-top" id="dayTableScrollTop"><div class="table-scroll-top-inner" id="dayTableScrollTopInner"></div></div>
+      <div class="data-table-wrap" id="dayTableWrap">
         <table class="day-table" id="dayTable">
           <thead>
             <tr id="dayTableHeaderRow">
@@ -122,6 +123,6 @@
 <script src="calc.js?v=16"></script>
 <script src="data.js?v=20"></script>
 <script src="common.js?v=12"></script>
-<script src="attendance.js?v=12"></script>
+<script src="attendance.js?v=13"></script>
 </body>
 </html>

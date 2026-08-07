@@ -240,6 +240,31 @@ async function renderSummary() {
   `).join('');
 }
 
+// 表の下端にしか出ない横スクロールバーだと、行数が多い月は毎回スクロールしてからで
+// ないと操作できないため、表の上にも連動する横スクロールバーを表示する。
+function setupTableScrollSync() {
+  const top = document.getElementById('dayTableScrollTop');
+  const topInner = document.getElementById('dayTableScrollTopInner');
+  const wrap = document.getElementById('dayTableWrap');
+  if (!top || !topInner || !wrap) return;
+  const syncWidth = () => { topInner.style.width = wrap.scrollWidth + 'px'; };
+  syncWidth();
+  new ResizeObserver(syncWidth).observe(wrap);
+  let syncing = false;
+  top.addEventListener('scroll', () => {
+    if (syncing) return;
+    syncing = true;
+    wrap.scrollLeft = top.scrollLeft;
+    syncing = false;
+  });
+  wrap.addEventListener('scroll', () => {
+    if (syncing) return;
+    syncing = true;
+    top.scrollLeft = wrap.scrollLeft;
+    syncing = false;
+  });
+}
+
 async function refreshAll() {
   await renderDayTable();
   await renderSummary();
@@ -258,6 +283,7 @@ document.getElementById('showMidHeaderCheckbox').addEventListener('change', rend
   if (!user) return;
   renderNavbar('attendance.html');
   renderNavbarUser(user);
+  setupTableScrollSync();
 
   document.getElementById('monthInput').value = currentYmInputValue();
   const hasEmployees = await populateEmployeeSelect();
