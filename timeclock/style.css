@@ -166,6 +166,7 @@ h1 {
   gap: 22px;
   align-items: start;
 }
+.grid.stack { grid-template-columns: minmax(0, 1fr); }
 
 @media (max-width: 780px) {
   .grid { grid-template-columns: minmax(0, 1fr); }

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>従業員マスタ管理 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=18">
+<link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
 <nav class="navbar wide" id="navbar"></nav>
@@ -21,7 +21,55 @@
     <p>※ 入力していただいた情報は、あなたの会社アカウントにのみ保存され、他の会社アカウントからは見えません。</p>
   </div>
 
-  <div class="grid">
+  <div class="grid stack">
+    <section class="card form-card" aria-label="従業員一覧">
+      <h2>登録済みの従業員</h2>
+      <div class="data-table-wrap">
+        <table class="data-table" id="employeeTable">
+          <thead>
+            <tr>
+              <th>操作</th>
+              <th class="sortable" data-sort="employeeNumber">従業員番号<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort="name">氏名<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort="branchName">所属支社<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort="department">部署<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort="employmentType">雇用形態<span class="sort-indicator"></span></th>
+              <th class="sortable" data-sort="insurance">取得保険<span class="sort-indicator"></span></th>
+            </tr>
+            <tr class="filter-row">
+              <th></th>
+              <th><input type="text" id="filterEmployeeNumber" placeholder="絞り込み"></th>
+              <th><input type="text" id="filterName" placeholder="絞り込み"></th>
+              <th></th>
+              <th></th>
+              <th>
+                <select id="filterEmploymentType">
+                  <option value="">すべて</option>
+                  <option value="正社員">正社員</option>
+                  <option value="役員">役員</option>
+                  <option value="アルバイト・パート">アルバイト・パート</option>
+                  <option value="アルバイト・パート（雇用保険対象外）">アルバイト・パート（雇用保険対象外）</option>
+                </select>
+              </th>
+              <th>
+                <select id="filterInsurance">
+                  <option value="">すべて</option>
+                  <option value="雇用・社保">雇用・社保</option>
+                  <option value="社保">社保</option>
+                  <option value="雇用">雇用</option>
+                  <option value="なし">なし</option>
+                </select>
+              </th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        まだ従業員が登録されていません。下のフォームから登録してください。
+      </div>
+    </section>
+
     <section class="card form-card" id="employeeFormCard" aria-label="従業員情報の入力">
       <h2 id="formTitle">従業員を新規登録</h2>
 
@@ -288,54 +336,6 @@
       <div style="display:flex; gap:10px; margin-top:22px;">
         <button id="saveBtn" type="button" class="btn btn-block">保存する</button>
         <button id="cancelEditBtn" type="button" class="btn btn-outline btn-block" style="display:none;">新規登録に戻る</button>
-      </div>
-    </section>
-
-    <section class="card form-card" aria-label="従業員一覧">
-      <h2>登録済みの従業員</h2>
-      <div class="data-table-wrap">
-        <table class="data-table" id="employeeTable">
-          <thead>
-            <tr>
-              <th>操作</th>
-              <th class="sortable" data-sort="employeeNumber">従業員番号<span class="sort-indicator"></span></th>
-              <th class="sortable" data-sort="name">氏名<span class="sort-indicator"></span></th>
-              <th class="sortable" data-sort="branchName">所属支社<span class="sort-indicator"></span></th>
-              <th class="sortable" data-sort="department">部署<span class="sort-indicator"></span></th>
-              <th class="sortable" data-sort="employmentType">雇用形態<span class="sort-indicator"></span></th>
-              <th class="sortable" data-sort="insurance">取得保険<span class="sort-indicator"></span></th>
-            </tr>
-            <tr class="filter-row">
-              <th></th>
-              <th><input type="text" id="filterEmployeeNumber" placeholder="絞り込み"></th>
-              <th><input type="text" id="filterName" placeholder="絞り込み"></th>
-              <th></th>
-              <th></th>
-              <th>
-                <select id="filterEmploymentType">
-                  <option value="">すべて</option>
-                  <option value="正社員">正社員</option>
-                  <option value="役員">役員</option>
-                  <option value="アルバイト・パート">アルバイト・パート</option>
-                  <option value="アルバイト・パート（雇用保険対象外）">アルバイト・パート（雇用保険対象外）</option>
-                </select>
-              </th>
-              <th>
-                <select id="filterInsurance">
-                  <option value="">すべて</option>
-                  <option value="雇用・社保">雇用・社保</option>
-                  <option value="社保">社保</option>
-                  <option value="雇用">雇用</option>
-                  <option value="なし">なし</option>
-                </select>
-              </th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="empty-state" id="emptyState" style="display:none;">
-        まだ従業員が登録されていません。左のフォームから登録してください。
       </div>
     </section>
   </div>
