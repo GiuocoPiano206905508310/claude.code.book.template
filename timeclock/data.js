@@ -544,6 +544,7 @@ function companyRowToObj(row) {
     overtimeFractionRules: row.overtime_fraction_rules || defaults.overtimeFractionRules,
     monthlyPaymentFractionRules: row.monthly_payment_fraction_rules || defaults.monthlyPaymentFractionRules,
     overtimeRates: row.overtime_rates || defaultOvertimeRates(),
+    sortOrder: row.sort_order,
   };
 }
 
@@ -572,6 +573,7 @@ function companyObjToRow(company, userId) {
     overtime_fraction_rules: company.overtimeFractionRules || {},
     monthly_payment_fraction_rules: company.monthlyPaymentFractionRules || {},
     overtime_rates: company.overtimeRates || defaultOvertimeRates(),
+    sort_order: company.sortOrder,
     updated_at: new Date().toISOString(),
   };
 }
@@ -581,7 +583,7 @@ function companyObjToRow(company, userId) {
 // 自動作成する（従来の単一会社設定と同じ挙動をユーザーが意識せず使えるようにするため）。
 async function ensureHeadOfficeBranch() {
   const userId = await getCurrentUserId();
-  const row = companyObjToRow(defaultCompany(), userId);
+  const row = companyObjToRow(Object.assign(defaultCompany(), { sortOrder: 1 }), userId);
   const { data, error } = await supabaseClient.from('company_branches').insert(row).select().single();
   if (error) throw error;
   return companyRowToObj(data);
@@ -589,7 +591,7 @@ async function ensureHeadOfficeBranch() {
 
 async function listBranches() {
   const { data, error } = await supabaseClient.from('company_branches').select('*')
-    .order('created_at', { ascending: true });
+    .order('sort_order', { ascending: true }).order('created_at', { ascending: true });
   if (error) throw error;
   if (!data || !data.length) {
     const head = await ensureHeadOfficeBranch();
@@ -629,13 +631,22 @@ async function saveBranch(branch) {
 // 本社の設定内容をすべて引き継いだ新しい支社を作成する
 // （デフォルト反映後、各項目の変更・修正は通常のsaveBranchで行う）
 async function createBranchFromHeadOffice(branchName) {
-  const head = await getCompany();
-  const newBranch = Object.assign({}, head, { id: undefined, branchName: branchName || '', isHeadOffice: false });
+  const [head, existingBranches] = await Promise.all([getCompany(), listBranches()]);
+  const maxSortOrder = existingBranches.reduce((max, b) => Math.max(max, Number(b.sortOrder) || 0), 0);
+  const newBranch = Object.assign({}, head, {
+    id: undefined, branchName: branchName || '', isHeadOffice: false, sortOrder: maxSortOrder + 1,
+  });
   return await saveBranch(newBranch);
 }
 
 async function deleteBranch(branchId) {
   const { error } = await supabaseClient.from('company_branches').delete().eq('id', branchId);
+  if (error) throw error;
+}
+
+// 支社一覧の並び順（No.）のみを更新する。他の設定項目には影響しない。
+async function updateBranchSortOrder(branchId, sortOrder) {
+  const { error } = await supabaseClient.from('company_branches').update({ sort_order: sortOrder }).eq('id', branchId);
   if (error) throw error;
 }
 
