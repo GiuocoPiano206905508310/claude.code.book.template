@@ -390,6 +390,7 @@ table.data-table th {
 }
 table.data-table tbody tr:hover { background: rgba(0,0,0,0.02); }
 table.data-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data-table th.num { text-align: right; }
 table.data-table td.actions { text-align: left; }
 table.data-table th.sortable { cursor: pointer; user-select: none; }
 table.data-table th.sortable:hover { color: var(--indigo); }
