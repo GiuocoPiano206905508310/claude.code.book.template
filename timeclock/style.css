@@ -475,8 +475,8 @@ table.data-table tr.filter-row input { padding-right: 6px; }
 .info-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  border-top: 1px solid var(--surface-line);
-  border-left: 1px solid var(--surface-line);
+  border-top: 2px solid var(--surface-line);
+  border-left: 2px solid var(--surface-line);
 }
 .info-row {
   display: grid;
@@ -485,7 +485,7 @@ table.data-table tr.filter-row input { padding-right: 6px; }
 .info-row .info-label,
 .info-row .info-value {
   padding: 8px 12px;
-  border-bottom: 1px solid var(--surface-line);
+  border-bottom: 2px solid var(--surface-line);
 }
 .info-row .info-label {
   font-size: 12.5px;
@@ -495,7 +495,7 @@ table.data-table tr.filter-row input { padding-right: 6px; }
   border-right: 1px dotted var(--ink-faint);
 }
 .info-row .info-value {
-  border-right: 1px solid var(--surface-line);
+  border-right: 2px solid var(--surface-line);
   font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
   font-size: 15px;
   font-variant-numeric: tabular-nums;
