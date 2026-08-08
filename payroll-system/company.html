@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>会社マスタ管理 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=21">
+<link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -329,6 +329,13 @@
     <p class="export-status" id="saveStatus"></p>
   </section>
 
+  <section class="card form-card" aria-label="変更履歴" style="margin-top:24px;">
+    <h2>変更履歴</h2>
+    <p class="field-note">※ 現在選択中の支社について、設定を更新した際の変更内容を新しい順に表示します。</p>
+    <div id="companyHistoryList"></div>
+    <div class="empty-state" id="companyHistoryEmptyState" style="display:none;">この支社の変更履歴はまだありません。</div>
+  </section>
+
   <footer>個人・小規模事業向けの概算ツールです。正式な保険料率の適用には専門家・社会保険労務士にご確認ください。</footer>
 </div>
 
@@ -336,8 +343,8 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
 <script src="calc.js?v=16"></script>
-<script src="data.js?v=20"></script>
-<script src="common.js?v=12"></script>
-<script src="company.js?v=13"></script>
+<script src="data.js?v=21"></script>
+<script src="common.js?v=13"></script>
+<script src="company.js?v=14"></script>
 </body>
 </html>

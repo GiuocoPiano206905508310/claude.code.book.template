@@ -325,9 +325,21 @@ function resetForm() {
   document.getElementById('weeklyScheduledDays').value = '5';
   document.getElementById('monthlyStandardHours').value = '160';
   document.getElementById('monthlyStandardDays').value = '20';
+  document.getElementById('employeeHistorySection').style.display = 'none';
   applyEmploymentTypeLabelToForm();
   updateAgeDisplay();
   refreshStandardMonthlyDefaults();
+}
+
+async function renderEmployeeHistory(employeeId) {
+  const section = document.getElementById('employeeHistorySection');
+  if (!employeeId) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  const list = document.getElementById('employeeHistoryList');
+  const empty = document.getElementById('employeeHistoryEmptyState');
+  const history = await listChangeHistory('employee', employeeId);
+  empty.style.display = history.length ? 'none' : '';
+  list.innerHTML = renderChangeHistoryList(history);
 }
 
 function loadFormFromEmployee(emp) {
@@ -376,6 +388,7 @@ function loadFormFromEmployee(emp) {
   document.getElementById('monthlyStandardDays').value = emp.monthlyStandardDays || 20;
   applyEmploymentTypeLabelToForm();
   updateAgeDisplay();
+  renderEmployeeHistory(emp.id);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

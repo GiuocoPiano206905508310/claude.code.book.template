@@ -139,14 +139,24 @@ async function getEmployeeByCode(employeeCode) {
   return data ? employeeRowToObj(data) : null;
 }
 
-// emp.id が未設定なら新規追加、設定済みなら更新
+// emp.id が未設定なら新規追加、設定済みなら更新。更新時は変更履歴を記録する
 async function saveEmployee(emp) {
   const userId = await getCurrentUserId();
   const row = employeeObjToRow(emp, userId);
   if (emp.id) {
+    const { data: oldData, error: oldError } = await supabaseClient.from('employees').select('*').eq('id', emp.id).maybeSingle();
+    if (oldError) throw oldError;
     const { data, error } = await supabaseClient.from('employees').update(row).eq('id', emp.id).select().single();
     if (error) throw error;
-    return employeeRowToObj(data);
+    const updated = employeeRowToObj(data);
+    if (oldData) {
+      const branches = await listBranches();
+      const branchNameById = {};
+      branches.forEach((b) => { branchNameById[b.id] = b.branchName; });
+      const changes = diffFields(employeeRowToObj(oldData), updated, buildEmployeeHistoryFields(branchNameById));
+      await recordChangeHistory('employee', emp.id, updated.name, changes);
+    }
+    return updated;
   }
   const { data, error } = await supabaseClient.from('employees').insert(row).select().single();
   if (error) throw error;
@@ -614,14 +624,21 @@ async function getCompany(branchId) {
   return await ensureHeadOfficeBranch();
 }
 
-// branch.idが未設定なら新規追加、設定済みなら更新
+// branch.idが未設定なら新規追加、設定済みなら更新。更新時は変更履歴を記録する
 async function saveBranch(branch) {
   const userId = await getCurrentUserId();
   const row = companyObjToRow(branch, userId);
   if (branch.id) {
+    const { data: oldData, error: oldError } = await supabaseClient.from('company_branches').select('*').eq('id', branch.id).maybeSingle();
+    if (oldError) throw oldError;
     const { data, error } = await supabaseClient.from('company_branches').update(row).eq('id', branch.id).select().single();
     if (error) throw error;
-    return companyRowToObj(data);
+    const updated = companyRowToObj(data);
+    if (oldData) {
+      const changes = diffFields(companyRowToObj(oldData), updated, COMPANY_HISTORY_FIELDS);
+      await recordChangeHistory('company_branch', branch.id, updated.branchName, changes);
+    }
+    return updated;
   }
   const { data, error } = await supabaseClient.from('company_branches').insert(row).select().single();
   if (error) throw error;
@@ -648,6 +665,145 @@ async function deleteBranch(branchId) {
 async function updateBranchSortOrder(branchId, sortOrder) {
   const { error } = await supabaseClient.from('company_branches').update({ sort_order: sortOrder }).eq('id', branchId);
   if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// 変更履歴（会社マスタ・従業員マスタを更新した際に、項目単位で変更前後の
+// 値を記録する。新規登録時は記録しない）
+// ---------------------------------------------------------------------------
+const HISTORY_WEEKDAY_LABELS = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+function fmtHistoryWeekday(v) { return HISTORY_WEEKDAY_LABELS[Number(v)] ?? ''; }
+function fmtHistoryYesNo(v) { return v ? '有' : '無'; }
+function fmtHistoryPercent(v) { return (v === null || v === undefined || v === '') ? '' : `${Number(v).toFixed(2)}%`; }
+function fmtHistoryDay(v) { return v === null || v === undefined || v === '' ? '' : (v === 'end' ? '末日' : `${v}日`); }
+function fmtHistoryYen(v) { return (v === null || v === undefined || v === '') ? '' : `${Number(v).toLocaleString()}円`; }
+function fmtHistoryRoundingRule(rule) {
+  if (!rule) return '';
+  return `${rule.minutes}分単位（${rule.method === 'down' ? '切り捨て' : '切り上げ'}）`;
+}
+
+// oldObj/newObjをdefsで定義した項目ごとに比較し、値が変わった項目だけを
+// { label, before, after } の配列として返す（同値なら結果に含めない）
+function diffFields(oldObj, newObj, defs) {
+  const changes = [];
+  defs.forEach((def) => {
+    const beforeRaw = def.get ? def.get(oldObj) : oldObj[def.key];
+    const afterRaw = def.get ? def.get(newObj) : newObj[def.key];
+    if (JSON.stringify(beforeRaw ?? null) === JSON.stringify(afterRaw ?? null)) return;
+    const before = def.format ? def.format(beforeRaw) : (beforeRaw ?? '');
+    const after = def.format ? def.format(afterRaw) : (afterRaw ?? '');
+    changes.push({ label: def.label, before: String(before), after: String(after) });
+  });
+  return changes;
+}
+
+const COMPANY_HISTORY_FIELDS = [
+  { key: 'branchName', label: '支社名' },
+  { key: 'companyName', label: '会社名' },
+  { key: 'statutoryHolidayWeekday', label: '法定休日', format: fmtHistoryWeekday },
+  { key: 'scheduledHolidayWeekday', label: '所定休日', format: fmtHistoryWeekday },
+  { key: 'weekStartDay', label: '週の起算日', format: fmtHistoryWeekday },
+  { key: 'weeklyOvertimeThreshold', label: '週法定外労働時間', format: (v) => (v || v === 0) ? `週${v}時間` : '' },
+  { key: 'paycheckClosingDay', label: '賃金締日', format: fmtHistoryDay },
+  { key: 'paycheckPaymentDay', label: '賃金支払日', format: fmtHistoryDay },
+  { key: 'healthInsuranceType', label: '健康保険の種類', format: (v) => v === 'kumiai' ? '健康保険組合' : (v ? '協会けんぽ' : '') },
+  { key: 'prefecture', label: '都道府県' },
+  { key: 'healthRate', label: '健康保険料率', format: fmtHistoryPercent },
+  { key: 'careRate', label: '介護保険料率', format: fmtHistoryPercent },
+  { key: 'pensionRate', label: '厚生年金保険料率', format: fmtHistoryPercent },
+  { key: 'industryType', label: '事業の種類（雇用保険）' },
+  { key: 'employmentRate', label: '雇用保険料率', format: fmtHistoryPercent },
+  { key: 'calcMethod', label: '源泉所得税の計算方法', format: (v) => v === 'machine' ? '機械計算' : (v ? '月額表' : '') },
+  { key: 'roundingEnabled', label: '打刻時刻の丸め', format: fmtHistoryYesNo },
+];
+[['clockIn', '出勤'], ['clockOut', '退勤'], ['breakStart', '休憩開始'], ['breakEnd', '休憩終了']].forEach(([kind, label]) => {
+  COMPANY_HISTORY_FIELDS.push({
+    key: `roundingRules.${kind}`,
+    label: `勤怠丸め設定（${label}）`,
+    get: (c) => c.roundingRules && c.roundingRules[kind],
+    format: fmtHistoryRoundingRule,
+  });
+});
+COMPANY_HISTORY_FIELDS.push(
+  { key: 'overtimeFractionRules.monthlyHoursRounding', label: '端数処理(1) 月間時間数の30分未満切捨て',
+    get: (c) => c.overtimeFractionRules && c.overtimeFractionRules.monthlyHoursRounding, format: fmtHistoryYesNo },
+  { key: 'overtimeFractionRules.hourlyWageRounding', label: '端数処理(2) 時給・割増単価の50銭未満切捨て',
+    get: (c) => c.overtimeFractionRules && c.overtimeFractionRules.hourlyWageRounding, format: fmtHistoryYesNo },
+  { key: 'overtimeFractionRules.monthlyPayRounding', label: '端数処理(3) 割増賃金総額の50銭未満切捨て',
+    get: (c) => c.overtimeFractionRules && c.overtimeFractionRules.monthlyPayRounding, format: fmtHistoryYesNo },
+  { key: 'monthlyPaymentFractionRules.round100', label: '賃金支払額端数処理(1) 100円未満端数処理',
+    get: (c) => c.monthlyPaymentFractionRules && c.monthlyPaymentFractionRules.round100, format: fmtHistoryYesNo },
+  { key: 'monthlyPaymentFractionRules.carryOver1000', label: '賃金支払額端数処理(2) 1,000円未満繰越',
+    get: (c) => c.monthlyPaymentFractionRules && c.monthlyPaymentFractionRules.carryOver1000, format: fmtHistoryYesNo },
+);
+OVERTIME_RATE_CATEGORIES.forEach((cat) => {
+  COMPANY_HISTORY_FIELDS.push({
+    key: `overtimeRates.${cat.key}`,
+    label: `割増率（${cat.label}）`,
+    get: (c) => c.overtimeRates && c.overtimeRates[cat.key],
+    format: (v) => (v === null || v === undefined || v === '') ? '' : `${Number(v).toFixed(2)}倍`,
+  });
+});
+
+function buildEmployeeHistoryFields(branchNameById) {
+  return [
+    { key: 'employeeNumber', label: '従業員番号' },
+    { key: 'branchId', label: '所属支社', format: (id) => (id && branchNameById[id]) || '' },
+    { key: 'department', label: '部署名' },
+    { key: 'name', label: '氏名' },
+    { key: 'nameKana', label: 'フリガナ' },
+    { key: 'gender', label: '性別' },
+    { key: 'genderOther', label: '性別（その他）' },
+    { key: 'employeeCode', label: '勤怠打刻用ユーザーID' },
+    { key: 'employmentType', label: '雇用形態' },
+    { key: 'hireDate', label: '入社日' },
+    { key: 'birthDate', label: '生年月日' },
+    { key: 'baseSalary', label: '基本給', format: fmtHistoryYen },
+    { key: 'fixedOvertimeEnabled', label: '固定残業代の有無', format: fmtHistoryYesNo },
+    { key: 'fixedOvertimeAllowanceName', label: '固定残業代の手当名称' },
+    { key: 'fixedOvertimeMonthlyHours', label: '固定残業時間数', format: (v) => (v || v === 0) ? `${v}時間` : '' },
+    { key: 'fixedOvertimeAmount', label: '固定残業代の金額', format: fmtHistoryYen },
+    { key: 'commuteAllowance', label: '通勤手当', format: fmtHistoryYen },
+    { key: 'commuteAllowanceExcludeFromOvertimeBase', label: '通勤手当を割増賃金基礎から除外', format: fmtHistoryYesNo },
+    { key: 'dependents', label: '扶養親族等の数', format: (v) => (v || v === 0) ? `${v}人` : '' },
+    { key: 'taxTable', label: '甲欄・乙欄' },
+    { key: 'workStart', label: '所定始業時刻' },
+    { key: 'workEnd', label: '所定終業時刻' },
+    { key: 'standardDailyHours', label: '1日の所定労働時間', format: (v) => (v || v === 0) ? `${v}時間` : '' },
+    { key: 'weeklyScheduledDays', label: '週の所定労働日数', format: (v) => (v || v === 0) ? `${v}日` : '' },
+    { key: 'monthlyStandardHours', label: '月平均所定労働時間', format: (v) => (v || v === 0) ? `${v}時間` : '' },
+    { key: 'monthlyStandardDays', label: '月平均所定労働日数', format: (v) => (v || v === 0) ? `${v}日` : '' },
+    { key: 'healthInsuranceNumber', label: '健保番号' },
+    { key: 'healthStandardMonthly', label: '標準報酬月額（健保）', format: fmtHistoryYen },
+    { key: 'pensionStandardMonthly', label: '標準報酬月額（厚年）', format: fmtHistoryYen },
+    { key: 'allowances', label: 'その他手当',
+      format: (arr) => (arr && arr.length) ? arr.map((a) => `${a.name} ${fmtHistoryYen(a.amount)}`).join('、') : 'なし' },
+  ];
+}
+
+async function recordChangeHistory(targetType, targetId, targetLabel, changes) {
+  if (!changes || !changes.length) return;
+  const userId = await getCurrentUserId();
+  const { error } = await supabaseClient.from('change_history').insert({
+    user_id: userId,
+    target_type: targetType,
+    target_id: targetId,
+    target_label: targetLabel || null,
+    changes,
+  });
+  if (error) throw error;
+}
+
+async function listChangeHistory(targetType, targetId) {
+  const { data, error } = await supabaseClient.from('change_history').select('*')
+    .eq('target_type', targetType).eq('target_id', targetId).order('changed_at', { ascending: false }).limit(50);
+  if (error) throw error;
+  return data.map((row) => ({
+    id: row.id,
+    targetLabel: row.target_label,
+    changes: row.changes || [],
+    changedAt: row.changed_at,
+  }));
 }
 
 // ---------------------------------------------------------------------------
