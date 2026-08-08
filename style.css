@@ -469,6 +469,25 @@ table.data-table tr.filter-row input { padding-right: 6px; }
 .summary-grid.compact-grid .tile-label { font-size: 10.5px; }
 .summary-grid.compact-grid .tile-value { font-size: 15px; margin-top: 2px; }
 
+/* ---------- 罫線付きの項目一覧（雇用形態・年齢区分など、従業員/会社マスタから
+   取り込んだ値の表示。renderInfoTiles()で使用） ---------- */
+.info-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); column-gap: 28px; }
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--surface-line);
+}
+.info-row .info-label { font-size: 12.5px; color: var(--ink-soft); }
+.info-row .info-value {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 /* ---------- attendance day grid ---------- */
 table.day-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.day-table th, table.day-table td {

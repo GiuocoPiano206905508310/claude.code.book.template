@@ -131,16 +131,17 @@ const AGE_GROUP_LABELS = {
   '75plus': '75歳以上',
 };
 
-// 従業員マスタ管理から取り込んだ値をカード形式で表示する（payroll.js / bonus.js から共用）
+// 従業員マスタ・会社マスタから取り込んだ値を、項目名(左)・値(右)の罫線付き
+// リスト形式で表示する（payroll.js / bonus.js / leave.js から共用）
 function renderInfoTiles(containerId, tiles) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = tiles.map(([label, value]) => `
-    <div class="summary-tile">
-      <div class="tile-label">${label}</div>
-      <div class="tile-value">${value}</div>
+  el.innerHTML = `<div class="info-list">${tiles.map(([label, value]) => `
+    <div class="info-row">
+      <div class="info-label">${label}</div>
+      <div class="info-value">${value}</div>
     </div>
-  `).join('');
+  `).join('')}</div>`;
 }
 
 // 都道府県セレクトの生成（employees.js / payroll.js から共用）
