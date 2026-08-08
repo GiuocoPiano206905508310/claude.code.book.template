@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>従業員マスタ管理 | 給与・勤怠管理システム</title>
-<link rel="stylesheet" href="style.css?v=21">
+<link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 <nav class="navbar wide" id="navbar"></nav>
@@ -333,6 +333,13 @@
       </div>
       <p class="field-note">※ 割増手当・欠勤控除は、勤怠管理画面の月次集計値と上記設定から給与計算画面で自動算出されます（給与計算画面で個別に上書きも可能）。割増率は<a href="company.html">会社マスタ管理</a>で支社ごとに設定します。</p>
 
+      <div id="employeeHistorySection" style="display:none;">
+        <h2 class="section-2">変更履歴</h2>
+        <p class="field-note">※ この従業員の情報を更新した際の変更内容を新しい順に表示します。</p>
+        <div id="employeeHistoryList"></div>
+        <div class="empty-state" id="employeeHistoryEmptyState" style="display:none;">この従業員の変更履歴はまだありません。</div>
+      </div>
+
       <div style="display:flex; gap:10px; margin-top:22px;">
         <button id="saveBtn" type="button" class="btn btn-block">保存する</button>
         <button id="cancelEditBtn" type="button" class="btn btn-outline btn-block" style="display:none;">新規登録に戻る</button>
@@ -347,8 +354,8 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=2"></script>
 <script src="calc.js?v=16"></script>
-<script src="data.js?v=20"></script>
-<script src="common.js?v=12"></script>
-<script src="employees.js?v=20"></script>
+<script src="data.js?v=21"></script>
+<script src="common.js?v=13"></script>
+<script src="employees.js?v=21"></script>
 </body>
 </html>

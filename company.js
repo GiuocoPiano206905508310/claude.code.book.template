@@ -212,6 +212,17 @@ async function loadFormFromCompany() {
   const paymentRules = company.monthlyPaymentFractionRules || {};
   document.getElementById('paymentFractionRound100').checked = !!paymentRules.round100;
   document.getElementById('paymentFractionCarryOver1000').checked = !!paymentRules.carryOver1000;
+
+  await renderCompanyHistory();
+}
+
+async function renderCompanyHistory() {
+  const list = document.getElementById('companyHistoryList');
+  const empty = document.getElementById('companyHistoryEmptyState');
+  if (!currentBranchId) { list.innerHTML = ''; empty.style.display = ''; return; }
+  const history = await listChangeHistory('company_branch', currentBranchId);
+  empty.style.display = history.length ? 'none' : '';
+  list.innerHTML = renderChangeHistoryList(history);
 }
 
 function collectFormAsCompany() {
@@ -288,6 +299,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   try {
     await saveBranch(collectFormAsCompany());
     await refreshBranchList(currentBranchId);
+    await renderCompanyHistory();
     showExportStatus('saveStatus', '会社マスタ情報を保存しました。', false);
     setEditMode(false);
   } catch (e) {

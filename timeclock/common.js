@@ -98,6 +98,25 @@ function ymLabel(ym) {
   return `${y}年${Number(m)}月`;
 }
 
+function fmtHistoryDateTime(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} `
+    + `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+// listChangeHistory()の戻り値を「変更履歴」セクションのHTMLに変換する共通ヘルパー
+function renderChangeHistoryList(history) {
+  if (!history.length) return '';
+  return history.map((h) => `
+    <div class="history-entry">
+      <div class="history-entry-date">${escapeHtml(fmtHistoryDateTime(h.changedAt))}</div>
+      <ul class="history-entry-changes">
+        ${h.changes.map((c) => `<li><strong>${escapeHtml(c.label)}</strong>：${escapeHtml(c.before) || '(未設定)'} → ${escapeHtml(c.after) || '(未設定)'}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('');
+}
+
 function previousYm(ym) {
   const [y, m] = ym.split('-').map(Number);
   const d = new Date(y, m - 2, 1);
