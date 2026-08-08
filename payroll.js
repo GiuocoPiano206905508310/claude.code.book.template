@@ -185,12 +185,7 @@ function renderAttendanceSummaryTiles(s) {
     ['欠勤日数', `${s.absenceDays} 日`, s.absenceDays ? 'warn' : ''],
     ['有給休暇日数', `${s.paidLeaveDays} 日`, ''],
   ];
-  document.getElementById('attendanceSummaryGrid').innerHTML = tiles.map(([label, value, cls]) => `
-    <div class="summary-tile">
-      <div class="tile-label">${label}</div>
-      <div class="tile-value ${cls}">${value}</div>
-    </div>
-  `).join('');
+  renderInfoTiles('attendanceSummaryGrid', tiles);
   renderOvertimeBreakdownTiles(s);
 }
 
@@ -209,12 +204,8 @@ const OVERTIME_BREAKDOWN_TILE_KEYS = [
 
 function renderOvertimeBreakdownTiles(s) {
   const totals = s.overtimeCategoryMonthTotals || {};
-  document.getElementById('overtimeBreakdownGrid').innerHTML = OVERTIME_BREAKDOWN_TILE_KEYS.map(([key, label]) => `
-    <div class="summary-tile">
-      <div class="tile-label">${label}</div>
-      <div class="tile-value">${((totals[key] || 0) / 60).toFixed(1)} h</div>
-    </div>
-  `).join('');
+  const tiles = OVERTIME_BREAKDOWN_TILE_KEYS.map(([key, label]) => [label, `${((totals[key] || 0) / 60).toFixed(1)} h`]);
+  renderInfoTiles('overtimeBreakdownGrid', tiles);
 }
 
 // allowanceItems: 賃金台帳で手当を項目別に表示するため、計算時点の従業員マスタの
