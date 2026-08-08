@@ -494,13 +494,13 @@ table.data-table tr.filter-row input { padding-right: 6px; }
   background: var(--bg);
 }
 /* ラベルとその値をつなぐ線は、他の項目間の実線の罫線と区別するため点線にする。
-   上下の実線（セルの区切り線）と交差して重なって見えないよう、実線の位置には
-   届かないところで止める疑似要素として描画する */
+   セル本体のborderではなく独立した疑似要素として描画することで、上下の実線
+   （セルの区切り線）とはすき間なく接するが、重なって交差はしないようにする */
 .info-row .info-label::after {
   content: "";
   position: absolute;
-  top: 4px;
-  bottom: 4px;
+  top: 0;
+  bottom: 0;
   right: 0;
   width: 0;
   border-right: 1px dotted var(--ink-faint);
