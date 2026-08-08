@@ -480,7 +480,7 @@ table.data-table tr.filter-row input { padding-right: 6px; }
 }
 .info-row {
   display: grid;
-  grid-template-columns: minmax(96px, auto) 1fr;
+  grid-template-columns: 168px 1fr;
 }
 .info-row .info-label,
 .info-row .info-value {
