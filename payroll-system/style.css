@@ -470,17 +470,25 @@ table.data-table tr.filter-row input { padding-right: 6px; }
 .summary-grid.compact-grid .tile-value { font-size: 15px; margin-top: 2px; }
 
 /* ---------- 罫線付きの項目一覧（雇用形態・年齢区分など、従業員/会社マスタから
-   取り込んだ値の表示。renderInfoTiles()で使用） ---------- */
-.info-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); column-gap: 28px; }
+   取り込んだ値の表示。renderInfoTiles()で使用）
+   ---------- エクセルの表のように、セル単位で縦横の罫線を引く ---------- */
+.info-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  border-top: 1px solid var(--surface-line);
+  border-left: 1px solid var(--surface-line);
+}
 .info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  padding: 8px 0;
+  display: grid;
+  grid-template-columns: minmax(96px, auto) 1fr;
+}
+.info-row .info-label,
+.info-row .info-value {
+  padding: 8px 12px;
+  border-right: 1px solid var(--surface-line);
   border-bottom: 1px solid var(--surface-line);
 }
-.info-row .info-label { font-size: 12.5px; color: var(--ink-soft); }
+.info-row .info-label { font-size: 12.5px; color: var(--ink-soft); background: var(--bg); }
 .info-row .info-value {
   font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
   font-size: 15px;
