@@ -495,6 +495,8 @@ table.data-table tr.filter-row input { padding-right: 6px; }
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
+.info-row .info-value.accent { color: var(--indigo); }
+.info-row .info-value.warn { color: var(--stamp); }
 
 /* ---------- attendance day grid ---------- */
 table.day-table { width: 100%; border-collapse: collapse; font-size: 13px; }

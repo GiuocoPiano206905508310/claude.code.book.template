@@ -232,12 +232,7 @@ async function renderSummary() {
     ['遅刻回数', `${s.lateCount} 回`, s.lateCount ? 'warn' : ''],
     ['早退回数', `${s.earlyLeaveCount} 回`, s.earlyLeaveCount ? 'warn' : ''],
   ];
-  grid.innerHTML = tiles.map(([label, value, cls]) => `
-    <div class="summary-tile">
-      <div class="tile-label">${label}</div>
-      <div class="tile-value ${cls}">${value}</div>
-    </div>
-  `).join('');
+  renderInfoTiles('summaryGrid', tiles);
 }
 
 // 表の下端にしか出ない横スクロールバーだと、行数が多い月は毎回スクロールしてからで

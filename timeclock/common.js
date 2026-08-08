@@ -131,15 +131,16 @@ const AGE_GROUP_LABELS = {
   '75plus': '75歳以上',
 };
 
-// 従業員マスタ・会社マスタから取り込んだ値を、項目名(左)・値(右)の罫線付き
-// リスト形式で表示する（payroll.js / bonus.js / leave.js から共用）
+// 従業員マスタ・会社マスタから取り込んだ値や集計値を、項目名(左)・値(右)の
+// 罫線付きリスト形式で表示する（payroll.js / bonus.js / leave.js / attendance.js から共用）
+// tiles の各要素は [label, value] または強調表示用に [label, value, cls]（'accent' | 'warn'）
 function renderInfoTiles(containerId, tiles) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = `<div class="info-list">${tiles.map(([label, value]) => `
+  el.innerHTML = `<div class="info-list">${tiles.map(([label, value, cls]) => `
     <div class="info-row">
       <div class="info-label">${label}</div>
-      <div class="info-value">${value}</div>
+      <div class="info-value ${cls || ''}">${value}</div>
     </div>
   `).join('')}</div>`;
 }
