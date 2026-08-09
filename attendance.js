@@ -235,6 +235,22 @@ async function renderSummary() {
   renderInfoTiles('summaryGrid', tiles);
 }
 
+// 労働基準法上遵守しなければならない時間外労働の上限（36協定の特別条項の
+// 有無にかかわらず超えることができない絶対的な上限）を超過していないか
+// チェックし、超過している場合は赤字の警告メッセージを表示する
+async function renderOvertimeLimitWarning() {
+  const employee = await currentEmployee();
+  const ym = document.getElementById('monthInput').value;
+  const el = document.getElementById('overtimeLimitWarning');
+  if (!employee || !ym) { el.style.display = 'none'; el.innerHTML = ''; return; }
+
+  const company = await getCompany(employee.branchId);
+  const warnings = await checkOvertimeLimitWarnings(employee, ym, company);
+  if (!warnings.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.innerHTML = warnings.map((w) => `<p>⚠ ${escapeHtml(w)}</p>`).join('');
+  el.style.display = '';
+}
+
 // 表の下端にしか出ない横スクロールバーだと、行数が多い月は毎回スクロールしてからで
 // ないと操作できないため、表の上にも連動する横スクロールバーを表示する。
 function setupTableScrollSync() {
@@ -263,6 +279,7 @@ function setupTableScrollSync() {
 async function refreshAll() {
   await renderDayTable();
   await renderSummary();
+  await renderOvertimeLimitWarning();
   const employee = await currentEmployee();
   const ym = document.getElementById('monthInput').value;
   const link = document.getElementById('goPayrollBtn');
