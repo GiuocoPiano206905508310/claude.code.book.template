@@ -397,6 +397,67 @@ async function computeMonthSummary(employee, ym, company) {
   };
 }
 
+// 労働基準法第36条に基づく時間外労働の上限（36協定の特別条項の有無にかかわらず
+// 遵守しなければならない絶対的な上限）を、対象月を含む直近12か月分の勤怠集計から
+// 概算でチェックする。判定対象：
+//   (1) 時間外労働と休日労働（法定休日労働）の合計が、当月100時間以上
+//   (2) 時間外労働と休日労働の合計の、直近2〜6か月平均のいずれかが80時間超
+//   (3) 時間外労働（法定休日労働を除く）の直近12か月合計が720時間超
+//   (4) 時間外労働（法定休日労働を除く）が月45時間を超えた月が、直近12か月で6か月を超えている
+// 所定休日労働は時間外労働側に含め、法定休日労働のみを休日労働側に含める。
+// 戻り値: 超過しているものについてのメッセージの配列（超過なしの場合は空配列）
+async function checkOvertimeLimitWarnings(employee, ym, company) {
+  const [y, m] = ym.split('-').map(Number);
+  const months = [];
+  for (let k = 0; k < 12; k++) {
+    const d = new Date(y, m - 1 - k, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  const summaries = await Promise.all(months.map((mm) => computeMonthSummary(employee, mm, company)));
+
+  const stats = summaries.map((s) => {
+    const cat = s.overtimeCategoryMonthTotals || {};
+    const overtimeOnlyMin = (cat.overtimeWithin60 || 0) + (cat.overtimeOver60 || 0)
+      + (cat.overtimeWithin60Night || 0) + (cat.overtimeOver60Night || 0)
+      + (cat.weeklyOvertime || 0) + (cat.weeklyOvertimeNight || 0)
+      + (cat.scheduledHoliday || 0);
+    const holidayWorkMin = (cat.statutoryHoliday || 0) + (cat.statutoryHolidayNight || 0);
+    return { overtimeOnlyMin, holidayWorkMin, combinedMin: overtimeOnlyMin + holidayWorkMin };
+  });
+
+  const warnings = [];
+  const current = stats[0];
+
+  const currentCombinedHours = current.combinedMin / 60;
+  if (currentCombinedHours >= 100) {
+    warnings.push(`時間外労働と休日労働の合計が今月${currentCombinedHours.toFixed(1)}時間となっており、労働基準法の上限（単月100時間未満）を超過しています。`);
+  }
+
+  let worstWindow = null;
+  for (let w = 2; w <= 6; w++) {
+    const sumMin = stats.slice(0, w).reduce((acc, s) => acc + s.combinedMin, 0);
+    const avgHours = sumMin / w / 60;
+    if (avgHours > 80 && (!worstWindow || avgHours > worstWindow.avgHours)) {
+      worstWindow = { w, avgHours };
+    }
+  }
+  if (worstWindow) {
+    warnings.push(`時間外労働と休日労働の合計の直近${worstWindow.w}か月平均が${worstWindow.avgHours.toFixed(1)}時間となっており、労働基準法の上限（複数月平均80時間以内）を超過しています。`);
+  }
+
+  const year720Hours = stats.reduce((acc, s) => acc + s.overtimeOnlyMin, 0) / 60;
+  if (year720Hours > 720) {
+    warnings.push(`時間外労働の直近12か月合計が${year720Hours.toFixed(1)}時間となっており、労働基準法の上限（年720時間以内）を超過しています。`);
+  }
+
+  const monthsOver45 = stats.filter((s) => s.overtimeOnlyMin / 60 > 45).length;
+  if (monthsOver45 > 6) {
+    warnings.push(`時間外労働が月45時間を超えた月が、直近12か月で${monthsOver45}か月となっており、労働基準法の上限（月45時間を超えることができるのは年6か月まで）を超過しています。`);
+  }
+
+  return warnings;
+}
+
 // ---------------------------------------------------------------------------
 // 給与明細履歴（従業員ID × 年月をキーに1件保存）
 // ---------------------------------------------------------------------------
