@@ -20,6 +20,10 @@
   <section class="card form-card" aria-label="パスワード変更">
     <h2>パスワード変更</h2>
     <div class="field-row">
+      <label for="currentPassword">現在のパスワード</label>
+      <div class="field-input"><input type="password" id="currentPassword" autocomplete="current-password"></div>
+    </div>
+    <div class="field-row">
       <label for="newPassword">新しいパスワード</label>
       <div class="field-input"><input type="password" id="newPassword" autocomplete="new-password"></div>
       <p class="field-note">※ 6文字以上で設定してください。</p>
@@ -56,6 +60,6 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=3"></script>
 <script src="common.js?v=16"></script>
-<script src="account.js?v=1"></script>
+<script src="account.js?v=2"></script>
 </body>
 </html>
