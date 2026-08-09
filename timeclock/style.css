@@ -21,8 +21,10 @@
   --shadow: rgba(35, 40, 42, 0.08);
 }
 
+/* 端末の設定に合わせる場合。アカウント設定で「白」を明示的に選択している
+   場合（:root[data-theme="light"]）は、この端末設定より優先させないため除外する */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #14181a;
     --surface: #1c2224;
@@ -44,6 +46,30 @@
     --focus: #7fb0dd;
     --shadow: rgba(0, 0, 0, 0.35);
   }
+}
+
+/* アカウント設定で「黒」を明示的に選択している場合。端末の設定によらず適用する */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14181a;
+  --surface: #1c2224;
+  --surface-line: #2c3436;
+  --ink: #ece7da;
+  --ink-soft: #a8ac9f;
+  --ink-faint: #767b70;
+  --indigo: #7fb0dd;
+  --indigo-ink: #a8cced;
+  --stamp: #e2765f;
+  --stamp-bg: rgba(226, 118, 95, 0.14);
+  --success: #74c79a;
+  --success-bg: rgba(116, 199, 154, 0.14);
+  --warn: #d9b35e;
+  --warn-bg: rgba(217, 179, 94, 0.14);
+  --sky-bg: rgba(96, 178, 224, 0.18);
+  --orange-bg: rgba(224, 158, 74, 0.2);
+  --border: #333c3a;
+  --focus: #7fb0dd;
+  --shadow: rgba(0, 0, 0, 0.35);
 }
 
 * { box-sizing: border-box; }

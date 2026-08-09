@@ -31,13 +31,15 @@ function renderNavbar(activeHref) {
   `;
 }
 
-// ログイン中のユーザー名とログアウトボタンをナビバーに反映する。
-// 各ページで requireAuth() の後に呼び出す。
-function renderNavbarUser(user) {
+// ログイン中のユーザー名（アカウント設定画面へのリンク）とログアウトボタンを
+// ナビバーに反映する。各ページで requireAuth() の後に呼び出す。
+// accountHref: アカウント設定画面へのパス（省略時は 'account.html'。timeclockなど
+// 別ディレクトリのページからは '../payroll-system/account.html' 等を指定する）
+function renderNavbarUser(user, accountHref) {
   const area = document.getElementById('navUserArea');
   if (!area || !user) return;
   area.innerHTML = `
-    <span class="nav-link" style="cursor:default;">${escapeHtml(currentUsername(user))} さん</span>
+    <a class="nav-link" href="${accountHref || 'account.html'}">${escapeHtml(currentUsername(user))} さん</a>
     <a class="nav-link" href="#" id="logoutLink">ログアウト</a>
   `;
   document.getElementById('logoutLink').addEventListener('click', async (e) => {
@@ -45,6 +47,40 @@ function renderNavbarUser(user) {
     await signOut();
     location.href = 'login.html';
   });
+}
+
+// ---------- 画面の表示設定（白/黒/端末の設定に合わせる） ----------
+const THEME_STORAGE_KEY = 'themePreference';
+
+// 保存済みの設定を返す（'light' | 'dark' | 'system'）
+function getThemePreference() {
+  try {
+    const v = localStorage.getItem(THEME_STORAGE_KEY);
+    return (v === 'light' || v === 'dark') ? v : 'system';
+  } catch (e) {
+    return 'system';
+  }
+}
+
+// data-theme属性を切り替えて即座に画面に反映する（style.cssの
+// :root[data-theme="..."] ルールで参照）
+function applyThemePreference(theme) {
+  if (theme === 'light' || theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', theme);
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+
+function setThemePreference(theme) {
+  try {
+    if (theme === 'light' || theme === 'dark') {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } else {
+      localStorage.removeItem(THEME_STORAGE_KEY);
+    }
+  } catch (e) { /* localStorage不可の環境では即時反映のみ行う */ }
+  applyThemePreference(theme);
 }
 
 // 数字にカンマを付けて表示する入力欄

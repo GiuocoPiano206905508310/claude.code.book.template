@@ -32,6 +32,11 @@ async function signOut() {
   await supabaseClient.auth.signOut();
 }
 
+async function changePassword(newPassword) {
+  const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
 async function getCurrentUser() {
   const { data } = await supabaseClient.auth.getSession();
   return data.session ? data.session.user : null;
