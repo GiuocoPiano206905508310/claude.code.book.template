@@ -11,7 +11,7 @@
 <nav class="navbar" id="navbar">
   <a class="brand" href="index.html">勤怠打刻</a>
   <div class="nav-links">
-    <a class="nav-link" href="../payroll-system/index.html">給与・勤怠管理システムへ →</a>
+    <a class="nav-link" href="../payroll-system/index.html" id="goToPayrollSystemLink">給与・勤怠管理システムへ →</a>
     <span id="navUserArea"></span>
   </div>
 </nav>
@@ -29,7 +29,7 @@
   </div>
 
   <div id="noEmployeeState" class="empty-state" style="display:none;">
-    従業員が登録されていません。先に給与・勤怠管理システムの<a href="../payroll-system/employees.html">従業員マスタ管理</a>から従業員を登録してください。
+    従業員が登録されていません。先に給与・勤怠管理システムの<a href="../payroll-system/employees.html" id="goToEmployeesLink">従業員マスタ管理</a>から従業員を登録してください。
   </div>
 
   <section class="card form-card" id="employeeLoginSection" style="max-width:420px; margin:0 auto; display:none;">
@@ -81,6 +81,6 @@
 <script src="calc.js?v=16"></script>
 <script src="data.js?v=22"></script>
 <script src="common.js?v=17"></script>
-<script src="timeclock.js?v=5"></script>
+<script src="timeclock.js?v=6"></script>
 </body>
 </html>
