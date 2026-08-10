@@ -191,14 +191,61 @@ if (goToEmployeesLink) {
 
 initPasswordToggles();
 
-(async () => {
-  const user = await requireAuth('../payroll-system/login.html', '../timeclock/index.html');
-  if (!user) return;
-  renderNavbarUser(user, '../payroll-system/account.html', '../payroll-system/login.html');
+// ---------------------------------------------------------------------------
+// 会社アカウント（給与・勤怠管理システムと共通）のログイン。
+// 打刻はこの画面だけで完結させたいため、未ログインでも給与・勤怠管理システムの
+// ログイン画面へ飛ばさず、この画面上でログインを受け付ける。
+// ---------------------------------------------------------------------------
+function showCompanyLoginSection() {
+  document.getElementById('companyLoginSection').style.display = '';
+  document.getElementById('noEmployeeState').style.display = 'none';
+  document.getElementById('employeeLoginSection').style.display = 'none';
+  document.getElementById('clockContent').style.display = 'none';
+}
 
-  // 時計表示は通信状況に関わらず即座に動かし始める
-  updateClockDisplay();
-  setInterval(updateClockDisplay, 1000);
+function friendlyCompanyAuthError(error) {
+  const msg = (error && error.message) || '';
+  if (msg.includes('Invalid login credentials')) return 'ユーザー名またはパスワードが正しくありません。';
+  if (msg.includes('Failed to fetch')) return '通信に失敗しました。しばらくしてから再度お試しください。';
+  return 'エラーが発生しました：' + msg;
+}
+
+async function tryCompanyLogin() {
+  const username = document.getElementById('companyLoginUsername').value.trim();
+  const password = document.getElementById('companyLoginPassword').value;
+  const errorEl = document.getElementById('companyLoginError');
+  errorEl.textContent = '';
+  if (!username || !password) {
+    errorEl.textContent = 'ユーザー名とパスワードを入力してください。';
+    return;
+  }
+  const btn = document.getElementById('companyLoginBtn');
+  btn.disabled = true;
+  try {
+    await signInWithUsername(username, password);
+    document.getElementById('companyLoginPassword').value = '';
+    await startTimeclock();
+  } catch (e) {
+    errorEl.textContent = friendlyCompanyAuthError(e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('companyLoginBtn').addEventListener('click', tryCompanyLogin);
+document.getElementById('companyLoginPassword').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') tryCompanyLogin();
+});
+
+// 会社アカウントでログイン済みの状態から、打刻画面本体を初期化する
+async function startTimeclock() {
+  const user = await getCurrentUser();
+  if (!user) { showCompanyLoginSection(); return; }
+
+  document.getElementById('companyLoginSection').style.display = 'none';
+  // ログアウト（手動・無操作による自動ログアウトとも）はこの打刻画面に戻し、
+  // 上記の会社アカウントログインを再度表示する
+  renderNavbarUser(user, '../payroll-system/account.html', 'index.html');
 
   try {
     const hasEmployees = await hasAnyEmployees();
@@ -219,4 +266,12 @@ initPasswordToggles();
     document.getElementById('punchStatus').innerHTML =
       '<span style="color:#e57373;">読み込みに失敗しました。通信状況を確認し、画面を再読み込みしてください。</span>';
   }
+}
+
+(async () => {
+  // 時計表示は通信状況・ログイン状態に関わらず即座に動かし始める
+  updateClockDisplay();
+  setInterval(updateClockDisplay, 1000);
+
+  await startTimeclock();
 })();
