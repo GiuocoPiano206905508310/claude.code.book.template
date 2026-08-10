@@ -80,6 +80,20 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
   }
 });
 
+// パスワード入力欄に添えた「表示」ボタンを、クリックのたびに入力内容の
+// 表示・非表示を切り替えるボタンにする（common.jsを読み込んでいないため、
+// この画面専用に定義する。account.html等ではcommon.jsの同名の関数を使用）
+document.querySelectorAll('.password-toggle-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const input = document.getElementById(btn.dataset.target);
+    if (!input) return;
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.textContent = showing ? '表示' : '非表示';
+    btn.setAttribute('aria-label', showing ? 'パスワードを表示' : 'パスワードを非表示');
+  });
+});
+
 // 既にログイン済みならそのまま次のページへ
 (async () => {
   const user = await getCurrentUser();

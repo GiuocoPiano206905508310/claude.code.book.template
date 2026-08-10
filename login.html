@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ログイン | 給与・勤怠管理システム</title>
 <script>(function(){try{var t=localStorage.getItem('themePreference');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
-<link rel="stylesheet" href="style.css?v=32">
+<link rel="stylesheet" href="style.css?v=33">
 </head>
 <body>
 <div class="page narrow">
@@ -33,7 +33,10 @@
       </div>
       <div class="field-row">
         <label for="loginPassword">パスワード</label>
-        <div class="field-input"><input type="password" id="loginPassword" autocomplete="current-password"></div>
+        <div class="field-input">
+          <input type="password" id="loginPassword" autocomplete="current-password">
+          <button type="button" class="password-toggle-btn" data-target="loginPassword" aria-label="パスワードを表示">表示</button>
+        </div>
       </div>
       <button type="button" class="btn btn-block" id="loginBtn">ログイン</button>
       <p class="export-status error" id="loginError"></p>
@@ -48,12 +51,18 @@
       </div>
       <div class="field-row">
         <label for="signupPassword">パスワード</label>
-        <div class="field-input"><input type="password" id="signupPassword" autocomplete="new-password"></div>
+        <div class="field-input">
+          <input type="password" id="signupPassword" autocomplete="new-password">
+          <button type="button" class="password-toggle-btn" data-target="signupPassword" aria-label="パスワードを表示">表示</button>
+        </div>
         <p class="field-note">※ 6文字以上で設定してください。</p>
       </div>
       <div class="field-row">
         <label for="signupPasswordConfirm">パスワード（確認）</label>
-        <div class="field-input"><input type="password" id="signupPasswordConfirm" autocomplete="new-password"></div>
+        <div class="field-input">
+          <input type="password" id="signupPasswordConfirm" autocomplete="new-password">
+          <button type="button" class="password-toggle-btn" data-target="signupPasswordConfirm" aria-label="パスワードを表示">表示</button>
+        </div>
       </div>
       <button type="button" class="btn btn-block" id="signupBtn">登録する</button>
       <p class="export-status error" id="signupError"></p>
@@ -66,6 +75,6 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=3"></script>
-<script src="login.js?v=2"></script>
+<script src="login.js?v=3"></script>
 </body>
 </html>
