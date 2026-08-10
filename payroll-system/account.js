@@ -54,6 +54,10 @@ document.querySelectorAll('input[name="themeChoice"]').forEach((radio) => {
   });
 });
 
+document.getElementById('idleLogoutSelect').addEventListener('change', (e) => {
+  setIdleLogoutMinutes(Number(e.target.value));
+});
+
 (async () => {
   const user = await requireAuth();
   if (!user) return;
@@ -64,4 +68,6 @@ document.querySelectorAll('input[name="themeChoice"]').forEach((radio) => {
   const current = getThemePreference();
   const target = document.querySelector(`input[name="themeChoice"][value="${current}"]`);
   if (target) target.checked = true;
+
+  document.getElementById('idleLogoutSelect').value = String(getIdleLogoutMinutes());
 })();

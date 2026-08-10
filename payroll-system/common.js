@@ -35,7 +35,8 @@ function renderNavbar(activeHref) {
 // ナビバーに反映する。各ページで requireAuth() の後に呼び出す。
 // accountHref: アカウント設定画面へのパス（省略時は 'account.html'。timeclockなど
 // 別ディレクトリのページからは '../payroll-system/account.html' 等を指定する）
-function renderNavbarUser(user, accountHref) {
+// loginHref: ログアウト時・自動ログアウト時の遷移先（省略時は 'login.html'）
+function renderNavbarUser(user, accountHref, loginHref) {
   const area = document.getElementById('navUserArea');
   if (!area || !user) return;
   area.innerHTML = `
@@ -45,8 +46,61 @@ function renderNavbarUser(user, accountHref) {
   document.getElementById('logoutLink').addEventListener('click', async (e) => {
     e.preventDefault();
     await signOut();
-    location.href = 'login.html';
+    location.href = loginHref || 'login.html';
   });
+  setupIdleLogoutTimer(loginHref);
+}
+
+// ---------- 自動ログアウト（アカウント設定で設定した無操作時間が経過すると
+// 自動的にログアウトする） ----------
+const IDLE_LOGOUT_STORAGE_KEY = 'idleLogoutMinutes';
+
+// 保存済みの自動ログアウトまでの無操作時間（分）を返す（0 = 無効）
+function getIdleLogoutMinutes() {
+  try {
+    const v = Number(localStorage.getItem(IDLE_LOGOUT_STORAGE_KEY));
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function setIdleLogoutMinutes(minutes) {
+  try {
+    if (minutes > 0) localStorage.setItem(IDLE_LOGOUT_STORAGE_KEY, String(minutes));
+    else localStorage.removeItem(IDLE_LOGOUT_STORAGE_KEY);
+  } catch (e) { /* localStorage不可の環境では即時反映のみ行う */ }
+  resetIdleLogoutTimer();
+}
+
+let idleLogoutTimerId = null;
+let idleLogoutLoginHref = 'login.html';
+let idleLogoutListenersAttached = false;
+
+// 現在の設定（getIdleLogoutMinutes）に基づき、タイマーを最初から数え直す。
+// 無効（0分）の場合はタイマーを止めるだけで再設定しない
+function resetIdleLogoutTimer() {
+  if (idleLogoutTimerId) { clearTimeout(idleLogoutTimerId); idleLogoutTimerId = null; }
+  const minutes = getIdleLogoutMinutes();
+  if (!minutes) return;
+  idleLogoutTimerId = setTimeout(async () => {
+    await signOut();
+    location.href = idleLogoutLoginHref;
+  }, minutes * 60 * 1000);
+}
+
+// 無操作時間による自動ログアウトのタイマーを設定する。クリック・キー入力・
+// マウス移動・スクロール・タッチのいずれかを「操作」とみなし、そのたびに
+// タイマーを数え直す。renderNavbarUser()から各ページで自動的に呼び出される
+function setupIdleLogoutTimer(loginHref) {
+  idleLogoutLoginHref = loginHref || 'login.html';
+  if (!idleLogoutListenersAttached) {
+    ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach((evt) => {
+      document.addEventListener(evt, resetIdleLogoutTimer, { passive: true });
+    });
+    idleLogoutListenersAttached = true;
+  }
+  resetIdleLogoutTimer();
 }
 
 // ---------- 画面の表示設定（白/黒/端末の設定に合わせる） ----------
