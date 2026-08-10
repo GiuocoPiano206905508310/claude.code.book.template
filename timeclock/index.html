@@ -12,7 +12,6 @@
   <a class="brand" href="index.html">勤怠打刻</a>
   <div class="nav-links">
     <a class="nav-link" href="../payroll-system/index.html" id="goToPayrollSystemLink">給与・勤怠管理システムへ →</a>
-    <span id="navUserArea"></span>
   </div>
 </nav>
 
@@ -26,28 +25,6 @@
   <div class="notice">
     <p>※ ここで打刻した出勤・退勤時刻は、給与・勤怠管理システムの勤怠データと自動的に連動します（クラウド上のデータを共有しているため、別のブラウザ・別の端末からでも反映されます）。</p>
     <p>※ 日々の打刻は、従業員ごとに発行された「勤怠打刻用ユーザーID・パスワード」でログインして行います（従業員マスタ管理から設定できます）。給与・勤怠管理システムのログインとは別物です。</p>
-  </div>
-
-  <section class="card form-card" id="companyLoginSection" style="max-width:420px; margin:0 auto; display:none;">
-    <h2>打刻端末の初期設定</h2>
-    <p class="field-note" style="margin-bottom:10px;">※ この端末で初めて打刻を使うときに、管理者が1回だけ行う設定です。給与・勤怠管理システムと同じ会社のユーザー名・パスワードを入力してください。以降この端末では、従業員のみなさんは従業員ログインだけで打刻できます（この画面は表示されません）。</p>
-    <div class="field-row">
-      <label for="companyLoginUsername">ユーザー名</label>
-      <div class="field-input"><input type="text" id="companyLoginUsername" autocomplete="username"></div>
-    </div>
-    <div class="field-row">
-      <label for="companyLoginPassword">パスワード</label>
-      <div class="field-input">
-        <input type="password" id="companyLoginPassword" autocomplete="current-password">
-        <button type="button" class="password-toggle-btn" data-target="companyLoginPassword" aria-label="パスワードを表示">表示</button>
-      </div>
-    </div>
-    <button type="button" class="btn btn-block" id="companyLoginBtn">ログイン</button>
-    <p class="export-status error" id="companyLoginError"></p>
-  </section>
-
-  <div id="noEmployeeState" class="empty-state" style="display:none;">
-    従業員が登録されていません。先に給与・勤怠管理システムの<a href="../payroll-system/employees.html" id="goToEmployeesLink">従業員マスタ管理</a>から従業員を登録してください。
   </div>
 
   <section class="card form-card" id="employeeLoginSection" style="max-width:420px; margin:0 auto; display:none;">
@@ -100,8 +77,8 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
 <script src="calc.js?v=16"></script>
-<script src="data.js?v=22"></script>
+<script src="data.js?v=23"></script>
 <script src="common.js?v=19"></script>
-<script src="timeclock.js?v=10"></script>
+<script src="timeclock.js?v=11"></script>
 </body>
 </html>
