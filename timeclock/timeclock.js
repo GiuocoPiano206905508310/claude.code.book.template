@@ -192,9 +192,9 @@ if (goToEmployeesLink) {
 initPasswordToggles();
 
 (async () => {
-  const user = await requireAuth('../login.html', 'timeclock/index.html');
+  const user = await requireAuth('../payroll-system/login.html', '../timeclock/index.html');
   if (!user) return;
-  renderNavbarUser(user, '../payroll-system/account.html', '../login.html');
+  renderNavbarUser(user, '../payroll-system/account.html', '../payroll-system/login.html');
 
   // 時計表示は通信状況に関わらず即座に動かし始める
   updateClockDisplay();
