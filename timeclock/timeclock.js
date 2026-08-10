@@ -174,6 +174,21 @@ document.getElementById('empLogoutLink').addEventListener('click', (e) => { e.pr
 document.getElementById('clockInBtn').addEventListener('click', () => punch('in'));
 document.getElementById('clockOutBtn').addEventListener('click', () => punch('out'));
 
+// 勤怠打刻（共用端末での利用を想定）から給与・勤怠管理システムへ移動する際は、
+// 会社アカウントとしてログイン済みであっても再ログインを求める（打刻端末に
+// 会社アカウントのログイン状態が残ったまま、誰でも管理画面に入れてしまう
+// ことを防ぐため）
+async function goToPayrollSystemWithReLogin(e, targetPath) {
+  e.preventDefault();
+  try { await signOut(); } catch (err) { /* サインアウトに失敗しても遷移は続行する */ }
+  location.href = `../payroll-system/login.html?next=${encodeURIComponent(targetPath)}`;
+}
+document.getElementById('goToPayrollSystemLink').addEventListener('click', (e) => goToPayrollSystemWithReLogin(e, 'index.html'));
+const goToEmployeesLink = document.getElementById('goToEmployeesLink');
+if (goToEmployeesLink) {
+  goToEmployeesLink.addEventListener('click', (e) => goToPayrollSystemWithReLogin(e, 'employees.html'));
+}
+
 (async () => {
   const user = await requireAuth('../login.html', 'timeclock/index.html');
   if (!user) return;
