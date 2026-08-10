@@ -49,7 +49,8 @@ function currentUsername(user) {
 
 // 未ログインならログイン画面へリダイレクトする。ログイン済みならuserを返す。
 // 各保護ページの先頭で呼び出す。
-// loginPath: login.htmlへの相対パス（サブディレクトリのページでは '../login.html' 等を指定）
+// loginPath: login.htmlへの相対パス（login.htmlはpayroll-system/直下にしかないため、
+// 別ディレクトリ（timeclock等）のページでは '../payroll-system/login.html' 等を指定）
 // nextValue: ログイン後に戻る先（省略時は現在のファイル名）
 async function requireAuth(loginPath, nextValue) {
   const user = await getCurrentUser();
