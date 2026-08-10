@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>勤怠打刻 | 給与・勤怠管理システム</title>
 <script>(function(){try{var t=localStorage.getItem('themePreference');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
-<link rel="stylesheet" href="style.css?v=32">
+<link rel="stylesheet" href="style.css?v=33">
 </head>
 <body>
 <nav class="navbar" id="navbar">
@@ -44,7 +44,10 @@
     </div>
     <div class="field-row">
       <label for="loginEmpPassword">パスワード</label>
-      <div class="field-input"><input type="password" id="loginEmpPassword" autocomplete="off"></div>
+      <div class="field-input">
+        <input type="password" id="loginEmpPassword" autocomplete="off">
+        <button type="button" class="password-toggle-btn" data-target="loginEmpPassword" aria-label="パスワードを表示">表示</button>
+      </div>
     </div>
     <button type="button" class="btn btn-block" id="empLoginBtn">ログイン</button>
     <p class="export-status error" id="empLoginError"></p>
@@ -80,7 +83,7 @@
 <script src="auth.js?v=3"></script>
 <script src="calc.js?v=16"></script>
 <script src="data.js?v=22"></script>
-<script src="common.js?v=17"></script>
-<script src="timeclock.js?v=6"></script>
+<script src="common.js?v=18"></script>
+<script src="timeclock.js?v=7"></script>
 </body>
 </html>

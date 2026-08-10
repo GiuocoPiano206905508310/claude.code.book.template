@@ -189,6 +189,8 @@ if (goToEmployeesLink) {
   goToEmployeesLink.addEventListener('click', (e) => goToPayrollSystemWithReLogin(e, 'employees.html'));
 }
 
+initPasswordToggles();
+
 (async () => {
   const user = await requireAuth('../login.html', 'timeclock/index.html');
   if (!user) return;

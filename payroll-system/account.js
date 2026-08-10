@@ -58,6 +58,8 @@ document.getElementById('idleLogoutSelect').addEventListener('change', (e) => {
   setIdleLogoutMinutes(Number(e.target.value));
 });
 
+initPasswordToggles();
+
 (async () => {
   const user = await requireAuth();
   if (!user) return;

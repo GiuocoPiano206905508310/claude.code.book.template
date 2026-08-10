@@ -178,6 +178,21 @@ function escapeHtml(str) {
   }[c]));
 }
 
+// パスワード入力欄に添えた「表示」ボタン（data-target="対象inputのid"）を、
+// クリックのたびに入力内容の表示・非表示を切り替えるボタンにする
+function initPasswordToggles() {
+  document.querySelectorAll('.password-toggle-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      if (!input) return;
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.textContent = showing ? '表示' : '非表示';
+      btn.setAttribute('aria-label', showing ? 'パスワードを表示' : 'パスワードを非表示');
+    });
+  });
+}
+
 function currentYmInputValue() {
   const now = new Date();
   return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
