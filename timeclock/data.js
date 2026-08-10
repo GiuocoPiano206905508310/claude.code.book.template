@@ -139,6 +139,50 @@ async function getEmployeeByCode(employeeCode) {
   return data ? employeeRowToObj(data) : null;
 }
 
+// ---------------------------------------------------------------------------
+// 勤怠打刻専用（会社アカウントのログインなしで動作する）
+//
+// 打刻端末では会社アカウントでのログインを不要にしたいが、テーブルへの直接
+// アクセスを未ログインユーザーに許可すると全社のデータが誰でも読めてしまう。
+// そのためテーブルの権限は与えず、従業員本人の認証情報（氏名・ユーザーID・
+// パスワード）が一致した場合のみ動作するデータベース側の関数（RPC）経由で
+// 読み書きする。関数の定義は migration-timeclock-employee-auth.sql を参照。
+// ---------------------------------------------------------------------------
+
+// 認証に成功すると { employee_id, employee_name } を返す。失敗時はnull
+async function timeclockEmployeeLogin(name, employeeCode, password) {
+  const { data, error } = await supabaseClient.rpc('timeclock_employee_login', {
+    p_name: name, p_code: employeeCode, p_password: password,
+  });
+  if (error) throw error;
+  return (data && data[0]) || null;
+}
+
+// 指定日の打刻状況。記録がなければnull
+async function timeclockGetDay(employeeCode, password, ym, day) {
+  const { data, error } = await supabaseClient.rpc('timeclock_get_day', {
+    p_code: employeeCode, p_password: password, p_ym: ym, p_day: Number(day),
+  });
+  if (error) throw error;
+  const row = (data && data[0]) || null;
+  if (!row) return null;
+  return {
+    clockIn: row.clock_in || '',
+    clockOut: row.clock_out || '',
+    breakMinutes: row.break_minutes,
+    status: row.status,
+  };
+}
+
+// kind: 'in'（出勤） / 'out'（退勤）、hm: 'HH:MM'
+async function timeclockPunch(employeeCode, password, ym, day, kind, hm) {
+  const { error } = await supabaseClient.rpc('timeclock_punch', {
+    p_code: employeeCode, p_password: password, p_ym: ym,
+    p_day: Number(day), p_kind: kind, p_time: hm,
+  });
+  if (error) throw error;
+}
+
 // emp.id が未設定なら新規追加、設定済みなら更新。更新時は変更履歴を記録する
 async function saveEmployee(emp) {
   const userId = await getCurrentUserId();

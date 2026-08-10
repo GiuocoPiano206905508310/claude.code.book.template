@@ -1,20 +1,23 @@
 // ============================================================================
 // 勤怠打刻画面のロジック
 // 出勤・退勤ボタンを押すと、その場でJST現在時刻を勤怠記録に反映する。
-// 給与・勤怠管理システムと同じSupabaseプロジェクト（同一会社アカウント）の
-// データを共有するため、ここで打刻した内容はそのまま勤怠管理画面・
-// 給与計算に連動する。
+// 給与・勤怠管理システムと同じSupabaseプロジェクトのデータを共有するため、
+// ここで打刻した内容はそのまま勤怠管理画面・給与計算に連動する。
 //
-// この端末（ブラウザ）自体は、会社アカウント（給与・勤怠管理システムと同じ
-// ログイン）で一度ログインしておく必要がある。日々の打刻では、その上に
-// さらに従業員ごとの「勤怠打刻用ユーザーID・パスワード」でログインする
-// （会社ログインとは別物・従業員マスタ管理で設定）。ログインしたブラウザの
-// タブを閉じるとログアウトされ、次の人がログインし直せるようにしている。
+// この画面は会社アカウントでのログインを必要としない。従業員ごとの
+// 「氏名・勤怠打刻用ユーザーID・パスワード」（従業員マスタ管理で設定）だけで
+// 打刻できる。データベースへの読み書きは、認証情報が一致した場合のみ動作する
+// データベース側の関数（timeclockEmployeeLogin / timeclockGetDay /
+// timeclockPunch）経由で行うため、テーブルそのものは未ログインユーザーに
+// 公開していない。
+// ログインしたブラウザのタブを閉じるとログアウトされ、次の人がログインし直せる。
 // ============================================================================
 
 const TIMECLOCK_SESSION_KEY = 'timeclockLoggedInEmployee';
 
-let loggedInEmployeeId = null;
+// 打刻のたびに従業員本人の認証情報でデータベース側の関数を呼ぶため、
+// ログイン中はこの端末のタブ内（sessionStorage）にのみ保持する
+let loggedInEmployee = null;
 
 function getStoredEmployeeLogin() {
   try {
@@ -25,16 +28,12 @@ function getStoredEmployeeLogin() {
   }
 }
 
-function storeEmployeeLogin(employee) {
-  sessionStorage.setItem(TIMECLOCK_SESSION_KEY, JSON.stringify({ id: employee.id, name: employee.name }));
+function storeEmployeeLogin(emp) {
+  sessionStorage.setItem(TIMECLOCK_SESSION_KEY, JSON.stringify(emp));
 }
 
 function clearEmployeeLogin() {
   sessionStorage.removeItem(TIMECLOCK_SESSION_KEY);
-}
-
-async function currentEmployee() {
-  return loggedInEmployeeId ? await getEmployee(loggedInEmployeeId) : null;
 }
 
 function showLoginSection() {
@@ -46,12 +45,12 @@ function showLoginSection() {
   document.getElementById('empLoginError').textContent = '';
 }
 
-async function enterAsEmployee(employee) {
-  loggedInEmployeeId = employee.id;
-  storeEmployeeLogin(employee);
+async function enterAsEmployee(emp) {
+  loggedInEmployee = emp;
+  storeEmployeeLogin(emp);
   document.getElementById('employeeLoginSection').style.display = 'none';
   document.getElementById('clockContent').style.display = '';
-  document.getElementById('loggedInEmpLabel').textContent = `${employee.name} さんとしてログイン中`;
+  document.getElementById('loggedInEmpLabel').textContent = `${emp.name} さんとしてログイン中`;
   await renderTodayStatus();
 }
 
@@ -66,21 +65,24 @@ async function tryEmployeeLogin() {
     errorEl.textContent = '従業員名・ユーザーID・パスワードをすべて入力してください。';
     return;
   }
+  const btn = document.getElementById('empLoginBtn');
+  btn.disabled = true;
   try {
-    const employee = await getEmployeeByCode(code);
-    const ok = employee && employee.loginPassword && employee.name.trim() === name && employee.loginPassword === password;
-    if (!ok) {
+    const found = await timeclockEmployeeLogin(name, code, password);
+    if (!found) {
       errorEl.textContent = '従業員名・ユーザーID・パスワードの組み合わせが正しくありません。';
       return;
     }
-    await enterAsEmployee(employee);
+    await enterAsEmployee({ id: found.employee_id, name: found.employee_name, code, password });
   } catch (e) {
     errorEl.textContent = '通信に失敗しました。しばらくしてから再度お試しください。';
+  } finally {
+    btn.disabled = false;
   }
 }
 
 function logoutEmployee() {
-  loggedInEmployeeId = null;
+  loggedInEmployee = null;
   clearEmployeeLogin();
   document.getElementById('punchStatus').innerHTML = '';
   showLoginSection();
@@ -107,7 +109,7 @@ function updateClockDisplay() {
     `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日（${['日', '月', '火', '水', '木', '金', '土'][now.getDay()]}）日本時間`;
 }
 
-function computeWorkedDisplay(employee, rec) {
+function computeWorkedDisplay(rec) {
   if (!rec || rec.status === 'absence' || rec.status === 'paid_leave') return null;
   const inMin = timeToMinutes(rec.clockIn);
   const outMin = timeToMinutes(rec.clockOut);
@@ -118,15 +120,13 @@ function computeWorkedDisplay(employee, rec) {
 }
 
 async function renderTodayStatus() {
-  const employee = await currentEmployee();
   const tbody = document.querySelector('#todayTable tbody');
   tbody.innerHTML = '';
-  if (!employee) return;
+  if (!loggedInEmployee) return;
 
   const { ym, day } = todayParts();
-  const records = await getMonthAttendance(employee.id, ym);
-  const rec = records[String(day)] || null;
-  const worked = computeWorkedDisplay(employee, rec);
+  const rec = await timeclockGetDay(loggedInEmployee.code, loggedInEmployee.password, ym, day);
+  const worked = computeWorkedDisplay(rec);
 
   const rows = [
     ['出勤時刻', rec && rec.clockIn ? rec.clockIn : '未打刻'],
@@ -141,28 +141,14 @@ async function renderTodayStatus() {
 }
 
 async function punch(kind) {
-  const employee = await currentEmployee();
-  if (!employee) return;
+  if (!loggedInEmployee) return;
 
   const label = kind === 'in' ? '出勤' : '退勤';
   const statusEl = document.getElementById('punchStatus');
   try {
     const { ym, day, hm } = todayParts();
-    const records = await getMonthAttendance(employee.id, ym);
-    const existing = records[String(day)] || {
-      status: 'normal', clockIn: '', clockOut: '', breakMinutes: 60,
-    };
-    // 欠勤・有給休暇として記録されていた日に打刻した場合は、出勤扱いに戻す
-    const status = (existing.status === 'absence' || existing.status === 'paid_leave') ? 'normal' : existing.status;
-    const record = Object.assign({}, existing, { status });
-    if (kind === 'in') {
-      record.clockIn = hm;
-    } else {
-      record.clockOut = hm;
-    }
-    await setDayAttendance(employee.id, ym, day, record);
-
-    statusEl.innerHTML = `<strong>${escapeHtml(employee.name)}</strong> さん：${hm} に${label}を記録しました。`;
+    await timeclockPunch(loggedInEmployee.code, loggedInEmployee.password, ym, day, kind, hm);
+    statusEl.innerHTML = `<strong>${escapeHtml(loggedInEmployee.name)}</strong> さん：${hm} に${label}を記録しました。`;
     await renderTodayStatus();
   } catch (e) {
     statusEl.innerHTML = `<span style="color:#e57373;">${label}の記録に失敗しました。通信状況を確認し、もう一度お試しください。</span>`;
@@ -170,6 +156,9 @@ async function punch(kind) {
 }
 
 document.getElementById('empLoginBtn').addEventListener('click', tryEmployeeLogin);
+document.getElementById('loginEmpPassword').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') tryEmployeeLogin();
+});
 document.getElementById('empLogoutLink').addEventListener('click', (e) => { e.preventDefault(); logoutEmployee(); });
 document.getElementById('clockInBtn').addEventListener('click', () => punch('in'));
 document.getElementById('clockOutBtn').addEventListener('click', () => punch('out'));
@@ -184,98 +173,25 @@ async function goToPayrollSystemWithReLogin(e, targetPath) {
   location.href = `../payroll-system/login.html?next=${encodeURIComponent(targetPath)}`;
 }
 document.getElementById('goToPayrollSystemLink').addEventListener('click', (e) => goToPayrollSystemWithReLogin(e, 'index.html'));
-const goToEmployeesLink = document.getElementById('goToEmployeesLink');
-if (goToEmployeesLink) {
-  goToEmployeesLink.addEventListener('click', (e) => goToPayrollSystemWithReLogin(e, 'employees.html'));
-}
 
 initPasswordToggles();
-
-// ---------------------------------------------------------------------------
-// 会社アカウント（給与・勤怠管理システムと共通）のログイン。
-// 打刻はこの画面だけで完結させたいため、未ログインでも給与・勤怠管理システムの
-// ログイン画面へ飛ばさず、この画面上でログインを受け付ける。
-// ---------------------------------------------------------------------------
-function showCompanyLoginSection() {
-  document.getElementById('companyLoginSection').style.display = '';
-  document.getElementById('noEmployeeState').style.display = 'none';
-  document.getElementById('employeeLoginSection').style.display = 'none';
-  document.getElementById('clockContent').style.display = 'none';
-}
-
-function friendlyCompanyAuthError(error) {
-  const msg = (error && error.message) || '';
-  if (msg.includes('Invalid login credentials')) return 'ユーザー名またはパスワードが正しくありません。';
-  if (msg.includes('Failed to fetch')) return '通信に失敗しました。しばらくしてから再度お試しください。';
-  return 'エラーが発生しました：' + msg;
-}
-
-async function tryCompanyLogin() {
-  const username = document.getElementById('companyLoginUsername').value.trim();
-  const password = document.getElementById('companyLoginPassword').value;
-  const errorEl = document.getElementById('companyLoginError');
-  errorEl.textContent = '';
-  if (!username || !password) {
-    errorEl.textContent = 'ユーザー名とパスワードを入力してください。';
-    return;
-  }
-  const btn = document.getElementById('companyLoginBtn');
-  btn.disabled = true;
-  try {
-    await signInWithUsername(username, password);
-    document.getElementById('companyLoginPassword').value = '';
-    await startTimeclock();
-  } catch (e) {
-    errorEl.textContent = friendlyCompanyAuthError(e);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-document.getElementById('companyLoginBtn').addEventListener('click', tryCompanyLogin);
-document.getElementById('companyLoginPassword').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') tryCompanyLogin();
-});
-
-// 会社アカウントでログイン済みの状態から、打刻画面本体を初期化する
-async function startTimeclock() {
-  const user = await getCurrentUser();
-  if (!user) { showCompanyLoginSection(); return; }
-
-  document.getElementById('companyLoginSection').style.display = 'none';
-  // 会社アカウントのログインは「この打刻端末の初期設定」として維持したいので、
-  // 無操作による自動ログアウトの対象から外す（対象にすると、休憩中など打刻の
-  // 合間に会社ログインが切れて、従業員に会社アカウントの再入力を求めることに
-  // なってしまう）。人の入れ替わりは従業員ログインの「ログアウト（次の人と
-  // 交代）」で行う。手動でナビの「ログアウト」を押した場合のみこの画面に戻り、
-  // 会社アカウントログインが再度表示される
-  renderNavbarUser(user, '../payroll-system/account.html', 'index.html', { idleLogout: false });
-
-  try {
-    const hasEmployees = await hasAnyEmployees();
-    document.getElementById('noEmployeeState').style.display = hasEmployees ? 'none' : '';
-    if (!hasEmployees) return;
-
-    const stored = getStoredEmployeeLogin();
-    if (stored) {
-      const employee = await getEmployee(stored.id);
-      if (employee) {
-        await enterAsEmployee(employee);
-        return;
-      }
-      clearEmployeeLogin();
-    }
-    showLoginSection();
-  } catch (e) {
-    document.getElementById('punchStatus').innerHTML =
-      '<span style="color:#e57373;">読み込みに失敗しました。通信状況を確認し、画面を再読み込みしてください。</span>';
-  }
-}
 
 (async () => {
   // 時計表示は通信状況・ログイン状態に関わらず即座に動かし始める
   updateClockDisplay();
   setInterval(updateClockDisplay, 1000);
 
-  await startTimeclock();
+  // 同じタブでログイン済みなら打刻画面へ復帰、そうでなければ従業員ログインを表示
+  const stored = getStoredEmployeeLogin();
+  if (stored && stored.code && stored.password) {
+    try {
+      const found = await timeclockEmployeeLogin(stored.name, stored.code, stored.password);
+      if (found) {
+        await enterAsEmployee({ id: found.employee_id, name: found.employee_name, code: stored.code, password: stored.password });
+        return;
+      }
+    } catch (e) { /* 通信不良時はログイン画面に戻す */ }
+    clearEmployeeLogin();
+  }
+  showLoginSection();
 })();
