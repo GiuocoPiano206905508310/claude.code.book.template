@@ -243,9 +243,13 @@ async function startTimeclock() {
   if (!user) { showCompanyLoginSection(); return; }
 
   document.getElementById('companyLoginSection').style.display = 'none';
-  // ログアウト（手動・無操作による自動ログアウトとも）はこの打刻画面に戻し、
-  // 上記の会社アカウントログインを再度表示する
-  renderNavbarUser(user, '../payroll-system/account.html', 'index.html');
+  // 会社アカウントのログインは「この打刻端末の初期設定」として維持したいので、
+  // 無操作による自動ログアウトの対象から外す（対象にすると、休憩中など打刻の
+  // 合間に会社ログインが切れて、従業員に会社アカウントの再入力を求めることに
+  // なってしまう）。人の入れ替わりは従業員ログインの「ログアウト（次の人と
+  // 交代）」で行う。手動でナビの「ログアウト」を押した場合のみこの画面に戻り、
+  // 会社アカウントログインが再度表示される
+  renderNavbarUser(user, '../payroll-system/account.html', 'index.html', { idleLogout: false });
 
   try {
     const hasEmployees = await hasAnyEmployees();

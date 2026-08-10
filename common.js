@@ -36,7 +36,10 @@ function renderNavbar(activeHref) {
 // accountHref: アカウント設定画面へのパス（省略時は 'account.html'。timeclockなど
 // 別ディレクトリのページからは '../payroll-system/account.html' 等を指定する）
 // loginHref: ログアウト時・自動ログアウト時の遷移先（省略時は 'login.html'）
-function renderNavbarUser(user, accountHref, loginHref) {
+// options.idleLogout: falseを渡すと無操作による自動ログアウトを行わない
+//   （共用の打刻端末など、会社アカウントのログインを端末の初期設定として
+//   維持したい画面で使用する）
+function renderNavbarUser(user, accountHref, loginHref, options) {
   const area = document.getElementById('navUserArea');
   if (!area || !user) return;
   area.innerHTML = `
@@ -48,7 +51,7 @@ function renderNavbarUser(user, accountHref, loginHref) {
     await signOut();
     location.href = loginHref || 'login.html';
   });
-  setupIdleLogoutTimer(loginHref);
+  if (!options || options.idleLogout !== false) setupIdleLogoutTimer(loginHref);
 }
 
 // ---------- 自動ログアウト（アカウント設定で設定した無操作時間が経過すると
