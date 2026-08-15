@@ -49,10 +49,11 @@ function fmtClockTime(minutes) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-// 「法定外60内」の直後に「週残業」、「深夜」の直後に「週深夜残業時間」を挿入した表示順
+// 「法定外(月60h超)」の直後に「法定外週合計」、「深夜」の直後に「深夜週合計」を
+// 挿入した表示順（法定外(月60h内)→法定外(月60h超)→法定外週合計 の並びになる）
 const OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY = (() => {
   const cols = OVERTIME_MINUTE_COLUMNS.slice();
-  cols.splice(cols.indexOf('overtimeWithin60') + 1, 0, 'weeklyOvertime');
+  cols.splice(cols.indexOf('overtimeOver60') + 1, 0, 'weeklyOvertime');
   cols.splice(cols.indexOf('lateNight') + 1, 0, 'weeklyOvertimeNight');
   return cols;
 })();
