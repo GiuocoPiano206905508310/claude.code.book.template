@@ -232,9 +232,19 @@ async function getMonthAttendance(employeeId, ym) {
       scheduledEnd: row.scheduled_end || '',
       breakMinutes: row.break_minutes,
       status: row.status,
+      earlyOvertime: !!row.early_overtime,
     };
   }
   return result;
+}
+
+// attendance_records.early_overtime（早出残業チェック）列がまだ無いDBでも動くよう、
+// 列が無いと分かった時点で以後は送信しない（勤怠の保存自体が失敗しないようにする）。
+// 列を追加するSQLはmigration-attendance-early-overtime.sqlを参照。
+let attendanceEarlyOvertimeColumnSupported = true;
+function isMissingEarlyOvertimeColumnError(error) {
+  const text = `${(error && error.message) || ''} ${(error && error.details) || ''}`;
+  return text.includes('early_overtime');
 }
 
 async function setDayAttendance(employeeId, ym, day, record) {
@@ -245,7 +255,7 @@ async function setDayAttendance(employeeId, ym, day, record) {
     return;
   }
   const userId = await getCurrentUserId();
-  const { error } = await supabaseClient.from('attendance_records').upsert({
+  const row = {
     user_id: userId,
     employee_id: employeeId,
     ym,
@@ -256,8 +266,19 @@ async function setDayAttendance(employeeId, ym, day, record) {
     scheduled_end: record.scheduledEnd || null,
     break_minutes: Number(record.breakMinutes) || 0,
     status: record.status || 'normal',
-  }, { onConflict: 'employee_id,ym,day' });
-  if (error) throw error;
+  };
+  if (attendanceEarlyOvertimeColumnSupported) row.early_overtime = !!record.earlyOvertime;
+
+  const { error } = await supabaseClient.from('attendance_records')
+    .upsert(row, { onConflict: 'employee_id,ym,day' });
+  if (!error) return;
+  if (!(attendanceEarlyOvertimeColumnSupported && isMissingEarlyOvertimeColumnError(error))) throw error;
+
+  attendanceEarlyOvertimeColumnSupported = false;
+  delete row.early_overtime;
+  const { error: retryError } = await supabaseClient.from('attendance_records')
+    .upsert(row, { onConflict: 'employee_id,ym,day' });
+  if (retryError) throw retryError;
 }
 
 // 指定期間（両端含む、'YYYY-MM-DD'形式）に日次勤怠入力でステータスが「有給休暇」
@@ -303,17 +324,18 @@ async function fetchPeriodRecords(employeeId, periodDates) {
 // records: 呼び出し側がすでに取得済みのperiodDates分の勤怠記録（fetchPeriodRecordsの
 // 戻り値と同じ形式）。ここでは前月分の追加取得のみ行い、二重取得はしない。
 // company: 渡された場合、打刻の丸め設定を出勤・退勤時刻に適用する
-async function computeWeeklyOvertimeWithPadding(employeeId, periodDates, records, overtimeCategoryPerDay, weekStartDay, weeklyOvertimeThreshold, company) {
+// defaultScheduledStart: 従業員マスタの所定始業時刻（所定始業時刻丸めの基準）
+async function computeWeeklyOvertimeWithPadding(employeeId, periodDates, records, overtimeCategoryPerDay, weekStartDay, weeklyOvertimeThreshold, company, defaultScheduledStart) {
   if (!periodDates.length) return {};
   const leadingPad = calcLeadingWeekPadDates(periodDates[0], weekStartDay);
   if (!leadingPad.length) {
-    return computeWeeklyOvertimeByDay(records, overtimeCategoryPerDay, periodDates, weekStartDay, weeklyOvertimeThreshold, company);
+    return computeWeeklyOvertimeByDay(records, overtimeCategoryPerDay, periodDates, weekStartDay, weeklyOvertimeThreshold, company, defaultScheduledStart);
   }
 
   const padYm = ymKey(leadingPad[0].y, leadingPad[0].m);
   const padMonthRecords = await getMonthAttendance(employeeId, padYm);
   const padDaysInMonth = new Date(leadingPad[0].y, leadingPad[0].m, 0).getDate();
-  const { perDay: padMonthPerDay } = computeOvertimeCategoryBreakdown(padMonthRecords, padDaysInMonth, company);
+  const { perDay: padMonthPerDay } = computeOvertimeCategoryBreakdown(padMonthRecords, padDaysInMonth, company, defaultScheduledStart);
 
   const extendedDates = leadingPad.concat(periodDates);
   const extendedRecords = {};
@@ -330,7 +352,7 @@ async function computeWeeklyOvertimeWithPadding(employeeId, periodDates, records
     extendedPerDay[idx] = overtimeCategoryPerDay[i + 1];
   });
 
-  const extendedResult = computeWeeklyOvertimeByDay(extendedRecords, extendedPerDay, extendedDates, weekStartDay, weeklyOvertimeThreshold, company);
+  const extendedResult = computeWeeklyOvertimeByDay(extendedRecords, extendedPerDay, extendedDates, weekStartDay, weeklyOvertimeThreshold, company, defaultScheduledStart);
 
   const result = {};
   periodDates.forEach((date, i) => {
@@ -384,7 +406,7 @@ async function computeMonthSummary(employee, ym, company) {
     if (rec.status === 'absence') { absenceDays++; continue; }
     if (rec.status === 'paid_leave') { paidLeaveDays++; continue; }
 
-    const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company);
+    const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company, scheduledStartMinutesForRounding(rec, employee.workStart));
     const outMin = roundClockOutMinutes(timeToMinutes(rec.clockOut), company);
     if (inMin === null || outMin === null) continue;
 
@@ -407,12 +429,12 @@ async function computeMonthSummary(employee, ym, company) {
   }
 
   const { perDay: overtimeCategoryPerDay, monthTotals: overtimeCategoryMonthTotals } =
-    computeOvertimeCategoryBreakdown(records, daysInMonth, company);
+    computeOvertimeCategoryBreakdown(records, daysInMonth, company, employee.workStart);
 
   if (company) {
     const periodDates = buildCalendarMonthDates(y, m);
     const weeklyByDay = await computeWeeklyOvertimeWithPadding(
-      employee.id, periodDates, records, overtimeCategoryPerDay, company.weekStartDay, company.weeklyOvertimeThreshold, company
+      employee.id, periodDates, records, overtimeCategoryPerDay, company.weekStartDay, company.weeklyOvertimeThreshold, company, employee.workStart
     );
     let weeklyOvertimeMonthTotal = 0;
     let weeklyOvertimeNightMonthTotal = 0;
@@ -617,6 +639,10 @@ function defaultCompany() {
     // 休憩開始・休憩終了は設定を保存するのみで計算には未反映）
     roundingEnabled: false,
     roundingRules: defaultRoundingRules(),
+    // 所定始業時刻丸め（デフォルト無）。有効にすると、所定始業時刻より前の打刻を
+    // 所定始業時刻に丸め、始業時刻前の勤務時間を集計の対象外とする
+    // （勤怠管理で「早出残業」にチェックした日は丸めず、始業前の勤務も集計する）
+    scheduledStartRounding: false,
     // 割増賃金計算における端数処理設定（労働基準局通達に基づく3項目。デフォルト適用なし）
     overtimeFractionRules: {
       monthlyHoursRounding: false, // (1) 月間の時間外・休日・深夜業時間数の30分未満切捨て・以上切上げ
@@ -656,6 +682,9 @@ function companyRowToObj(row) {
     calcMethod: row.calc_method || defaults.calcMethod,
     roundingEnabled: row.rounding_enabled !== null && row.rounding_enabled !== undefined ? !!row.rounding_enabled : defaults.roundingEnabled,
     roundingRules: row.rounding_rules || defaults.roundingRules,
+    // 所定始業時刻丸めは勤怠丸め設定（rounding_rules）のJSONに同居させている
+    // （DBの列追加を不要にするため）
+    scheduledStartRounding: !!(row.rounding_rules && row.rounding_rules.scheduledStartRounding),
     overtimeFractionRules: row.overtime_fraction_rules || defaults.overtimeFractionRules,
     monthlyPaymentFractionRules: row.monthly_payment_fraction_rules || defaults.monthlyPaymentFractionRules,
     overtimeRates: row.overtime_rates || defaultOvertimeRates(),
@@ -684,7 +713,8 @@ function companyObjToRow(company, userId) {
     employment_rate: company.employmentRate,
     calc_method: company.calcMethod,
     rounding_enabled: !!company.roundingEnabled,
-    rounding_rules: company.roundingRules || defaultRoundingRules(),
+    rounding_rules: Object.assign({}, company.roundingRules || defaultRoundingRules(),
+      { scheduledStartRounding: !!company.scheduledStartRounding }),
     overtime_fraction_rules: company.overtimeFractionRules || {},
     monthly_payment_fraction_rules: company.monthlyPaymentFractionRules || {},
     overtime_rates: company.overtimeRates || defaultOvertimeRates(),
@@ -820,6 +850,7 @@ const COMPANY_HISTORY_FIELDS = [
   { key: 'employmentRate', label: '雇用保険料率', format: fmtHistoryPercent },
   { key: 'calcMethod', label: '源泉所得税の計算方法', format: (v) => v === 'machine' ? '機械計算' : (v ? '月額表' : '') },
   { key: 'roundingEnabled', label: '打刻時刻の丸め', format: fmtHistoryYesNo },
+  { key: 'scheduledStartRounding', label: '所定始業時刻丸め', format: fmtHistoryYesNo },
 ];
 [['clockIn', '出勤'], ['clockOut', '退勤'], ['breakStart', '休憩開始'], ['breakEnd', '休憩終了']].forEach(([kind, label]) => {
   COMPANY_HISTORY_FIELDS.push({

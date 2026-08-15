@@ -22,9 +22,9 @@ async function populateEmployeeSelect() {
 
 const OVERTIME_MINUTE_COLUMNS = OVERTIME_RATE_CATEGORIES.map((c) => overtimeMinuteKey(c.key));
 
-function computeWorkedMinutes(rec, company) {
+function computeWorkedMinutes(rec, company, defaultScheduledStart) {
   if (!rec || rec.status === 'absence' || rec.status === 'paid_leave') return null;
-  const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company);
+  const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company, scheduledStartMinutesForRounding(rec, defaultScheduledStart));
   const outMin = roundClockOutMinutes(timeToMinutes(rec.clockOut), company);
   if (inMin === null || outMin === null) return null;
   const breakMin = Number(rec.breakMinutes) || 0;
@@ -80,7 +80,7 @@ function computeMidHeaderInsertIndex(periodDates) {
 
 function renderMonthTotalRow(rowId, totals) {
   const row = document.getElementById(rowId);
-  OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY.concat('worked').forEach((key) => {
+  OVERTIME_MINUTE_COLUMNS_WITH_WEEKLY.concat(['worked', 'earlyOvertime']).forEach((key) => {
     const cell = row.querySelector(`[data-role="${key}"]`);
     if (cell) cell.textContent = fmtHm(totals[key]);
   });
@@ -101,14 +101,17 @@ async function renderDayTable() {
   document.getElementById('periodRangeLabel').textContent =
     `※ 対象期間：${first.y}/${first.m}/${first.d} 〜 ${last.y}/${last.m}/${last.d}（会社マスタ管理の賃金締日に基づく）`;
   const records = await fetchPeriodRecords(employee.id, periodDates);
-  const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, periodDates.length, company);
-  const weeklyByDay = await computeWeeklyOvertimeWithPadding(employee.id, periodDates, records, overtimeByDay, company.weekStartDay, company.weeklyOvertimeThreshold, company);
+  const { perDay: overtimeByDay, monthTotals } = computeOvertimeCategoryBreakdown(records, periodDates.length, company, employee.workStart);
+  const weeklyByDay = await computeWeeklyOvertimeWithPadding(employee.id, periodDates, records, overtimeByDay, company.weekStartDay, company.weeklyOvertimeThreshold, company, employee.workStart);
   const showMidHeader = document.getElementById('showMidHeaderCheckbox').checked;
   const midHeaderInsertAt = showMidHeader ? computeMidHeaderInsertIndex(periodDates) : -1;
   const headerRowTemplate = document.getElementById('dayTableHeaderRow');
   let workedTotal = 0;
   let weeklyOvertimeTotal = 0;
   let weeklyOvertimeNightTotal = 0;
+  let earlyOvertimeTotal = 0;
+  // 打刻の丸め後の時刻は、打刻時刻の丸めか所定始業時刻丸めのいずれかが有効な場合に表示する
+  const showRoundedClock = !!(company.roundingEnabled || company.scheduledStartRounding);
 
   periodDates.forEach((date, i) => {
     if (i === midHeaderInsertAt) {
@@ -124,11 +127,13 @@ async function renderDayTable() {
     const rec = records[String(idx)] || { clockIn: '', clockOut: '', breakMinutes: 60, status: defaultStatusForWeekday(dow, company) };
     const scheduledStart = rec.scheduledStart || employee.workStart || '';
     const scheduledEnd = rec.scheduledEnd || employee.workEnd || '';
-    const worked = computeWorkedMinutes(rec, company);
+    const worked = computeWorkedMinutes(rec, company, employee.workStart);
     workedTotal += worked || 0;
-    // 丸め後の出勤・退勤時刻は、会社マスタ管理で丸め設定が有効な場合のみ表示する
-    const roundedClockIn = company.roundingEnabled ? roundClockInMinutes(timeToMinutes(rec.clockIn), company) : null;
-    const roundedClockOut = company.roundingEnabled ? roundClockOutMinutes(timeToMinutes(rec.clockOut), company) : null;
+    const earlyOvertimeMin = computeEarlyOvertimeMinutes(rec, company, employee.workStart);
+    earlyOvertimeTotal += earlyOvertimeMin;
+    const roundedClockIn = showRoundedClock
+      ? roundClockInMinutes(timeToMinutes(rec.clockIn), company, scheduledStartMinutesForRounding(rec, employee.workStart)) : null;
+    const roundedClockOut = showRoundedClock ? roundClockOutMinutes(timeToMinutes(rec.clockOut), company) : null;
     weeklyOvertimeTotal += weeklyByDay[idx].weeklyOvertime;
     weeklyOvertimeNightTotal += weeklyByDay[idx].weeklyOvertimeNight;
     const dayValues = Object.assign({}, overtimeByDay[idx], weeklyByDay[idx]);
@@ -139,6 +144,8 @@ async function renderDayTable() {
     const tr = document.createElement('tr');
     tr.className = rec.status && rec.status !== 'normal' ? `row-${rec.status}` : '';
     const isTimeless = rec.status === 'absence' || rec.status === 'paid_leave';
+    // 休日出勤の日は所定始業時刻の概念がないため、早出残業のチェックは操作できないようにする
+    const isHolidayStatus = isScheduledHolidayStatus(rec.status) || isStatutoryHolidayStatus(rec.status);
     tr.innerHTML = `
       <td class="date-cell ${dow === 0 ? 'is-weekend' : ''} ${dow === 6 ? 'is-saturday' : ''}">${date.m}/${date.d} (${weekday})</td>
       <td>
@@ -159,13 +166,22 @@ async function renderDayTable() {
       <td><input type="number" min="0" step="5" data-field="breakMinutes" value="${rec.breakMinutes ?? 60}" ${isTimeless ? 'disabled' : ''}></td>
       <td class="computed" data-role="worked">${fmtHm(worked)}</td>
       ${categoryCells}
+      <td class="computed" data-role="earlyOvertime">
+        <label class="cell-toggle">
+          <input type="checkbox" data-field="earlyOvertime" ${rec.earlyOvertime ? 'checked' : ''} ${isTimeless || isHolidayStatus ? 'disabled' : ''}>
+          <span>${fmtHm(earlyOvertimeMin)}</span>
+        </label>
+      </td>
     `;
     tr.dataset.actualYm = ymKey(date.y, date.m);
     tr.dataset.actualDay = date.d;
     tbody.appendChild(tr);
   });
 
-  const monthTotalsWithWeekly = Object.assign({ weeklyOvertime: weeklyOvertimeTotal, weeklyOvertimeNight: weeklyOvertimeNightTotal, worked: workedTotal }, monthTotals);
+  const monthTotalsWithWeekly = Object.assign(
+    { weeklyOvertime: weeklyOvertimeTotal, weeklyOvertimeNight: weeklyOvertimeNightTotal, worked: workedTotal },
+    monthTotals, { earlyOvertime: earlyOvertimeTotal }
+  );
   renderMonthTotalRow('monthTotalTopRow', monthTotalsWithWeekly);
   renderMonthTotalRow('monthTotalBottomRow', monthTotalsWithWeekly);
 
@@ -190,12 +206,17 @@ async function renderDayTable() {
       const timeless = statusSelect.value === 'absence' || statusSelect.value === 'paid_leave';
       tr.querySelectorAll('[data-field="clockIn"], [data-field="clockOut"], [data-field="scheduledStart"], [data-field="scheduledEnd"], [data-field="breakMinutes"]')
         .forEach((el) => { el.disabled = timeless; });
+      const holiday = isScheduledHolidayStatus(statusSelect.value) || isStatutoryHolidayStatus(statusSelect.value);
+      tr.querySelector('[data-field="earlyOvertime"]').disabled = timeless || holiday;
       if (isReadyToSave()) saveRow(employee, actualYm, actualDay, tr);
     });
     [clockInEl, clockOutEl, scheduledStartEl, scheduledEndEl].forEach((el) => {
       el.addEventListener('blur', () => { if (isReadyToSave()) saveRow(employee, actualYm, actualDay, tr); });
     });
     tr.querySelector('[data-field="breakMinutes"]').addEventListener('change', () => {
+      if (isReadyToSave()) saveRow(employee, actualYm, actualDay, tr);
+    });
+    tr.querySelector('[data-field="earlyOvertime"]').addEventListener('change', () => {
       if (isReadyToSave()) saveRow(employee, actualYm, actualDay, tr);
     });
   });
@@ -210,6 +231,7 @@ async function saveRow(employee, actualYm, actualDay, tr) {
     scheduledStart: tr.querySelector('[data-field="scheduledStart"]').value,
     scheduledEnd: tr.querySelector('[data-field="scheduledEnd"]').value,
     breakMinutes: Number(tr.querySelector('[data-field="breakMinutes"]').value) || 0,
+    earlyOvertime: tr.querySelector('[data-field="earlyOvertime"]').checked,
   };
   await setDayAttendance(employee.id, actualYm, actualDay, record);
   await renderDayTable();
