@@ -1035,9 +1035,39 @@ function computeOvertimeCategoryBreakdown(records, daysInMonth, company) {
         const workedTotal = Math.max(0, (rawEnd - rawStart) - breakMin);
 
         if (isStatutoryHolidayStatus(rec.status)) {
-          const nightMin = Math.min(workedTotal, overlapMinutesWithWindows(rawStart, rawEnd, NIGHT_WINDOWS_MIN));
-          dayMinutes.statutoryHolidayNight = nightMin;
-          dayMinutes.statutoryHoliday = workedTotal - nightMin;
+          // 法定休日は「暦日（0:00〜24:00）」単位で判定されるため、24:00を過ぎた分は
+          // 休日労働ではなくなり、そのまま continuing する時間外労働として扱う
+          // （厚生労働省「割増賃金の例」②の「ここからは休日労働ではなくなる」）。
+          // 例）法定休日に9:00〜翌9:00勤務（休憩1h）の場合
+          //   9:00〜22:00  → 法定休日（3割5分以上）12時間
+          //   22:00〜24:00 → 法定休日+深夜（6割以上）2時間
+          //   0:00〜5:00   → 法定外+深夜（5割以上）5時間
+          //   5:00〜9:00   → 法定外（2割5分以上）4時間
+          const dayEndMin = 24 * 60;
+          const holidayEnd = Math.min(rawEnd, dayEndMin);
+          // 休憩は休日労働の時間帯（24:00まで）で取得したものと仮定して差し引く
+          const holidayWorked = Math.max(0, (holidayEnd - rawStart) - breakMin);
+          const holidayNight = Math.min(holidayWorked, overlapMinutesWithWindows(rawStart, holidayEnd, NIGHT_WINDOWS_MIN));
+          dayMinutes.statutoryHolidayNight = holidayNight;
+          dayMinutes.statutoryHoliday = holidayWorked - holidayNight;
+
+          // 24:00以降の分は、休日労働ではなく通常の法定外労働として計上する
+          const afterMidnight = Math.max(0, rawEnd - dayEndMin);
+          if (afterMidnight > 0) {
+            const nightAfter = Math.min(afterMidnight, overlapMinutesWithWindows(dayEndMin, rawEnd, NIGHT_WINDOWS_MIN));
+            const within60Capacity = Math.max(0, MONTHLY_OVERTIME_THRESHOLD_MIN - cumulativeOvertimeMin);
+            const dayWithin60Total = Math.min(afterMidnight, within60Capacity);
+            cumulativeOvertimeMin += afterMidnight;
+
+            const nightShare = nightAfter / afterMidnight;
+            const within60NightMin = Math.min(nightAfter, Math.round(dayWithin60Total * nightShare));
+            const within60NonNightMin = dayWithin60Total - within60NightMin;
+
+            dayMinutes.overtimeWithin60 = within60NonNightMin;
+            dayMinutes.overtimeWithin60Night = within60NightMin;
+            dayMinutes.overtimeOver60 = Math.max(0, (afterMidnight - nightAfter) - within60NonNightMin);
+            dayMinutes.overtimeOver60Night = Math.max(0, nightAfter - within60NightMin);
+          }
         } else if (isScheduledHolidayStatus(rec.status)) {
           const nightMin = Math.min(workedTotal, overlapMinutesWithWindows(rawStart, rawEnd, NIGHT_WINDOWS_MIN));
           // 所定休日出勤には「深夜との組み合わせ」区分がないため、深夜分は深夜労働時間に計上する
