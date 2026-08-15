@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>会社マスタ管理 | 給与・勤怠管理システム</title>
 <script>(function(){try{var t=localStorage.getItem('themePreference');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
-<link rel="stylesheet" href="style.css?v=35">
+<link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -25,11 +25,20 @@
   <section class="card form-card" aria-label="支社選択" id="branchCard">
     <h2>支社選択</h2>
     <p class="field-note">※ 登録した順に表示されます。「編集」を押すと、下の会社マスタ情報にその支社の設定を表示・編集できます。支社ごとに休日・保険料率・割増率・勤怠丸め設定などをすべて個別に設定できます。</p>
+    <p class="field-note">※ 複数の支社に同じ設定をまとめて反映したい場合・まとめて削除したい場合は、左端のチェックを入れてから下の「チェックした支社を一括編集／一括削除」を押してください。</p>
     <div class="data-table-wrap">
       <table class="data-table" id="branchListTable">
-        <thead><tr><th>No.</th><th>支社名</th><th>区分</th><th>操作</th></tr></thead>
+        <thead><tr>
+          <th class="branch-select-col"><input type="checkbox" id="branchSelectAll" title="すべて選択／解除"></th>
+          <th>No.</th><th>支社名</th><th>区分</th><th>操作</th>
+        </tr></thead>
         <tbody></tbody>
       </table>
+    </div>
+    <div class="bulk-action-row">
+      <span class="bulk-count" id="branchSelectedCount">選択中：0件</span>
+      <button id="bulkEditBranchBtn" type="button" class="btn btn-sm btn-outline" disabled>チェックした支社を一括編集</button>
+      <button id="bulkDeleteBranchBtn" type="button" class="btn btn-sm btn-danger" disabled>チェックした支社を一括削除</button>
     </div>
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px;">
       <input type="text" id="newBranchNameInput" placeholder="例：〇〇支社" style="flex:1; min-width:200px;">
@@ -40,6 +49,7 @@
 
   <section class="card form-card" aria-label="会社の保険料率・源泉徴収設定" id="companyFormCard">
     <p class="field-note" id="editModeNote" style="display:none; margin:0 0 14px;">編集中です。内容を確認のうえ「保存する」を押してください。</p>
+    <p class="bulk-edit-note" id="bulkEditNote" style="display:none;"></p>
 
     <h2 class="section-2">支社名</h2>
     <div class="field-row">
@@ -353,6 +363,6 @@
 <script src="calc.js?v=18"></script>
 <script src="data.js?v=24"></script>
 <script src="common.js?v=19"></script>
-<script src="company.js?v=15"></script>
+<script src="company.js?v=16"></script>
 </body>
 </html>

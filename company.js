@@ -7,11 +7,19 @@
 // ---------------------------------------------------------------------------
 let companyBranches = [];
 let currentBranchId = null;
+// 一括操作でチェックされている支社のID。一覧を再描画しても選択状態を保つ
+const selectedBranchIds = new Set();
+// 一括編集中の支社ID（配列）。単一支社の編集中・未編集の場合はnull
+let bulkEditBranchIds = null;
 
 function renderBranchList() {
   const tbody = document.querySelector('#branchListTable tbody');
   tbody.innerHTML = companyBranches.map((b, i) => `
     <tr data-branch-id="${b.id}"${b.id === currentBranchId ? ' style="background:var(--surface-line);"' : ''}>
+      <td class="branch-select-col">
+        <input type="checkbox" data-action="select-branch" data-id="${b.id}"
+          title="一括操作の対象にする"${selectedBranchIds.has(b.id) ? ' checked' : ''}>
+      </td>
       <td>
         <span class="branch-no">${i + 1}</span>
         <button type="button" class="btn btn-sm btn-outline" data-action="move-up" data-id="${b.id}" title="上へ移動"${i === 0 ? ' disabled' : ''}>▲</button>
@@ -25,6 +33,26 @@ function renderBranchList() {
       </td>
     </tr>
   `).join('');
+}
+
+// チェック件数の表示・一括操作ボタンの活性・全選択チェックの状態を更新する
+function updateBranchBulkUi() {
+  const count = selectedBranchIds.size;
+  document.getElementById('branchSelectedCount').textContent = `選択中：${count}件`;
+  document.getElementById('bulkEditBranchBtn').disabled = count === 0;
+  // 本社は削除できないため、削除対象になる支社が1件も無い場合は押せないようにする
+  const deletableCount = companyBranches.filter((b) => selectedBranchIds.has(b.id) && !b.isHeadOffice).length;
+  document.getElementById('bulkDeleteBranchBtn').disabled = deletableCount === 0;
+
+  const selectAll = document.getElementById('branchSelectAll');
+  selectAll.checked = companyBranches.length > 0 && count === companyBranches.length;
+  selectAll.indeterminate = count > 0 && count < companyBranches.length;
+}
+
+// 削除された支社などが選択に残らないようにする
+function pruneSelectedBranchIds() {
+  const existing = new Set(companyBranches.map((b) => b.id));
+  [...selectedBranchIds].forEach((id) => { if (!existing.has(id)) selectedBranchIds.delete(id); });
 }
 
 // 隣接する支社とNo.（並び順）を入れ替える
@@ -48,7 +76,9 @@ async function moveBranch(branchId, direction) {
 async function refreshBranchList(selectId) {
   companyBranches = await listBranches();
   currentBranchId = selectId || (companyBranches.find((b) => b.isHeadOffice) || companyBranches[0]).id;
+  pruneSelectedBranchIds();
   renderBranchList();
+  updateBranchBulkUi();
 }
 
 // ---------------------------------------------------------------------------
@@ -283,9 +313,34 @@ function setEditMode(editing) {
   });
   document.getElementById('editModeNote').style.display = editing ? '' : 'none';
   document.getElementById('editSaveRow').style.display = editing ? '' : 'none';
+  applyBulkEditModeToForm();
+}
+
+// 一括編集中は、支社名の欄だけは編集できないようにする（各支社の名称は
+// それぞれ元のまま残し、名称以外の設定だけをまとめて反映するため）
+function applyBulkEditModeToForm() {
+  const note = document.getElementById('bulkEditNote');
+  const nameInput = document.getElementById('branchNameInput');
+  if (!bulkEditBranchIds) {
+    note.style.display = 'none';
+    note.textContent = '';
+    return;
+  }
+  const names = companyBranches.filter((b) => bulkEditBranchIds.includes(b.id)).map((b) => b.branchName);
+  note.textContent = `一括編集中：${names.length}件（${names.join('、')}）。`
+    + '「保存する」を押すと、支社名を除くすべての設定がこれらの支社に同じ内容で反映されます。';
+  note.style.display = '';
+  nameInput.disabled = true;
+}
+
+// 一括編集を解除して通常の編集に戻す
+function clearBulkEditMode() {
+  bulkEditBranchIds = null;
+  applyBulkEditModeToForm();
 }
 
 document.getElementById('cancelEditBtn').addEventListener('click', async () => {
+  clearBulkEditMode();
   await loadFormFromCompany();
   setEditMode(false);
   showExportStatus('saveStatus', '', false);
@@ -297,6 +352,45 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     return;
   }
   const btn = document.getElementById('saveBtn');
+
+  if (bulkEditBranchIds) {
+    const targets = companyBranches.filter((b) => bulkEditBranchIds.includes(b.id));
+    const ok = confirm(`次の${targets.length}件の支社に、支社名を除く同じ設定を反映します。\n\n`
+      + targets.map((b) => `・${b.branchName}`).join('\n') + '\n\nよろしいですか？');
+    if (!ok) return;
+    btn.disabled = true;
+    const form = collectFormAsCompany();
+    const failed = [];
+    try {
+      for (const branch of targets) {
+        // 支社名・本社区分・並び順は各支社のものを維持し、それ以外を上書きする
+        const merged = Object.assign({}, form, {
+          id: branch.id,
+          branchName: branch.branchName,
+          isHeadOffice: branch.isHeadOffice,
+          sortOrder: branch.sortOrder,
+        });
+        try {
+          await saveBranch(merged);
+        } catch (err) {
+          failed.push(`${branch.branchName}（${err.message}）`);
+        }
+      }
+      clearBulkEditMode();
+      await refreshBranchList(currentBranchId);
+      await loadFormFromCompany();
+      setEditMode(false);
+      if (failed.length) {
+        showExportStatus('saveStatus', `${targets.length - failed.length}件に反映しましたが、次の支社で失敗しました：` + failed.join('、'), true);
+      } else {
+        showExportStatus('saveStatus', `${targets.length}件の支社に設定を反映しました。`, false);
+      }
+    } finally {
+      btn.disabled = false;
+    }
+    return;
+  }
+
   btn.disabled = true;
   try {
     await saveBranch(collectFormAsCompany());
@@ -319,6 +413,7 @@ async function switchToBranch(branchId) {
   if (wasEditing && !confirm('編集中の内容は保存されていません。破棄して支社を切り替えますか？')) {
     return;
   }
+  clearBulkEditMode();
   currentBranchId = branchId;
   renderBranchList();
   await loadFormFromCompany();
@@ -326,6 +421,21 @@ async function switchToBranch(branchId) {
   showExportStatus('saveStatus', '', false);
   showExportStatus('branchStatus', '', false);
 }
+
+document.querySelector('#branchListTable tbody').addEventListener('change', (e) => {
+  const checkbox = e.target.closest('[data-action="select-branch"]');
+  if (!checkbox) return;
+  if (checkbox.checked) selectedBranchIds.add(checkbox.dataset.id);
+  else selectedBranchIds.delete(checkbox.dataset.id);
+  updateBranchBulkUi();
+});
+
+document.getElementById('branchSelectAll').addEventListener('change', (e) => {
+  selectedBranchIds.clear();
+  if (e.target.checked) companyBranches.forEach((b) => selectedBranchIds.add(b.id));
+  renderBranchList();
+  updateBranchBulkUi();
+});
 
 document.querySelector('#branchListTable tbody').addEventListener('click', async (e) => {
   const moveUpBtn = e.target.closest('[data-action="move-up"]');
@@ -365,6 +475,68 @@ document.querySelector('#branchListTable tbody').addEventListener('click', async
       showExportStatus('branchStatus', '支社の削除に失敗しました：' + err.message, true);
       deleteBtn.disabled = false;
     }
+  }
+});
+
+// チェックした支社をまとめて編集する（保存時に同じ設定をすべてへ反映する）
+document.getElementById('bulkEditBranchBtn').addEventListener('click', async () => {
+  const targets = companyBranches.filter((b) => selectedBranchIds.has(b.id));
+  if (!targets.length) {
+    showExportStatus('branchStatus', '一括編集する支社にチェックを入れてください。', true);
+    return;
+  }
+  const wasEditing = document.getElementById('editModeNote').style.display !== 'none';
+  if (wasEditing && !confirm('編集中の内容は保存されていません。破棄して一括編集を始めますか？')) return;
+
+  bulkEditBranchIds = targets.map((b) => b.id);
+  // 先頭の支社の設定を初期値としてフォームに表示する
+  currentBranchId = targets[0].id;
+  renderBranchList();
+  await loadFormFromCompany();
+  setEditMode(true);
+  showExportStatus('saveStatus', '', false);
+  showExportStatus('branchStatus', `${targets.length}件の支社を一括編集します。設定を変更して「保存する」を押してください。`, false);
+  document.getElementById('companyFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// チェックした支社をまとめて削除する（本社は削除対象から除外する）
+document.getElementById('bulkDeleteBranchBtn').addEventListener('click', async () => {
+  const selected = companyBranches.filter((b) => selectedBranchIds.has(b.id));
+  const targets = selected.filter((b) => !b.isHeadOffice);
+  const skippedHeadOffice = selected.length - targets.length;
+  if (!targets.length) {
+    showExportStatus('branchStatus', '削除できる支社が選択されていません（本社は削除できません）。', true);
+    return;
+  }
+  const ok = confirm(`次の${targets.length}件の支社を削除します。\n\n`
+    + targets.map((b) => `・${b.branchName}`).join('\n')
+    + '\n\nこれらの支社に所属している従業員は、所属支社が未設定になります。よろしいですか？'
+    + (skippedHeadOffice ? '\n※ 本社は削除できないため対象から除きます。' : ''));
+  if (!ok) return;
+
+  const btn = document.getElementById('bulkDeleteBranchBtn');
+  btn.disabled = true;
+  const failed = [];
+  let currentDeleted = false;
+  for (const branch of targets) {
+    try {
+      await deleteBranch(branch.id);
+      selectedBranchIds.delete(branch.id);
+      if (branch.id === currentBranchId) currentDeleted = true;
+    } catch (err) {
+      failed.push(`${branch.branchName}（${err.message}）`);
+    }
+  }
+  clearBulkEditMode();
+  await refreshBranchList(currentDeleted ? null : currentBranchId);
+  if (currentDeleted) {
+    await loadFormFromCompany();
+    setEditMode(false);
+  }
+  if (failed.length) {
+    showExportStatus('branchStatus', `${targets.length - failed.length}件を削除しましたが、次の支社で失敗しました：` + failed.join('、'), true);
+  } else {
+    showExportStatus('branchStatus', `${targets.length}件の支社を削除しました。`, false);
   }
 });
 
