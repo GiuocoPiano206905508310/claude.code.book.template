@@ -990,11 +990,55 @@ function roundClockMinutes(minutes, unit, method) {
   return method === 'up' ? minutes + (u - rem) : minutes - rem;
 }
 
+// 「所定始業時刻丸め」で始業時刻に丸める対象とする、始業前勤務の上限（12時間）。
+// これを超えて早い打刻は、夜勤等で所定始業時刻と打刻が日をまたいでいるとみなし、
+// 丸めの対象外とする（例：所定始業22:00に対して打刻0:30を22:00に丸めてしまわない）
+const EARLY_CLOCK_IN_CLAMP_LIMIT_MIN = 12 * 60;
+
 // company.roundingEnabled/roundingRulesに基づき、出勤・退勤の打刻時刻（分）を丸める。
-// 丸め設定が無効の場合はそのまま返す（1分単位で計算）
-function roundClockInMinutes(minutes, company) {
+// 丸め設定が無効の場合はそのまま返す（1分単位で計算）。
+// scheduledStartMin（所定始業時刻の分）を渡し、かつ会社マスタ管理で
+// 「所定始業時刻丸め」が有効な場合は、丸め後の出勤時刻が所定始業時刻より
+// 早ければ所定始業時刻まで繰り下げ、始業時刻前の勤務時間を集計対象外とする
+// （例：所定始業9:00に対して8:35に打刻していても、丸め後の出勤は9:00になる）。
+function roundClockInMinutes(minutes, company, scheduledStartMin) {
   const rule = company && company.roundingEnabled && company.roundingRules && company.roundingRules.clockIn;
-  return rule ? roundClockMinutes(minutes, rule.minutes, rule.method) : minutes;
+  const rounded = rule ? roundClockMinutes(minutes, rule.minutes, rule.method) : minutes;
+  if (rounded === null || rounded === undefined) return rounded;
+  if (!company || !company.scheduledStartRounding) return rounded;
+  if (scheduledStartMin === null || scheduledStartMin === undefined) return rounded;
+  const early = scheduledStartMin - rounded;
+  return early > 0 && early <= EARLY_CLOCK_IN_CLAMP_LIMIT_MIN ? scheduledStartMin : rounded;
+}
+
+// 丸め計算に使う所定始業時刻（分）を返す。日次勤怠の所定始業時刻を優先し、
+// 未入力なら従業員マスタの所定始業時刻（defaultScheduledStart）を使う。
+// 次の場合は丸めを行わない（nullを返す）:
+//   ・その日を「早出残業」としてチェックしている（始業前勤務を集計対象にする）
+//   ・休日出勤（所定始業時刻の概念がないため）
+function scheduledStartMinutesForRounding(rec, defaultScheduledStart) {
+  if (!rec || rec.earlyOvertime) return null;
+  if (isScheduledHolidayStatus(rec.status) || isStatutoryHolidayStatus(rec.status)) return null;
+  const recStart = timeToMinutes(rec.scheduledStart);
+  if (recStart !== null && recStart !== undefined) return recStart;
+  const defStart = timeToMinutes(defaultScheduledStart);
+  return defStart !== null && defStart !== undefined ? defStart : null;
+}
+
+// 「早出残業」としてチェックした日について、所定始業時刻より前の勤務時間（分）を返す。
+// チェックしていない日・休日出勤・始業前勤務がない日は0。
+// この時間は丸めを行わないため、法定内・法定外などの各区分にそのまま含まれている
+// （早出残業の列は、そのうち始業時刻前に発生した分を内訳として表示するもの）。
+function computeEarlyOvertimeMinutes(rec, company, defaultScheduledStart) {
+  if (!rec || !rec.earlyOvertime) return 0;
+  if (rec.status === 'absence' || rec.status === 'paid_leave') return 0;
+  if (isScheduledHolidayStatus(rec.status) || isStatutoryHolidayStatus(rec.status)) return 0;
+  const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company, null);
+  const recStart = timeToMinutes(rec.scheduledStart);
+  const startMin = (recStart !== null && recStart !== undefined) ? recStart : timeToMinutes(defaultScheduledStart);
+  if (inMin === null || inMin === undefined || startMin === null || startMin === undefined) return 0;
+  const early = startMin - inMin;
+  return early > 0 && early <= EARLY_CLOCK_IN_CLAMP_LIMIT_MIN ? early : 0;
 }
 function roundClockOutMinutes(minutes, company) {
   const rule = company && company.roundingEnabled && company.roundingRules && company.roundingRules.clockOut;
@@ -1015,8 +1059,11 @@ function roundMinutesToHour(minutes) {
 
 // records: getMonthAttendanceの戻り値（{日: {clockIn, clockOut, breakMinutes, status}}）
 // company: 会社マスタ管理の設定（渡された場合、打刻の丸め設定を出勤・退勤時刻に適用する）
+// defaultScheduledStart: 従業員マスタの所定始業時刻（'HH:MM'）。会社マスタ管理の
+//   「所定始業時刻丸め」が有効な場合に、日次勤怠で所定始業時刻が未入力の日の
+//   丸め基準として使う
 // 戻り値: { perDay: {日: {区分キー: 分}}, monthTotals: {区分キー: 分} }
-function computeOvertimeCategoryBreakdown(records, daysInMonth, company) {
+function computeOvertimeCategoryBreakdown(records, daysInMonth, company, defaultScheduledStart) {
   const perDay = {};
   const monthTotals = emptyOvertimeMinutes();
   let cumulativeOvertimeMin = 0;
@@ -1026,7 +1073,7 @@ function computeOvertimeCategoryBreakdown(records, daysInMonth, company) {
     const dayMinutes = emptyOvertimeMinutes();
 
     if (rec && rec.status !== 'absence' && rec.status !== 'paid_leave') {
-      const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company);
+      const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company, scheduledStartMinutesForRounding(rec, defaultScheduledStart));
       const outMin = roundClockOutMinutes(timeToMinutes(rec.clockOut), company);
       if (inMin !== null && outMin !== null) {
         const rawStart = inMin;
@@ -1136,8 +1183,9 @@ function computeOvertimeCategoryBreakdown(records, daysInMonth, company) {
 // periodDates: buildCalendarMonthDates/buildPayPeriodDatesの戻り値（日付昇順の配列）
 // weeklyThresholdHours: 40 または 44（会社マスタ管理の「週法定外労働時間」設定）
 // company: 会社マスタ管理の設定（渡された場合、打刻の丸め設定を出勤・退勤時刻に適用する）
+// defaultScheduledStart: 従業員マスタの所定始業時刻（computeOvertimeCategoryBreakdown参照）
 // 戻り値: { [連番]: { weeklyOvertime: 分, weeklyOvertimeNight: 分 } }
-function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay, weeklyThresholdHours, company) {
+function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay, weeklyThresholdHours, company, defaultScheduledStart) {
   const thresholdMin = (Number(weeklyThresholdHours) || 40) * 60;
   const result = {};
   let weekWorkedMin = 0;
@@ -1150,7 +1198,7 @@ function computeWeeklyOvertimeByDay(records, perDay, periodDates, weekStartDay, 
     const dow = new Date(y, m - 1, d).getDay();
     const rec = records[String(idx)];
     if (rec && (rec.status === 'normal' || isScheduledHolidayStatus(rec.status))) {
-      const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company);
+      const inMin = roundClockInMinutes(timeToMinutes(rec.clockIn), company, scheduledStartMinutesForRounding(rec, defaultScheduledStart));
       const outMin = roundClockOutMinutes(timeToMinutes(rec.clockOut), company);
       if (inMin !== null && outMin !== null) {
         const rawEnd = outMin <= inMin ? outMin + 24 * 60 : outMin;

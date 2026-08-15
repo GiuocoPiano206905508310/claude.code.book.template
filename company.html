@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>会社マスタ管理 | 給与・勤怠管理システム</title>
 <script>(function(){try{var t=localStorage.getItem('themePreference');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
-<link rel="stylesheet" href="style.css?v=33">
+<link rel="stylesheet" href="style.css?v=34">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -118,6 +118,13 @@
         </select>
       </div>
     </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="scheduledStartRounding">
+      <label for="scheduledStartRounding">所定始業時刻丸め（所定始業時刻より前の打刻を所定始業時刻に丸め、始業時刻前の勤務時間を集計の対象外とする）</label>
+    </div>
+    <p class="field-note">※ 例：所定始業時刻が9:00の場合、8:35に打刻していても「出勤(丸め後)」は自動的に9:00になります。<br>
+      ※ 所定始業時刻は日次の勤怠入力の「所定始業時刻」（未入力の場合は従業員マスタ管理の所定始業時刻）を基準とします。休日出勤の日は丸めません。<br>
+      ※ 始業時刻前の勤務を認めていて、その勤務時間を早出残業として集計する日は、<a href="attendance.html">勤怠管理</a>の「早出残業」にチェックを入れてください（その日は丸めを行いません）。</p>
     <div id="roundingRulesSection" style="display:none;">
       <div class="data-table-wrap">
         <table class="data-table" id="roundingRulesTable">
@@ -343,9 +350,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
-<script src="calc.js?v=17"></script>
-<script src="data.js?v=23"></script>
+<script src="calc.js?v=18"></script>
+<script src="data.js?v=24"></script>
 <script src="common.js?v=19"></script>
-<script src="company.js?v=14"></script>
+<script src="company.js?v=15"></script>
 </body>
 </html>

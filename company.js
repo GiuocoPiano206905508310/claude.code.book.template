@@ -203,6 +203,7 @@ async function loadFormFromCompany() {
   applyRoundingEnabledToForm();
   const rules = company.roundingRules || defaultRoundingRules();
   ROUNDING_KINDS.forEach((kind) => setRoundingRowValue(kind, rules[kind]));
+  document.getElementById('scheduledStartRounding').checked = !!company.scheduledStartRounding;
 
   const overtimeRules = company.overtimeFractionRules || {};
   document.getElementById('overtimeFractionMonthlyHours').checked = !!overtimeRules.monthlyHoursRounding;
@@ -254,6 +255,7 @@ function collectFormAsCompany() {
       breakStart: getRoundingRowValue('breakStart'),
       breakEnd: getRoundingRowValue('breakEnd'),
     },
+    scheduledStartRounding: document.getElementById('scheduledStartRounding').checked,
     overtimeFractionRules: {
       monthlyHoursRounding: document.getElementById('overtimeFractionMonthlyHours').checked,
       hourlyWageRounding: document.getElementById('overtimeFractionHourlyWage').checked,
