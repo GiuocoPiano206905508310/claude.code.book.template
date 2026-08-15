@@ -54,6 +54,25 @@ async function enterAsEmployee(emp) {
   await renderTodayStatus();
 }
 
+// ログインに失敗した原因が画面から分かるようにする。
+// 打刻はデータベース側の関数（RPC）経由で動作するため、その関数が未作成・
+// 権限不足の場合は通信エラーではなく設定不足である旨を案内する。
+function describeTimeclockLoginError(e) {
+  const code = (e && e.code) || '';
+  const text = `${(e && e.message) || ''} ${(e && e.details) || ''} ${(e && e.hint) || ''}`;
+  // 権限不足のメッセージにも関数名が含まれるため、先に権限の判定を行う
+  if (code === '42501' || text.includes('permission denied')) {
+    return '打刻用のデータベース関数を実行する権限がありません。'
+      + 'migration-timeclock-employee-auth.sql の grant execute の部分を実行してください。';
+  }
+  if (code === 'PGRST202' || text.includes('schema cache') || text.includes('Could not find the function')) {
+    return '打刻用のデータベース関数が見つかりません。Supabaseの SQL Editor で '
+      + 'migration-timeclock-employee-auth.sql を実行してください。';
+  }
+  const detail = (e && e.message) ? `（${e.message}）` : '';
+  return '通信に失敗しました。しばらくしてから再度お試しください。' + detail;
+}
+
 async function tryEmployeeLogin() {
   const name = document.getElementById('loginEmpName').value.trim();
   const code = document.getElementById('loginEmpCode').value.trim();
@@ -70,12 +89,14 @@ async function tryEmployeeLogin() {
   try {
     const found = await timeclockEmployeeLogin(name, code, password);
     if (!found) {
-      errorEl.textContent = '従業員名・ユーザーID・パスワードの組み合わせが正しくありません。';
+      errorEl.textContent = '従業員名・ユーザーID・パスワードの組み合わせが正しくありません。'
+        + '（ユーザーID・パスワードは、給与・勤怠管理システムの「従業員マスタ管理」で'
+        + '各従業員に登録したものを入力してください）';
       return;
     }
     await enterAsEmployee({ id: found.employee_id, name: found.employee_name, code, password });
   } catch (e) {
-    errorEl.textContent = '通信に失敗しました。しばらくしてから再度お試しください。';
+    errorEl.textContent = describeTimeclockLoginError(e);
   } finally {
     btn.disabled = false;
   }
