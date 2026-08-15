@@ -67,14 +67,14 @@
               <th>実働</th>
               <th title="法定内労働時間">法定内</th>
               <th title="法定外労働時間(月60時間以内)">法定外(月60h内)</th>
+              <th title="法定外労働時間(月60時間超)">法定外(月60h超)</th>
               <th title="週の法定外労働時間（週40時間超、日次の法定外分と重複しない分のみ）。会社マスタ管理の「週の起算日」を基準とした週の最終日に計上されます。">法定外週合計</th>
-              <th title="法定外労働時間(月60時間超)">法定外60超</th>
               <th title="所定休日労働時間">所定休日</th>
               <th title="法定休日労働時間">法定休日</th>
               <th title="深夜労働時間">深夜</th>
-              <th title="週の法定外労働時間を超過し、かつ深夜労働時間帯に発生した労働時間（日次の法定外60内・法定外60超には含まれません）">週深夜残業時間</th>
-              <th title="法定外労働時間(月60時間以内) + 深夜労働時間">法定外60内+深夜</th>
-              <th title="法定外労働時間(月60時間超) + 深夜労働時間">法定外60超+深夜</th>
+              <th title="週の法定外労働時間を超過し、かつ深夜労働時間帯に発生した労働時間（日次の法定外(月60h内)・法定外(月60h超)には含まれません）">深夜週合計</th>
+              <th title="法定外労働時間(月60時間以内) + 深夜労働時間">法定外(月60h内)+深夜</th>
+              <th title="法定外労働時間(月60時間超) + 深夜労働時間">法定外(月60h超)+深夜</th>
               <th title="法定休日労働時間 + 深夜労働時間">法定休日+深夜</th>
             </tr>
             <tr class="month-total-row" id="monthTotalTopRow">
@@ -82,8 +82,8 @@
               <td class="computed" data-role="worked"></td>
               <td class="computed" data-role="legalWithin"></td>
               <td class="computed" data-role="overtimeWithin60"></td>
-              <td class="computed" data-role="weeklyOvertime"></td>
               <td class="computed" data-role="overtimeOver60"></td>
+              <td class="computed" data-role="weeklyOvertime"></td>
               <td class="computed" data-role="scheduledHoliday"></td>
               <td class="computed" data-role="statutoryHoliday"></td>
               <td class="computed" data-role="lateNight"></td>
@@ -100,8 +100,8 @@
               <td class="computed" data-role="worked"></td>
               <td class="computed" data-role="legalWithin"></td>
               <td class="computed" data-role="overtimeWithin60"></td>
-              <td class="computed" data-role="weeklyOvertime"></td>
               <td class="computed" data-role="overtimeOver60"></td>
+              <td class="computed" data-role="weeklyOvertime"></td>
               <td class="computed" data-role="scheduledHoliday"></td>
               <td class="computed" data-role="statutoryHoliday"></td>
               <td class="computed" data-role="lateNight"></td>
@@ -126,6 +126,6 @@
 <script src="calc.js?v=17"></script>
 <script src="data.js?v=23"></script>
 <script src="common.js?v=19"></script>
-<script src="attendance.js?v=15"></script>
+<script src="attendance.js?v=16"></script>
 </body>
 </html>
