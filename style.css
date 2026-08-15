@@ -343,13 +343,16 @@ input[type="checkbox"]:indeterminate::after { left: 12px; }
 .bulk-action-row {
   display: flex;
   align-items: center;
+  /* 画面幅が狭くてボタンが折り返す場合も、右端でそろえて表示する */
+  justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px dashed var(--surface-line);
 }
-.bulk-action-row .bulk-count { font-size: 12.5px; color: var(--ink-soft); margin-right: 4px; }
+/* 件数の表示だけは左端に置き、ボタンを右へ寄せる */
+.bulk-action-row .bulk-count { font-size: 12.5px; color: var(--ink-soft); margin-right: auto; }
 .bulk-edit-note {
   margin: 0 0 14px;
   padding: 10px 14px;
