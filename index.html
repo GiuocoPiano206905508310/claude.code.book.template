@@ -529,6 +529,34 @@
 
   #printArea { display: none; }
 
+  .page-scroll-buttons {
+    position: fixed;
+    right: 18px;
+    bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 50;
+  }
+  .page-scroll-buttons button {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--indigo);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 2px 6px var(--shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .page-scroll-buttons button:hover { background: var(--indigo); color: #fff; }
+  .page-scroll-buttons button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
   @page {
     size: A4;
     margin: 12mm;
@@ -1016,6 +1044,11 @@
 </div>
 
 <section class="card payslip" id="printArea" aria-hidden="true"></section>
+
+<div class="page-scroll-buttons">
+  <button type="button" id="scrollTopBtn" aria-label="ページの先頭へ">▲</button>
+  <button type="button" id="scrollBottomBtn" aria-label="ページの最後へ">▼</button>
+</div>
 
 <script src="main.js?v=1786933788"></script>
 </body>
