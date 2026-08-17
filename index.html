@@ -752,15 +752,6 @@
       <h2>賞与支給項目</h2>
 
       <div class="field-row">
-        <label for="bonusCalcMethod">源泉所得税の計算方法</label>
-        <div class="field-input">
-          <select id="bonusCalcMethod">
-            <option value="table">月額表</option>
-            <option value="machine">機械計算（甲欄のみ）</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-row">
         <label for="bonusAmount">賞与額</label>
         <div class="field-input">
           <input type="text" inputmode="numeric" id="bonusAmount" placeholder="500,000">
@@ -808,6 +799,15 @@
           <summary>※扶養親族等の数の算定方法</summary>
           <img src="fuyou-santei.jpg" alt="扶養親族等の数の算定方法（国税庁）">
         </details>
+      </div>
+      <div class="field-row">
+        <label for="bonusCalcMethod">源泉所得税の計算方法</label>
+        <div class="field-input">
+          <select id="bonusCalcMethod">
+            <option value="table">月額表</option>
+            <option value="machine">機械計算（甲欄のみ）</option>
+          </select>
+        </div>
       </div>
       <div class="field-row">
         <label for="bonusTaxTable">甲欄・乙欄</label>
