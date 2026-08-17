@@ -115,6 +115,9 @@
     margin-bottom: 14px;
   }
   .view-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     padding: 5px 16px;
     font-size: 11px;
     letter-spacing: 0.04em;
@@ -124,6 +127,13 @@
     border-radius: 999px;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
+  }
+  /* アイコンは線画（白黒）。currentColorを使うため、ライト／ダークや選択状態に自動で追従する */
+  .btn-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    display: block;
   }
   .view-btn:hover { color: var(--ink-soft); }
   .view-btn.active {
@@ -574,6 +584,11 @@
   }
   .settings-btn:hover { background: var(--indigo); color: #fff; }
   .settings-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .settings-icon {
+    width: 19px;
+    height: 19px;
+    display: block;
+  }
 
   .settings-panel {
     position: absolute;
@@ -678,7 +693,12 @@
 </head>
 <body>
 <div class="settings">
-  <button type="button" class="settings-btn" id="settingsBtn" aria-label="画面の表示設定" aria-expanded="false" aria-controls="settingsPanel">⚙</button>
+  <button type="button" class="settings-btn" id="settingsBtn" aria-label="画面の表示設定" aria-expanded="false" aria-controls="settingsPanel">
+    <svg class="settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="3.2"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
   <div class="settings-panel" id="settingsPanel" hidden>
     <h2>画面の表示設定</h2>
     <p class="settings-note">※ この端末のブラウザにのみ保存されます。他の端末でログインした場合は別途設定してください。</p>
@@ -698,8 +718,16 @@
 </div>
 <div class="page">
   <div class="view-toggle">
-    <button type="button" class="view-btn active" id="viewPcBtn">🖥 PC版</button>
-    <button type="button" class="view-btn" id="viewMobileBtn">📱 スマホ版</button>
+    <button type="button" class="view-btn active" id="viewPcBtn">
+      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <rect x="2.5" y="4" width="19" height="12.5" rx="1.5"/>
+        <path d="M12 16.5V20M8.5 20h7"/>
+      </svg>PC版</button>
+    <button type="button" class="view-btn" id="viewMobileBtn">
+      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <rect x="6.5" y="2.5" width="11" height="19" rx="2"/>
+        <path d="M10.75 18.5h2.5"/>
+      </svg>スマホ版</button>
   </div>
 
   <div class="tabs">
