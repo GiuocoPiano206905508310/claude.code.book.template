@@ -237,6 +237,9 @@
     outline: none;
     border-bottom: 2px solid var(--focus);
   }
+  input::placeholder {
+    color: var(--ink-faint);
+  }
   input[readonly] {
     color: var(--ink-soft);
   }
@@ -546,28 +549,28 @@
       <div class="field-row">
         <label for="baseSalary" id="baseSalaryLabel">基本給</label>
         <div class="field-input">
-          <input type="text" inputmode="numeric" id="baseSalary" value="280,000">
+          <input type="text" inputmode="numeric" id="baseSalary" placeholder="300,000">
           <span class="unit">円</span>
         </div>
       </div>
       <div class="field-row">
         <label for="overtimePay">残業手当</label>
         <div class="field-input">
-          <input type="text" inputmode="numeric" id="overtimePay" value="20,000">
+          <input type="text" inputmode="numeric" id="overtimePay" placeholder="30,000">
           <span class="unit">円</span>
         </div>
       </div>
       <div class="field-row">
         <label for="taxableAllowance">その他手当（課税）</label>
         <div class="field-input">
-          <input type="text" inputmode="numeric" id="taxableAllowance" value="10,000">
+          <input type="text" inputmode="numeric" id="taxableAllowance" placeholder="10,000">
           <span class="unit">円</span>
         </div>
       </div>
       <div class="field-row">
         <label for="commuteAllowance">通勤手当（非課税）</label>
         <div class="field-input">
-          <input type="text" inputmode="numeric" id="commuteAllowance" value="10,000">
+          <input type="text" inputmode="numeric" id="commuteAllowance" placeholder="10,000">
           <span class="unit">円</span>
         </div>
       </div>
