@@ -13,7 +13,7 @@ const PREFECTURE_HEALTH_RATES = {
 };
 // 介護保険料率・子ども子育て支援金率は全国一律（令和8年度）
 const CARE_RATE_DEFAULT = 1.62;
-const CHILD_SUPPORT_LEVY_RATE = 0.23; // 全体率。令和8年4月分（5月納付分）から徴収、労使折半
+const CHILD_SUPPORT_LEVY_RATE_DEFAULT = 0.23; // 全体率。令和8年4月分（5月納付分）から徴収、労使折半
 
 // 厚生労働省「令和8年度雇用保険料率」（労働者負担分・失業等給付等の保険料率のみ、令和8年4月～令和9年3月）
 const EMPLOYMENT_RATES_BY_INDUSTRY = {
@@ -22,7 +22,7 @@ const EMPLOYMENT_RATES_BY_INDUSTRY = {
   '建設の事業': 0.6,
 };
 
-function populatePrefectureSelect(selectId, healthId, careId) {
+function populatePrefectureSelect(selectId, healthId, careId, childLevyId) {
   const select = document.getElementById(selectId);
   for (const name of Object.keys(PREFECTURE_HEALTH_RATES)) {
     const option = document.createElement('option');
@@ -31,27 +31,30 @@ function populatePrefectureSelect(selectId, healthId, careId) {
     if (name === '東京') option.selected = true;
     select.appendChild(option);
   }
-  applyPrefectureRate(selectId, healthId, careId);
+  applyPrefectureRate(selectId, healthId, careId, childLevyId);
 }
 
-function applyPrefectureRate(selectId, healthId, careId) {
+function applyPrefectureRate(selectId, healthId, careId, childLevyId) {
   const prefecture = document.getElementById(selectId).value;
   document.getElementById(healthId).value = PREFECTURE_HEALTH_RATES[prefecture].toFixed(2);
   document.getElementById(careId).value = CARE_RATE_DEFAULT.toFixed(2);
+  document.getElementById(childLevyId).value = CHILD_SUPPORT_LEVY_RATE_DEFAULT.toFixed(2);
 }
 
 // 健康保険の種類（協会けんぽ／健康保険組合）の切り替え
-// 協会けんぽ：都道府県選択欄を表示し、健康保険料率・介護保険料率は都道府県から自動入力（編集不可）
-// 健康保険組合：都道府県選択欄を隠し、健康保険料率・介護保険料率とも手動入力（厚生年金保険料率は影響を受けない）
-function applyHealthInsuranceType(typeId, prefectureRowId, prefectureSelectId, healthId, careId, healthLabelId, careLabelId) {
+// 協会けんぽ：都道府県選択欄を表示し、健康保険料率・介護保険料率・子ども子育て支援金料率は都道府県/全国一律の値から自動入力（編集不可）
+// 健康保険組合：都道府県選択欄を隠し、健康保険料率・介護保険料率・子ども子育て支援金料率とも手動入力（厚生年金保険料率は影響を受けない）
+function applyHealthInsuranceType(typeId, prefectureRowId, prefectureSelectId, healthId, careId, childLevyId, healthLabelId, careLabelId, childLevyLabelId) {
   const isKumiai = document.getElementById(typeId).value === 'kumiai';
   document.getElementById(prefectureRowId).style.display = isKumiai ? 'none' : '';
   document.getElementById(healthId).readOnly = !isKumiai;
   document.getElementById(careId).readOnly = !isKumiai;
+  document.getElementById(childLevyId).readOnly = !isKumiai;
   document.getElementById(healthLabelId).textContent = isKumiai ? '健康保険料率（手動入力）' : '健康保険料率（自動入力）';
   document.getElementById(careLabelId).textContent = isKumiai ? '介護保険料率（手動入力）' : '介護保険料率（全国一律）';
+  document.getElementById(childLevyLabelId).textContent = isKumiai ? '子ども・子育て支援金料率（手動入力）' : '子ども・子育て支援金料率（全国一律）';
   if (!isKumiai) {
-    applyPrefectureRate(prefectureSelectId, healthId, careId);
+    applyPrefectureRate(prefectureSelectId, healthId, careId, childLevyId);
   }
 }
 
@@ -70,7 +73,7 @@ function updateInsuranceFieldVisibility(o) {
   if (hideHealthGroup) {
     document.getElementById(o.prefectureRowId).style.display = 'none';
   } else {
-    applyHealthInsuranceType(o.healthTypeId, o.prefectureRowId, o.prefectureSelectId, o.healthRateId, o.careRateId, o.healthRateLabelId, o.careRateLabelId);
+    applyHealthInsuranceType(o.healthTypeId, o.prefectureRowId, o.prefectureSelectId, o.healthRateId, o.careRateId, o.childLevyRateId, o.healthRateLabelId, o.careRateLabelId, o.childLevyRateLabelId);
   }
 }
 
@@ -549,6 +552,7 @@ function calculateBonus() {
 
   const healthRate = Number(document.getElementById('bonusHealthRate').value) / 100;
   const careRate = Number(document.getElementById('bonusCareRate').value) / 100;
+  const childLevyRate = Number(document.getElementById('bonusChildLevyRate').value) / 100;
   const pensionRate = Number(document.getElementById('bonusPensionRate').value) / 100;
   const employmentRate = Number(document.getElementById('bonusEmploymentRate').value) / 100;
 
@@ -576,7 +580,7 @@ function calculateBonus() {
   const careInsurance = hasCare ? roundInsuranceShare(healthStandardBonus * careRate / 2) : 0;
   const pensionInsurance = hasPension ? roundInsuranceShare(pensionStandardBonus * pensionRate / 2) : 0;
   const employmentInsurance = subjectEmploymentInsurance ? bonusAmount * employmentRate : 0;
-  const childSupportLevy = hasHealth ? roundInsuranceShare(healthStandardBonus * (CHILD_SUPPORT_LEVY_RATE / 100) / 2) : 0;
+  const childSupportLevy = hasHealth ? roundInsuranceShare(healthStandardBonus * childLevyRate / 2) : 0;
   const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
 
   const bonusBase = Math.max(0, bonusAmount - socialInsuranceTotal);
@@ -660,6 +664,7 @@ function calculate() {
 
   const healthRate = Number(document.getElementById('healthRate').value) / 100;
   const careRate = Number(document.getElementById('careRate').value) / 100;
+  const childLevyRate = Number(document.getElementById('childLevyRate').value) / 100;
   const pensionRate = Number(document.getElementById('pensionRate').value) / 100;
   const employmentRate = Number(document.getElementById('employmentRate').value) / 100;
 
@@ -681,7 +686,7 @@ function calculate() {
   const careInsurance = hasCare ? roundInsuranceShare(socialInsuranceBase * careRate / 2) : 0;
   const pensionInsurance = hasPension ? roundInsuranceShare(socialInsuranceBase * pensionRate / 2) : 0;
   const employmentInsurance = subjectEmploymentInsurance ? grossPay * employmentRate : 0;
-  const childSupportLevy = hasHealth ? roundInsuranceShare(socialInsuranceBase * (CHILD_SUPPORT_LEVY_RATE / 100) / 2) : 0;
+  const childSupportLevy = hasHealth ? roundInsuranceShare(socialInsuranceBase * childLevyRate / 2) : 0;
 
   const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
 
@@ -806,8 +811,10 @@ const MONTHLY_INSURANCE_VISIBILITY_CONFIG = {
   prefectureSelectId: 'prefecture',
   healthRateId: 'healthRate',
   careRateId: 'careRate',
+  childLevyRateId: 'childLevyRate',
   healthRateLabelId: 'healthRateLabel',
   careRateLabelId: 'careRateLabel',
+  childLevyRateLabelId: 'childLevyRateLabel',
 };
 const BONUS_INSURANCE_VISIBILITY_CONFIG = {
   employmentTypeId: 'bonusEmploymentType',
@@ -818,16 +825,18 @@ const BONUS_INSURANCE_VISIBILITY_CONFIG = {
   prefectureSelectId: 'bonusPrefecture',
   healthRateId: 'bonusHealthRate',
   careRateId: 'bonusCareRate',
+  childLevyRateId: 'bonusChildLevyRate',
   healthRateLabelId: 'bonusHealthRateLabel',
   careRateLabelId: 'bonusCareRateLabel',
+  childLevyRateLabelId: 'bonusChildLevyRateLabel',
 };
 
 document.getElementById('prefecture').addEventListener('change', () => {
-  applyPrefectureRate('prefecture', 'healthRate', 'careRate');
+  applyPrefectureRate('prefecture', 'healthRate', 'careRate', 'childLevyRate');
   calculate();
 });
 document.getElementById('healthInsuranceType').addEventListener('change', () => {
-  applyHealthInsuranceType('healthInsuranceType', 'prefectureFieldRow', 'prefecture', 'healthRate', 'careRate', 'healthRateLabel', 'careRateLabel');
+  applyHealthInsuranceType('healthInsuranceType', 'prefectureFieldRow', 'prefecture', 'healthRate', 'careRate', 'childLevyRate', 'healthRateLabel', 'careRateLabel', 'childLevyRateLabel');
   calculate();
 });
 document.getElementById('industryType').addEventListener('change', () => {
@@ -845,11 +854,11 @@ document.getElementById('calcMethod').addEventListener('change', calculate);
 document.getElementById('calcBtn').addEventListener('click', calculate);
 
 document.getElementById('bonusPrefecture').addEventListener('change', () => {
-  applyPrefectureRate('bonusPrefecture', 'bonusHealthRate', 'bonusCareRate');
+  applyPrefectureRate('bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusChildLevyRate');
   calculateBonus();
 });
 document.getElementById('bonusHealthInsuranceType').addEventListener('change', () => {
-  applyHealthInsuranceType('bonusHealthInsuranceType', 'bonusPrefectureFieldRow', 'bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusHealthRateLabel', 'bonusCareRateLabel');
+  applyHealthInsuranceType('bonusHealthInsuranceType', 'bonusPrefectureFieldRow', 'bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusChildLevyRate', 'bonusHealthRateLabel', 'bonusCareRateLabel', 'bonusChildLevyRateLabel');
   calculateBonus();
 });
 document.getElementById('bonusIndustryType').addEventListener('change', () => {
@@ -924,13 +933,13 @@ if (window.innerWidth < 700) {
   setMobileView(false);
 }
 
-populatePrefectureSelect('prefecture', 'healthRate', 'careRate');
+populatePrefectureSelect('prefecture', 'healthRate', 'careRate', 'childLevyRate');
 populateIndustrySelect('industryType', 'employmentRate');
-populatePrefectureSelect('bonusPrefecture', 'bonusHealthRate', 'bonusCareRate');
+populatePrefectureSelect('bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusChildLevyRate');
 populateIndustrySelect('bonusIndustryType', 'bonusEmploymentRate');
 applyEmploymentTypeLabel();
-applyHealthInsuranceType('healthInsuranceType', 'prefectureFieldRow', 'prefecture', 'healthRate', 'careRate', 'healthRateLabel', 'careRateLabel');
-applyHealthInsuranceType('bonusHealthInsuranceType', 'bonusPrefectureFieldRow', 'bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusHealthRateLabel', 'bonusCareRateLabel');
+applyHealthInsuranceType('healthInsuranceType', 'prefectureFieldRow', 'prefecture', 'healthRate', 'careRate', 'childLevyRate', 'healthRateLabel', 'careRateLabel', 'childLevyRateLabel');
+applyHealthInsuranceType('bonusHealthInsuranceType', 'bonusPrefectureFieldRow', 'bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusChildLevyRate', 'bonusHealthRateLabel', 'bonusCareRateLabel', 'bonusChildLevyRateLabel');
 updateInsuranceFieldVisibility(MONTHLY_INSURANCE_VISIBILITY_CONFIG);
 updateInsuranceFieldVisibility(BONUS_INSURANCE_VISIBILITY_CONFIG);
 calculate();
