@@ -397,9 +397,6 @@
     padding: 7px 22px 0;
     border-bottom: none;
   }
-  .result-notes { padding: 0 22px 18px; }
-  .result-notes .field-note { margin: 4px 0 0; }
-  .result-notes .field-note:first-child { margin-top: 0; }
 
   .net-block {
     padding: 20px 22px 26px;
@@ -736,11 +733,6 @@
         <div class="net-label">差引支給額（手取り）</div>
         <div class="net-value" id="netValue">— 円</div>
       </div>
-      <div class="result-notes">
-        <p class="field-note">※ 残業手当、その他手当（課税）、通勤手当（非課税）は入力された場合に表示（テキストコピーに印字）されます。</p>
-        <p class="field-note">※ 「課税対象額」は、総支給額（非課税交通費除く）から社会保険料合計を差し引いた額です。</p>
-        <p class="field-note">※ 「総控除額」は、源泉所得税（概算）と住民税の合計額です。</p>
-      </div>
       <div class="export-row">
         <button type="button" class="export-btn pc-only" id="exportPdfBtn">🖨 印刷</button>
         <button type="button" class="export-btn pc-only" id="exportExcelBtn">📊 Excel出力</button>
@@ -957,10 +949,6 @@
       <div class="net-block">
         <div class="net-label">差引支給額（手取り）</div>
         <div class="net-value" id="bonusNetValue">— 円</div>
-      </div>
-      <div class="result-notes">
-        <p class="field-note">※ 「課税対象額」は、総支給額（非課税交通費除く）から社会保険料合計を差し引いた額です。</p>
-        <p class="field-note">※ 「総控除額」は、源泉所得税（概算）の額です。</p>
       </div>
       <div class="export-row">
         <button type="button" class="export-btn pc-only" id="bonusExportPdfBtn">🖨 印刷</button>
