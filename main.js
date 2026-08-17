@@ -1053,3 +1053,64 @@ document.getElementById('scrollTopBtn').addEventListener('click', () => scrollPa
 document.getElementById('scrollBottomBtn').addEventListener('click', () => {
   scrollPageTo(document.documentElement.scrollHeight);
 });
+
+// 画面の表示設定（自動／ライト／ダーク）
+// 選択内容はこの端末のブラウザのlocalStorageにのみ保存する
+// （テーマ自体はheadのインラインスクリプトで描画前に適用済み）
+const THEME_STORAGE_KEY = 'displayTheme';
+
+function readSavedTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    return saved === 'light' || saved === 'dark' ? saved : 'auto';
+  } catch (e) {
+    return 'auto';
+  }
+}
+
+function applyTheme(theme) {
+  if (theme === 'light' || theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', theme);
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  try {
+    if (theme === 'auto') {
+      localStorage.removeItem(THEME_STORAGE_KEY);
+    } else {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    }
+  } catch (e) { /* localStorageが使えない場合は、このセッション内のみの適用となる */ }
+}
+
+const settingsEl = document.querySelector('.settings');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+
+function setSettingsPanelOpen(isOpen) {
+  settingsPanel.hidden = !isOpen;
+  settingsBtn.setAttribute('aria-expanded', String(isOpen));
+}
+
+settingsBtn.addEventListener('click', () => {
+  setSettingsPanelOpen(settingsPanel.hidden);
+});
+// パネルの外側をクリック、またはEscキーで閉じる
+document.addEventListener('click', (e) => {
+  if (!settingsPanel.hidden && !settingsEl.contains(e.target)) setSettingsPanelOpen(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !settingsPanel.hidden) {
+    setSettingsPanelOpen(false);
+    settingsBtn.focus();
+  }
+});
+
+document.querySelectorAll('input[name="displayTheme"]').forEach((radio) => {
+  radio.addEventListener('change', () => {
+    if (radio.checked) applyTheme(radio.value);
+  });
+});
+
+// 保存済みの設定をラジオボタンの初期状態に反映する
+document.querySelector(`input[name="displayTheme"][value="${readSavedTheme()}"]`).checked = true;
