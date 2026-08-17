@@ -41,13 +41,14 @@ function applyPrefectureRate(selectId, healthId, careId) {
 }
 
 // 健康保険の種類（協会けんぽ／健康保険組合）の切り替え
-// 協会けんぽ：都道府県選択欄を表示し、健康保険料率・介護保険料率は都道府県から自動入力（介護保険料率は編集不可）
+// 協会けんぽ：都道府県選択欄を表示し、健康保険料率・介護保険料率は都道府県から自動入力（編集不可）
 // 健康保険組合：都道府県選択欄を隠し、健康保険料率・介護保険料率とも手動入力（厚生年金保険料率は影響を受けない）
 function applyHealthInsuranceType(typeId, prefectureRowId, prefectureSelectId, healthId, careId, healthLabelId, careLabelId) {
   const isKumiai = document.getElementById(typeId).value === 'kumiai';
   document.getElementById(prefectureRowId).style.display = isKumiai ? 'none' : '';
+  document.getElementById(healthId).readOnly = !isKumiai;
   document.getElementById(careId).readOnly = !isKumiai;
-  document.getElementById(healthLabelId).textContent = isKumiai ? '健康保険料率（手動入力）' : '健康保険料率（自動入力・編集可）';
+  document.getElementById(healthLabelId).textContent = isKumiai ? '健康保険料率（手動入力）' : '健康保険料率（自動入力）';
   document.getElementById(careLabelId).textContent = isKumiai ? '介護保険料率（手動入力）' : '介護保険料率（全国一律）';
   if (!isKumiai) {
     applyPrefectureRate(prefectureSelectId, healthId, careId);
