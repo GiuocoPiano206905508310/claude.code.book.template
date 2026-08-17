@@ -166,7 +166,11 @@
     margin: 26px auto 30px;
   }
   .notice strong { color: var(--stamp); }
-  .notice p { margin: 4px 0; }
+  .notice p {
+    margin: 4px 0;
+    padding-left: 1.3em;
+    text-indent: -1.3em;
+  }
   .notice p:first-child { margin-top: 0; }
   .notice p:last-child { margin-bottom: 0; }
 
@@ -447,8 +451,9 @@
   }
 
   footer {
-    text-align: center;
-    margin-top: 30px;
+    text-align: left;
+    max-width: 760px;
+    margin: 30px auto 0;
     font-size: 11.5px;
     color: var(--ink-faint);
   }
