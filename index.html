@@ -752,6 +752,30 @@
       <h2>賞与支給項目</h2>
 
       <div class="field-row">
+        <label for="bonusCalcMethod">源泉所得税の計算方法</label>
+        <div class="field-input">
+          <select id="bonusCalcMethod">
+            <option value="table">月額表</option>
+            <option value="machine">機械計算（甲欄のみ）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="bonusAmount">賞与額</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="bonusAmount" value="500,000">
+          <span class="unit">円</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="prevMonthSalary">前月の給与の金額（社会保険料等控除後）</label>
+        <div class="field-input">
+          <input type="text" inputmode="numeric" id="prevMonthSalary" value="250,000">
+          <span class="unit">円</span>
+        </div>
+        <p class="field-note">※支払い状況（通常の場合／前月の給与の10倍を超える賞与を支払う場合／前月に給与の支払がない場合）は、「賞与額」と「前月の給与の金額」から自動判定されます。</p>
+      </div>
+      <div class="field-row">
         <label for="bonusEmploymentType">雇用形態</label>
         <div class="field-input">
           <select id="bonusEmploymentType">
@@ -786,15 +810,6 @@
         </details>
       </div>
       <div class="field-row">
-        <label for="bonusCalcMethod">源泉所得税の計算方法</label>
-        <div class="field-input">
-          <select id="bonusCalcMethod">
-            <option value="table">月額表</option>
-            <option value="machine">機械計算（甲欄のみ）</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-row">
         <label for="bonusTaxTable">甲欄・乙欄</label>
         <div class="field-input">
           <select id="bonusTaxTable">
@@ -802,21 +817,6 @@
             <option value="乙">乙欄（扶養控除等申告書なし）</option>
           </select>
         </div>
-      </div>
-      <div class="field-row">
-        <label for="bonusAmount">賞与額</label>
-        <div class="field-input">
-          <input type="text" inputmode="numeric" id="bonusAmount" value="500,000">
-          <span class="unit">円</span>
-        </div>
-      </div>
-      <div class="field-row">
-        <label for="prevMonthSalary">前月の給与の金額（社会保険料等控除後）</label>
-        <div class="field-input">
-          <input type="text" inputmode="numeric" id="prevMonthSalary" value="250,000">
-          <span class="unit">円</span>
-        </div>
-        <p class="field-note">※支払い状況（通常の場合／前月の給与の10倍を超える賞与を支払う場合／前月に給与の支払がない場合）は、「賞与額」と「前月の給与の金額」から自動判定されます。</p>
       </div>
       <div class="field-row">
         <label for="bonusCalcPeriod">賞与の計算期間</label>
