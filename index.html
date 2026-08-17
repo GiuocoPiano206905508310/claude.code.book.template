@@ -536,6 +536,10 @@
     padding: 0 22px 22px;
   }
   .export-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
     flex: 1 1 90px;
     padding: 9px;
     font-size: 12.5px;
@@ -939,9 +943,22 @@
         <div class="net-value" id="netValue">— 円</div>
       </div>
       <div class="export-row">
-        <button type="button" class="export-btn pc-only" id="exportPdfBtn">🖨 印刷</button>
-        <button type="button" class="export-btn pc-only" id="exportExcelBtn">📊 Excel出力</button>
-        <button type="button" class="export-btn" id="exportCopyBtn">📋 テキスト(.txt)コピー</button>
+        <button type="button" class="export-btn pc-only" id="exportPdfBtn">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M6.5 9.5V3h11v6.5"/>
+            <path d="M6.5 18H4.5A1.5 1.5 0 0 1 3 16.5v-5A1.5 1.5 0 0 1 4.5 10h15a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5h-2"/>
+            <rect x="6.5" y="14" width="11" height="7" rx="1"/>
+          </svg>印刷</button>
+        <button type="button" class="export-btn pc-only" id="exportExcelBtn">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M3 9h18M9.5 9v12"/>
+          </svg>Excel出力</button>
+        <button type="button" class="export-btn" id="exportCopyBtn">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <rect x="8.5" y="2.5" width="7" height="4" rx="1"/>
+            <path d="M15.5 4.5H18a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h2.5"/>
+          </svg>テキスト(.txt)コピー</button>
       </div>
       <p class="export-status" id="exportStatus"></p>
     </section>
@@ -1157,9 +1174,22 @@
         <div class="net-value" id="bonusNetValue">— 円</div>
       </div>
       <div class="export-row">
-        <button type="button" class="export-btn pc-only" id="bonusExportPdfBtn">🖨 印刷</button>
-        <button type="button" class="export-btn pc-only" id="bonusExportExcelBtn">📊 Excel出力</button>
-        <button type="button" class="export-btn" id="bonusExportCopyBtn">📋 テキスト(.txt)コピー</button>
+        <button type="button" class="export-btn pc-only" id="bonusExportPdfBtn">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M6.5 9.5V3h11v6.5"/>
+            <path d="M6.5 18H4.5A1.5 1.5 0 0 1 3 16.5v-5A1.5 1.5 0 0 1 4.5 10h15a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5h-2"/>
+            <rect x="6.5" y="14" width="11" height="7" rx="1"/>
+          </svg>印刷</button>
+        <button type="button" class="export-btn pc-only" id="bonusExportExcelBtn">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M3 9h18M9.5 9v12"/>
+          </svg>Excel出力</button>
+        <button type="button" class="export-btn" id="bonusExportCopyBtn">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <rect x="8.5" y="2.5" width="7" height="4" rx="1"/>
+            <path d="M15.5 4.5H18a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h2.5"/>
+          </svg>テキスト(.txt)コピー</button>
       </div>
       <p class="export-status" id="bonusExportStatus"></p>
     </section>
