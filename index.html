@@ -326,6 +326,23 @@
   button#calcBtn:hover, button#calcBonusBtn:hover { background: var(--indigo-ink); }
   button#calcBtn:focus-visible, button#calcBonusBtn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
+  .clear-btn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 11px;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: "Meiryo", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .clear-btn:hover { background: var(--stamp-bg); color: var(--stamp); border-color: var(--stamp); }
+  .clear-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
   .payslip { padding: 0; overflow: hidden; position: sticky; top: 20px; }
 
   .payslip-head {
@@ -721,6 +738,7 @@
       </div>
 
       <button id="calcBtn" type="button">給与を計算する</button>
+      <button id="clearBtn" type="button" class="clear-btn">クリア</button>
     </section>
 
     <section class="card payslip" id="resultCard" aria-label="計算結果">
@@ -938,6 +956,7 @@
       </div>
 
       <button id="calcBonusBtn" type="button">賞与を計算する</button>
+      <button id="clearBonusBtn" type="button" class="clear-btn">クリア</button>
     </section>
 
     <section class="card payslip" id="bonusResultCard" aria-label="賞与計算結果">
@@ -987,6 +1006,6 @@
 
 <section class="card payslip" id="printArea" aria-hidden="true"></section>
 
-<script src="main.js?v=1786932479"></script>
+<script src="main.js?v=1786933788"></script>
 </body>
 </html>
