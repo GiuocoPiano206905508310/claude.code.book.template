@@ -57,10 +57,11 @@ function applyHealthInsuranceType(typeId, prefectureRowId, prefectureSelectId, h
 // 雇用形態による保険料率欄の表示切り替え
 // アルバイト・パート（雇用保険のみ対象）：健康保険・厚生年金関連の欄を非表示にし、雇用保険関連の欄のみ表示
 // アルバイト・パート（雇用保険対象外）：健康保険・厚生年金・雇用保険関連の欄をすべて非表示
+// 役員：雇用保険の対象外のため、雇用保険関連の欄を非表示
 function updateInsuranceFieldVisibility(o) {
   const employmentType = document.getElementById(o.employmentTypeId).value;
   const hideHealthGroup = employmentType === 'アルバイト・パート' || employmentType === 'アルバイト・パート（雇用保険対象外）';
-  const hideEmploymentGroup = employmentType === 'アルバイト・パート（雇用保険対象外）';
+  const hideEmploymentGroup = employmentType === 'アルバイト・パート（雇用保険対象外）' || employmentType === '役員';
 
   o.healthGroupIds.forEach(id => { document.getElementById(id).style.display = hideHealthGroup ? 'none' : ''; });
   o.employmentGroupIds.forEach(id => { document.getElementById(id).style.display = hideEmploymentGroup ? 'none' : ''; });
