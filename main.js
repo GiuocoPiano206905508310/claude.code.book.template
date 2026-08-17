@@ -1039,9 +1039,17 @@ document.getElementById('bonusExportCopyBtn').addEventListener('click', () => co
   'bonusExportStatus'
 ));
 
-document.getElementById('scrollTopBtn').addEventListener('click', () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-});
+// ページ先頭／末尾へのスクロール
+// スクロールオプション（smooth）に未対応の古いブラウザでは、引数2つの形式で即時移動する
+function scrollPageTo(top) {
+  try {
+    window.scrollTo({ top, behavior: 'smooth' });
+  } catch (e) {
+    window.scrollTo(0, top);
+  }
+}
+
+document.getElementById('scrollTopBtn').addEventListener('click', () => scrollPageTo(0));
 document.getElementById('scrollBottomBtn').addEventListener('click', () => {
-  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  scrollPageTo(document.documentElement.scrollHeight);
 });
