@@ -348,13 +348,13 @@
   .payslip-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
     padding: 16px 22px;
     border-bottom: 2px solid var(--ink);
   }
   .payslip-head .title {
     font-family: "Meiryo", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
-    font-size: 14px;
+    font-size: 17px;
     font-weight: 400;
     letter-spacing: 0.1em;
   }
@@ -366,6 +366,7 @@
     border-radius: 50%;
     width: 34px;
     height: 34px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -421,7 +422,7 @@
   }
   .net-block .net-label {
     font-family: "Meiryo", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 400;
     letter-spacing: 0.16em;
     color: var(--ink-soft);
@@ -429,7 +430,7 @@
   }
   .net-block .net-value {
     font-family: "Meiryo", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
-    font-size: 14px;
+    font-size: 22px;
     font-weight: 400;
     color: var(--success);
     font-variant-numeric: tabular-nums;
@@ -743,8 +744,8 @@
 
     <section class="card payslip" id="resultCard" aria-label="計算結果">
       <div class="payslip-head">
-        <span class="title">給与計算シミュレーション結果</span>
         <span class="stamp-badge">試算</span>
+        <span class="title">給与計算シミュレーション結果</span>
       </div>
       <table id="resultTable"><tbody></tbody></table>
       <div class="net-block">
@@ -961,8 +962,8 @@
 
     <section class="card payslip" id="bonusResultCard" aria-label="賞与計算結果">
       <div class="payslip-head">
-        <span class="title">賞与計算シミュレーション結果</span>
         <span class="stamp-badge">試算</span>
+        <span class="title">賞与計算シミュレーション結果</span>
       </div>
       <table id="bonusResultTable"><tbody></tbody></table>
       <div class="net-block">
