@@ -112,6 +112,13 @@ function getNumValue(id) {
   return Number(raw) || 0;
 }
 
+// 被保険者負担額の1円未満の端数処理（健康保険法・厚生年金保険法等）：50銭以下は切り捨て、50銭を超える端数は切り上げ
+// 通常の四捨五入（Math.round）とはちょうど50銭のときの扱いが逆になるため、専用の丸め処理を行う
+function roundInsuranceShare(x) {
+  const floor = Math.floor(x);
+  return x - floor > 0.5 ? floor + 1 : floor;
+}
+
 // 年齢区分ごとの社会保険加入ルール
 const AGE_RULES = {
   under40: { care: false, pension: true, health: true },
@@ -565,11 +572,11 @@ function calculateBonus() {
   // 厚生年金：同月内の累計150万円が上限
   const pensionStandardBonus = Math.max(0, Math.min(standardBonus, BONUS_PENSION_MONTHLY_CAP - pensionCumulative));
 
-  const healthInsurance = hasHealth ? Math.round(healthStandardBonus * healthRate / 2) : 0;
-  const careInsurance = hasCare ? Math.round(healthStandardBonus * careRate / 2) : 0;
-  const pensionInsurance = hasPension ? Math.round(pensionStandardBonus * pensionRate / 2) : 0;
+  const healthInsurance = hasHealth ? roundInsuranceShare(healthStandardBonus * healthRate / 2) : 0;
+  const careInsurance = hasCare ? roundInsuranceShare(healthStandardBonus * careRate / 2) : 0;
+  const pensionInsurance = hasPension ? roundInsuranceShare(pensionStandardBonus * pensionRate / 2) : 0;
   const employmentInsurance = subjectEmploymentInsurance ? bonusAmount * employmentRate : 0;
-  const childSupportLevy = hasHealth ? Math.round(healthStandardBonus * (CHILD_SUPPORT_LEVY_RATE / 100) / 2) : 0;
+  const childSupportLevy = hasHealth ? roundInsuranceShare(healthStandardBonus * (CHILD_SUPPORT_LEVY_RATE / 100) / 2) : 0;
   const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
 
   const bonusBase = Math.max(0, bonusAmount - socialInsuranceTotal);
@@ -660,11 +667,11 @@ function calculate() {
   // 社会保険算定基礎額（通勤手当も含む）
   const socialInsuranceBase = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
 
-  const healthInsurance = hasHealth ? Math.round(socialInsuranceBase * healthRate / 2) : 0;
-  const careInsurance = hasCare ? Math.round(socialInsuranceBase * careRate / 2) : 0;
-  const pensionInsurance = hasPension ? Math.round(socialInsuranceBase * pensionRate / 2) : 0;
+  const healthInsurance = hasHealth ? roundInsuranceShare(socialInsuranceBase * healthRate / 2) : 0;
+  const careInsurance = hasCare ? roundInsuranceShare(socialInsuranceBase * careRate / 2) : 0;
+  const pensionInsurance = hasPension ? roundInsuranceShare(socialInsuranceBase * pensionRate / 2) : 0;
   const employmentInsurance = subjectEmploymentInsurance ? grossPay * employmentRate : 0;
-  const childSupportLevy = hasHealth ? Math.round(socialInsuranceBase * (CHILD_SUPPORT_LEVY_RATE / 100) / 2) : 0;
+  const childSupportLevy = hasHealth ? roundInsuranceShare(socialInsuranceBase * (CHILD_SUPPORT_LEVY_RATE / 100) / 2) : 0;
 
   const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
 
