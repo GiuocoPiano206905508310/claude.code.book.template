@@ -217,6 +217,7 @@ async function loadFormFromCompany() {
   document.getElementById('weeklyOvertimeThreshold').value = String(company.weeklyOvertimeThreshold);
   populateDayOfMonthSelect('paycheckClosingDay', String(company.paycheckClosingDay));
   populateDayOfMonthSelect('paycheckPaymentDay', String(company.paycheckPaymentDay));
+  document.getElementById('paycheckPaymentMonth').value = company.paycheckPaymentMonth === 'current' ? 'current' : 'next';
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
   populatePrefectureSelect('prefecture', company.prefecture);
   populateIndustrySelect('industryType', company.industryType);
@@ -270,6 +271,7 @@ function collectFormAsCompany() {
     weeklyOvertimeThreshold: Number(document.getElementById('weeklyOvertimeThreshold').value),
     paycheckClosingDay: document.getElementById('paycheckClosingDay').value,
     paycheckPaymentDay: document.getElementById('paycheckPaymentDay').value,
+    paycheckPaymentMonth: document.getElementById('paycheckPaymentMonth').value,
     healthInsuranceType: document.getElementById('healthInsuranceType').value,
     prefecture: document.getElementById('prefecture').value,
     healthRate: Number(document.getElementById('healthRate').value) || 0,

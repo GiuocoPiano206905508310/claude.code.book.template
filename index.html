@@ -27,7 +27,7 @@
   <section class="card form-card" id="notificationSection" style="margin-bottom:28px;">
     <h2>お知らせ<span class="notification-count" id="notificationCount"></span></h2>
     <p class="field-note">※ 保存済みの給与明細と勤怠の集計から、社会保険の月額変更届（随時改定）の要件を満たした従業員を自動で検出してお知らせします。判定は「①固定的賃金の変動 ②従前の標準報酬月額との2等級以上の差 ③3か月とも支払基礎日数17日以上」をすべて満たす場合とし、固定的賃金の増減と標準報酬月額の増減の方向が一致しない場合は対象外としています。</p>
-    <p class="field-note">※ 変動月・改定月は給与計算の「対象年月」を基準に表示しています。翌月払いの場合、実際の起算月・改定月は1か月後になります。<br>
+    <p class="field-note">※ 起算月・改定月は、<a href="company.html">会社マスタ管理</a>の「賃金の支払月」（当月払い／翌月払い）の設定をもとに、実際に報酬が支払われる月で表示します。<br>
       ※ 次の場合は自動判定できないため、個別にご確認ください。年間報酬の平均で算定する保険者算定（1等級以上の差で改定）／特定適用事業所の短時間労働者（支払基礎日数11日以上）／非固定的手当の新設・廃止による賃金体系の変更／遡及した昇給・降給の差額調整／休職・産休育休・一時帰休の期間を含む場合。</p>
     <div id="notificationList"></div>
     <div class="empty-state" id="notificationEmptyState" style="display:none;">現在お知らせはありません。</div>
@@ -82,9 +82,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
-<script src="calc.js?v=19"></script>
-<script src="data.js?v=26"></script>
+<script src="calc.js?v=20"></script>
+<script src="data.js?v=27"></script>
 <script src="common.js?v=19"></script>
-<script src="dashboard.js?v=6"></script>
+<script src="dashboard.js?v=7"></script>
 </body>
 </html>

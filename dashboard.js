@@ -23,21 +23,24 @@ function renderMonthlyRevisionNotices(notices) {
         <td class="num">${m.basisDays} 日</td>
       </tr>
     `).join('');
+    const paymentNote = n.paymentMonthSetting === 'current' ? '当月払い' : '翌月払い';
     return `
       <div class="notification-item">
         <p class="notification-title">
           <span class="badge badge-leave">月額変更届</span>
-          ${escapeHtml(n.employeeName)} さん：${ymLabel(n.changeYm)}の${direction}により随時改定の要件を満たしています
+          ${escapeHtml(n.employeeName)} さん：${ymLabel(n.changeYm)}分の給与の${direction}により随時改定の要件を満たしています
         </p>
         <p class="notification-body">
-          改定月（変動月から4か月目）：<strong>${ymLabel(n.revisionYm)}</strong><br>
+          起算月（変動後の報酬を初めて受けた月）：<strong>${ymLabel(n.startYm)}</strong>
+          （${ymLabel(n.changeYm)}分の給与・${paymentNote}）<br>
+          改定月（起算月から4か月目）：<strong>${ymLabel(n.revisionYm)}</strong><br>
           健康保険の標準報酬月額：${gradeText}（${Math.abs(n.gradeDiff)}等級の差）<br>
           厚生年金の標準報酬月額：${formatThousands(n.currentPensionStandardMonthly)}円 → ${formatThousands(n.newPensionStandardMonthly)}円<br>
           固定的賃金：${formatThousands(n.fixedWageBefore)}円 → ${formatThousands(n.fixedWageAfter)}円／3か月平均の報酬月額：${formatThousands(n.averageRemuneration)}円
         </p>
         <div class="data-table-wrap">
           <table class="data-table notification-table">
-            <thead><tr><th>対象月</th><th class="num">報酬月額</th><th class="num">支払基礎日数</th></tr></thead>
+            <thead><tr><th>対象月（給与計算）</th><th class="num">報酬月額</th><th class="num">支払基礎日数</th></tr></thead>
             <tbody>${monthRows}</tbody>
           </table>
         </div>
