@@ -151,6 +151,89 @@ function standardMonthlyGradeOf(standardMonthly, brackets) {
 }
 
 // ----------------------------------------------------------------------
+// 算定基礎届（定時決定）の判定・算出
+// 日本年金機構「算定基礎届の記入・提出ガイドブック」に基づく。
+// 4月・5月・6月に支払われた報酬のうち、支払基礎日数が一定日数以上の月を
+// 対象として平均額を求め、標準報酬月額を決定する。
+//   一般の被保険者     : 17日以上の月が対象。3か月とも17日未満なら従前のまま
+//   短時間就労者(パート): 17日以上の月が無い場合に限り15日以上17日未満の月が対象
+//   短時間労働者       : 11日以上の月が対象
+// ----------------------------------------------------------------------
+const SANTEI_MIN_BASIS_DAYS = 17;
+const SANTEI_PART_TIME_MIN_BASIS_DAYS = 15;
+const SANTEI_SHORT_TIME_MIN_BASIS_DAYS = 11;
+
+// months: [{ ym, remuneration, basisDays, cashRemuneration, inKindRemuneration }]（4・5・6月の順）
+// workerType: 'general'（一般）| 'partTime'（短時間就労者）| 'shortTime'（短時間労働者）
+// currentHealthStandardMonthly / currentPensionStandardMonthly: 従前の標準報酬月額
+function computeSanteiBase(options) {
+  const months = options.months || [];
+  const workerType = options.workerType || 'general';
+  const result = {
+    workerType,
+    months,
+    targetYms: [],
+    total: 0,
+    averageRemuneration: 0,
+    usePrevious: false,
+    note: '',
+  };
+
+  const minDays = workerType === 'shortTime' ? SANTEI_SHORT_TIME_MIN_BASIS_DAYS : SANTEI_MIN_BASIS_DAYS;
+  let targets = months.filter((m) => (Number(m.basisDays) || 0) >= minDays);
+
+  // 短時間就労者は、17日以上の月が1つも無い場合に限り15日以上の月で算定する
+  if (!targets.length && workerType === 'partTime') {
+    targets = months.filter((m) => (Number(m.basisDays) || 0) >= SANTEI_PART_TIME_MIN_BASIS_DAYS);
+    if (targets.length) result.note = `支払基礎日数${SANTEI_MIN_BASIS_DAYS}日以上の月がないため、`
+      + `${SANTEI_PART_TIME_MIN_BASIS_DAYS}日以上の月で算定しています`;
+  }
+
+  if (!targets.length) {
+    result.usePrevious = true;
+    result.note = `支払基礎日数が${minDays}日以上の月がないため、従前の標準報酬月額のままとなります`;
+    result.newHealthStandardMonthly = Number(options.currentHealthStandardMonthly) || 0;
+    result.newPensionStandardMonthly = Number(options.currentPensionStandardMonthly) || 0;
+    return result;
+  }
+
+  result.targetYms = targets.map((m) => m.ym);
+  result.total = targets.reduce((sum, m) => sum + (Number(m.remuneration) || 0), 0);
+  // 平均額の1円未満は切り捨てる
+  result.averageRemuneration = Math.floor(result.total / targets.length);
+  result.newHealthStandardMonthly = lookupStandardMonthlyAmount(result.averageRemuneration, HEALTH_STANDARD_BRACKETS);
+  result.newPensionStandardMonthly = lookupStandardMonthlyAmount(result.averageRemuneration, PENSION_STANDARD_BRACKETS);
+  result.currentHealthStandardMonthly = Number(options.currentHealthStandardMonthly) || 0;
+  result.currentPensionStandardMonthly = Number(options.currentPensionStandardMonthly) || 0;
+  result.newHealthGrade = standardMonthlyGradeOf(result.newHealthStandardMonthly, HEALTH_STANDARD_BRACKETS);
+  result.newPensionGrade = standardMonthlyGradeOf(result.newPensionStandardMonthly, PENSION_STANDARD_BRACKETS);
+  return result;
+}
+
+// 和暦（元号コード付き）の生年月日。届書の様式に合わせて「5-300504」の形式で返す
+// 元号コード: 1=明治 3=大正 5=昭和 7=平成 9=令和
+function formatBirthDateForForm(isoDate) {
+  if (!isoDate) return '';
+  const [y, m, d] = String(isoDate).split('-').map(Number);
+  if (!y || !m || !d) return '';
+  const value = y * 10000 + m * 100 + d;
+  let era = 9;
+  let baseYear = 2018; // 令和1年 = 2019年
+  if (value < 19120730) { era = 1; baseYear = 1867; }        // 明治
+  else if (value < 19261225) { era = 3; baseYear = 1911; }   // 大正
+  else if (value < 19890108) { era = 5; baseYear = 1925; }   // 昭和
+  else if (value < 20190501) { era = 7; baseYear = 1988; }   // 平成
+  const eraYear = y - baseYear;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${era}-${pad(eraYear)}${pad(m)}${pad(d)}`;
+}
+
+// 西暦年を令和年に変換する（令和1年=2019年）
+function toReiwaYear(year) {
+  return Number(year) - 2018;
+}
+
+// ----------------------------------------------------------------------
 // 月額変更（随時改定）の判定
 // 日本年金機構「随時改定（月額変更届）」の要件に基づく。
 // 次の3つをすべて満たした場合に月額変更届の提出対象となる。

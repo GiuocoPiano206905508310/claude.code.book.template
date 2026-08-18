@@ -643,11 +643,19 @@ async function findMonthlyRevisionNotices(employee, options) {
 
     const months = [];
     for (const ym of targetYms) {
+      const slip = slips[ym];
+      const inKind = Number((slip.result || {}).inKindPay) || 0;
+      const remuneration = remunerationOfPayslip(slip);
       months.push({
         ym,
-        fixedWage: fixedWageOfPayslip(slips[ym]),
-        remuneration: remunerationOfPayslip(slips[ym]),
-        basisDays: await computePaymentBasisDays(employee, ym, company, slips[ym]),
+        // 届書には実際に支払った月を記入するため、支払月も持たせる
+        paymentYm: paymentYmOfPeriod(ym, company),
+        paymentMonth: Number(paymentYmOfPeriod(ym, company).split('-')[1]),
+        fixedWage: fixedWageOfPayslip(slip),
+        remuneration,
+        cashRemuneration: Math.max(0, remuneration - inKind),
+        inKindRemuneration: inKind,
+        basisDays: await computePaymentBasisDays(employee, ym, company, slip),
       });
     }
 
@@ -662,12 +670,94 @@ async function findMonthlyRevisionNotices(employee, options) {
       notices.push(Object.assign({
         employeeId: employee.id,
         employeeName: employee.name,
+        // 届書への差し込み用（従業員マスタ管理で登録した内容）
+        insuranceNumber: employee.healthInsuranceNumber || '',
+        birthDate: employee.birthDate || '',
+        employmentType: employee.employmentType,
         changeYm, // 固定的賃金が変動した給与計算の対象年月
         paymentMonthSetting: company.paycheckPaymentMonth === 'current' ? 'current' : 'next',
       }, judged));
     }
   }
   return notices;
+}
+
+// ---------------------------------------------------------------------------
+// 算定基礎届（定時決定）の対象者と届書の内容を組み立てる
+//
+// 対象年（提出年）の4月・5月・6月に「支払われた」給与をもとに算定する。
+// 会社マスタ管理の「賃金の支払月」が翌月払いの場合、4月に支払われる給与は
+// 3月分の給与計算結果になるため、対象となる給与明細の年月をずらして取得する。
+// ---------------------------------------------------------------------------
+
+// 支払月（'YYYY-MM'）に対応する給与計算の対象年月を返す（paymentYmOfPeriodの逆）
+function periodYmOfPayment(paymentYm, company) {
+  const isCurrent = company && company.paycheckPaymentMonth === 'current';
+  return isCurrent ? paymentYm : addMonthsToYm(paymentYm, -1);
+}
+
+// 雇用形態から届書上の被保険者区分を判定する
+function santeiWorkerTypeOf(employee) {
+  const type = employee && employee.employmentType;
+  if (type === 'アルバイト・パート' || type === 'アルバイト・パート（雇用保険対象外）') return 'partTime';
+  return 'general';
+}
+
+// 従業員1人分の算定基礎届の内容。給与明細が1か月も無い場合はnull
+async function buildSanteiEntry(employee, year, company) {
+  const paymentYms = [`${year}-04`, `${year}-05`, `${year}-06`];
+  const slips = await listPayslips(employee.id);
+  const months = [];
+  let hasAnySlip = false;
+
+  for (const paymentYm of paymentYms) {
+    const periodYm = periodYmOfPayment(paymentYm, company);
+    const slip = slips[periodYm];
+    if (slip) hasAnySlip = true;
+    const result = (slip && slip.result) || {};
+    const inKind = Number(result.inKindPay) || 0;
+    const remuneration = slip ? remunerationOfPayslip(slip) : 0;
+    months.push({
+      ym: paymentYm,
+      periodYm,
+      month: Number(paymentYm.split('-')[1]),
+      hasSlip: !!slip,
+      basisDays: slip ? await computePaymentBasisDays(employee, periodYm, company, slip) : 0,
+      cashRemuneration: Math.max(0, remuneration - inKind),
+      inKindRemuneration: inKind,
+      remuneration,
+    });
+  }
+  if (!hasAnySlip) return null;
+
+  const workerType = santeiWorkerTypeOf(employee);
+  const computed = computeSanteiBase({
+    months,
+    workerType,
+    currentHealthStandardMonthly: employee.healthStandardMonthly,
+    currentPensionStandardMonthly: employee.pensionStandardMonthly,
+  });
+  return Object.assign({
+    employeeId: employee.id,
+    employeeName: employee.name,
+    insuranceNumber: employee.healthInsuranceNumber || '',
+    birthDate: employee.birthDate || '',
+    employmentType: employee.employmentType,
+    applyYm: `${year}-09`, // 適用年月は当年9月
+  }, computed);
+}
+
+// 算定基礎届の対象となる全従業員分をまとめて返す
+async function listSanteiEntries(year) {
+  const employees = await listEmployees();
+  const entries = [];
+  for (const emp of employees) {
+    if (!isSocialInsuranceTarget(emp)) continue;
+    const company = await getCompany(emp.branchId);
+    const entry = await buildSanteiEntry(emp, year, company);
+    if (entry) entries.push(entry);
+  }
+  return entries;
 }
 
 // 全従業員分の随時改定の通知を、改定月の新しい順に返す
