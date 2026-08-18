@@ -240,10 +240,20 @@
       <p class="field-note">※ ここで設定した締日に合わせて、日次勤怠入力の対象期間の開始日が自動的に決まります（例：25日締めの場合、前月26日〜当月25日を表示）。</p>
     </div>
     <div class="field-row">
+      <label for="paycheckPaymentMonth">賃金の支払月</label>
+      <div class="field-input">
+        <select id="paycheckPaymentMonth">
+          <option value="next">翌月払い（例：3月分の給与を4月に支払う）</option>
+          <option value="current">当月払い（例：3月分の給与を3月に支払う）</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
       <label for="paycheckPaymentDay">賃金支払日</label>
       <div class="field-input">
         <select id="paycheckPaymentDay"></select>
       </div>
+      <p class="field-note">※ 社会保険の月額変更届（随時改定）は「変動後の報酬を初めて受けた月」から起算して4か月目に改定するため、ここで設定した支払月をもとに<a href="index.html">ダッシュボードのお知らせ</a>の起算月・改定月を表示します。</p>
     </div>
 
     <h2 class="section-2" id="rateSectionHeader">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
@@ -360,9 +370,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
-<script src="calc.js?v=19"></script>
-<script src="data.js?v=26"></script>
+<script src="calc.js?v=20"></script>
+<script src="data.js?v=27"></script>
 <script src="common.js?v=19"></script>
-<script src="company.js?v=16"></script>
+<script src="company.js?v=17"></script>
 </body>
 </html>

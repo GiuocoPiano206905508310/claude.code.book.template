@@ -172,6 +172,8 @@ const MONTHLY_REVISION_GRADE_DIFF = 2;
 // previousFixedWage: 変動月の前月の固定的賃金
 // currentHealthStandardMonthly / currentPensionStandardMonthly: 現在の標準報酬月額
 // minBasisDays: 支払基礎日数の下限（既定17日。特定適用事業所の短時間労働者は11日）
+// startYm: 起算月（変動後の報酬を初めて受けた＝支払われた月）。省略時は months[0].ym。
+//   翌月払いの場合、給与計算の対象年月より1か月後が起算月になる
 function checkMonthlyRevision(options) {
   const months = options.months || [];
   const minBasisDays = Number(options.minBasisDays) || MONTHLY_REVISION_MIN_BASIS_DAYS;
@@ -231,10 +233,19 @@ function checkMonthlyRevision(options) {
     result.unmetReasons.push('固定的賃金の増減と標準報酬月額の増減の方向が一致しません');
   }
 
-  // 改定月＝変動月から起算して4か月目
-  result.revisionYm = addMonthsToYm(months[0].ym, 3);
+  // 改定月＝起算月（変動後の報酬を初めて受けた月）から起算して4か月目
+  result.startYm = options.startYm || months[0].ym;
+  result.revisionYm = addMonthsToYm(result.startYm, 3);
   result.eligible = result.unmetReasons.length === 0;
   return result;
+}
+
+// 給与計算の対象年月（締め月）から、その給与が実際に支払われる月を求める。
+// company.paycheckPaymentMonth が 'current'（当月払い）なら同じ月、
+// それ以外（'next'＝翌月払い、既定）なら翌月を返す
+function paymentYmOfPeriod(ym, company) {
+  const isCurrent = company && company.paycheckPaymentMonth === 'current';
+  return isCurrent ? ym : addMonthsToYm(ym, 1);
 }
 
 // 'YYYY-MM' に月数を加算する

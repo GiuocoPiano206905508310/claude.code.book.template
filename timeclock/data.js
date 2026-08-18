@@ -634,7 +634,10 @@ async function findMonthlyRevisionNotices(employee, options) {
     const targetYms = [changeYm, addMonthsToYm(changeYm, 1), addMonthsToYm(changeYm, 2)];
     if (!targetYms.every((ym) => slips[ym])) continue;
 
-    const revisionYm = addMonthsToYm(changeYm, 3);
+    // 起算月は「変動後の報酬を初めて受けた（支払われた）月」。翌月払いの場合は
+    // 給与計算の対象年月の翌月になる（会社マスタ管理の「賃金の支払月」設定）
+    const startYm = paymentYmOfPeriod(changeYm, company);
+    const revisionYm = addMonthsToYm(startYm, 3);
     // 古すぎる改定は通知しない（改定月が直近withinMonths以内のもののみ）
     if (revisionYm < oldestRevisionYm) continue;
 
@@ -650,12 +653,18 @@ async function findMonthlyRevisionNotices(employee, options) {
 
     const judged = checkMonthlyRevision({
       months,
+      startYm,
       previousFixedWage,
       currentHealthStandardMonthly: employee.healthStandardMonthly,
       currentPensionStandardMonthly: employee.pensionStandardMonthly,
     });
     if (judged.eligible) {
-      notices.push(Object.assign({ employeeId: employee.id, employeeName: employee.name, changeYm }, judged));
+      notices.push(Object.assign({
+        employeeId: employee.id,
+        employeeName: employee.name,
+        changeYm, // 固定的賃金が変動した給与計算の対象年月
+        paymentMonthSetting: company.paycheckPaymentMonth === 'current' ? 'current' : 'next',
+      }, judged));
     }
   }
   return notices;
@@ -740,6 +749,9 @@ function defaultCompany() {
     weeklyOvertimeThreshold: 40, // 週法定外労働時間の基準（40 または 44。特例措置対象事業場のみ44）
     paycheckClosingDay: 'end', // 1〜31 または 'end'（末日）
     paycheckPaymentDay: '25', // 1〜31 または 'end'（末日）
+    // 賃金の支払月。'next'＝翌月払い（3月分を4月に支払う）／'current'＝当月払い。
+    // 社会保険の月額変更届（随時改定）の起算月・改定月の判定に使用する
+    paycheckPaymentMonth: 'next',
     healthInsuranceType: 'kyoukai',
     prefecture: '東京',
     healthRate: PREFECTURE_HEALTH_RATES['東京'],
@@ -785,6 +797,7 @@ function companyRowToObj(row) {
     weeklyOvertimeThreshold: orNum(row.weekly_overtime_threshold, defaults.weeklyOvertimeThreshold),
     paycheckClosingDay: row.paycheck_closing_day || defaults.paycheckClosingDay,
     paycheckPaymentDay: row.paycheck_payment_day || defaults.paycheckPaymentDay,
+    paycheckPaymentMonth: row.paycheck_payment_month === 'current' ? 'current' : defaults.paycheckPaymentMonth,
     healthInsuranceType: row.health_insurance_type || defaults.healthInsuranceType,
     prefecture: row.prefecture || defaults.prefecture,
     healthRate: orNum(row.health_rate, defaults.healthRate),
@@ -817,6 +830,7 @@ function companyObjToRow(company, userId) {
     weekly_overtime_threshold: company.weeklyOvertimeThreshold,
     paycheck_closing_day: String(company.paycheckClosingDay || 'end'),
     paycheck_payment_day: String(company.paycheckPaymentDay || 'end'),
+    paycheck_payment_month: company.paycheckPaymentMonth === 'current' ? 'current' : 'next',
     health_insurance_type: company.healthInsuranceType,
     prefecture: company.prefecture,
     health_rate: company.healthRate,
@@ -873,13 +887,36 @@ async function getCompany(branchId) {
 }
 
 // branch.idが未設定なら新規追加、設定済みなら更新。更新時は変更履歴を記録する
+// company_branches.paycheck_payment_month（賃金の支払月）列がまだ無いDBでも
+// 会社マスタの保存自体が失敗しないよう、列が無いと分かった時点で以後は送信しない。
+// 列を追加するSQLは migration-company-payment-month.sql を参照。
+let companyPaymentMonthColumnSupported = true;
+function isMissingPaymentMonthColumnError(error) {
+  const text = `${(error && error.message) || ''} ${(error && error.details) || ''}`;
+  return text.includes('paycheck_payment_month');
+}
+
 async function saveBranch(branch) {
   const userId = await getCurrentUserId();
   const row = companyObjToRow(branch, userId);
+  if (!companyPaymentMonthColumnSupported) delete row.paycheck_payment_month;
+
+  // 列が無いDBでは列なしで再試行する
+  const runWithFallback = async (run) => {
+    const first = await run(row);
+    if (!first.error) return first;
+    if (!(companyPaymentMonthColumnSupported && isMissingPaymentMonthColumnError(first.error))) return first;
+    companyPaymentMonthColumnSupported = false;
+    const retryRow = Object.assign({}, row);
+    delete retryRow.paycheck_payment_month;
+    return await run(retryRow);
+  };
+
   if (branch.id) {
     const { data: oldData, error: oldError } = await supabaseClient.from('company_branches').select('*').eq('id', branch.id).maybeSingle();
     if (oldError) throw oldError;
-    const { data, error } = await supabaseClient.from('company_branches').update(row).eq('id', branch.id).select().single();
+    const { data, error } = await runWithFallback((r) =>
+      supabaseClient.from('company_branches').update(r).eq('id', branch.id).select().single());
     if (error) throw error;
     const updated = companyRowToObj(data);
     if (oldData) {
@@ -888,7 +925,8 @@ async function saveBranch(branch) {
     }
     return updated;
   }
-  const { data, error } = await supabaseClient.from('company_branches').insert(row).select().single();
+  const { data, error } = await runWithFallback((r) =>
+    supabaseClient.from('company_branches').insert(r).select().single());
   if (error) throw error;
   return companyRowToObj(data);
 }
@@ -954,6 +992,7 @@ const COMPANY_HISTORY_FIELDS = [
   { key: 'weeklyOvertimeThreshold', label: '週法定外労働時間', format: (v) => (v || v === 0) ? `週${v}時間` : '' },
   { key: 'paycheckClosingDay', label: '賃金締日', format: fmtHistoryDay },
   { key: 'paycheckPaymentDay', label: '賃金支払日', format: fmtHistoryDay },
+  { key: 'paycheckPaymentMonth', label: '賃金の支払月', format: (v) => (v === 'current' ? '当月払い' : '翌月払い') },
   { key: 'healthInsuranceType', label: '健康保険の種類', format: (v) => v === 'kumiai' ? '健康保険組合' : (v ? '協会けんぽ' : '') },
   { key: 'prefecture', label: '都道府県' },
   { key: 'healthRate', label: '健康保険料率', format: fmtHistoryPercent },
