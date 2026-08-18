@@ -331,6 +331,108 @@ function paymentYmOfPeriod(ym, company) {
   return isCurrent ? ym : addMonthsToYm(ym, 1);
 }
 
+// ----------------------------------------------------------------------
+// 日本の祝日判定・賃金支払日の土日祝日調整
+// ----------------------------------------------------------------------
+// 春分の日・秋分の日（1980〜2099年に有効な近似式。国立天文台の発表と1日前後
+// 異なる場合がある）
+function vernalEquinoxDay(year) {
+  return Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+}
+function autumnalEquinoxDay(year) {
+  return Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+}
+
+// year年month月の第n○曜日（weekday: 0=日〜6=土）が何日かを返す
+function nthWeekdayOfMonth(year, month, weekday, n) {
+  const firstWeekday = new Date(year, month - 1, 1).getDay();
+  const offset = (weekday - firstWeekday + 7) % 7;
+  return 1 + offset + (n - 1) * 7;
+}
+
+// 「国民の祝日に関する法律」に基づく固定日・移動日の祝日名（振替休日・国民の休日を
+// 除く）。該当しなければnull。2022年以降の祝日区分（山の日・スポーツの日等の
+// 改称後）を前提とする
+function fixedOrMovingHolidayName(year, month, day) {
+  const FIXED_HOLIDAYS = {
+    '1-1': '元日', '2-11': '建国記念の日', '2-23': '天皇誕生日', '4-29': '昭和の日',
+    '5-3': '憲法記念日', '5-4': 'みどりの日', '5-5': 'こどもの日', '8-11': '山の日',
+    '11-3': '文化の日', '11-23': '勤労感謝の日',
+  };
+  const fixed = FIXED_HOLIDAYS[`${month}-${day}`];
+  if (fixed) return fixed;
+  if (month === 1 && day === nthWeekdayOfMonth(year, 1, 1, 2)) return '成人の日';
+  if (month === 7 && day === nthWeekdayOfMonth(year, 7, 1, 3)) return '海の日';
+  if (month === 9 && day === nthWeekdayOfMonth(year, 9, 1, 3)) return '敬老の日';
+  if (month === 10 && day === nthWeekdayOfMonth(year, 10, 1, 2)) return 'スポーツの日';
+  if (month === 3 && day === vernalEquinoxDay(year)) return '春分の日';
+  if (month === 9 && day === autumnalEquinoxDay(year)) return '秋分の日';
+  return null;
+}
+
+// 振替休日：祝日が日曜日に当たる場合、その日以後最初の「祝日でない日」が休日となる
+function isSubstituteHoliday(year, month, day) {
+  if (fixedOrMovingHolidayName(year, month, day)) return false;
+  const cur = new Date(year, month - 1, day);
+  cur.setDate(cur.getDate() - 1);
+  while (fixedOrMovingHolidayName(cur.getFullYear(), cur.getMonth() + 1, cur.getDate())) {
+    if (cur.getDay() === 0) return true;
+    cur.setDate(cur.getDate() - 1);
+  }
+  return false;
+}
+
+// 国民の休日：前日・翌日がともに祝日で、その日自体が祝日でも日曜日でもない場合
+// （敬老の日と秋分の日の間の1日など）
+function isCitizensHoliday(year, month, day) {
+  if (fixedOrMovingHolidayName(year, month, day)) return false;
+  const date = new Date(year, month - 1, day);
+  if (date.getDay() === 0) return false;
+  const before = new Date(date); before.setDate(before.getDate() - 1);
+  const after = new Date(date); after.setDate(after.getDate() + 1);
+  return !!(fixedOrMovingHolidayName(before.getFullYear(), before.getMonth() + 1, before.getDate())
+    && fixedOrMovingHolidayName(after.getFullYear(), after.getMonth() + 1, after.getDate()));
+}
+
+// 振替休日・国民の休日を含めた祝日名（該当しなければnull）
+function japaneseHolidayName(year, month, day) {
+  return fixedOrMovingHolidayName(year, month, day)
+    || (isSubstituteHoliday(year, month, day) ? '振替休日' : null)
+    || (isCitizensHoliday(year, month, day) ? '国民の休日' : null);
+}
+
+function isBusinessDay(year, month, day) {
+  const dow = new Date(year, month - 1, day).getDay();
+  if (dow === 0 || dow === 6) return false;
+  return !japaneseHolidayName(year, month, day);
+}
+
+// 土曜・日曜・祝日に当たる日を、指定の方法で最寄りの営業日に調整する。
+// method: 'before'（直前の営業日に前倒し）｜'after'（直後の営業日に後ろ倒し）
+// それ以外（'none'等）は調整せずそのまま返す
+function adjustToBusinessDay(year, month, day, method) {
+  if (method !== 'before' && method !== 'after') return { y: year, m: month, d: day };
+  const date = new Date(year, month - 1, day);
+  const step = method === 'before' ? -1 : 1;
+  while (!isBusinessDay(date.getFullYear(), date.getMonth() + 1, date.getDate())) {
+    date.setDate(date.getDate() + step);
+  }
+  return { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() };
+}
+
+// 給与計算の対象年月（締め期間）から、実際の賃金支払日を求める。
+// company.paycheckPaymentMonth（当月払い/翌月払い）・paycheckPaymentDay（支払日）・
+// paymentDateHolidayAdjust（土日祝日の調整方法）に基づく。戻り値は{y, m, d}
+function computePaymentDate(periodYm, company) {
+  const paymentYm = paymentYmOfPeriod(periodYm, company);
+  const [y, m] = paymentYm.split('-').map(Number);
+  const paymentDay = (company && company.paycheckPaymentDay) || 'end';
+  // effectiveClosingDateは'end'（末日）を扱えないため、末日はここで別に計算する
+  const base = paymentDay === 'end' ? new Date(y, m, 0) : effectiveClosingDate(y, m, paymentDay);
+  return adjustToBusinessDay(base.getFullYear(), base.getMonth() + 1, base.getDate(),
+    company && company.paymentDateHolidayAdjust);
+}
+
 // 'YYYY-MM' に月数を加算する
 function addMonthsToYm(ym, months) {
   const [y, m] = String(ym).split('-').map(Number);

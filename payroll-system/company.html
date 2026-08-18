@@ -255,6 +255,17 @@
       </div>
       <p class="field-note">※ 社会保険の月額変更届（随時改定）は「変動後の報酬を初めて受けた月」から起算して4か月目に改定するため、ここで設定した支払月をもとに<a href="index.html">ダッシュボードのお知らせ</a>の起算月・改定月を表示します。</p>
     </div>
+    <div class="field-row" style="border-bottom: none;">
+      <label for="paymentDateHolidayAdjust">賃金支払日が土日祝日の場合</label>
+      <div class="field-input">
+        <select id="paymentDateHolidayAdjust">
+          <option value="none">調整しない（支払日のまま）</option>
+          <option value="before">前倒し（直前の営業日に繰り上げる）</option>
+          <option value="after">後ろ倒し（直後の営業日に繰り下げる）</option>
+        </select>
+      </div>
+      <p class="field-note">※ 賃金支払日が土曜・日曜・祝日（振替休日・国民の休日を含む）に当たる場合の調整方法です。<a href="payroll.html">給与計算</a>・<a href="payroll.html">賃金台帳</a>の支給日は、この設定に基づいて自動計算されます。</p>
+    </div>
 
     <h2 class="section-2" id="rateSectionHeader">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
     <div class="field-row" id="healthTypeFieldRow">
@@ -370,9 +381,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
-<script src="calc.js?v=21"></script>
-<script src="data.js?v=29"></script>
-<script src="common.js?v=20"></script>
-<script src="company.js?v=17"></script>
+<script src="calc.js?v=22"></script>
+<script src="data.js?v=30"></script>
+<script src="common.js?v=21"></script>
+<script src="company.js?v=18"></script>
 </body>
 </html>

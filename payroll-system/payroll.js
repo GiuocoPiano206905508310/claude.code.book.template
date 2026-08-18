@@ -77,6 +77,8 @@ async function loadFormForEmployeeMonth() {
 
   const company = await getCompany(employee.branchId);
   currentCompany = company;
+  document.getElementById('paymentDateLabel').textContent =
+    `支給日：${fmtPaymentDate(computePaymentDate(ym, company))}`;
   currentAttendanceSummary = await computeMonthSummary(employee, ym, company);
   const commuteAllowanceForOvertimeBase = employee.commuteAllowanceExcludeFromOvertimeBase === false ? (employee.commuteAllowance || 0) : 0;
   const overtimeBaseWage = employee.baseSalary + sumNonExcludedAllowances(employee.allowances) + commuteAllowanceForOvertimeBase;
@@ -273,7 +275,10 @@ async function calculate() {
 
 function renderResult(r) {
   const isOfficer = currentEmployeeFields && currentEmployeeFields.employmentType === '役員';
+  const ym = document.getElementById('monthInput').value;
+  const paymentDateText = ym && currentCompany ? fmtPaymentDate(computePaymentDate(ym, currentCompany)) : '—';
   const rows = [
+    ['支給日', paymentDateText, 'raw', true],
     [isOfficer ? '役員報酬' : '基本給', r.baseSalary, 'plain', true],
   ];
   if (currentFixedOvertime && currentFixedOvertime.enabled) {
@@ -324,7 +329,7 @@ function renderResult(r) {
     if (kind === 'total') tr.className = 'total';
     if (kind === 'sub') tr.className = 'sub';
     const valueClass = !applicable ? 'value na' : (kind === 'deduction' ? 'value deduction' : 'value');
-    const valueHtml = applicable ? yen(value) : '対象外';
+    const valueHtml = kind === 'raw' ? escapeHtml(value) : (applicable ? yen(value) : '対象外');
     tr.innerHTML = `<td class="label">${label}</td><td class="${valueClass}">${valueHtml}</td>`;
     tbody.appendChild(tr);
   }
@@ -337,6 +342,7 @@ async function renderHistoryTable() {
   tbody.innerHTML = '';
   if (!employee) { document.getElementById('historyEmptyState').style.display = ''; return; }
 
+  const company = await getCompany(employee.branchId);
   const slips = await listPayslips(employee.id);
   const yms = Object.keys(slips).sort().reverse();
   document.getElementById('historyEmptyState').style.display = yms.length ? 'none' : '';
@@ -347,6 +353,7 @@ async function renderHistoryTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${ymLabel(ym)}</td>
+      <td>${fmtPaymentDate(computePaymentDate(ym, company))}</td>
       <td class="num">${formatThousands(slip.result.grossPay)} 円</td>
       <td class="num">${formatThousands(slip.result.netPay)} 円</td>
       <td class="actions">
@@ -376,6 +383,7 @@ async function renderHistoryTable() {
 // 賃金台帳（様式第20号・労働基準法施行規則第55条）の記載事項を参考にした行定義。
 // hours/日単位の行は小数第1位まで、円単位の行は千円区切りで表示する
 const WAGE_LEDGER_ROWS = [
+  { key: '__paymentDate', label: '賃金支払日' }, // 会社マスタ管理の締日・支払月・支払日・土日祝日調整設定から自動算出（renderWageLedgerTable参照）
   { key: 'workDays', label: '労働日数', unit: '日' },
   { key: 'workedHours', label: '労働時間数', unit: '時間' },
   { key: 'holidayHours', label: '休日労働時間数', unit: '時間' },
@@ -481,6 +489,7 @@ async function buildWageLedgerColumns(employee, company) {
 
     columns.push({
       ym,
+      paymentDate: computePaymentDate(ym, company),
       workDays: summary.workDays,
       workedHours: summary.workedHours,
       holidayHours: holidayMin / 60,
@@ -565,6 +574,10 @@ async function renderWageLedgerTable() {
   const overtimeBreakdownLabels = [...new Set(columns.flatMap((c) => c.overtimeBreakdownItems.map((it) => it.label)))];
 
   const dataRows = WAGE_LEDGER_ROWS.flatMap((rowDef) => {
+    if (rowDef.key === '__paymentDate') {
+      const cells = columns.map((c) => `<td class="num">${fmtPaymentDate(c.paymentDate)}</td>`).join('');
+      return [`<tr><td>${rowDef.label}</td>${cells}</tr>`];
+    }
     if (rowDef.key === '__section') {
       // 様式第20号にならい、手当・社会保険料控除・控除金は区分見出し行を挟んで内訳を表示する
       return [`<tr class="ledger-section"><td colspan="${columns.length + 1}">${rowDef.label}</td></tr>`];

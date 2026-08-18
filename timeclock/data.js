@@ -869,6 +869,10 @@ function defaultCompany() {
       round100: false, // (1) 賃金支払額の100円未満端数を50円未満切捨て・以上切上げ
       carryOver1000: false, // (2) 1,000円未満の端数を翌月の賃金支払日に繰り越して支払う
     },
+    // 賃金支払日が土日祝日に当たる場合の調整方法。'none'＝調整しない（既定）、
+    // 'before'＝直前の営業日に前倒し、'after'＝直後の営業日に後ろ倒し。
+    // monthly_payment_fraction_rulesのJSONに同居させている（DBの列追加を不要にするため）
+    paymentDateHolidayAdjust: 'none',
     overtimeRates: defaultOvertimeRates(),
   };
 }
@@ -903,6 +907,8 @@ function companyRowToObj(row) {
     scheduledStartRounding: !!(row.rounding_rules && row.rounding_rules.scheduledStartRounding),
     overtimeFractionRules: row.overtime_fraction_rules || defaults.overtimeFractionRules,
     monthlyPaymentFractionRules: row.monthly_payment_fraction_rules || defaults.monthlyPaymentFractionRules,
+    paymentDateHolidayAdjust: (row.monthly_payment_fraction_rules && row.monthly_payment_fraction_rules.paymentDateHolidayAdjust)
+      || defaults.paymentDateHolidayAdjust,
     overtimeRates: row.overtime_rates || defaultOvertimeRates(),
     sortOrder: row.sort_order,
   };
@@ -933,7 +939,8 @@ function companyObjToRow(company, userId) {
     rounding_rules: Object.assign({}, company.roundingRules || defaultRoundingRules(),
       { scheduledStartRounding: !!company.scheduledStartRounding }),
     overtime_fraction_rules: company.overtimeFractionRules || {},
-    monthly_payment_fraction_rules: company.monthlyPaymentFractionRules || {},
+    monthly_payment_fraction_rules: Object.assign({}, company.monthlyPaymentFractionRules || {},
+      { paymentDateHolidayAdjust: company.paymentDateHolidayAdjust || 'none' }),
     overtime_rates: company.overtimeRates || defaultOvertimeRates(),
     sort_order: company.sortOrder,
     updated_at: new Date().toISOString(),
@@ -1113,6 +1120,8 @@ COMPANY_HISTORY_FIELDS.push(
     get: (c) => c.monthlyPaymentFractionRules && c.monthlyPaymentFractionRules.round100, format: fmtHistoryYesNo },
   { key: 'monthlyPaymentFractionRules.carryOver1000', label: '賃金支払額端数処理(2) 1,000円未満繰越',
     get: (c) => c.monthlyPaymentFractionRules && c.monthlyPaymentFractionRules.carryOver1000, format: fmtHistoryYesNo },
+  { key: 'paymentDateHolidayAdjust', label: '支払日が土日祝日の場合',
+    format: (v) => ({ before: '前倒し', after: '後ろ倒し' }[v] || '調整しない') },
 );
 OVERTIME_RATE_CATEGORIES.forEach((cat) => {
   COMPANY_HISTORY_FIELDS.push({
