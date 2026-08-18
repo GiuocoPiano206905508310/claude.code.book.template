@@ -331,6 +331,32 @@ function resetForm() {
   refreshStandardMonthlyDefaults();
 }
 
+// ページ下部の「変更履歴」カード。全従業員分をまとめて新しい順に表示し、
+// 従業員名で絞り込めるようにする
+async function renderAllEmployeeHistory() {
+  const list = document.getElementById('allEmployeeHistoryList');
+  const empty = document.getElementById('allEmployeeHistoryEmptyState');
+  const filter = document.getElementById('historyEmployeeFilter');
+  if (!list) return;
+
+  const history = await listChangeHistoryByType('employee', 100);
+  const selected = filter.value || '';
+  const shown = selected ? history.filter((h) => h.targetId === selected) : history;
+  empty.style.display = shown.length ? 'none' : '';
+  list.innerHTML = renderChangeHistoryListWithLabel(shown);
+}
+
+// 絞り込み用の従業員リスト（選択中の値は保持する）
+async function populateHistoryEmployeeFilter() {
+  const filter = document.getElementById('historyEmployeeFilter');
+  if (!filter) return;
+  const current = filter.value;
+  const employees = await listEmployees();
+  filter.innerHTML = '<option value="">すべての従業員</option>'
+    + employees.map((e) => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+  if (current && employees.some((e) => e.id === current)) filter.value = current;
+}
+
 async function renderEmployeeHistory(employeeId) {
   const section = document.getElementById('employeeHistorySection');
   if (!employeeId) { section.style.display = 'none'; return; }
@@ -595,6 +621,8 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     await saveEmployee(emp);
     resetForm();
     await renderEmployeeTable();
+    await populateHistoryEmployeeFilter();
+    await renderAllEmployeeHistory();
   } catch (e) {
     alert('保存に失敗しました：' + e.message);
   } finally {
@@ -636,4 +664,7 @@ document.getElementById('addAllowanceBtn').addEventListener('click', refreshStan
   populateBranchSelect();
   resetForm();
   await renderEmployeeTable();
+  await populateHistoryEmployeeFilter();
+  await renderAllEmployeeHistory();
+  document.getElementById('historyEmployeeFilter').addEventListener('change', renderAllEmployeeHistory);
 })();

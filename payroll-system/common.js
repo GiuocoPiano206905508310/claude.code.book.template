@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: 'payroll.html', label: '給与計算' },
   { href: 'bonus.html', label: '賞与計算' },
   { href: 'leave.html', label: '有給休暇管理簿' },
+  { href: 'insurance-report.html', label: '算定基礎届・月額変更届' },
 ];
 
 // 表示用の性別ラベル（「その他」選択時は自由入力欄の値、未入力なら「その他」）
@@ -218,6 +219,22 @@ function renderChangeHistoryList(history) {
   return history.map((h) => `
     <div class="history-entry">
       <div class="history-entry-date">${escapeHtml(fmtHistoryDateTime(h.changedAt))}</div>
+      <ul class="history-entry-changes">
+        ${h.changes.map((c) => `<li><strong>${escapeHtml(c.label)}</strong>：${escapeHtml(c.before) || '(未設定)'} → ${escapeHtml(c.after) || '(未設定)'}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('');
+}
+
+// 対象名（従業員名など）付きの変更履歴一覧。複数の対象をまとめて表示する場合に使う
+function renderChangeHistoryListWithLabel(history) {
+  if (!history.length) return '';
+  return history.map((h) => `
+    <div class="history-entry">
+      <div class="history-entry-date">
+        ${escapeHtml(fmtHistoryDateTime(h.changedAt))}
+        <span class="history-entry-target">${escapeHtml(h.targetLabel || '')}</span>
+      </div>
       <ul class="history-entry-changes">
         ${h.changes.map((c) => `<li><strong>${escapeHtml(c.label)}</strong>：${escapeHtml(c.before) || '(未設定)'} → ${escapeHtml(c.after) || '(未設定)'}</li>`).join('')}
       </ul>

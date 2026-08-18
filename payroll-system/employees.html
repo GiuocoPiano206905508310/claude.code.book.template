@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>従業員マスタ管理 | 給与・勤怠管理システム</title>
 <script>(function(){try{var t=localStorage.getItem('themePreference');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
-<link rel="stylesheet" href="style.css?v=38">
+<link rel="stylesheet" href="style.css?v=39">
 </head>
 <body>
 <nav class="navbar wide" id="navbar"></nav>
@@ -348,6 +348,17 @@
     </section>
   </div>
 
+  <section class="card form-card" aria-label="変更履歴" id="allEmployeeHistoryCard" style="margin-top:24px;">
+    <h2>変更履歴</h2>
+    <p class="field-note">※ 従業員の情報を更新した際の変更内容を、全従業員分まとめて新しい順に表示します（新規登録時は記録されません）。特定の従業員の履歴だけを見る場合は、上の一覧で「編集」を押すと入力欄の下に表示されます。</p>
+    <div class="field-row" style="border-bottom:none;">
+      <label for="historyEmployeeFilter">従業員で絞り込む</label>
+      <div class="field-input"><select id="historyEmployeeFilter"></select></div>
+    </div>
+    <div id="allEmployeeHistoryList"></div>
+    <div class="empty-state" id="allEmployeeHistoryEmptyState" style="display:none;">変更履歴はまだありません。</div>
+  </section>
+
   <footer>個人・小規模事業向けの概算ツールです。正式な給与計算には専門家・社会保険労務士にご確認ください。</footer>
 </div>
 
@@ -355,8 +366,8 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
 <script src="calc.js?v=20"></script>
-<script src="data.js?v=27"></script>
-<script src="common.js?v=19"></script>
-<script src="employees.js?v=21"></script>
+<script src="data.js?v=28"></script>
+<script src="common.js?v=20"></script>
+<script src="employees.js?v=22"></script>
 </body>
 </html>
