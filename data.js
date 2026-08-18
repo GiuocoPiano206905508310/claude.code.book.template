@@ -589,12 +589,22 @@ function remunerationOfPayslip(slip) {
   return (Number(r.grossPay) || 0) - (Number(r.specialPay) || 0);
 }
 
-// 支払基礎日数。月給制のため「給与計算期間の暦日数 − 欠勤日数」で算定する
-async function computePaymentBasisDays(employee, ym, company) {
+// 支払基礎日数（月給制）。
+// 「標準報酬月額の定時決定及び随時改定の事務取扱いに関する事例集」のとおり、
+// 月給者は出勤日数にかかわらず給与計算期間の暦日数を支払基礎日数とする。
+// ただし欠勤日数分の給与が差し引かれる月（給与計算画面で「欠勤控除を適用する」
+// にチェックして保存した月）は、就業規則等で定めた所定労働日数から欠勤日数を
+// 控除した日数とする。
+async function computePaymentBasisDays(employee, ym, company, slip) {
   const [y, m] = ym.split('-').map(Number);
-  const periodDates = buildPayPeriodDates(y, m, company && company.paycheckClosingDay);
+  const calendarDays = buildPayPeriodDates(y, m, company && company.paycheckClosingDay).length;
+  const appliedAbsenceDeduction = !!((slip && slip.input && slip.input.applyAbsenceDeduction)
+    || (slip && slip.result && slip.result.absenceDeduction));
+  if (!appliedAbsenceDeduction) return calendarDays;
+
   const summary = await computeMonthSummary(employee, ym);
-  return Math.max(0, periodDates.length - summary.absenceDays);
+  const scheduledDays = Number(employee.monthlyStandardDays) || calendarDays;
+  return Math.max(0, scheduledDays - summary.absenceDays);
 }
 
 // 従業員1人分の随時改定の通知を返す（要件を満たしたものだけ）。
@@ -634,7 +644,7 @@ async function findMonthlyRevisionNotices(employee, options) {
         ym,
         fixedWage: fixedWageOfPayslip(slips[ym]),
         remuneration: remunerationOfPayslip(slips[ym]),
-        basisDays: await computePaymentBasisDays(employee, ym, company),
+        basisDays: await computePaymentBasisDays(employee, ym, company, slips[ym]),
       });
     }
 
