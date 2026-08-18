@@ -2,11 +2,63 @@
 // ダッシュボード画面のロジック
 // ============================================================================
 
+// ---------------------------------------------------------------------------
+// お知らせ（社会保険の月額変更届＝随時改定の要件を満たした従業員の通知）
+// ---------------------------------------------------------------------------
+function renderMonthlyRevisionNotices(notices) {
+  const list = document.getElementById('notificationList');
+  const empty = document.getElementById('notificationEmptyState');
+  const count = document.getElementById('notificationCount');
+
+  count.textContent = notices.length ? `（${notices.length}件）` : '';
+  empty.style.display = notices.length ? 'none' : '';
+  list.innerHTML = notices.map((n) => {
+    const direction = n.fixedWageDirection === 'up' ? '昇給' : '降給';
+    const gradeText = `${n.currentHealthGrade}等級（${formatThousands(n.currentHealthStandardMonthly)}円）`
+      + ` → ${n.newHealthGrade}等級（${formatThousands(n.newHealthStandardMonthly)}円）`;
+    const monthRows = n.months.map((m) => `
+      <tr>
+        <td>${ymLabel(m.ym)}</td>
+        <td class="num">${formatThousands(m.remuneration)} 円</td>
+        <td class="num">${m.basisDays} 日</td>
+      </tr>
+    `).join('');
+    return `
+      <div class="notification-item">
+        <p class="notification-title">
+          <span class="badge badge-leave">月額変更届</span>
+          ${escapeHtml(n.employeeName)} さん：${ymLabel(n.changeYm)}の${direction}により随時改定の要件を満たしています
+        </p>
+        <p class="notification-body">
+          改定月（変動月から4か月目）：<strong>${ymLabel(n.revisionYm)}</strong><br>
+          健康保険の標準報酬月額：${gradeText}（${Math.abs(n.gradeDiff)}等級の差）<br>
+          厚生年金の標準報酬月額：${formatThousands(n.currentPensionStandardMonthly)}円 → ${formatThousands(n.newPensionStandardMonthly)}円<br>
+          固定的賃金：${formatThousands(n.fixedWageBefore)}円 → ${formatThousands(n.fixedWageAfter)}円／3か月平均の報酬月額：${formatThousands(n.averageRemuneration)}円
+        </p>
+        <div class="data-table-wrap">
+          <table class="data-table notification-table">
+            <thead><tr><th>対象月</th><th class="num">報酬月額</th><th class="num">支払基礎日数</th></tr></thead>
+            <tbody>${monthRows}</tbody>
+          </table>
+        </div>
+        <p class="notification-body">
+          <a href="employees.html">従業員マスタ管理</a>で標準報酬月額を改定後の金額に更新してください。
+        </p>
+      </div>
+    `;
+  }).join('');
+}
+
 (async () => {
   const user = await requireAuth();
   if (!user) return;
   renderNavbar('index.html');
   renderNavbarUser(user);
+
+  // お知らせは件数が多いと時間がかかるため、他の表示を妨げないよう並行して描画する
+  listMonthlyRevisionNotices()
+    .then(renderMonthlyRevisionNotices)
+    .catch(() => renderMonthlyRevisionNotices([]));
 
   const employees = await listEmployees();
   const ym = currentYm();

@@ -132,6 +132,118 @@ function lookupStandardMonthlyAmount(compensation, brackets) {
   return brackets[brackets.length - 1].amount;
 }
 
+// 報酬月額に対応する標準報酬月額の「等級」（1始まり）を返す
+function lookupStandardMonthlyGrade(compensation, brackets) {
+  const amount = Number(compensation) || 0;
+  for (let i = 0; i < brackets.length; i++) {
+    const b = brackets[i];
+    if ((b.lower === null || amount >= b.lower) && (b.upper === null || amount < b.upper)) return i + 1;
+  }
+  return brackets.length;
+}
+
+// 標準報酬月額（等級の金額そのもの）から等級を逆引きする
+function standardMonthlyGradeOf(standardMonthly, brackets) {
+  const amount = Number(standardMonthly) || 0;
+  const index = brackets.findIndex((b) => b.amount === amount);
+  if (index >= 0) return index + 1;
+  return lookupStandardMonthlyGrade(amount, brackets);
+}
+
+// ----------------------------------------------------------------------
+// 月額変更（随時改定）の判定
+// 日本年金機構「随時改定（月額変更届）」の要件に基づく。
+// 次の3つをすべて満たした場合に月額変更届の提出対象となる。
+//   (1) 昇給・降給等により固定的賃金に変動があった
+//   (2) 変動月からの3か月間に支給された報酬（残業手当等の非固定的賃金を含む）の
+//       平均月額に該当する標準報酬月額と、これまでの標準報酬月額との間に
+//       2等級以上の差が生じた
+//   (3) 3か月とも支払基礎日数が17日以上である
+// また、固定的賃金の増減の方向（昇給・降給）と標準報酬月額の増減の方向が
+// 一致しない場合は対象外となる。改定は変動月から起算して4か月目。
+// ----------------------------------------------------------------------
+const MONTHLY_REVISION_MIN_BASIS_DAYS = 17;
+const MONTHLY_REVISION_GRADE_DIFF = 2;
+
+// months: 変動月から3か月分（昇順）の配列
+//   [{ ym, fixedWage, remuneration, basisDays }]
+//   fixedWage: その月の固定的賃金、remuneration: その月の報酬（臨時の給与を除く）
+//   basisDays: 支払基礎日数
+// previousFixedWage: 変動月の前月の固定的賃金
+// currentHealthStandardMonthly / currentPensionStandardMonthly: 現在の標準報酬月額
+// minBasisDays: 支払基礎日数の下限（既定17日。特定適用事業所の短時間労働者は11日）
+function checkMonthlyRevision(options) {
+  const months = options.months || [];
+  const minBasisDays = Number(options.minBasisDays) || MONTHLY_REVISION_MIN_BASIS_DAYS;
+  const prevFixed = Number(options.previousFixedWage) || 0;
+  const result = {
+    eligible: false,
+    unmetReasons: [],
+    months,
+    fixedWageDirection: null,
+    fixedWageBefore: prevFixed,
+    fixedWageAfter: months.length ? Number(months[0].fixedWage) || 0 : 0,
+    averageRemuneration: 0,
+    revisionYm: null,
+  };
+  if (months.length !== 3) {
+    result.unmetReasons.push('3か月分の給与明細が保存されていません');
+    return result;
+  }
+
+  // (1) 固定的賃金の変動
+  const fixedAfter = Number(months[0].fixedWage) || 0;
+  if (fixedAfter === prevFixed) {
+    result.unmetReasons.push('固定的賃金の変動がありません');
+    return result;
+  }
+  result.fixedWageDirection = fixedAfter > prevFixed ? 'up' : 'down';
+
+  // (3) 支払基礎日数（3か月とも下限以上であること）
+  const shortMonths = months.filter((m) => (Number(m.basisDays) || 0) < minBasisDays);
+  if (shortMonths.length) {
+    result.unmetReasons.push(
+      `支払基礎日数が${minBasisDays}日未満の月があります（`
+      + shortMonths.map((m) => `${m.ym}：${Number(m.basisDays) || 0}日`).join('、') + '）'
+    );
+  }
+
+  // (2) 3か月平均の報酬月額に対応する標準報酬月額との等級差
+  const total = months.reduce((sum, m) => sum + (Number(m.remuneration) || 0), 0);
+  // 平均額に1円未満の端数が生じたときは切り捨てる
+  const average = Math.floor(total / months.length);
+  result.averageRemuneration = average;
+
+  result.currentHealthStandardMonthly = Number(options.currentHealthStandardMonthly) || 0;
+  result.currentPensionStandardMonthly = Number(options.currentPensionStandardMonthly) || 0;
+  result.newHealthStandardMonthly = lookupStandardMonthlyAmount(average, HEALTH_STANDARD_BRACKETS);
+  result.newPensionStandardMonthly = lookupStandardMonthlyAmount(average, PENSION_STANDARD_BRACKETS);
+  result.currentHealthGrade = standardMonthlyGradeOf(result.currentHealthStandardMonthly, HEALTH_STANDARD_BRACKETS);
+  result.newHealthGrade = standardMonthlyGradeOf(result.newHealthStandardMonthly, HEALTH_STANDARD_BRACKETS);
+  result.currentPensionGrade = standardMonthlyGradeOf(result.currentPensionStandardMonthly, PENSION_STANDARD_BRACKETS);
+  result.newPensionGrade = standardMonthlyGradeOf(result.newPensionStandardMonthly, PENSION_STANDARD_BRACKETS);
+  result.gradeDiff = result.newHealthGrade - result.currentHealthGrade;
+
+  if (Math.abs(result.gradeDiff) < MONTHLY_REVISION_GRADE_DIFF) {
+    result.unmetReasons.push(`標準報酬月額の等級差が${MONTHLY_REVISION_GRADE_DIFF}等級未満です`);
+  } else if ((result.gradeDiff > 0 ? 'up' : 'down') !== result.fixedWageDirection) {
+    // 昇給したのに等級が下がった（またはその逆）の場合は随時改定の対象外
+    result.unmetReasons.push('固定的賃金の増減と標準報酬月額の増減の方向が一致しません');
+  }
+
+  // 改定月＝変動月から起算して4か月目
+  result.revisionYm = addMonthsToYm(months[0].ym, 3);
+  result.eligible = result.unmetReasons.length === 0;
+  return result;
+}
+
+// 'YYYY-MM' に月数を加算する
+function addMonthsToYm(ym, months) {
+  const [y, m] = String(ym).split('-').map(Number);
+  const d = new Date(y, (m - 1) + Number(months), 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 // 標準報酬月額の算定基礎となる報酬月額＝基本給＋固定残業代（設定時）＋各種手当＋通勤手当
 function computeStandardMonthlyBase(baseSalary, fixedOvertimeAmount, allowancesTotal, commuteAllowance) {
   return (Number(baseSalary) || 0) + (Number(fixedOvertimeAmount) || 0)

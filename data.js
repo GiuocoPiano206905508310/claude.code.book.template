@@ -561,6 +561,109 @@ async function deletePayslip(employeeId, ym) {
 }
 
 // ---------------------------------------------------------------------------
+// 月額変更（随時改定）の判定
+//
+// 保存済みの給与明細（給与計算画面で「この明細を保存」したもの）から、
+// 固定的賃金が変動した月を探し、その月からの3か月分で随時改定の要件を
+// 満たしているかを判定する。判定の詳細はcalc.jsのcheckMonthlyRevision参照。
+// ---------------------------------------------------------------------------
+
+// 社会保険（健康保険・厚生年金）の対象となる雇用形態か
+function isSocialInsuranceTarget(employee) {
+  const type = employee && employee.employmentType;
+  return type !== 'アルバイト・パート' && type !== 'アルバイト・パート（雇用保険対象外）';
+}
+
+// 保存済み明細から、その月の固定的賃金（毎月固定して支給される賃金）を求める。
+// 基本給・固定残業代・その他手当（課税）・通勤手当が該当し、割増手当や
+// 臨時の給与などの非固定的賃金は含めない
+function fixedWageOfPayslip(slip) {
+  const r = (slip && slip.result) || {};
+  return (Number(r.baseSalary) || 0) + (Number(r.fixedOvertimePay) || 0)
+    + (Number(r.taxableAllowance) || 0) + (Number(r.commuteAllowance) || 0);
+}
+
+// その月の報酬月額。通勤手当・割増手当・現物給与を含み、臨時に受けるものは除く
+function remunerationOfPayslip(slip) {
+  const r = (slip && slip.result) || {};
+  return (Number(r.grossPay) || 0) - (Number(r.specialPay) || 0);
+}
+
+// 支払基礎日数。月給制のため「給与計算期間の暦日数 − 欠勤日数」で算定する
+async function computePaymentBasisDays(employee, ym, company) {
+  const [y, m] = ym.split('-').map(Number);
+  const periodDates = buildPayPeriodDates(y, m, company && company.paycheckClosingDay);
+  const summary = await computeMonthSummary(employee, ym);
+  return Math.max(0, periodDates.length - summary.absenceDays);
+}
+
+// 従業員1人分の随時改定の通知を返す（要件を満たしたものだけ）。
+// options.withinMonths: 改定月が現在から何か月前までのものを対象にするか（既定12か月）
+async function findMonthlyRevisionNotices(employee, options) {
+  const opts = options || {};
+  if (!isSocialInsuranceTarget(employee)) return [];
+
+  const slips = await listPayslips(employee.id);
+  const yms = Object.keys(slips).sort();
+  if (yms.length < 4) return [];
+
+  const company = await getCompany(employee.branchId);
+  const nowYm = currentYmInputValue();
+  const oldestRevisionYm = addMonthsToYm(nowYm, -(Number(opts.withinMonths) || 12));
+  const notices = [];
+
+  for (let i = 1; i < yms.length; i++) {
+    const changeYm = yms[i];
+    // 変動月の前月が連続していること（間が空いている場合は比較しない）
+    if (yms[i - 1] !== previousYm(changeYm)) continue;
+
+    const previousFixedWage = fixedWageOfPayslip(slips[yms[i - 1]]);
+    if (fixedWageOfPayslip(slips[changeYm]) === previousFixedWage) continue;
+
+    // 変動月からの3か月がすべて保存済みで連続していること
+    const targetYms = [changeYm, addMonthsToYm(changeYm, 1), addMonthsToYm(changeYm, 2)];
+    if (!targetYms.every((ym) => slips[ym])) continue;
+
+    const revisionYm = addMonthsToYm(changeYm, 3);
+    // 古すぎる改定は通知しない（改定月が直近withinMonths以内のもののみ）
+    if (revisionYm < oldestRevisionYm) continue;
+
+    const months = [];
+    for (const ym of targetYms) {
+      months.push({
+        ym,
+        fixedWage: fixedWageOfPayslip(slips[ym]),
+        remuneration: remunerationOfPayslip(slips[ym]),
+        basisDays: await computePaymentBasisDays(employee, ym, company),
+      });
+    }
+
+    const judged = checkMonthlyRevision({
+      months,
+      previousFixedWage,
+      currentHealthStandardMonthly: employee.healthStandardMonthly,
+      currentPensionStandardMonthly: employee.pensionStandardMonthly,
+    });
+    if (judged.eligible) {
+      notices.push(Object.assign({ employeeId: employee.id, employeeName: employee.name, changeYm }, judged));
+    }
+  }
+  return notices;
+}
+
+// 全従業員分の随時改定の通知を、改定月の新しい順に返す
+async function listMonthlyRevisionNotices(options) {
+  const employees = await listEmployees();
+  const all = [];
+  for (const emp of employees) {
+    const notices = await findMonthlyRevisionNotices(emp, options);
+    all.push(...notices);
+  }
+  all.sort((a, b) => (a.revisionYm < b.revisionYm ? 1 : (a.revisionYm > b.revisionYm ? -1 : 0)));
+  return all;
+}
+
+// ---------------------------------------------------------------------------
 // 賞与明細履歴（従業員ごとに複数件、複数回の賞与支給に対応）
 // ---------------------------------------------------------------------------
 function bonusRowToObj(row) {
