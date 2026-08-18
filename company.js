@@ -218,6 +218,8 @@ async function loadFormFromCompany() {
   populateDayOfMonthSelect('paycheckClosingDay', String(company.paycheckClosingDay));
   populateDayOfMonthSelect('paycheckPaymentDay', String(company.paycheckPaymentDay));
   document.getElementById('paycheckPaymentMonth').value = company.paycheckPaymentMonth === 'current' ? 'current' : 'next';
+  document.getElementById('paymentDateHolidayAdjust').value = ['before', 'after'].includes(company.paymentDateHolidayAdjust)
+    ? company.paymentDateHolidayAdjust : 'none';
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
   populatePrefectureSelect('prefecture', company.prefecture);
   populateIndustrySelect('industryType', company.industryType);
@@ -272,6 +274,7 @@ function collectFormAsCompany() {
     paycheckClosingDay: document.getElementById('paycheckClosingDay').value,
     paycheckPaymentDay: document.getElementById('paycheckPaymentDay').value,
     paycheckPaymentMonth: document.getElementById('paycheckPaymentMonth').value,
+    paymentDateHolidayAdjust: document.getElementById('paymentDateHolidayAdjust').value,
     healthInsuranceType: document.getElementById('healthInsuranceType').value,
     prefecture: document.getElementById('prefecture').value,
     healthRate: Number(document.getElementById('healthRate').value) || 0,

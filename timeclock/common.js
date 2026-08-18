@@ -207,6 +207,15 @@ function ymLabel(ym) {
   return `${y}年${Number(m)}月`;
 }
 
+const PAYMENT_DATE_WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+
+// calc.jsのcomputePaymentDateが返す{y, m, d}を「2026/8/25（火）」の形式にする
+function fmtPaymentDate(date) {
+  if (!date) return '—';
+  const dow = new Date(date.y, date.m - 1, date.d).getDay();
+  return `${date.y}/${date.m}/${date.d}（${PAYMENT_DATE_WEEKDAY_LABELS[dow]}）`;
+}
+
 function fmtHistoryDateTime(iso) {
   const d = new Date(iso);
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} `

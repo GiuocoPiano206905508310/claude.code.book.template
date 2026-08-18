@@ -760,6 +760,11 @@ table.day-table tr.mid-header-row th {
   font-size: 15px;
   letter-spacing: 0.1em;
 }
+.payslip-head .payslip-payment-date {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
 .payslip-head .stamp-badge {
   font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
   font-size: 12px;
