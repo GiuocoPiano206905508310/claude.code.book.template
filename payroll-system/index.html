@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ダッシュボード | 給与・勤怠管理システム</title>
 <script>(function(){try{var t=localStorage.getItem('themePreference');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
-<link rel="stylesheet" href="style.css?v=37">
+<link rel="stylesheet" href="style.css?v=38">
 </head>
 <body>
 <nav class="navbar" id="navbar"></nav>
@@ -23,6 +23,13 @@
   </div>
 
   <div class="summary-grid" id="summaryGrid"></div>
+
+  <section class="card form-card" id="notificationSection" style="margin-bottom:28px;">
+    <h2>お知らせ<span class="notification-count" id="notificationCount"></span></h2>
+    <p class="field-note">※ 保存済みの給与明細と勤怠の集計から、社会保険の月額変更届（随時改定）の要件を満たした従業員を自動で検出してお知らせします。</p>
+    <div id="notificationList"></div>
+    <div class="empty-state" id="notificationEmptyState" style="display:none;">現在お知らせはありません。</div>
+  </section>
 
   <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 28px;">
     <a class="card form-card" style="text-decoration:none; color:inherit; display:block;" href="company.html">
@@ -73,9 +80,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
-<script src="calc.js?v=18"></script>
-<script src="data.js?v=24"></script>
+<script src="calc.js?v=19"></script>
+<script src="data.js?v=25"></script>
 <script src="common.js?v=19"></script>
-<script src="dashboard.js?v=5"></script>
+<script src="dashboard.js?v=6"></script>
 </body>
 </html>
