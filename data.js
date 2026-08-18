@@ -1094,6 +1094,21 @@ async function listChangeHistory(targetType, targetId) {
   }));
 }
 
+// 対象種別ごとの変更履歴を、対象を問わず新しい順にまとめて取得する
+// （従業員マスタ管理の「変更履歴」で全従業員分を一覧表示するために使用）
+async function listChangeHistoryByType(targetType, limit) {
+  const { data, error } = await supabaseClient.from('change_history').select('*')
+    .eq('target_type', targetType).order('changed_at', { ascending: false }).limit(Number(limit) || 100);
+  if (error) throw error;
+  return data.map((row) => ({
+    id: row.id,
+    targetId: row.target_id,
+    targetLabel: row.target_label,
+    changes: row.changes || [],
+    changedAt: row.changed_at,
+  }));
+}
+
 // ---------------------------------------------------------------------------
 // ダッシュボード集計用ヘルパー
 // ---------------------------------------------------------------------------
