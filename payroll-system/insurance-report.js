@@ -74,9 +74,23 @@ function renderSanteiTable() {
   }).join('');
 
   updateSheetSelect('santeiSheet', santeiSelected.size, SANTEI_FORM.perSheet);
+  // 対象者がいない場合は作成ボタンを押せないようにする（押しても作れないため）
+  document.getElementById('santeiExcelBtn').disabled = santeiEntries.length === 0;
   const all = document.getElementById('santeiSelectAll');
   all.checked = santeiEntries.length > 0 && santeiSelected.size === santeiEntries.length;
   all.indeterminate = santeiSelected.size > 0 && santeiSelected.size < santeiEntries.length;
+}
+
+// 対象者が0件のときに、どの給与明細を探したのかを具体的に案内する
+async function santeiEmptyMessage(year) {
+  const company = await getCompany();
+  const periodYms = [`${year}-04`, `${year}-05`, `${year}-06`].map((ym) => periodYmOfPayment(ym, company));
+  const isNextMonth = !company || company.paycheckPaymentMonth !== 'current';
+  return `${year}年4月・5月・6月に支払われた給与の明細が保存されていないため、対象者がいません。`
+    + `${isNextMonth ? '会社マスタ管理の「賃金の支払月」が翌月払いのため、' : ''}`
+    + `<a href="payroll.html">給与計算</a>画面で対象年月を`
+    + periodYms.map((ym) => `<strong>${ymLabel(ym)}</strong>`).join('・')
+    + `に切り替えて「💾 この明細を保存」を押すと、ここに対象者が表示されます。`;
 }
 
 async function loadSantei() {
@@ -87,7 +101,12 @@ async function loadSantei() {
     santeiSelected.clear();
     santeiEntries.forEach((e) => santeiSelected.add(e.employeeId));
     renderSanteiTable();
-    showExportStatus('santeiStatus', `対象者 ${santeiEntries.length} 名を集計しました。`, false);
+    if (santeiEntries.length) {
+      showExportStatus('santeiStatus', `対象者 ${santeiEntries.length} 名を集計しました。`, false);
+    } else {
+      document.getElementById('santeiEmptyState').innerHTML = await santeiEmptyMessage(year);
+      showExportStatus('santeiStatus', '', false);
+    }
   } catch (e) {
     showExportStatus('santeiStatus', '集計に失敗しました：' + e.message, true);
   }
@@ -149,6 +168,7 @@ function renderGeppenTable() {
   }).join('');
 
   updateSheetSelect('geppenSheet', geppenSelected.size, GEPPEN_FORM.perSheet);
+  document.getElementById('geppenExcelBtn').disabled = geppenNotices.length === 0;
   const all = document.getElementById('geppenSelectAll');
   all.checked = geppenNotices.length > 0 && geppenSelected.size === geppenNotices.length;
   all.indeterminate = geppenSelected.size > 0 && geppenSelected.size < geppenNotices.length;
@@ -161,7 +181,9 @@ async function loadGeppen() {
     geppenSelected.clear();
     geppenNotices.forEach((n) => geppenSelected.add(n.employeeId));
     renderGeppenTable();
-    showExportStatus('geppenStatus', `対象者 ${geppenNotices.length} 名を集計しました。`, false);
+    // 0件のときは空状態の案内に任せ、件数のメッセージは出さない
+    showExportStatus('geppenStatus',
+      geppenNotices.length ? `対象者 ${geppenNotices.length} 名を集計しました。` : '', false);
   } catch (e) {
     showExportStatus('geppenStatus', '集計に失敗しました：' + e.message, true);
   }
