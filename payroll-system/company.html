@@ -138,10 +138,11 @@
     <div id="roundingRulesSection" style="display:none;">
       <div class="data-table-wrap">
         <table class="data-table" id="roundingRulesTable">
-          <thead><tr><th>状態</th><th>丸め単位</th><th>計算方法</th></tr></thead>
+          <thead><tr><th>項目</th><th>状態</th><th>丸め単位</th><th>計算方法</th></tr></thead>
           <tbody>
             <tr data-kind="clockIn">
               <td>出勤</td>
+              <td class="cell-toggle"><input type="checkbox" class="rounding-kind-enabled" checked></td>
               <td>
                 <select class="rounding-unit-select">
                   <option value="5">5分</option>
@@ -162,6 +163,7 @@
             </tr>
             <tr data-kind="clockOut">
               <td>退勤</td>
+              <td class="cell-toggle"><input type="checkbox" class="rounding-kind-enabled" checked></td>
               <td>
                 <select class="rounding-unit-select">
                   <option value="5">5分</option>
@@ -182,6 +184,7 @@
             </tr>
             <tr data-kind="breakStart">
               <td>休憩開始</td>
+              <td class="cell-toggle"><input type="checkbox" class="rounding-kind-enabled" checked></td>
               <td>
                 <select class="rounding-unit-select">
                   <option value="5">5分</option>
@@ -202,6 +205,7 @@
             </tr>
             <tr data-kind="breakEnd">
               <td>休憩終了</td>
+              <td class="cell-toggle"><input type="checkbox" class="rounding-kind-enabled" checked></td>
               <td>
                 <select class="rounding-unit-select">
                   <option value="5">5分</option>
@@ -223,7 +227,8 @@
           </tbody>
         </table>
       </div>
-      <p class="field-note">※ 出勤・退勤の丸めは日次勤怠入力・給与計算に実際に反映されます。休憩開始・休憩終了の丸めは、休憩を時刻ではなく分数で入力する現在の勤怠入力方式では計算に反映できないため、設定の保存のみとなります。</p>
+      <p class="field-note">※「状態」のスイッチで項目ごとに丸めのオン・オフを切り替えられます（例：出勤は丸めず、退勤だけ丸める）。オフにした項目は1分単位のまま計算されます。<br>
+        ※ 出勤・退勤の丸めは日次勤怠入力・給与計算に実際に反映されます。休憩開始・休憩終了の丸めは、休憩を時刻ではなく分数で入力する現在の勤怠入力方式では計算に反映できないため、設定の保存のみとなります。</p>
       <p class="rate-error">
         ⚠️従業員の不利益になる丸めは認められていません<br>
         労働基準法第24条の『全額払いの原則』により、給与は本来1分単位で計算して支払う必要があります。<br>
@@ -381,9 +386,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
-<script src="calc.js?v=22"></script>
-<script src="data.js?v=30"></script>
+<script src="calc.js?v=23"></script>
+<script src="data.js?v=31"></script>
 <script src="common.js?v=21"></script>
-<script src="company.js?v=18"></script>
+<script src="company.js?v=19"></script>
 </body>
 </html>
