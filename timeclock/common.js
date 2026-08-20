@@ -4,6 +4,7 @@
 
 const NAV_ITEMS = [
   { href: 'index.html', label: 'ダッシュボード' },
+  { href: 'index.html#notificationSection', label: 'お知らせ', id: 'navNotificationLink' },
   { href: 'company.html', label: '会社' },
   { href: 'employees.html', label: '従業員' },
   { href: 'attendance.html', label: '勤怠' },
@@ -24,12 +25,26 @@ function renderNavbar(activeHref) {
   if (!nav) return;
   const links = NAV_ITEMS.map((item) => {
     const cls = item.href === activeHref ? 'nav-link active' : 'nav-link';
-    return `<a class="${cls}" href="${item.href}">${item.label}</a>`;
+    const idAttr = item.id ? ` id="${item.id}"` : '';
+    const badge = item.id ? `<span class="nav-badge" id="${item.id}Badge"></span>` : '';
+    return `<a class="${cls}" href="${item.href}"${idAttr}>${item.label}${badge}</a>`;
   }).join('');
   nav.innerHTML = `
     <a class="brand" href="index.html">給与・勤怠管理システム</a>
     <div class="nav-links">${links}<span id="navUserArea"></span></div>
   `;
+  loadNavNotificationBadge();
+}
+
+// 上部ナビの「お知らせ」に、社会保険の月額変更届（随時改定）対象者の件数バッジを表示する。
+// 全従業員の給与明細を集計するため時間がかかる場合があり、他の画面描画をブロックしない
+// よう非同期で行う（0件・取得失敗時はバッジを表示しない）
+function loadNavNotificationBadge() {
+  const badge = document.getElementById('navNotificationLinkBadge');
+  if (!badge || typeof listMonthlyRevisionNotices !== 'function') return;
+  listMonthlyRevisionNotices()
+    .then((notices) => { badge.textContent = notices.length ? String(notices.length) : ''; })
+    .catch(() => { badge.textContent = ''; });
 }
 
 // ログイン中のユーザー名（アカウント設定画面へのリンク）とログアウトボタンを
