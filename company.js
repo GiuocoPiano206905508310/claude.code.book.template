@@ -170,6 +170,7 @@ function applyRoundingEnabledToForm() {
 function setRoundingRowValue(kind, rule) {
   const row = document.querySelector(`#roundingRulesTable tr[data-kind="${kind}"]`);
   if (!row || !rule) return;
+  const enabledCheckbox = row.querySelector('.rounding-kind-enabled');
   const unitSelect = row.querySelector('.rounding-unit-select');
   const customInput = row.querySelector('.rounding-custom-input');
   const methodSelect = row.querySelector('.rounding-method-select');
@@ -183,15 +184,30 @@ function setRoundingRowValue(kind, rule) {
     customInput.value = minutes;
   }
   methodSelect.value = rule.method === 'down' ? 'down' : 'up';
+  enabledCheckbox.checked = rule.enabled !== false;
+  applyRoundingKindEnabledToRow(row);
 }
 
 function getRoundingRowValue(kind) {
   const row = document.querySelector(`#roundingRulesTable tr[data-kind="${kind}"]`);
+  const enabledCheckbox = row.querySelector('.rounding-kind-enabled');
   const unitSelect = row.querySelector('.rounding-unit-select');
   const customInput = row.querySelector('.rounding-custom-input');
   const methodSelect = row.querySelector('.rounding-method-select');
   const minutes = unitSelect.value === 'custom' ? (Number(customInput.value) || 1) : Number(unitSelect.value);
-  return { minutes, method: methodSelect.value === 'down' ? 'down' : 'up' };
+  return { minutes, method: methodSelect.value === 'down' ? 'down' : 'up', enabled: enabledCheckbox.checked };
+}
+
+// 項目ごとの「状態」スイッチがオフのとき、その行の丸め単位・計算方法の選択を
+// 編集不可にする（実際に丸めが適用されないことが見た目でも分かるように）
+function applyRoundingKindEnabledToRow(row) {
+  const enabled = row.querySelector('.rounding-kind-enabled').checked;
+  const unitSelect = row.querySelector('.rounding-unit-select');
+  const customInput = row.querySelector('.rounding-custom-input');
+  const methodSelect = row.querySelector('.rounding-method-select');
+  unitSelect.disabled = !enabled;
+  customInput.disabled = !enabled;
+  methodSelect.disabled = !enabled;
 }
 
 function attachRoundingRowEvents() {
@@ -205,6 +221,9 @@ function attachRoundingRowEvents() {
         customInput.style.display = 'none';
       }
     });
+  });
+  document.querySelectorAll('#roundingRulesTable .rounding-kind-enabled').forEach((checkbox) => {
+    checkbox.addEventListener('change', () => applyRoundingKindEnabledToRow(checkbox.closest('tr')));
   });
 }
 
@@ -316,6 +335,9 @@ function setEditMode(editing) {
   document.querySelectorAll('#companyFormCard select, #companyFormCard input').forEach((el) => {
     el.disabled = !editing;
   });
+  // 項目ごとの「状態」スイッチがオフの行は、編集モードに入っても丸め単位・
+  // 計算方法の選択を編集不可のままにする
+  document.querySelectorAll('#roundingRulesTable tr[data-kind]').forEach((row) => applyRoundingKindEnabledToRow(row));
   document.getElementById('editModeNote').style.display = editing ? '' : 'none';
   document.getElementById('editSaveRow').style.display = editing ? '' : 'none';
   applyBulkEditModeToForm();

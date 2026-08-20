@@ -1311,7 +1311,8 @@ const EARLY_CLOCK_IN_CLAMP_LIMIT_MIN = 12 * 60;
 // （例：所定始業9:00に対して8:35に打刻していても、丸め後の出勤は9:00になる）。
 function roundClockInMinutes(minutes, company, scheduledStartMin) {
   const rule = company && company.roundingEnabled && company.roundingRules && company.roundingRules.clockIn;
-  const rounded = rule ? roundClockMinutes(minutes, rule.minutes, rule.method) : minutes;
+  const active = rule && rule.enabled !== false;
+  const rounded = active ? roundClockMinutes(minutes, rule.minutes, rule.method) : minutes;
   if (rounded === null || rounded === undefined) return rounded;
   if (!company || !company.scheduledStartRounding) return rounded;
   if (scheduledStartMin === null || scheduledStartMin === undefined) return rounded;
@@ -1350,7 +1351,8 @@ function computeEarlyOvertimeMinutes(rec, company, defaultScheduledStart) {
 }
 function roundClockOutMinutes(minutes, company) {
   const rule = company && company.roundingEnabled && company.roundingRules && company.roundingRules.clockOut;
-  return rule ? roundClockMinutes(minutes, rule.minutes, rule.method) : minutes;
+  const active = rule && rule.enabled !== false;
+  return active ? roundClockMinutes(minutes, rule.minutes, rule.method) : minutes;
 }
 
 // 50銭未満切り捨て・50銭以上を1円に切り上げ（円未満の端数処理。四捨五入と同じ結果になる）

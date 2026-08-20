@@ -818,13 +818,14 @@ async function deleteBonusRecord(employeeId, bonusId) {
 // ---------------------------------------------------------------------------
 // 会社マスタ（保険料率設定。ログインユーザー1人＝会社1社の単一レコード）
 // ---------------------------------------------------------------------------
-// 勤怠丸め設定のデフォルト（打刻の丸め設定を参照。単位は分、method: 'up'=切り上げ/'down'=切り捨て）
+// 勤怠丸め設定のデフォルト（打刻の丸め設定を参照。単位は分、method: 'up'=切り上げ/'down'=切り捨て、
+// enabled: この項目に丸めを適用するか。既定は有効＝「打刻時刻の丸め」が有効な間は全項目に適用）
 function defaultRoundingRules() {
   return {
-    clockIn: { minutes: 15, method: 'up' },
-    clockOut: { minutes: 15, method: 'down' },
-    breakStart: { minutes: 15, method: 'up' },
-    breakEnd: { minutes: 15, method: 'down' },
+    clockIn: { minutes: 15, method: 'up', enabled: true },
+    clockOut: { minutes: 15, method: 'down', enabled: true },
+    breakStart: { minutes: 15, method: 'up', enabled: true },
+    breakEnd: { minutes: 15, method: 'down', enabled: true },
   };
 }
 
@@ -1062,6 +1063,7 @@ function fmtHistoryDay(v) { return v === null || v === undefined || v === '' ? '
 function fmtHistoryYen(v) { return (v === null || v === undefined || v === '') ? '' : `${Number(v).toLocaleString()}円`; }
 function fmtHistoryRoundingRule(rule) {
   if (!rule) return '';
+  if (rule.enabled === false) return '丸めなし';
   return `${rule.minutes}分単位（${rule.method === 'down' ? '切り捨て' : '切り上げ'}）`;
 }
 
