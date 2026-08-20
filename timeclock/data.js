@@ -1068,15 +1068,18 @@ function fmtHistoryRoundingRule(rule) {
 }
 
 // oldObj/newObjをdefsで定義した項目ごとに比較し、値が変わった項目だけを
-// { label, before, after } の配列として返す（同値なら結果に含めない）
+// { label, before, after } の配列として返す（同値なら結果に含めない）。
+// 比較は表示用にフォーマットした後の文字列で行う。同じ表示結果になる場合は
+// 内部データ（JSON構造）が違っていても「変更なし」として扱う
+// （例：丸め設定にenabledフィールドが増えても、表示上変わらない項目は履歴に出さない）
 function diffFields(oldObj, newObj, defs) {
   const changes = [];
   defs.forEach((def) => {
     const beforeRaw = def.get ? def.get(oldObj) : oldObj[def.key];
     const afterRaw = def.get ? def.get(newObj) : newObj[def.key];
-    if (JSON.stringify(beforeRaw ?? null) === JSON.stringify(afterRaw ?? null)) return;
     const before = def.format ? def.format(beforeRaw) : (beforeRaw ?? '');
     const after = def.format ? def.format(afterRaw) : (afterRaw ?? '');
+    if (String(before) === String(after)) return;
     changes.push({ label: def.label, before: String(before), after: String(after) });
   });
   return changes;
