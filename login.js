@@ -7,12 +7,21 @@ function getNextPage() {
   return params.get('next') || 'index.html';
 }
 
+// ブラウザによってネットワーク接続失敗時のエラー文言が異なる
+// （Chrome/Edge: "Failed to fetch"、Safari: "Load failed"、
+// Firefox: "NetworkError when attempting to fetch resource"）ため、
+// いずれにも該当するかどうかで判定する
+function isNetworkFetchError(error) {
+  const msg = (error && error.message) || '';
+  return msg.includes('Failed to fetch') || msg.includes('Load failed') || msg.includes('NetworkError');
+}
+
 function friendlyAuthError(error) {
   const msg = (error && error.message) || '';
   if (msg.includes('Invalid login credentials')) return 'ユーザー名またはパスワードが正しくありません。';
   if (msg.includes('User already registered')) return 'このユーザー名は既に登録されています。別のユーザー名を使用してください。';
   if (msg.includes('Password should be at least')) return 'パスワードは6文字以上で設定してください。';
-  if (msg.includes('Failed to fetch')) return '通信に失敗しました。しばらくしてから再度お試しください。';
+  if (isNetworkFetchError(error)) return '通信に失敗しました。インターネット接続をご確認のうえ、しばらくしてから再度お試しください。';
   return 'エラーが発生しました：' + msg;
 }
 
