@@ -23,6 +23,20 @@ function renderTotalsGrid(summary) {
   ]);
 }
 
+function renderPremiumGrid(premiums) {
+  const laborAccidentValue = premiums.laborAccidentRatePerMille === null
+    ? '会社マスタ管理で業種番号を設定してください'
+    : `${formatThousands(premiums.laborAccidentPremium)} 円（率 ${premiums.laborAccidentRatePerMille}‰）`;
+  renderInfoTiles('premiumGrid', [
+    ['労災保険料', laborAccidentValue, premiums.laborAccidentRatePerMille === null ? 'warn' : ''],
+    ['雇用保険料', `${formatThousands(premiums.employmentInsurancePremium)} 円（率 ${premiums.employmentInsuranceRatePerMille}‰）`],
+    ['労働保険料（合計）', premiums.laborAccidentRatePerMille === null
+      ? '—'
+      : `${formatThousands(premiums.laborAccidentPremium + premiums.employmentInsurancePremium)} 円`],
+    ['一般拠出金額', `${formatThousands(premiums.generalContributionPremium)} 円（率 ${premiums.generalContributionRatePerMille}‰）`],
+  ]);
+}
+
 function ymShortLabel(ym) {
   const [y, m] = ym.split('-').map(Number);
   return `${y}年${m}月`;
@@ -74,6 +88,7 @@ async function loadSummary() {
   document.getElementById('excelBtn').disabled = !hasAnyData;
 
   renderTotalsGrid(summary);
+  renderPremiumGrid(computeLaborInsurancePremiums(summary, currentCompany));
   renderMonthlyTable(summary);
   renderBonusTable(summary);
 }

@@ -28,6 +28,35 @@ const EMPLOYMENT_RATES_BY_INDUSTRY = {
   '建設の事業': 0.6,
 };
 
+// 厚生労働省「労災保険率表」（令和6年4月1日施行、単位：1/1,000）。
+// キーは業種番号（2桁）。会社マスタ管理で入力する「業種番号（4桁）」の上2桁で引く
+const WORKERS_COMP_INSURANCE_RATE_TABLE = {
+  '02': 52, '11': 18, '12': 37, '21': 88, '23': 13, '24': 2.5, '25': 37, '26': 26,
+  '31': 34, '32': 11, '33': 9, '34': 9, '35': 9.5, '38': 12, '36': 6, '37': 15,
+  '41': 5.5, '42': 4, '44': 13, '45': 7, '46': 3.5, '47': 4.5, '48': 6, '66': 13,
+  '62': 17, '49': 23, '50': 6.5, '51': 7, '52': 5, '53': 16, '54': 9, '63': 6.5,
+  '55': 6.5, '56': 5, '57': 3, '58': 4, '59': 23, '60': 2.5, '64': 3.5, '61': 6,
+  '71': 4, '72': 8.5, '73': 9, '74': 12, '81': 3, '95': 13, '91': 13, '93': 6,
+  '96': 6.5, '97': 2.5, '98': 3, '99': 2.5, '94': 3, '90': 42,
+};
+
+// 石綿健康被害救済法に基づく一般拠出金率（全事業一律、単位：1/1,000）
+const GENERAL_CONTRIBUTION_RATE_PER_MILLE = 0.02;
+
+// 業種番号（4桁）の上2桁から労災保険率（単位：1/1,000）を引く。該当が無ければnull
+function laborAccidentInsuranceRatePerMille(industryCode4) {
+  const code2 = String(industryCode4 || '').slice(0, 2);
+  return Object.prototype.hasOwnProperty.call(WORKERS_COMP_INSURANCE_RATE_TABLE, code2)
+    ? WORKERS_COMP_INSURANCE_RATE_TABLE[code2] : null;
+}
+
+// 賃金集計表の千円未満切り捨て済み賃金総額（千円単位の数値）と保険率（単位：1/1,000）から、
+// 確定保険料・一般拠出金額（円、円未満切り捨て）を計算する
+function calcInsurancePremiumFromThousandYen(thousandYen, ratePerMille) {
+  if (ratePerMille === null || ratePerMille === undefined) return null;
+  return Math.floor((thousandYen || 0) * ratePerMille);
+}
+
 // 協会けんぽ「令和8年3月分（4月納付分）からの健康保険・厚生年金保険の保険料額表」の
 // 標準報酬月額等級（都道府県によらず全国共通）。amountが標準報酬月額、lower/upperが対応する
 // 報酬月額の範囲（lower円以上・upper円未満。null は範囲の下限／上限なし）。

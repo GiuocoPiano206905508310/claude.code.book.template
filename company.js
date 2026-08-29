@@ -311,6 +311,7 @@ async function loadFormFromCompany() {
   document.getElementById('laborInsurancePhone2').value = phone2;
   document.getElementById('laborInsurancePhone3').value = phone3;
   document.getElementById('laborInsuranceBusinessDescription').value = laborInfo.businessDescription || '';
+  document.getElementById('laborInsuranceIndustryCode4').value = laborInfo.industryCode4 || '';
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
   populatePrefectureSelect('prefecture', company.prefecture);
   populateIndustrySelect('industryType', company.industryType);
@@ -401,6 +402,7 @@ function collectFormAsCompany() {
       address: document.getElementById('laborInsuranceAddress').value.trim(),
       phone: joinNumberParts(['laborInsurancePhone1', 'laborInsurancePhone2', 'laborInsurancePhone3']),
       businessDescription: document.getElementById('laborInsuranceBusinessDescription').value.trim(),
+      industryCode4: document.getElementById('laborInsuranceIndustryCode4').value.trim(),
     },
   };
 }

@@ -43,6 +43,10 @@
 
     <div class="summary-grid compact-grid" id="totalsGrid"></div>
 
+    <h2 style="margin-top:24px;">労働保険料・一般拠出金額</h2>
+    <p class="field-note">※ 労災保険料は、<a href="company.html">会社マスタ管理</a>で入力した「業種番号（4桁）」の上2桁から厚生労働省「労災保険率表」（令和6年4月1日施行）の率を引いて計算します。雇用保険料は会社マスタ管理の雇用保険料率、一般拠出金額は全業種一律の率（1000分の0.02）で計算します。いずれも賃金総額（千円未満切り捨て）×率（円未満切り捨て）の概算値です。</p>
+    <div class="summary-grid compact-grid" id="premiumGrid"></div>
+
     <div class="data-table-wrap">
       <table class="data-table" id="monthlyTable">
         <thead>
@@ -80,11 +84,11 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
-<script src="calc.js?v=23"></script>
-<script src="data.js?v=34"></script>
+<script src="calc.js?v=24"></script>
+<script src="data.js?v=35"></script>
 <script src="common.js?v=23"></script>
 <script src="xlsxform.js?v=1"></script>
 <script src="labor-insurance-form.js?v=2"></script>
-<script src="labor-insurance.js?v=2"></script>
+<script src="labor-insurance.js?v=3"></script>
 </body>
 </html>
