@@ -851,7 +851,10 @@ document.getElementById('employmentType').addEventListener('change', () => {
 document.getElementById('ageGroup').addEventListener('change', calculate);
 document.getElementById('taxTable').addEventListener('change', calculate);
 document.getElementById('calcMethod').addEventListener('change', calculate);
-document.getElementById('calcBtn').addEventListener('click', calculate);
+document.getElementById('calcBtn').addEventListener('click', () => {
+  calculate();
+  scrollToResultCard('resultCard');
+});
 
 document.getElementById('bonusPrefecture').addEventListener('change', () => {
   applyPrefectureRate('bonusPrefecture', 'bonusHealthRate', 'bonusCareRate', 'bonusChildLevyRate');
@@ -875,7 +878,10 @@ document.getElementById('bonusCalcMethod').addEventListener('change', calculateB
 document.getElementById('bonusCalcPeriod').addEventListener('change', calculateBonus);
 document.getElementById('bonusHealthCumulative').addEventListener('change', calculateBonus);
 document.getElementById('bonusPensionCumulative').addEventListener('change', calculateBonus);
-document.getElementById('calcBonusBtn').addEventListener('click', calculateBonus);
+document.getElementById('calcBonusBtn').addEventListener('click', () => {
+  calculateBonus();
+  scrollToResultCard('bonusResultCard');
+});
 
 // 「クリア」：金額系の入力項目のみを初期状態に戻す（雇用形態・都道府県等の選択項目は維持）
 document.getElementById('clearBtn').addEventListener('click', () => {
@@ -1043,6 +1049,19 @@ function scrollPageTo(top) {
     window.scrollTo({ top, behavior: 'smooth' });
   } catch (e) {
     window.scrollTo(0, top);
+  }
+}
+
+// 計算ボタンを押した後、計算結果までスクロールする
+// PC表示など、すでに結果が画面内に収まっている場合は不要に動かさない
+function scrollToResultCard(cardId) {
+  const card = document.getElementById(cardId);
+  const rect = card.getBoundingClientRect();
+  if (rect.top >= 0 && rect.bottom <= window.innerHeight) return;
+  try {
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    card.scrollIntoView(true);
   }
 }
 
