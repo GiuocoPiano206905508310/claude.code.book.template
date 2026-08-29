@@ -310,9 +310,16 @@
         <input type="text" id="laborInsurancePhone3" inputmode="numeric" pattern="[0-9]*" maxlength="4" style="width:70px;">
       </div>
     </div>
-    <div class="field-row" style="border-bottom: none;">
+    <div class="field-row">
       <label for="laborInsuranceBusinessDescription">具体的な業務又は作業の内容</label>
       <div class="field-input"><input type="text" id="laborInsuranceBusinessDescription" placeholder="例：〇〇の卸売業・小売業"></div>
+    </div>
+    <div class="field-row" style="border-bottom: none;">
+      <label for="laborInsuranceIndustryCode4">業種番号（4桁）</label>
+      <div class="field-input numeric-box-group" data-numeric-group style="display:flex; gap:6px; align-items:center;">
+        <input type="text" id="laborInsuranceIndustryCode4" inputmode="numeric" pattern="[0-9]*" maxlength="4" style="width:70px;">
+      </div>
+      <p class="field-note">※ 上2桁が労災保険率表の業種番号に対応します。<a href="labor-insurance.html">労働保険 年度更新</a>画面の労災保険料の計算に使用します。</p>
     </div>
 
     <h2 class="section-2" id="rateSectionHeader">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
@@ -429,9 +436,9 @@
 <script src="supabase-sdk.js?v=1"></script>
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
-<script src="calc.js?v=23"></script>
-<script src="data.js?v=34"></script>
+<script src="calc.js?v=24"></script>
+<script src="data.js?v=35"></script>
 <script src="common.js?v=23"></script>
-<script src="company.js?v=21"></script>
+<script src="company.js?v=22"></script>
 </body>
 </html>

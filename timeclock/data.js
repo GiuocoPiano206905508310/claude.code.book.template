@@ -731,6 +731,35 @@ async function computeLaborInsuranceSummary(year, company) {
   return computeLaborInsuranceSummaryFromData(year, company, employees, payslipsByEmployeeId, bonusesByEmployeeId);
 }
 
+// computeLaborInsuranceSummary()の集計結果と会社マスタの設定から、確定保険料
+// （労災保険料・雇用保険料）・一般拠出金額（円、円未満切り捨て）を計算する（純粋関数）。
+// 業種番号が未設定・労災保険率表に該当が無い場合、laborAccidentRatePerMille・
+// laborAccidentPremiumはnullになる
+function computeLaborInsurancePremiums(summary, company) {
+  const industryCode4 = (company && company.laborInsuranceInfo && company.laborInsuranceInfo.industryCode4) || '';
+  const laborAccidentRatePerMille = laborAccidentInsuranceRatePerMille(industryCode4);
+  const laborAccidentPremium = calcInsurancePremiumFromThousandYen(summary.laborInsuranceThousandYen, laborAccidentRatePerMille);
+
+  // company.employmentRateは「%」単位（例：0.5は0.5%）で保存されているため、
+  // 1/1,000単位（‰）に変換してから計算する（0.5% = 5‰）
+  const employmentInsuranceRatePerMille = (Number(company && company.employmentRate) || 0) * 10;
+  const employmentInsurancePremium = calcInsurancePremiumFromThousandYen(
+    summary.employmentInsuranceThousandYen, employmentInsuranceRatePerMille);
+
+  const generalContributionPremium = calcInsurancePremiumFromThousandYen(
+    summary.generalContributionThousandYen, GENERAL_CONTRIBUTION_RATE_PER_MILLE);
+
+  return {
+    industryCode4,
+    laborAccidentRatePerMille,
+    laborAccidentPremium,
+    employmentInsuranceRatePerMille,
+    employmentInsurancePremium,
+    generalContributionRatePerMille: GENERAL_CONTRIBUTION_RATE_PER_MILLE,
+    generalContributionPremium,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // 月額変更（随時改定）の判定
 //
@@ -1062,6 +1091,7 @@ function defaultLaborInsuranceInfo() {
     address: '',
     phone: '',
     businessDescription: '', // 具体的な業務又は作業の内容
+    industryCode4: '', // 業種番号（4桁）。上2桁で労災保険率表を引く
   };
 }
 
@@ -1342,6 +1372,7 @@ COMPANY_HISTORY_FIELDS.push(
   ['address', '事業所の所在地'],
   ['phone', '事業所の電話番号'],
   ['businessDescription', '具体的な業務又は作業の内容'],
+  ['industryCode4', '業種番号'],
 ].forEach(([key, label]) => {
   COMPANY_HISTORY_FIELDS.push({
     key: `laborInsuranceInfo.${key}`,
