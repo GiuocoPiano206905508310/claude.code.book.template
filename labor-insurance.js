@@ -32,7 +32,7 @@ function renderMonthlyTable(summary) {
   const tbody = document.getElementById('monthlyTableBody');
   tbody.innerHTML = summary.monthRows.map((row) => `
     <tr>
-      <td>${ymShortLabel(row.paymentYm)}</td>
+      <td>${ymShortLabel(row.periodYm)}</td>
       <td class="num">${row.category1.count} 人</td>
       <td class="num">${formatThousands(row.category1.wage)} 円</td>
       <td class="num">${row.category3.count} 人</td>

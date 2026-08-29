@@ -69,7 +69,7 @@ function buildLaborInsuranceFormValues(summary, company) {
 
   summary.monthRows.forEach((row, i) => {
     const excelRow = form.monthStartRow + i;
-    values[`A${excelRow}`] = monthLabel(row.paymentYm);
+    values[`A${excelRow}`] = monthLabel(row.periodYm);
     Object.entries(form.categoryColumns).forEach(([key, cols]) => {
       const bucket = row[key];
       values[`${cols.count}${excelRow}`] = bucket.count;
