@@ -563,9 +563,11 @@ async function deletePayslip(employeeId, ym) {
 // ---------------------------------------------------------------------------
 // 労働保険 年度更新（確定保険料・一般拠出金算定基礎賃金集計表）
 //
-// 保存済みの給与明細・賞与明細から、支給月ベースで年度（4月〜翌3月）分の
-// 賃金を区分ごとに集計する。区分の判定は雇用形態に基づく（従業員マスタの
-// 「雇用形態」設定をそのまま使用し、新たな入力項目は増やさない）：
+// 保存済みの給与明細・賞与明細から、勤怠月（給与計算対象月）ベースで年度
+// （4月〜翌3月）分の賃金を区分ごとに集計する（賞与は支給日ベース。賞与
+// 明細には勤怠月に相当する期間の概念が無いため）。区分の判定は雇用形態に
+// 基づく（従業員マスタの「雇用形態」設定をそのまま使用し、新たな入力項目は
+// 増やさない）：
 //   ・正社員／アルバイト・パート（雇用保険のみ対象）
 //       → 労災保険：常用労働者（区分1）／雇用保険：被保険者（区分5）
 //   ・アルバイト・パート（雇用保険対象外）
@@ -584,8 +586,8 @@ function laborInsuranceEmploymentTypeCategory(employmentType) {
   return 'regular'; // 正社員／アルバイト・パート（雇用保険のみ対象）
 }
 
-// 年度（year年4月〜year+1年3月）の支給月一覧（'YYYY-MM'）を返す
-function laborInsuranceFiscalYearPaymentYms(year) {
+// 年度（year年4月〜year+1年3月）の勤怠月（給与計算対象月）一覧（'YYYY-MM'）を返す
+function laborInsuranceFiscalYearPeriodYms(year) {
   const yms = [];
   for (let i = 0; i < 12; i++) {
     const m = 4 + i;
@@ -602,14 +604,16 @@ function laborInsuranceEmptyBucket() { return { count: 0, wage: 0 }; }
 // 純粋な集計ロジック本体（I/Oを行わない）。employees・payslipsByEmployeeId・
 // bonusesByEmployeeIdはあらかじめ取得済みのデータを渡す（テスト容易化のため
 // computeLaborInsuranceSummary()から分離している）。
+// 月別の賃金は勤怠月（給与計算対象月＝給与明細のym）を基準に集計する
+// （支給日の年月ではなく、実際に働いた月を基準とする）。
 // payslipsByEmployeeId: { [employeeId]: { [ym]: { input, result } } }（listPayslipsの戻り値をそのまま）
 // bonusesByEmployeeId: { [employeeId]: [{ date, input, result }, ...] }（listBonusesの戻り値をそのまま）
 function computeLaborInsuranceSummaryFromData(year, company, employees, payslipsByEmployeeId, bonusesByEmployeeId) {
   const targets = (employees || []).filter((e) => laborInsuranceEmploymentTypeCategory(e.employmentType) !== 'excluded');
-  const paymentYms = laborInsuranceFiscalYearPaymentYms(year);
+  const periodYms = laborInsuranceFiscalYearPeriodYms(year);
 
-  const monthRows = paymentYms.map((paymentYm) => ({
-    paymentYm,
+  const monthRows = periodYms.map((periodYm) => ({
+    periodYm,
     category1: laborInsuranceEmptyBucket(), // 常用労働者
     category2: laborInsuranceEmptyBucket(), // 役員で労働者扱いの人（本機能では常に0）
     category3: laborInsuranceEmptyBucket(), // 臨時労働者
@@ -617,8 +621,7 @@ function computeLaborInsuranceSummaryFromData(year, company, employees, payslips
     category6: laborInsuranceEmptyBucket(), // 雇用保険：役員（本機能では常に0）
   }));
 
-  paymentYms.forEach((paymentYm, idx) => {
-    const periodYm = periodYmOfPayment(paymentYm, company);
+  periodYms.forEach((periodYm, idx) => {
     const row = monthRows[idx];
     targets.forEach((emp) => {
       const slip = (payslipsByEmployeeId[emp.id] || {})[periodYm];

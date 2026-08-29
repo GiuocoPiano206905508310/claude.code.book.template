@@ -39,7 +39,7 @@
       </div>
       <button type="button" class="btn btn-outline" id="excelBtn">📊 賃金集計表のExcelを作成</button>
     </div>
-    <p class="field-note">※ 支給日ベースで集計します（会社マスタ管理の「賃金の支払月」の設定に従い、翌月払いの場合は前年3月〜当年2月分の給与明細を使用します）。</p>
+    <p class="field-note">※ 勤怠月（給与計算画面の対象年月）ベースで集計します。賞与は支給日（賞与計算画面の支給日）ベースで、年度内（4/1〜翌3/31）に支給したものを集計します。</p>
 
     <div class="summary-grid compact-grid" id="totalsGrid"></div>
 
@@ -47,7 +47,7 @@
       <table class="data-table" id="monthlyTable">
         <thead>
           <tr>
-            <th>支給月</th>
+            <th>勤怠月</th>
             <th class="num">常用労働者<br>人数</th>
             <th class="num">常用労働者<br>賃金</th>
             <th class="num">臨時労働者<br>人数</th>
@@ -81,10 +81,10 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
 <script src="calc.js?v=23"></script>
-<script src="data.js?v=33"></script>
+<script src="data.js?v=34"></script>
 <script src="common.js?v=23"></script>
 <script src="xlsxform.js?v=1"></script>
-<script src="labor-insurance-form.js?v=1"></script>
-<script src="labor-insurance.js?v=1"></script>
+<script src="labor-insurance-form.js?v=2"></script>
+<script src="labor-insurance.js?v=2"></script>
 </body>
 </html>
