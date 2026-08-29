@@ -740,9 +740,12 @@ function computeLaborInsurancePremiums(summary, company) {
   const laborAccidentRatePerMille = laborAccidentInsuranceRatePerMille(industryCode4);
   const laborAccidentPremium = calcInsurancePremiumFromThousandYen(summary.laborInsuranceThousandYen, laborAccidentRatePerMille);
 
-  // company.employmentRateは「%」単位（例：0.5は0.5%）で保存されているため、
-  // 1/1,000単位（‰）に変換してから計算する（0.5% = 5‰）
-  const employmentInsuranceRatePerMille = (Number(company && company.employmentRate) || 0) * 10;
+  // 雇用保険料は、会社が申告・納付する金額（労働者負担分＋事業主負担分の合計）を表示する。
+  // company.employmentRateは給与天引き用の労働者負担分のみのため使用せず、
+  // 会社マスタの「事業の種類（雇用保険）」からEMPLOYMENT_RATES_TOTAL_BY_INDUSTRY
+  // （合計・%単位）を引き、1/1,000単位（‰）に変換して計算する
+  const employmentInsuranceTotalRatePercent = EMPLOYMENT_RATES_TOTAL_BY_INDUSTRY[company && company.industryType] || 0;
+  const employmentInsuranceRatePerMille = employmentInsuranceTotalRatePercent * 10;
   const employmentInsurancePremium = calcInsurancePremiumFromThousandYen(
     summary.employmentInsuranceThousandYen, employmentInsuranceRatePerMille);
 
