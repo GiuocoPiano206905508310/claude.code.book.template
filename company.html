@@ -272,6 +272,39 @@
       <p class="field-note">※ 賃金支払日が土曜・日曜・祝日（振替休日・国民の休日を含む）に当たる場合の調整方法です。<a href="payroll.html">給与計算</a>・<a href="payroll.html">賃金台帳</a>の支給日は、この設定に基づいて自動計算されます。</p>
     </div>
 
+    <h2 class="section-2">労働保険番号・事業所情報</h2>
+    <div class="field-row">
+      <label for="laborInsurancePrefecture">労働保険番号</label>
+      <div class="field-input" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+        <input type="text" id="laborInsurancePrefecture" placeholder="都道府県" maxlength="2" style="width:56px;">
+        <span class="unit">-</span>
+        <input type="text" id="laborInsuranceOfficeCode" placeholder="所掌" maxlength="1" style="width:44px;">
+        <span class="unit">-</span>
+        <input type="text" id="laborInsuranceJurisdiction" placeholder="管轄" maxlength="2" style="width:44px;">
+        <span class="unit">-</span>
+        <input type="text" id="laborInsuranceBaseNumber" placeholder="基幹番号" maxlength="6" style="width:80px;">
+        <span class="unit">-</span>
+        <input type="text" id="laborInsuranceBranchNumber" placeholder="枝番号" maxlength="3" style="width:56px;">
+      </div>
+      <p class="field-note">※ 都道府県2桁・所掌1桁・管轄2桁・基幹番号6桁・枝番号3桁で入力してください。<a href="labor-insurance.html">労働保険 年度更新</a>の賃金集計表に使用します。</p>
+    </div>
+    <div class="field-row">
+      <label for="laborInsuranceZipCode">事業所の郵便番号</label>
+      <div class="field-input"><input type="text" id="laborInsuranceZipCode" placeholder="例：123-4567"></div>
+    </div>
+    <div class="field-row">
+      <label for="laborInsuranceAddress">事業所の所在地</label>
+      <div class="field-input"><input type="text" id="laborInsuranceAddress"></div>
+    </div>
+    <div class="field-row">
+      <label for="laborInsurancePhone">事業所の電話番号</label>
+      <div class="field-input"><input type="text" id="laborInsurancePhone" placeholder="例：03-1234-5678"></div>
+    </div>
+    <div class="field-row" style="border-bottom: none;">
+      <label for="laborInsuranceBusinessDescription">具体的な業務又は作業の内容</label>
+      <div class="field-input"><input type="text" id="laborInsuranceBusinessDescription" placeholder="例：〇〇の卸売業・小売業"></div>
+    </div>
+
     <h2 class="section-2" id="rateSectionHeader">保険料率設定（令和8年度・協会けんぽ準拠）</h2>
     <div class="field-row" id="healthTypeFieldRow">
       <label for="healthInsuranceType">健康保険の種類</label>
@@ -387,8 +420,8 @@
 <script src="supabase-client.js?v=2"></script>
 <script src="auth.js?v=4"></script>
 <script src="calc.js?v=23"></script>
-<script src="data.js?v=32"></script>
-<script src="common.js?v=22"></script>
-<script src="company.js?v=19"></script>
+<script src="data.js?v=33"></script>
+<script src="common.js?v=23"></script>
+<script src="company.js?v=20"></script>
 </body>
 </html>

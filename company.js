@@ -239,6 +239,16 @@ async function loadFormFromCompany() {
   document.getElementById('paycheckPaymentMonth').value = company.paycheckPaymentMonth === 'current' ? 'current' : 'next';
   document.getElementById('paymentDateHolidayAdjust').value = ['before', 'after'].includes(company.paymentDateHolidayAdjust)
     ? company.paymentDateHolidayAdjust : 'none';
+  const laborInfo = company.laborInsuranceInfo || defaultLaborInsuranceInfo();
+  document.getElementById('laborInsurancePrefecture').value = laborInfo.prefectureCode || '';
+  document.getElementById('laborInsuranceOfficeCode').value = laborInfo.officeCode || '';
+  document.getElementById('laborInsuranceJurisdiction').value = laborInfo.jurisdiction || '';
+  document.getElementById('laborInsuranceBaseNumber').value = laborInfo.baseNumber || '';
+  document.getElementById('laborInsuranceBranchNumber').value = laborInfo.branchNumber || '';
+  document.getElementById('laborInsuranceZipCode').value = laborInfo.zipCode || '';
+  document.getElementById('laborInsuranceAddress').value = laborInfo.address || '';
+  document.getElementById('laborInsurancePhone').value = laborInfo.phone || '';
+  document.getElementById('laborInsuranceBusinessDescription').value = laborInfo.businessDescription || '';
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
   populatePrefectureSelect('prefecture', company.prefecture);
   populateIndustrySelect('industryType', company.industryType);
@@ -318,6 +328,17 @@ function collectFormAsCompany() {
     monthlyPaymentFractionRules: {
       round100: document.getElementById('paymentFractionRound100').checked,
       carryOver1000: document.getElementById('paymentFractionCarryOver1000').checked,
+    },
+    laborInsuranceInfo: {
+      prefectureCode: document.getElementById('laborInsurancePrefecture').value.trim(),
+      officeCode: document.getElementById('laborInsuranceOfficeCode').value.trim(),
+      jurisdiction: document.getElementById('laborInsuranceJurisdiction').value.trim(),
+      baseNumber: document.getElementById('laborInsuranceBaseNumber').value.trim(),
+      branchNumber: document.getElementById('laborInsuranceBranchNumber').value.trim(),
+      zipCode: document.getElementById('laborInsuranceZipCode').value.trim(),
+      address: document.getElementById('laborInsuranceAddress').value.trim(),
+      phone: document.getElementById('laborInsurancePhone').value.trim(),
+      businessDescription: document.getElementById('laborInsuranceBusinessDescription').value.trim(),
     },
   };
 }

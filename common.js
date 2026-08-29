@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: 'bonus.html', label: '賞与計算' },
   { href: 'leave.html', label: '有給休暇管理簿' },
   { href: 'insurance-report.html', label: '算定基礎届・月額変更届' },
+  { href: 'labor-insurance.html', label: '労働保険 年度更新' },
 ];
 
 // 表示用の性別ラベル（「その他」選択時は自由入力欄の値、未入力なら「その他」）

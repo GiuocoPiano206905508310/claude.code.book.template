@@ -561,6 +561,174 @@ async function deletePayslip(employeeId, ym) {
 }
 
 // ---------------------------------------------------------------------------
+// 労働保険 年度更新（確定保険料・一般拠出金算定基礎賃金集計表）
+//
+// 保存済みの給与明細・賞与明細から、支給月ベースで年度（4月〜翌3月）分の
+// 賃金を区分ごとに集計する。区分の判定は雇用形態に基づく（従業員マスタの
+// 「雇用形態」設定をそのまま使用し、新たな入力項目は増やさない）：
+//   ・正社員／アルバイト・パート（雇用保険のみ対象）
+//       → 労災保険：常用労働者（区分1）／雇用保険：被保険者（区分5）
+//   ・アルバイト・パート（雇用保険対象外）
+//       → 労災保険：臨時労働者（区分3）のみ（雇用保険の区分5には含めない）
+//   ・役員 → 労働保険の集計対象外（区分2・6は本機能では常に0人・0円。
+//       労働者扱いの役員がいる場合は、出力後にご自身で備考欄に追記してください）
+// 集計する賃金は、給与計算・賞与計算で保存済みの明細の総支給額（通勤手当・
+// 実物給与・臨時の給与を含む）をそのまま使用する。ただし雇用保険の区分
+// （5・7）は、給与計算画面の「雇用保険料の計算基礎から除外する手当」で
+// 除外指定した金額を差し引く（月次の雇用保険料計算と同じ扱い）。
+// ---------------------------------------------------------------------------
+
+function laborInsuranceEmploymentTypeCategory(employmentType) {
+  if (employmentType === '役員') return 'excluded';
+  if (employmentType === 'アルバイト・パート（雇用保険対象外）') return 'casualOnly';
+  return 'regular'; // 正社員／アルバイト・パート（雇用保険のみ対象）
+}
+
+// 年度（year年4月〜year+1年3月）の支給月一覧（'YYYY-MM'）を返す
+function laborInsuranceFiscalYearPaymentYms(year) {
+  const yms = [];
+  for (let i = 0; i < 12; i++) {
+    const m = 4 + i;
+    const y = m <= 12 ? year : year + 1;
+    const mm = m <= 12 ? m : m - 12;
+    yms.push(`${y}-${String(mm).padStart(2, '0')}`);
+  }
+  return yms;
+}
+
+// 賃金集計表の1つの区分（人数・賃金）を表すオブジェクトを返す
+function laborInsuranceEmptyBucket() { return { count: 0, wage: 0 }; }
+
+// 純粋な集計ロジック本体（I/Oを行わない）。employees・payslipsByEmployeeId・
+// bonusesByEmployeeIdはあらかじめ取得済みのデータを渡す（テスト容易化のため
+// computeLaborInsuranceSummary()から分離している）。
+// payslipsByEmployeeId: { [employeeId]: { [ym]: { input, result } } }（listPayslipsの戻り値をそのまま）
+// bonusesByEmployeeId: { [employeeId]: [{ date, input, result }, ...] }（listBonusesの戻り値をそのまま）
+function computeLaborInsuranceSummaryFromData(year, company, employees, payslipsByEmployeeId, bonusesByEmployeeId) {
+  const targets = (employees || []).filter((e) => laborInsuranceEmploymentTypeCategory(e.employmentType) !== 'excluded');
+  const paymentYms = laborInsuranceFiscalYearPaymentYms(year);
+
+  const monthRows = paymentYms.map((paymentYm) => ({
+    paymentYm,
+    category1: laborInsuranceEmptyBucket(), // 常用労働者
+    category2: laborInsuranceEmptyBucket(), // 役員で労働者扱いの人（本機能では常に0）
+    category3: laborInsuranceEmptyBucket(), // 臨時労働者
+    category5: laborInsuranceEmptyBucket(), // 雇用保険：常用労働者・パート等
+    category6: laborInsuranceEmptyBucket(), // 雇用保険：役員（本機能では常に0）
+  }));
+
+  paymentYms.forEach((paymentYm, idx) => {
+    const periodYm = periodYmOfPayment(paymentYm, company);
+    const row = monthRows[idx];
+    targets.forEach((emp) => {
+      const slip = (payslipsByEmployeeId[emp.id] || {})[periodYm];
+      if (!slip) return;
+      const grossPay = (slip.result && slip.result.grossPay) || 0;
+      const excludedAllowance = (slip.input && slip.input.employmentInsuranceExcludedAllowance) || 0;
+      const category = laborInsuranceEmploymentTypeCategory(emp.employmentType);
+      const laborBucket = category === 'casualOnly' ? row.category3 : row.category1;
+      laborBucket.count += 1;
+      laborBucket.wage += grossPay;
+      if (category === 'regular') {
+        row.category5.count += 1;
+        row.category5.wage += Math.max(0, grossPay - excludedAllowance);
+      }
+    });
+  });
+
+  // 区分4（労災合計＝1+2+3）・区分7（雇用保険合計＝5+6）は月別行にも表示するため、
+  // 月ごとに算出しておく（賞与は月別行には含めず、合計行のみに反映する）
+  monthRows.forEach((row) => {
+    row.category4 = {
+      count: row.category1.count + row.category2.count + row.category3.count,
+      wage: row.category1.wage + row.category2.wage + row.category3.wage,
+    };
+    row.category7 = {
+      count: row.category5.count + row.category6.count,
+      wage: row.category5.wage + row.category6.wage,
+    };
+  });
+
+  // 賞与：年度内（4/1〜翌3/31）の支給日で、支給年月ごとに合算する（区分1/2/3/5/6には
+  // 分解せず、区分4・7の合計にのみ反映する。様式のひな形自体がそのような構成のため）
+  const fiscalStart = `${year}-04-01`;
+  const fiscalEnd = `${year + 1}-03-31`;
+  const bonusByYm = {};
+  targets.forEach((emp) => {
+    const category = laborInsuranceEmploymentTypeCategory(emp.employmentType);
+    (bonusesByEmployeeId[emp.id] || []).forEach((b) => {
+      if (!b.date || b.date < fiscalStart || b.date > fiscalEnd) return;
+      const ym = b.date.slice(0, 7);
+      const amount = (b.result && b.result.bonusAmount) || 0;
+      if (!bonusByYm[ym]) bonusByYm[ym] = { category4Wage: 0, category7Wage: 0 };
+      bonusByYm[ym].category4Wage += amount;
+      if (category === 'regular') bonusByYm[ym].category7Wage += amount;
+    });
+  });
+  const sortedBonusYms = Object.keys(bonusByYm).sort();
+  // 様式は賞与欄が3口までのため、4口目以降は3口目にまとめて合算する
+  const bonusRows = sortedBonusYms.slice(0, 3).map((ym) => ({ ym, ...bonusByYm[ym] }));
+  if (sortedBonusYms.length > 3) {
+    let extra4 = 0;
+    let extra7 = 0;
+    sortedBonusYms.slice(2).forEach((ym) => { extra4 += bonusByYm[ym].category4Wage; extra7 += bonusByYm[ym].category7Wage; });
+    bonusRows[2] = { ym: sortedBonusYms[2], category4Wage: extra4, category7Wage: extra7 };
+  }
+
+  const sumMonthly = (key) => monthRows.reduce((acc, row) => ({
+    count: acc.count + row[key].count, wage: acc.wage + row[key].wage,
+  }), laborInsuranceEmptyBucket());
+  const totalCategory1 = sumMonthly('category1');
+  const totalCategory2 = sumMonthly('category2');
+  const totalCategory3 = sumMonthly('category3');
+  const totalCategory5 = sumMonthly('category5');
+  const totalCategory6 = sumMonthly('category6');
+  const bonusTotal4 = bonusRows.reduce((s, r) => s + r.category4Wage, 0);
+  const bonusTotal7 = bonusRows.reduce((s, r) => s + r.category7Wage, 0);
+
+  const totalCategory4 = {
+    count: totalCategory1.count + totalCategory2.count + totalCategory3.count,
+    wage: totalCategory1.wage + totalCategory2.wage + totalCategory3.wage + bonusTotal4,
+  };
+  const totalCategory7 = {
+    count: totalCategory5.count + totalCategory6.count,
+    wage: totalCategory5.wage + totalCategory6.wage + bonusTotal7,
+  };
+
+  // 常時使用労働者数（労災保険対象者数）：9の合計人数を12で除し切り捨て（0人となる場合の特例なし）
+  const laborInsuredAverage = Math.floor(totalCategory4.count / 12);
+  // 雇用保険被保険者数：11の合計人数を12で除し切り捨て。切り捨てた結果0人となる場合は1人とする
+  const employmentInsuredAverageRaw = Math.floor(totalCategory7.count / 12);
+  const employmentInsuredAverage = employmentInsuredAverageRaw === 0 && totalCategory7.count > 0 ? 1 : employmentInsuredAverageRaw;
+
+  return {
+    year,
+    monthRows,
+    bonusRows,
+    totalCategory1, totalCategory2, totalCategory3, totalCategory4,
+    totalCategory5, totalCategory6, totalCategory7,
+    laborInsuredAverage,
+    employmentInsuredAverage,
+    // 10の合計額の千円未満を切り捨てた額（労災保険対象者分・一般拠出金は同じ賃金総額を使用）
+    laborInsuranceThousandYen: Math.floor(totalCategory4.wage / 1000),
+    employmentInsuranceThousandYen: Math.floor(totalCategory7.wage / 1000),
+    generalContributionThousandYen: Math.floor(totalCategory4.wage / 1000),
+  };
+}
+
+async function computeLaborInsuranceSummary(year, company) {
+  const employees = await listEmployees();
+  const targets = employees.filter((e) => laborInsuranceEmploymentTypeCategory(e.employmentType) !== 'excluded');
+  const payslipsByEmployeeId = {};
+  const bonusesByEmployeeId = {};
+  await Promise.all(targets.map(async (emp) => {
+    payslipsByEmployeeId[emp.id] = await listPayslips(emp.id);
+    bonusesByEmployeeId[emp.id] = await listBonuses(emp.id);
+  }));
+  return computeLaborInsuranceSummaryFromData(year, company, employees, payslipsByEmployeeId, bonusesByEmployeeId);
+}
+
+// ---------------------------------------------------------------------------
 // 月額変更（随時改定）の判定
 //
 // 保存済みの給与明細（給与計算画面で「この明細を保存」したもの）から、
@@ -875,6 +1043,22 @@ function defaultCompany() {
     // monthly_payment_fraction_rulesのJSONに同居させている（DBの列追加を不要にするため）
     paymentDateHolidayAdjust: 'none',
     overtimeRates: defaultOvertimeRates(),
+    laborInsuranceInfo: defaultLaborInsuranceInfo(),
+  };
+}
+
+// 労働保険番号・事業所情報のデフォルト（労働保険 年度更新の賃金集計表の作成に使用）
+function defaultLaborInsuranceInfo() {
+  return {
+    prefectureCode: '', // 労働保険番号：都道府県（2桁）
+    officeCode: '', // 所掌（1桁）
+    jurisdiction: '', // 管轄（2桁）
+    baseNumber: '', // 基幹番号（6桁）
+    branchNumber: '', // 枝番号（3桁）
+    zipCode: '',
+    address: '',
+    phone: '',
+    businessDescription: '', // 具体的な業務又は作業の内容
   };
 }
 
@@ -911,6 +1095,7 @@ function companyRowToObj(row) {
     paymentDateHolidayAdjust: (row.monthly_payment_fraction_rules && row.monthly_payment_fraction_rules.paymentDateHolidayAdjust)
       || defaults.paymentDateHolidayAdjust,
     overtimeRates: row.overtime_rates || defaultOvertimeRates(),
+    laborInsuranceInfo: Object.assign({}, defaults.laborInsuranceInfo, row.labor_insurance_office_info || {}),
     sortOrder: row.sort_order,
   };
 }
@@ -943,6 +1128,7 @@ function companyObjToRow(company, userId) {
     monthly_payment_fraction_rules: Object.assign({}, company.monthlyPaymentFractionRules || {},
       { paymentDateHolidayAdjust: company.paymentDateHolidayAdjust || 'none' }),
     overtime_rates: company.overtimeRates || defaultOvertimeRates(),
+    labor_insurance_office_info: company.laborInsuranceInfo || defaultLaborInsuranceInfo(),
     sort_order: company.sortOrder,
     updated_at: new Date().toISOString(),
   };
@@ -985,29 +1171,44 @@ async function getCompany(branchId) {
 }
 
 // branch.idが未設定なら新規追加、設定済みなら更新。更新時は変更履歴を記録する
-// company_branches.paycheck_payment_month（賃金の支払月）列がまだ無いDBでも
-// 会社マスタの保存自体が失敗しないよう、列が無いと分かった時点で以後は送信しない。
-// 列を追加するSQLは migration-company-payment-month.sql を参照。
+// company_branches.paycheck_payment_month（賃金の支払月）・labor_insurance_office_info
+// （労働保険番号等の事業所情報）列がまだ無いDBでも会社マスタの保存自体が失敗しないよう、
+// 列が無いと分かった時点で以後は送信しない。列を追加するSQLは
+// migration-company-payment-month.sql / migration-labor-insurance-office-info.sql を参照。
 let companyPaymentMonthColumnSupported = true;
-function isMissingPaymentMonthColumnError(error) {
+let companyLaborInsuranceInfoColumnSupported = true;
+function isMissingColumnError(error, columnName) {
   const text = `${(error && error.message) || ''} ${(error && error.details) || ''}`;
-  return text.includes('paycheck_payment_month');
+  return text.includes(columnName);
 }
 
 async function saveBranch(branch) {
   const userId = await getCurrentUserId();
   const row = companyObjToRow(branch, userId);
   if (!companyPaymentMonthColumnSupported) delete row.paycheck_payment_month;
+  if (!companyLaborInsuranceInfoColumnSupported) delete row.labor_insurance_office_info;
 
-  // 列が無いDBでは列なしで再試行する
+  // 列が無いDBでは列なしで再試行する（複数の列が同時に無い場合にも対応する）
   const runWithFallback = async (run) => {
-    const first = await run(row);
-    if (!first.error) return first;
-    if (!(companyPaymentMonthColumnSupported && isMissingPaymentMonthColumnError(first.error))) return first;
-    companyPaymentMonthColumnSupported = false;
-    const retryRow = Object.assign({}, row);
-    delete retryRow.paycheck_payment_month;
-    return await run(retryRow);
+    let attemptRow = row;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await run(attemptRow);
+      if (!result.error) return result;
+      if (companyPaymentMonthColumnSupported && isMissingColumnError(result.error, 'paycheck_payment_month')) {
+        companyPaymentMonthColumnSupported = false;
+        attemptRow = Object.assign({}, attemptRow);
+        delete attemptRow.paycheck_payment_month;
+        continue;
+      }
+      if (companyLaborInsuranceInfoColumnSupported && isMissingColumnError(result.error, 'labor_insurance_office_info')) {
+        companyLaborInsuranceInfoColumnSupported = false;
+        attemptRow = Object.assign({}, attemptRow);
+        delete attemptRow.labor_insurance_office_info;
+        continue;
+      }
+      return result;
+    }
+    return await run(attemptRow);
   };
 
   if (branch.id) {
@@ -1128,6 +1329,23 @@ COMPANY_HISTORY_FIELDS.push(
   { key: 'paymentDateHolidayAdjust', label: '支払日が土日祝日の場合',
     format: (v) => ({ before: '前倒し', after: '後ろ倒し' }[v] || '調整しない') },
 );
+[
+  ['prefectureCode', '労働保険番号（都道府県）'],
+  ['officeCode', '労働保険番号（所掌）'],
+  ['jurisdiction', '労働保険番号（管轄）'],
+  ['baseNumber', '労働保険番号（基幹番号）'],
+  ['branchNumber', '労働保険番号（枝番号）'],
+  ['zipCode', '事業所の郵便番号'],
+  ['address', '事業所の所在地'],
+  ['phone', '事業所の電話番号'],
+  ['businessDescription', '具体的な業務又は作業の内容'],
+].forEach(([key, label]) => {
+  COMPANY_HISTORY_FIELDS.push({
+    key: `laborInsuranceInfo.${key}`,
+    label,
+    get: (c) => c.laborInsuranceInfo && c.laborInsuranceInfo[key],
+  });
+});
 OVERTIME_RATE_CATEGORIES.forEach((cat) => {
   COMPANY_HISTORY_FIELDS.push({
     key: `overtimeRates.${cat.key}`,
