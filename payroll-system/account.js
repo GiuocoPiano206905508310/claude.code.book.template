@@ -4,12 +4,21 @@
 
 let loggedInUser = null;
 
+// ブラウザによってネットワーク接続失敗時のエラー文言が異なる
+// （Chrome/Edge: "Failed to fetch"、Safari: "Load failed"、
+// Firefox: "NetworkError when attempting to fetch resource"）ため、
+// いずれにも該当するかどうかで判定する
+function isNetworkFetchError(error) {
+  const msg = (error && error.message) || '';
+  return msg.includes('Failed to fetch') || msg.includes('Load failed') || msg.includes('NetworkError');
+}
+
 function friendlyPasswordError(error) {
   const msg = (error && error.message) || '';
   if (msg.includes('Invalid login credentials')) return '現在のパスワードが正しくありません。';
   if (msg.includes('Password should be at least')) return 'パスワードは6文字以上で設定してください。';
   if (msg.includes('should be different')) return '現在のパスワードとは異なるパスワードを設定してください。';
-  if (msg.includes('Failed to fetch')) return '通信に失敗しました。しばらくしてから再度お試しください。';
+  if (isNetworkFetchError(error)) return '通信に失敗しました。インターネット接続をご確認のうえ、しばらくしてから再度お試しください。';
   return 'エラーが発生しました：' + msg;
 }
 
