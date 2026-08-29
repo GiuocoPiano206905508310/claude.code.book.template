@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>労働保険 年度更新 | 給与・勤怠管理システム</title>
+<script>(function(){try{var t=localStorage.getItem('themePreference');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<link rel="stylesheet" href="style.css?v=41">
+</head>
+<body>
+<nav class="navbar wide" id="navbar"></nav>
+
+<div class="page wide">
+  <header class="masthead">
+    <p class="eyebrow">Labor Insurance Annual Update</p>
+    <h1>労働保険 年度更新</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="notice">
+    <p>※ 保存済みの給与明細・賞与明細から、年度（4月〜翌3月）分の賃金を「確定保険料・一般拠出金算定基礎賃金集計表」の区分（常用労働者・臨時労働者・雇用保険被保険者など）ごとに自動集計し、Excelに出力します。</p>
+    <p>※ 出力できるのは、この賃金集計表のみです。概算・確定保険料の申告書自体（保険料額の計算・納付書）は対象外のため、出力した集計表をもとにご自身で作成してください。</p>
+    <p>※ 従業員の区分は、従業員マスタ管理の「雇用形態」から自動判定します（正社員・アルバイト（雇用保険対象）→常用労働者・雇用保険被保険者／アルバイト（雇用保険対象外）→臨時労働者）。<strong>役員は本機能では集計対象外です</strong>（区分2・6は0人・0円で出力されます）。労働者扱いの役員がいる場合は、出力後にご自身で追記してください。</p>
+    <p>※ Excelのレイアウトは、厚生労働省が公開している様式を参考に本アプリ向けに簡略化して作成したものです（原本の官公庁配布ファイルとは体裁が異なります）。合計・平均・千円未満切り捨ての金額は、Excelを開いたときに数式で自動計算されます。</p>
+  </div>
+
+  <section class="card form-card" id="officeInfoCard">
+    <h2>事業所情報</h2>
+    <p class="field-note">※ 労働保険番号・事業所の住所等は<a href="company.html">会社マスタ管理</a>で入力した内容がそのまま使用されます。</p>
+    <div class="summary-grid" id="officeInfoGrid"></div>
+  </section>
+
+  <section class="card form-card" id="summaryCard" style="margin-top:24px;">
+    <h2>賃金集計表</h2>
+    <div class="toolbar" style="margin-top:14px;">
+      <div class="toolbar-field">
+        <label for="fiscalYear">対象年度</label>
+        <div class="field-input"><select id="fiscalYear"></select></div>
+      </div>
+      <button type="button" class="btn btn-outline" id="excelBtn">📊 賃金集計表のExcelを作成</button>
+    </div>
+    <p class="field-note">※ 支給日ベースで集計します（会社マスタ管理の「賃金の支払月」の設定に従い、翌月払いの場合は前年3月〜当年2月分の給与明細を使用します）。</p>
+
+    <div class="summary-grid compact-grid" id="totalsGrid"></div>
+
+    <div class="data-table-wrap">
+      <table class="data-table" id="monthlyTable">
+        <thead>
+          <tr>
+            <th>支給月</th>
+            <th class="num">常用労働者<br>人数</th>
+            <th class="num">常用労働者<br>賃金</th>
+            <th class="num">臨時労働者<br>人数</th>
+            <th class="num">臨時労働者<br>賃金</th>
+            <th class="num">労災 合計<br>人数</th>
+            <th class="num">労災 合計<br>賃金</th>
+            <th class="num">雇用保険<br>被保険者数</th>
+            <th class="num">雇用保険<br>被保険者賃金</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="data-table-wrap" id="bonusTableWrap" style="margin-top:16px;">
+      <table class="data-table" id="bonusTable">
+        <thead><tr><th>賞与支給年月</th><th class="num">労災保険 対象賃金</th><th class="num">雇用保険 対象賃金</th></tr></thead>
+        <tbody id="bonusTableBody"></tbody>
+      </table>
+      <div class="empty-state" id="bonusEmptyState" style="display:none;">この年度に保存済みの賞与明細はありません。</div>
+    </div>
+
+    <div class="empty-state" id="summaryEmptyState" style="display:none;">対象年度の給与明細が保存されていません。給与計算画面で「この明細を保存」してからご利用ください。</div>
+    <p class="export-status" id="excelStatus"></p>
+  </section>
+
+  <footer>個人・小規模事業向けの概算ツールです。正式な申告には専門家・社会保険労務士にご確認ください。</footer>
+</div>
+
+<script src="supabase-sdk.js?v=1"></script>
+<script src="supabase-client.js?v=2"></script>
+<script src="auth.js?v=4"></script>
+<script src="calc.js?v=23"></script>
+<script src="data.js?v=33"></script>
+<script src="common.js?v=23"></script>
+<script src="xlsxform.js?v=1"></script>
+<script src="labor-insurance-form.js?v=1"></script>
+<script src="labor-insurance.js?v=1"></script>
+</body>
+</html>
