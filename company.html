@@ -275,30 +275,40 @@
     <h2 class="section-2">労働保険番号・事業所情報</h2>
     <div class="field-row">
       <label for="laborInsurancePrefecture">労働保険番号</label>
-      <div class="field-input" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-        <input type="text" id="laborInsurancePrefecture" placeholder="都道府県" maxlength="2" style="width:56px;">
+      <div class="field-input numeric-box-group" data-numeric-group style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+        <input type="text" id="laborInsurancePrefecture" inputmode="numeric" pattern="[0-9]*" placeholder="都道府県" maxlength="2" style="width:56px;">
         <span class="unit">-</span>
-        <input type="text" id="laborInsuranceOfficeCode" placeholder="所掌" maxlength="1" style="width:44px;">
+        <input type="text" id="laborInsuranceOfficeCode" inputmode="numeric" pattern="[0-9]*" placeholder="所掌" maxlength="1" style="width:44px;">
         <span class="unit">-</span>
-        <input type="text" id="laborInsuranceJurisdiction" placeholder="管轄" maxlength="2" style="width:44px;">
+        <input type="text" id="laborInsuranceJurisdiction" inputmode="numeric" pattern="[0-9]*" placeholder="管轄" maxlength="2" style="width:44px;">
         <span class="unit">-</span>
-        <input type="text" id="laborInsuranceBaseNumber" placeholder="基幹番号" maxlength="6" style="width:80px;">
+        <input type="text" id="laborInsuranceBaseNumber" inputmode="numeric" pattern="[0-9]*" placeholder="基幹番号" maxlength="6" style="width:80px;">
         <span class="unit">-</span>
-        <input type="text" id="laborInsuranceBranchNumber" placeholder="枝番号" maxlength="3" style="width:56px;">
+        <input type="text" id="laborInsuranceBranchNumber" inputmode="numeric" pattern="[0-9]*" placeholder="枝番号" maxlength="3" style="width:56px;">
       </div>
-      <p class="field-note">※ 都道府県2桁・所掌1桁・管轄2桁・基幹番号6桁・枝番号3桁で入力してください。<a href="labor-insurance.html">労働保険 年度更新</a>の賃金集計表に使用します。</p>
+      <p class="field-note">※ 都道府県2桁・所掌1桁・管轄2桁・基幹番号6桁・枝番号3桁で入力してください（数字のみ。桁数まで入力すると次の欄に自動で移動します）。<a href="labor-insurance.html">労働保険 年度更新</a>の賃金集計表に使用します。</p>
     </div>
     <div class="field-row">
-      <label for="laborInsuranceZipCode">事業所の郵便番号</label>
-      <div class="field-input"><input type="text" id="laborInsuranceZipCode" placeholder="例：123-4567"></div>
+      <label for="laborInsuranceZipCode1">事業所の郵便番号</label>
+      <div class="field-input numeric-box-group" data-numeric-group style="display:flex; gap:6px; align-items:center;">
+        <input type="text" id="laborInsuranceZipCode1" inputmode="numeric" pattern="[0-9]*" maxlength="3" style="width:56px;">
+        <span class="unit">-</span>
+        <input type="text" id="laborInsuranceZipCode2" inputmode="numeric" pattern="[0-9]*" maxlength="4" style="width:70px;">
+      </div>
     </div>
     <div class="field-row">
       <label for="laborInsuranceAddress">事業所の所在地</label>
       <div class="field-input"><input type="text" id="laborInsuranceAddress"></div>
     </div>
     <div class="field-row">
-      <label for="laborInsurancePhone">事業所の電話番号</label>
-      <div class="field-input"><input type="text" id="laborInsurancePhone" placeholder="例：03-1234-5678"></div>
+      <label for="laborInsurancePhone1">事業所の電話番号</label>
+      <div class="field-input numeric-box-group" data-numeric-group style="display:flex; gap:6px; align-items:center;">
+        <input type="text" id="laborInsurancePhone1" inputmode="numeric" pattern="[0-9]*" maxlength="4" style="width:70px;">
+        <span class="unit">-</span>
+        <input type="text" id="laborInsurancePhone2" inputmode="numeric" pattern="[0-9]*" maxlength="4" style="width:70px;">
+        <span class="unit">-</span>
+        <input type="text" id="laborInsurancePhone3" inputmode="numeric" pattern="[0-9]*" maxlength="4" style="width:70px;">
+      </div>
     </div>
     <div class="field-row" style="border-bottom: none;">
       <label for="laborInsuranceBusinessDescription">具体的な業務又は作業の内容</label>
@@ -422,6 +432,6 @@
 <script src="calc.js?v=23"></script>
 <script src="data.js?v=34"></script>
 <script src="common.js?v=23"></script>
-<script src="company.js?v=20"></script>
+<script src="company.js?v=21"></script>
 </body>
 </html>

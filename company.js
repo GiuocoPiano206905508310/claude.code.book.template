@@ -157,6 +157,63 @@ function applyIndustryRateToForm() {
 }
 
 // ---------------------------------------------------------------------------
+// 労働保険番号・郵便番号・電話番号の数字専用の分割入力欄
+// （ハイフンは入力できないため、桁数まで入力すると自動的に次の欄へ移動する）
+// ---------------------------------------------------------------------------
+
+// 保存済みの値（ハイフン区切りの文字列、または区切りの無い数字の並び）を、
+// 分割入力欄の各欄の値に分解する。ハイフンが含まれる場合はその区切りを
+// そのまま使う（保存済みの内容をできるだけ忠実に復元するため）
+function splitStoredNumber(value, lengths) {
+  const str = String(value || '');
+  if (str.includes('-')) {
+    const segments = str.split('-').map((s) => s.replace(/[^0-9]/g, ''));
+    while (segments.length < lengths.length) segments.push('');
+    return segments.slice(0, lengths.length);
+  }
+  const digits = str.replace(/[^0-9]/g, '');
+  const parts = [];
+  let idx = 0;
+  lengths.forEach((len) => {
+    parts.push(digits.slice(idx, idx + len));
+    idx += len;
+  });
+  return parts;
+}
+
+// 分割入力欄の各要素IDの値を、入力済みの欄だけハイフンでつないだ文字列にする
+function joinNumberParts(elementIds) {
+  return elementIds.map((id) => document.getElementById(id).value.trim()).filter((v) => v).join('-');
+}
+
+// data-numeric-group属性を持つ要素の内側にあるinputmode="numeric"の入力欄を対象に、
+// 数字以外の入力を除去し、最大文字数まで入力したら次の欄へ自動的にフォーカスを移す。
+// バックスペースで空の欄から前の欄へ戻ることもできるようにする
+function setupNumericAutoAdvanceGroups() {
+  document.querySelectorAll('[data-numeric-group]').forEach((group) => {
+    const inputs = Array.from(group.querySelectorAll('input[inputmode="numeric"]'));
+    inputs.forEach((input, idx) => {
+      input.addEventListener('input', () => {
+        const digitsOnly = input.value.replace(/[^0-9]/g, '');
+        if (digitsOnly !== input.value) input.value = digitsOnly;
+        if (input.value.length >= Number(input.maxLength) && idx < inputs.length - 1) {
+          inputs[idx + 1].focus();
+        }
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && input.value === '' && idx > 0) {
+          // preventDefaultしないと、フォーカス移動後にBackspaceの既定動作が
+          // 移動先（前の欄）の末尾の文字を誤って削除してしまう
+          e.preventDefault();
+          inputs[idx - 1].focus();
+        }
+      });
+    });
+  });
+}
+setupNumericAutoAdvanceGroups();
+
+// ---------------------------------------------------------------------------
 // 勤怠丸め設定（出勤・退勤・休憩開始・休憩終了）
 // ---------------------------------------------------------------------------
 const ROUNDING_PRESET_MINUTES = ['5', '10', '15', '20', '30'];
@@ -245,9 +302,14 @@ async function loadFormFromCompany() {
   document.getElementById('laborInsuranceJurisdiction').value = laborInfo.jurisdiction || '';
   document.getElementById('laborInsuranceBaseNumber').value = laborInfo.baseNumber || '';
   document.getElementById('laborInsuranceBranchNumber').value = laborInfo.branchNumber || '';
-  document.getElementById('laborInsuranceZipCode').value = laborInfo.zipCode || '';
+  const [zip1, zip2] = splitStoredNumber(laborInfo.zipCode, [3, 4]);
+  document.getElementById('laborInsuranceZipCode1').value = zip1;
+  document.getElementById('laborInsuranceZipCode2').value = zip2;
   document.getElementById('laborInsuranceAddress').value = laborInfo.address || '';
-  document.getElementById('laborInsurancePhone').value = laborInfo.phone || '';
+  const [phone1, phone2, phone3] = splitStoredNumber(laborInfo.phone, [4, 4, 4]);
+  document.getElementById('laborInsurancePhone1').value = phone1;
+  document.getElementById('laborInsurancePhone2').value = phone2;
+  document.getElementById('laborInsurancePhone3').value = phone3;
   document.getElementById('laborInsuranceBusinessDescription').value = laborInfo.businessDescription || '';
   document.getElementById('healthInsuranceType').value = company.healthInsuranceType;
   populatePrefectureSelect('prefecture', company.prefecture);
@@ -335,9 +397,9 @@ function collectFormAsCompany() {
       jurisdiction: document.getElementById('laborInsuranceJurisdiction').value.trim(),
       baseNumber: document.getElementById('laborInsuranceBaseNumber').value.trim(),
       branchNumber: document.getElementById('laborInsuranceBranchNumber').value.trim(),
-      zipCode: document.getElementById('laborInsuranceZipCode').value.trim(),
+      zipCode: joinNumberParts(['laborInsuranceZipCode1', 'laborInsuranceZipCode2']),
       address: document.getElementById('laborInsuranceAddress').value.trim(),
-      phone: document.getElementById('laborInsurancePhone').value.trim(),
+      phone: joinNumberParts(['laborInsurancePhone1', 'laborInsurancePhone2', 'laborInsurancePhone3']),
       businessDescription: document.getElementById('laborInsuranceBusinessDescription').value.trim(),
     },
   };
