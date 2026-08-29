@@ -880,19 +880,16 @@ document.getElementById('calcBonusBtn').addEventListener('click', calculateBonus
 // 「クリア」：金額系の入力項目のみを初期状態に戻す（雇用形態・都道府県等の選択項目は維持）
 document.getElementById('clearBtn').addEventListener('click', () => {
   if (!confirm('入力した内容をすべてクリアします。よろしいですか？')) return;
-  ['baseSalary', 'overtimePay', 'taxableAllowance', 'commuteAllowance'].forEach(id => {
+  ['baseSalary', 'overtimePay', 'taxableAllowance', 'commuteAllowance', 'dependents', 'residentTax'].forEach(id => {
     document.getElementById(id).value = '';
   });
-  document.getElementById('dependents').value = '0';
-  document.getElementById('residentTax').value = '0';
   calculate();
 });
 document.getElementById('clearBonusBtn').addEventListener('click', () => {
   if (!confirm('入力した内容をすべてクリアします。よろしいですか？')) return;
-  ['bonusAmount', 'prevMonthSalary'].forEach(id => {
+  ['bonusAmount', 'prevMonthSalary', 'bonusDependents'].forEach(id => {
     document.getElementById(id).value = '';
   });
-  document.getElementById('bonusDependents').value = '0';
   document.getElementById('bonusHealthCumulative').value = '0';
   document.getElementById('bonusPensionCumulative').value = '0';
   calculateBonus();
