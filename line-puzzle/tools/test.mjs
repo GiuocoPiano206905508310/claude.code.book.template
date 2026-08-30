@@ -65,6 +65,14 @@ for (let id = 1; id <= 50; id++) {
   await page.evaluate(i => document.querySelectorAll('.stage-btn')[i - 1].click(), id);
   await page.waitForSelector('#screen-game.is-active');
   await page.waitForTimeout(60);
+  if (id === 1) {
+    // 初回（まだ何もクリアしていない状態）でステージ1を開始したときだけ、
+    // チュートリアルが自動表示されるはず
+    chk(await page.isVisible('#modal-tutorial'), '初回はステージ1でチュートリアルが自動表示される');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+    chk(!(await page.isVisible('#modal-tutorial')), 'Escapeでチュートリアルを閉じられる');
+  }
   const sol = await page.evaluate(i => window.LEVELS[i - 1].sol, id);
   for (const ch of sol) {
     await page.keyboard.press(KEY[ch]);
@@ -92,7 +100,9 @@ const lockedAfter = await page.$$eval('.stage-btn.is-locked', n => n.length);
 chk(lockedAfter === 0, `クリア済みステージが解放されている (locked=${lockedAfter})`);
 
 console.log('\n== 部分進捗の保存 ==');
-await page.evaluate(() => localStorage.clear());
+// このブロックはチュートリアルを検証する場所ではないので、既読状態にしてから始める
+await page.evaluate(() => localStorage.setItem('linePuzzle.progress.v1',
+  JSON.stringify({ cleared: {}, lastStage: 1, tutorialSeen: true })));
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(200);
 for (let id = 1; id <= 3; id++) {
@@ -359,6 +369,62 @@ console.log('\n== ステージ帯ごとの葉色 ==');
     chk(hasVeins, `${bc.label} に葉脈が描かれている`);
     await page.click('#game-back'); await page.waitForTimeout(200);
   }
+}
+
+console.log('\n== ホーム画面: 横5マスの固定グリッドと帯ごとの色 ==');
+{
+  // 直前のブロックで 49/50 クリア済みの状態のまま、ステージ選択画面にいる
+  const cols = await page.evaluate(() =>
+    getComputedStyle(document.getElementById('stage-grid')).gridTemplateColumns.trim().split(/\s+/).length);
+  chk(cols === 5, `ステージ選択が横5マスの固定グリッド (実際: ${cols}列)`);
+
+  const bandColor = { 1: 'rgb(139, 195, 74)', 2: 'rgb(63, 143, 69)', 3: 'rgb(224, 181, 42)', 4: 'rgb(193, 68, 60)', 5: 'rgb(138, 98, 64)' };
+  const bandSamples = await page.evaluate(() => {
+    const btns = document.querySelectorAll('.stage-btn');
+    return [0, 10, 20, 30].map(i => ({
+      id: i + 1,
+      cls: btns[i].className,
+      bg: getComputedStyle(btns[i]).backgroundColor,
+    }));
+  });
+  for (const s of bandSamples) {
+    const band = Math.min(5, Math.ceil(s.id / 10));
+    chk(s.cls.includes('band-' + band), `Level ${s.id} のボタンに band-${band} が付く (class="${s.cls}")`);
+    chk(s.bg === bandColor[band], `Level ${s.id} は帯${band}の色 (期待 ${bandColor[band]} / 実際 ${s.bg})`);
+  }
+  // 数字と星が重ならないよう間隔が空いていることを、星の上端が数字の下端より
+  // 下にあることで確認する
+  const overlap = await page.evaluate(() => {
+    const btn = document.querySelector('.stage-btn.is-cleared');
+    const stars = btn.querySelector('.stage-stars');
+    const bRect = btn.getBoundingClientRect(), sRect = stars.getBoundingClientRect();
+    return sRect.top < bRect.top + bRect.height * 0.55;   // 星がボタン上半分に食い込んでいないか
+  });
+  chk(!overlap, 'クリア済みボタンで数字と星が重ならない');
+}
+
+console.log('\n== 遊び方（？）ボタンとチュートリアルの見返し ==');
+{
+  chk(await page.isVisible('#select-help'), '遊び方（？）ボタンが表示されている');
+  const order = await page.evaluate(() => {
+    const bar = document.querySelector('#screen-select .topbar');
+    const ids = Array.from(bar.querySelectorAll('button')).map(b => b.id);
+    return ids;
+  });
+  chk(order.indexOf('select-help') === order.indexOf('select-continue') - 1,
+      `？ボタンが▶ボタンの左にある (順序: ${order.join(',')})`);
+
+  await page.click('#select-help');
+  await page.waitForTimeout(200);
+  chk(await page.isVisible('#modal-tutorial'), '？ボタンでチュートリアルが開く');
+  const dotCount = await page.evaluate(() => document.querySelectorAll('#tut-dots span').length);
+  chk(dotCount === 4, `チュートリアルが4ステップ (実際: ${dotCount})`);
+  for (let i = 0; i < 3; i++) { await page.click('#tut-next'); await page.waitForTimeout(120); }
+  const okText = await page.evaluate(() => document.getElementById('tut-next').textContent);
+  chk(okText === 'OK', `最終ステップでOKボタンになる (実際: "${okText}")`);
+  await page.click('#tut-next');
+  await page.waitForTimeout(150);
+  chk(!(await page.isVisible('#modal-tutorial')), 'OKでチュートリアルが閉じる');
 }
 
 console.log('\n== アイコンがモノクロか ==');

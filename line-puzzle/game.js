@@ -18,6 +18,21 @@
   var STORE_KEY = 'linePuzzle.progress.v1';
   var SOLVE_BUDGET = 400000;   // ソルバーが辿るノード数の上限
 
+  // 触角の生えた芋虫の顔（盤面上のプレイヤー・チュートリアルの見本盤面で共用）
+  var PLAYER_FACE_SVG =
+    '<svg viewBox="0 0 100 100" aria-hidden="true">' +
+      '<g class="antenna">' +
+        '<path d="M38 44 C 30 30, 26 22, 22 14"/>' +
+        '<path d="M62 44 C 70 30, 74 22, 78 14"/>' +
+        '<circle cx="21" cy="11" r="7"/>' +
+        '<circle cx="79" cy="11" r="7"/>' +
+      '</g>' +
+      '<rect class="face" x="13" y="34" width="74" height="58" rx="21"/>' +
+      '<circle class="eye" cx="37" cy="58" r="6.5"/>' +
+      '<circle class="eye" cx="63" cy="58" r="6.5"/>' +
+      '<path class="mouth" d="M40 74 Q 50 82, 60 74"/>' +
+    '</svg>';
+
   var LEVELS = window.LEVELS || [];
 
   /* ---------- DOM ヘルパ ---------- */
@@ -30,7 +45,7 @@
   var memoryStore = null;      // localStorage が使えない環境の代替
   var storageWarned = false;
 
-  function blankProgress() { return { cleared: {}, lastStage: 1 }; }
+  function blankProgress() { return { cleared: {}, lastStage: 1, tutorialSeen: false }; }
 
   function readProgress() {
     if (memoryStore) return memoryStore;
@@ -89,6 +104,9 @@
   function isUnlocked(id) {
     return id <= highestCleared() + 1;
   }
+
+  /* ステージ帯（1-10若葉/11-20深緑/21-30黄葉/31-40紅葉/41-50枯葉）を求める */
+  function bandOf(id) { return Math.min(5, Math.ceil(id / 10)); }
 
   /* ============================================================
      4. レベルモデル（直進移動 + ソルバー）
@@ -220,7 +238,7 @@
           btn.textContent = id;
           btn.setAttribute('aria-label', 'Level ' + id);
           if (rec) {
-            btn.classList.add('is-cleared');
+            btn.classList.add('is-cleared', 'band-' + bandOf(id));
             var stars = el('span', 'stage-stars');
             for (var s = 1; s <= 3; s++) {
               stars.innerHTML += '<svg class="ic star' + (s <= rec.stars ? '' : ' off') + '"><use href="#ic-star"/></svg>';
@@ -278,6 +296,7 @@
     updateStats();
     show('game');
     requestAnimationFrame(fitBoard);
+    maybeAutoTutorial(id);
   }
 
   function markPainted(i) {
@@ -317,20 +336,7 @@
     stretchEl.style.transitionDuration = '0ms';
     stretchEl.style.transform = 'scaleX(0)';
     playerEl = el('div', 'player');
-    // 触角の生えた芋虫の顔
-    playerEl.innerHTML =
-      '<svg viewBox="0 0 100 100" aria-hidden="true">' +
-        '<g class="antenna">' +
-          '<path d="M38 44 C 30 30, 26 22, 22 14"/>' +
-          '<path d="M62 44 C 70 30, 74 22, 78 14"/>' +
-          '<circle cx="21" cy="11" r="7"/>' +
-          '<circle cx="79" cy="11" r="7"/>' +
-        '</g>' +
-        '<rect class="face" x="13" y="34" width="74" height="58" rx="21"/>' +
-        '<circle class="eye" cx="37" cy="58" r="6.5"/>' +
-        '<circle class="eye" cx="63" cy="58" r="6.5"/>' +
-        '<path class="mouth" d="M40 74 Q 50 82, 60 74"/>' +
-      '</svg>';
+    playerEl.innerHTML = PLAYER_FACE_SVG;
     boardEl.appendChild(playerEl);
     placePlayer(true);
   }
@@ -578,7 +584,7 @@
   function closeModal(id) { $(id).hidden = true; }
 
   function anyModalOpen() {
-    return !$('modal-pause').hidden || !$('modal-clear').hidden;
+    return !$('modal-pause').hidden || !$('modal-clear').hidden || !$('modal-tutorial').hidden;
   }
 
   /* ---------- 入力 ---------- */
@@ -590,6 +596,7 @@
   window.addEventListener('keydown', function (ev) {
     if (!screens.game.classList.contains('is-active')) return;
     if (ev.key === 'Escape') {
+      if (!$('modal-tutorial').hidden) { closeTutorial(); return; }
       if (!$('modal-pause').hidden) closeModal('modal-pause');
       else if ($('modal-clear').hidden) openModal('modal-pause');
       return;
@@ -622,7 +629,196 @@
   gameEl.addEventListener('touchmove', function (ev) { ev.preventDefault(); }, { passive: false });
 
   /* ============================================================
-     9. 起動
+     9. 遊び方チュートリアル
+     ・ステージ1を初めて開始した時（まだ一度もクリアしていない状態）に自動表示。
+       一度見たら自動表示はしない。ステージ選択の「？」ボタンからはいつでも見返せる。
+     ・①直進のみ ②全マス踏破が必要 ③行き止まり→やり直すボタン ④詰まったら
+       ヒントボタン、の4ステップを、実物の葉・小石・通過マスの見た目そのままの
+       見本盤面と、スワイプ/タップを示す手のアニメーションで案内する。
+     ============================================================ */
+  function tutHandInner() {
+    return '<g fill="#fff" stroke="#2b2b2b" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">' +
+        '<rect x="5.2" y="23" width="10" height="6.5" rx="3" transform="rotate(-32 10.2 26.3)"/>' +
+        '<rect x="13" y="19" width="17" height="15" rx="6.5"/>' +
+        '<rect x="14" y="3" width="6" height="18" rx="3"/>' +
+        '<rect x="21" y="9" width="5.4" height="12" rx="2.6"/>' +
+        '<rect x="26.3" y="12" width="5" height="10" rx="2.4"/>' +
+        '<rect x="31" y="16" width="4.2" height="8" rx="2"/>' +
+      '</g>';
+  }
+  function tutHandSVG() {
+    return '<svg viewBox="0 0 40 40">' + tutHandInner() + '</svg>';
+  }
+  function tutHandSwipeSVG(mirror) {
+    return '<svg viewBox="0 0 40 40"' + (mirror ? ' style="transform:scaleX(-1)"' : '') + '>' +
+      '<g stroke="rgba(255,255,255,.95)" stroke-width="2.4" stroke-linecap="round" opacity=".9">' +
+        '<path d="M3 15 L8 18"/><path d="M1 21 L7 22.5"/><path d="M2 27 L7.5 27.5"/>' +
+      '</g>' +
+      tutHandInner() +
+    '</svg>';
+  }
+
+  var TUT_CELL = 46;
+  var TUT_STEPS = [
+    {
+      title: 'まっすぐにしか進めません',
+      caption: 'スワイプした方向へ、壁や角にぶつかるまで一直線に進みます。',
+      board: ['W L L L', 'P F F F', 'L L L W'],
+      hand: { anim: 'tut-swipe-h', x: 134, y: 50, mirror: true }
+    },
+    {
+      title: 'すべての葉っぱを通ります',
+      caption: '盤面の葉っぱを全部通ったらクリアです。緑のマスを残すとクリアになりません。',
+      board: ['F F F F', 'F P F T', 'F F F F']
+    },
+    {
+      title: '行き止まったら、やり直す',
+      caption: '進めなくなったら、やり直すボタンでこのステージを最初からやり直せます。',
+      board: ['W P F F F', 'F F F F F', 'W W W L L'],
+      action: { icon: 'ic-retry', label: 'やり直すボタンを押す' }
+    },
+    {
+      title: '詰まったら、ヒント',
+      caption: '次の一手に迷ったら、ヒントボタンで進む方向を確認できます。',
+      board: ['F F L L', 'F P L L', 'W L L L'],
+      action: { icon: 'ic-hint', label: 'ヒントボタンを押す' }
+    }
+  ];
+
+  function tutCell(kind) {
+    var c = el('div', 'cell' + (kind === 'wall' ? ' is-wall' : kind === 'filled' ? ' is-filled' : ''));
+    return c;
+  }
+
+  function tutMiniBoard(hostEl, layout, handSpec) {
+    hostEl.innerHTML = '';
+    var rowsArr = layout.map(function (r) { return r.split(' '); });
+    var cols = rowsArr[0].length, rows = rowsArr.length;
+    var frame = el('div', 'tut-stage');
+    frame.style.width = (cols * TUT_CELL) + 'px';
+    frame.style.height = (rows * TUT_CELL) + 'px';
+    var board = el('div', 'board leaf-band-1');
+    board.style.gridTemplateColumns = 'repeat(' + cols + ', ' + TUT_CELL + 'px)';
+    for (var y = 0; y < rows; y++) {
+      for (var x = 0; x < cols; x++) {
+        var ch = rowsArr[y][x];
+        var kind = ch === 'W' ? 'wall' : ((ch === 'F' || ch === 'P') ? 'filled' : 'leaf');
+        var c = tutCell(kind);
+        c.style.width = TUT_CELL + 'px'; c.style.height = TUT_CELL + 'px';
+        c.style.position = 'relative';
+        if (ch === 'P') {
+          c.innerHTML = '<div class="player" style="position:absolute;inset:0;width:100%;height:100%">' + PLAYER_FACE_SVG + '</div>';
+        }
+        if (ch === 'T') {
+          c.innerHTML = '<div style="position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;' +
+            'background:#fff;color:var(--accent);font-size:12px;font-weight:800;display:grid;place-items:center;' +
+            'box-shadow:0 2px 4px rgba(0,0,0,.3);animation:tutpulse 1.1s ease-in-out infinite">!</div>';
+        }
+        board.appendChild(c);
+      }
+    }
+    frame.appendChild(board);
+    if (handSpec) {
+      var hand = el('div', 'tut-hand ' + handSpec.anim);
+      hand.style.left = handSpec.x + 'px';
+      hand.style.top = handSpec.y + 'px';
+      hand.innerHTML = tutHandSwipeSVG(handSpec.mirror);
+      frame.appendChild(hand);
+    }
+    hostEl.appendChild(frame);
+  }
+
+  function tutActionRow(hostEl, iconId, label) {
+    hostEl.innerHTML = '';
+    var row = el('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:14px;margin-top:2px';
+    row.innerHTML =
+      '<div style="position:relative">' +
+        '<div class="round-btn" style="width:46px;height:46px"><svg class="ic" style="width:22px;height:22px"><use href="#' + iconId + '"/></svg></div>' +
+        '<div class="tut-hand tut-tap" style="left:20px;top:14px"><div style="width:34px;height:34px">' + tutHandSVG() + '</div></div>' +
+      '</div>' +
+      '<span style="font-size:12.5px;color:var(--page-deep)">' + label + '</span>';
+    hostEl.appendChild(row);
+  }
+
+  function renderTutorialCard(root) {
+    var idx = 0;
+    root.innerHTML =
+      '<div class="tut-card">' +
+        '<p class="tut-step-label" id="tut-steplabel"></p>' +
+        '<p class="tut-caption" id="tut-caption"></p>' +
+        '<div id="tut-board"></div>' +
+        '<div id="tut-action"></div>' +
+        '<div class="tut-nav">' +
+          '<button class="tut-arrow-btn" id="tut-prev" type="button" aria-label="前へ"><svg viewBox="0 0 24 24"><polyline points="15,5 8,12 15,19"/></svg></button>' +
+          '<div class="tut-dots" id="tut-dots"></div>' +
+          '<button class="tut-arrow-btn" id="tut-next" type="button" aria-label="次へ"><svg viewBox="0 0 24 24"><polyline points="9,5 16,12 9,19"/></svg></button>' +
+        '</div>' +
+      '</div>';
+
+    var dotsEl = root.querySelector('#tut-dots');
+    var dotsHtml = '';
+    for (var i = 0; i < TUT_STEPS.length; i++) dotsHtml += '<span></span>';
+    dotsEl.innerHTML = dotsHtml;
+
+    // ボタン要素は使い回し、見た目(class/innerHTML)だけを差し替える
+    // （毎回 addEventListener し直すとクリックのたびにリスナーが積み重なるため、
+    //   登録はこの関数の最後で一度だけ行う）
+    var prevBtn = root.querySelector('#tut-prev');
+    var nextBtn = root.querySelector('#tut-next');
+
+    function show(i) {
+      idx = Math.max(0, Math.min(TUT_STEPS.length - 1, i));
+      var s = TUT_STEPS[idx];
+      root.querySelector('#tut-steplabel').textContent = 'STEP ' + (idx + 1) + ' / ' + TUT_STEPS.length + '　' + s.title;
+      root.querySelector('#tut-caption').textContent = s.caption;
+      tutMiniBoard(root.querySelector('#tut-board'), s.board, s.hand);
+      var actionHost = root.querySelector('#tut-action');
+      if (s.action) tutActionRow(actionHost, s.action.icon, s.action.label);
+      else actionHost.innerHTML = '';
+      var dots = dotsEl.children;
+      for (var d = 0; d < dots.length; d++) dots[d].className = d === idx ? 'is-on' : '';
+      prevBtn.disabled = idx === 0;
+      if (idx === TUT_STEPS.length - 1) {
+        nextBtn.className = 'tut-ok-btn';
+        nextBtn.textContent = 'OK';
+        nextBtn.setAttribute('aria-label', '閉じる');
+      } else {
+        nextBtn.className = 'tut-arrow-btn';
+        nextBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="9,5 16,12 9,19"/></svg>';
+        nextBtn.setAttribute('aria-label', '次へ');
+      }
+    }
+    prevBtn.addEventListener('click', function () { show(idx - 1); });
+    nextBtn.addEventListener('click', function () {
+      if (idx === TUT_STEPS.length - 1) { closeTutorial(); return; }
+      show(idx + 1);
+    });
+    show(0);
+  }
+
+  function openTutorial() {
+    var modal = $('modal-tutorial');
+    renderTutorialCard(modal);
+    openModal('modal-tutorial');
+  }
+
+  function closeTutorial() {
+    closeModal('modal-tutorial');
+  }
+
+  function maybeAutoTutorial(id) {
+    var p = readProgress();
+    if (id === 1 && highestCleared() === 0 && !p.tutorialSeen) {
+      saveProgress(function (pr) { pr.tutorialSeen = true; });
+      openTutorial();
+    }
+  }
+
+  $('select-help').addEventListener('click', openTutorial);
+
+  /* ============================================================
+     10. 起動
      ============================================================ */
   function boot() {
     if (!LEVELS.length) {
