@@ -278,20 +278,22 @@ await page.waitForTimeout(300);
     const open = all.filter(c => !c.classList.contains('is-wall') && !c.classList.contains('is-filled'));
     const walls = all.filter(c => c.classList.contains('is-wall'));
     const filled = all.filter(c => c.classList.contains('is-filled'));
+    const openBg = open[0] && bg(open[0]);
     return {
       openCount: open.length,
       openAllLeaf: open.every(c => bg(c).includes('data:image/svg+xml')),
       variants: new Set(open.map(bg)).size,
-      wallsClean: walls.length > 0 && walls.every(c => bg(c) === 'none'),
-      filledClean: filled.length > 0 && filled.every(c => bg(c) === 'none'),
+      // 小石(お邪魔ブロック)・通過マスは、葉の背景ではなく専用のSVG(小石の面・通過マスの黒枠)を持つ
+      wallsClean: walls.length > 0 && walls.every(c => bg(c).includes('data:image/svg+xml') && bg(c) !== openBg),
+      filledClean: filled.length > 0 && filled.every(c => bg(c).includes('data:image/svg+xml') && bg(c) !== openBg),
       openColor: open[0] && getComputedStyle(open[0]).backgroundColor,
       wallColor: walls[0] && getComputedStyle(walls[0]).backgroundColor,
     };
   });
   chk(leaf.openAllLeaf, `未通過のマスすべてに葉が描かれている (${leaf.openCount}マス)`);
   chk(leaf.variants === 1, `葉の向きが揃っている (${leaf.variants}種類)`);
-  chk(leaf.wallsClean, 'お邪魔ブロックには葉が乗らない');
-  chk(leaf.filledClean, '通過済みのマスには葉が乗らない');
+  chk(leaf.wallsClean, 'お邪魔ブロックには葉ではなく小石の模様が乗る');
+  chk(leaf.filledClean, '通過済みのマスには葉ではなく通過マスの模様が乗る');
   chk(leaf.openColor !== leaf.wallColor,
       `葉のマスとブロックの色が別 (${leaf.openColor} / ${leaf.wallColor})`);
 }

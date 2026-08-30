@@ -221,38 +221,54 @@ body {
    斜めの主脈(左上→右下)+上辺・左辺への側脈という葉脈の形はどの帯でも共通。 */
 .board.leaf-band-1 {
   --leaf-base: #8bc34a;
-  --leaf-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2858,74,18,.22%29' stroke-width='3.2'%3E%3Cpath d='M16 0 L16 16'/%3E%3Cpath d='M0 16 L16 16'/%3E%3Cpath d='M30 0 L30 30'/%3E%3Cpath d='M0 30 L30 30'/%3E%3Cpath d='M44 0 L44 44'/%3E%3Cpath d='M0 44 L44 44'/%3E%3Cpath d='M58 0 L58 58'/%3E%3Cpath d='M0 58 L58 58'/%3E%3Cpath d='M72 0 L72 72'/%3E%3Cpath d='M0 72 L72 72'/%3E%3Cpath d='M86 0 L86 86'/%3E%3Cpath d='M0 86 L86 86'/%3E%3C/g%3E%3Cpath d='M0 0 L100 100' stroke='rgba%2858,74,18,.40%29' stroke-width='5.5'/%3E%3C/g%3E%3C/svg%3E");
+  --leaf-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2858,74,18,.22%29' stroke-width='3.2'%3E%3Cpath d='M16 0 L16 16'/%3E%3Cpath d='M0 16 L16 16'/%3E%3Cpath d='M30 0 L30 30'/%3E%3Cpath d='M0 30 L30 30'/%3E%3Cpath d='M44 0 L44 44'/%3E%3Cpath d='M0 44 L44 44'/%3E%3Cpath d='M58 0 L58 58'/%3E%3Cpath d='M0 58 L58 58'/%3E%3Cpath d='M72 0 L72 72'/%3E%3Cpath d='M0 72 L72 72'/%3E%3Cpath d='M86 0 L86 86'/%3E%3Cpath d='M0 86 L86 86'/%3E%3C/g%3E%3Cpath d='M-0.92 0.92 L96.46 103.54 L103.54 96.46 L0.92 -0.92 Z' fill='rgba%2858,74,18,.40%29'/%3E%3C/g%3E%3C/svg%3E");
   --leaf-outline: rgba(58,74,18,.20);
 }   /* Stage 1〜10 若葉 */
 .board.leaf-band-2 {
   --leaf-base: #3f8f45;
-  --leaf-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2814,54,19,.22%29' stroke-width='3.2'%3E%3Cpath d='M16 0 L16 16'/%3E%3Cpath d='M0 16 L16 16'/%3E%3Cpath d='M30 0 L30 30'/%3E%3Cpath d='M0 30 L30 30'/%3E%3Cpath d='M44 0 L44 44'/%3E%3Cpath d='M0 44 L44 44'/%3E%3Cpath d='M58 0 L58 58'/%3E%3Cpath d='M0 58 L58 58'/%3E%3Cpath d='M72 0 L72 72'/%3E%3Cpath d='M0 72 L72 72'/%3E%3Cpath d='M86 0 L86 86'/%3E%3Cpath d='M0 86 L86 86'/%3E%3C/g%3E%3Cpath d='M0 0 L100 100' stroke='rgba%2814,54,19,.40%29' stroke-width='5.5'/%3E%3C/g%3E%3C/svg%3E");
+  --leaf-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2814,54,19,.22%29' stroke-width='3.2'%3E%3Cpath d='M16 0 L16 16'/%3E%3Cpath d='M0 16 L16 16'/%3E%3Cpath d='M30 0 L30 30'/%3E%3Cpath d='M0 30 L30 30'/%3E%3Cpath d='M44 0 L44 44'/%3E%3Cpath d='M0 44 L44 44'/%3E%3Cpath d='M58 0 L58 58'/%3E%3Cpath d='M0 58 L58 58'/%3E%3Cpath d='M72 0 L72 72'/%3E%3Cpath d='M0 72 L72 72'/%3E%3Cpath d='M86 0 L86 86'/%3E%3Cpath d='M0 86 L86 86'/%3E%3C/g%3E%3Cpath d='M-0.92 0.92 L96.46 103.54 L103.54 96.46 L0.92 -0.92 Z' fill='rgba%2814,54,19,.40%29'/%3E%3C/g%3E%3C/svg%3E");
   --leaf-outline: rgba(14,54,19,.18);
 }   /* Stage 11〜20 深緑 */
 .board.leaf-band-3 {
   --leaf-base: #e0b52a;
-  --leaf-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2894,66,10,.24%29' stroke-width='3.2'%3E%3Cpath d='M16 0 L16 16'/%3E%3Cpath d='M0 16 L16 16'/%3E%3Cpath d='M30 0 L30 30'/%3E%3Cpath d='M0 30 L30 30'/%3E%3Cpath d='M44 0 L44 44'/%3E%3Cpath d='M0 44 L44 44'/%3E%3Cpath d='M58 0 L58 58'/%3E%3Cpath d='M0 58 L58 58'/%3E%3Cpath d='M72 0 L72 72'/%3E%3Cpath d='M0 72 L72 72'/%3E%3Cpath d='M86 0 L86 86'/%3E%3Cpath d='M0 86 L86 86'/%3E%3C/g%3E%3Cpath d='M0 0 L100 100' stroke='rgba%2894,66,10,.42%29' stroke-width='5.5'/%3E%3C/g%3E%3C/svg%3E");
+  --leaf-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2894,66,10,.24%29' stroke-width='3.2'%3E%3Cpath d='M16 0 L16 16'/%3E%3Cpath d='M0 16 L16 16'/%3E%3Cpath d='M30 0 L30 30'/%3E%3Cpath d='M0 30 L30 30'/%3E%3Cpath d='M44 0 L44 44'/%3E%3Cpath d='M0 44 L44 44'/%3E%3Cpath d='M58 0 L58 58'/%3E%3Cpath d='M0 58 L58 58'/%3E%3Cpath d='M72 0 L72 72'/%3E%3Cpath d='M0 72 L72 72'/%3E%3Cpath d='M86 0 L86 86'/%3E%3Cpath d='M0 86 L86 86'/%3E%3C/g%3E%3Cpath d='M-0.92 0.92 L96.46 103.54 L103.54 96.46 L0.92 -0.92 Z' fill='rgba%2894,66,10,.42%29'/%3E%3C/g%3E%3C/svg%3E");
   --leaf-outline: rgba(94,66,10,.20);
 }   /* Stage 21〜30 黄葉 */
 .board.leaf-band-4 {
   --leaf-base: #c1443c;
-  --leaf-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2874,20,16,.24%29' stroke-width='3.2'%3E%3Cpath d='M16 0 L16 16'/%3E%3Cpath d='M0 16 L16 16'/%3E%3Cpath d='M30 0 L30 30'/%3E%3Cpath d='M0 30 L30 30'/%3E%3Cpath d='M44 0 L44 44'/%3E%3Cpath d='M0 44 L44 44'/%3E%3Cpath d='M58 0 L58 58'/%3E%3Cpath d='M0 58 L58 58'/%3E%3Cpath d='M72 0 L72 72'/%3E%3Cpath d='M0 72 L72 72'/%3E%3Cpath d='M86 0 L86 86'/%3E%3Cpath d='M0 86 L86 86'/%3E%3C/g%3E%3Cpath d='M0 0 L100 100' stroke='rgba%2874,20,16,.42%29' stroke-width='5.5'/%3E%3C/g%3E%3C/svg%3E");
+  --leaf-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2874,20,16,.24%29' stroke-width='3.2'%3E%3Cpath d='M16 0 L16 16'/%3E%3Cpath d='M0 16 L16 16'/%3E%3Cpath d='M30 0 L30 30'/%3E%3Cpath d='M0 30 L30 30'/%3E%3Cpath d='M44 0 L44 44'/%3E%3Cpath d='M0 44 L44 44'/%3E%3Cpath d='M58 0 L58 58'/%3E%3Cpath d='M0 58 L58 58'/%3E%3Cpath d='M72 0 L72 72'/%3E%3Cpath d='M0 72 L72 72'/%3E%3Cpath d='M86 0 L86 86'/%3E%3Cpath d='M0 86 L86 86'/%3E%3C/g%3E%3Cpath d='M-0.92 0.92 L96.46 103.54 L103.54 96.46 L0.92 -0.92 Z' fill='rgba%2874,20,16,.42%29'/%3E%3C/g%3E%3C/svg%3E");
   --leaf-outline: rgba(74,20,16,.20);
 }   /* Stage 31〜40 紅葉 */
 .board.leaf-band-5 {
   --leaf-base: #8a6240;
-  --leaf-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2846,28,12,.28%29' stroke-width='3.2'%3E%3Cpath d='M16 0 L16 16'/%3E%3Cpath d='M0 16 L16 16'/%3E%3Cpath d='M30 0 L30 30'/%3E%3Cpath d='M0 30 L30 30'/%3E%3Cpath d='M44 0 L44 44'/%3E%3Cpath d='M0 44 L44 44'/%3E%3Cpath d='M58 0 L58 58'/%3E%3Cpath d='M0 58 L58 58'/%3E%3Cpath d='M72 0 L72 72'/%3E%3Cpath d='M0 72 L72 72'/%3E%3Cpath d='M86 0 L86 86'/%3E%3Cpath d='M0 86 L86 86'/%3E%3C/g%3E%3Cpath d='M0 0 L100 100' stroke='rgba%2846,28,12,.46%29' stroke-width='5.5'/%3E%3C/g%3E%3C/svg%3E");
+  --leaf-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2846,28,12,.28%29' stroke-width='3.2'%3E%3Cpath d='M16 0 L16 16'/%3E%3Cpath d='M0 16 L16 16'/%3E%3Cpath d='M30 0 L30 30'/%3E%3Cpath d='M0 30 L30 30'/%3E%3Cpath d='M44 0 L44 44'/%3E%3Cpath d='M0 44 L44 44'/%3E%3Cpath d='M58 0 L58 58'/%3E%3Cpath d='M0 58 L58 58'/%3E%3Cpath d='M72 0 L72 72'/%3E%3Cpath d='M0 72 L72 72'/%3E%3Cpath d='M86 0 L86 86'/%3E%3Cpath d='M0 86 L86 86'/%3E%3C/g%3E%3Cpath d='M-0.92 0.92 L96.46 103.54 L103.54 96.46 L0.92 -0.92 Z' fill='rgba%2846,28,12,.46%29'/%3E%3C/g%3E%3C/svg%3E");
   --leaf-outline: rgba(46,28,12,.24);
 }   /* Stage 41〜50 枯葉 */
 
+/* お邪魔ブロック＝小石。角を丸めた四角の輪郭に、面の明暗とひび割れを
+   加えた3種類をマスの位置に応じて出し分け、敷き詰めたときに単調にならない
+   ようにする。 */
 .cell.is-wall {
-  background-image: none;
   background-color: var(--wall);
-  box-shadow: inset 0 -3px 0 var(--wall-dark);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3CclipPath id='rc1'%3E%3Cpath d='M7 17 Q7 7 17 7 L77 7 Q93 7 93 23 L93 71 Q93 93 71 93 L21 93 Q7 93 7 79 Z'/%3E%3C/clipPath%3E%3C/defs%3E%3Cpath d='M7 17 Q7 7 17 7 L77 7 Q93 7 93 23 L93 71 Q93 93 71 93 L21 93 Q7 93 7 79 Z' fill='%239ba2aa'/%3E%3Cg clip-path='url%28%23rc1%29'%3E%3Cpath d='M7 17 Q7 7 17 7 L60 7 L30 40 L7 55 Z' fill='%23c9ced4'/%3E%3Cpath d='M93 71 Q93 93 71 93 L45 93 L70 55 L93 45 Z' fill='%237c828a'/%3E%3Cpath d='M40 22 L58 34' fill='none' stroke='%233f434a' stroke-width='3' stroke-linecap='round' opacity='.55'/%3E%3Cpath d='M62 66 L78 58' fill='none' stroke='%233f434a' stroke-width='3' stroke-linecap='round' opacity='.55'/%3E%3C/g%3E%3Cpath d='M7 17 Q7 7 17 7 L77 7 Q93 7 93 23 L93 71 Q93 93 71 93 L21 93 Q7 93 7 79 Z' fill='none' stroke='%233f434a' stroke-width='6' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  box-shadow: none;
 }
+.cell.is-wall:nth-child(3n+2) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3CclipPath id='rc2'%3E%3Cpath d='M7 25 Q7 7 25 7 L83 7 Q93 7 93 17 L93 79 Q93 93 79 93 L27 93 Q7 93 7 73 Z'/%3E%3C/clipPath%3E%3C/defs%3E%3Cpath d='M7 25 Q7 7 25 7 L83 7 Q93 7 93 17 L93 79 Q93 93 79 93 L27 93 Q7 93 7 73 Z' fill='%239ba2aa'/%3E%3Cg clip-path='url%28%23rc2%29'%3E%3Cpath d='M7 25 Q7 7 25 7 L68 7 L34 46 L7 62 Z' fill='%23c9ced4'/%3E%3Cpath d='M93 79 Q93 93 79 93 L50 93 L74 60 L93 50 Z' fill='%237c828a'/%3E%3Cpath d='M30 50 L48 40' fill='none' stroke='%233f434a' stroke-width='3' stroke-linecap='round' opacity='.55'/%3E%3Cpath d='M60 24 L60 42' fill='none' stroke='%233f434a' stroke-width='3' stroke-linecap='round' opacity='.55'/%3E%3C/g%3E%3Cpath d='M7 25 Q7 7 25 7 L83 7 Q93 7 93 17 L93 79 Q93 93 79 93 L27 93 Q7 93 7 73 Z' fill='none' stroke='%233f434a' stroke-width='6' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.cell.is-wall:nth-child(3n) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3CclipPath id='rc3'%3E%3Cpath d='M7 21 Q7 7 21 7 L73 7 Q93 7 93 27 L93 83 Q93 93 83 93 L23 93 Q7 93 7 77 Z'/%3E%3C/clipPath%3E%3C/defs%3E%3Cpath d='M7 21 Q7 7 21 7 L73 7 Q93 7 93 27 L93 83 Q93 93 83 93 L23 93 Q7 93 7 77 Z' fill='%239ba2aa'/%3E%3Cg clip-path='url%28%23rc3%29'%3E%3Cpath d='M7 21 Q7 7 21 7 L64 7 L32 42 L7 58 Z' fill='%23c9ced4'/%3E%3Cpath d='M93 83 Q93 93 83 93 L54 93 L76 58 L93 48 Z' fill='%237c828a'/%3E%3Cpath d='M46 60 L64 68' fill='none' stroke='%233f434a' stroke-width='3' stroke-linecap='round' opacity='.55'/%3E%3Cpath d='M28 30 L44 24' fill='none' stroke='%233f434a' stroke-width='3' stroke-linecap='round' opacity='.55'/%3E%3C/g%3E%3Cpath d='M7 21 Q7 7 21 7 L73 7 Q93 7 93 27 L93 83 Q93 93 83 93 L23 93 Q7 93 7 77 Z' fill='none' stroke='%233f434a' stroke-width='6' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* 通過済みマス(虫の通り道)。マスいっぱいに角丸の黒枠を描き、隣のマスと
+   枠が接することで、体が節ごとに連結しているように見せる。 */
 .cell.is-filled {
-  background-image: none;
   background-color: var(--cell-fill);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M7 27 Q7 7 27 7 L73 7 Q93 7 93 27 L93 73 Q93 93 73 93 L27 93 Q7 93 7 73 Z' fill='none' stroke='%23181018' stroke-width='7' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
   box-shadow: inset 0 -3px 0 var(--cell-fill-dark);
   animation: pop .18s ease-out;
 }
