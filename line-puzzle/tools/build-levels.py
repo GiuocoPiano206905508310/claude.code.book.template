@@ -28,19 +28,27 @@ def usable(v, min_choices):
     return v['holes'] >= MIN_BLOCKS and v['holes'] >= 0.08*v['w']*v['h'] and v['choices'] >= min_choices
 easy = sorted((v for v in pool if usable(v, 1)), key=lambda v: v['score'])
 hard = sorted((v for v in pool if usable(v, 2)), key=lambda v: v['score'])
-print(f"分岐1つ以上 {len(easy)}件 / 分岐2つ以上 {len(hard)}件（ブロック{MIN_BLOCKS}個以上）")
+tough = sorted((v for v in pool if usable(v, 3)), key=lambda v: v['score'])
+print(f"分岐1つ以上 {len(easy)}件 / 2つ以上 {len(hard)}件 / 3つ以上 {len(tough)}件"
+      f"（ブロック{MIN_BLOCKS}個以上）")
 
 N=50
-TUTORIAL=4          # 最初の数ステージはルールを覚えるための易しめの帯から選ぶ
-chosen=[]; usedH=set(); usedE=set()
+TUTORIAL=3          # 最初の数ステージはルールを覚えるための易しめの帯から選ぶ
+LATE=30             # 終盤は迷いどころが3つ以上ある盤面だけを使う
+chosen=[]; used={id(easy):set(), id(hard):set(), id(tough):set()}
 for i in range(N):
     if i < TUTORIAL:
-        src, seen = easy, usedE
-        pct = 0.05 + (0.25-0.05)*(i/(TUTORIAL-1))
+        src = easy
+        pct = 0.10 + (0.30-0.10)*(i/(TUTORIAL-1))
+    elif i < LATE:
+        src = hard
+        t=((i-TUTORIAL)/(LATE-1-TUTORIAL))**1.05
+        pct = 0.33 + (0.88-0.33)*t
     else:
-        src, seen = hard, usedH
-        t=((i-TUTORIAL)/(N-1-TUTORIAL))**1.15
-        pct = 0.30 + (1.00-0.30)*t
+        src = tough
+        t=((i-LATE)/(N-1-LATE))**1.10
+        pct = 0.50 + (1.00-0.50)*t
+    seen = used[id(src)]
     k=min(len(src)-1, int(pct*(len(src)-1)))
     # 既に選んだものと重ならない最も近い候補へずらす
     while k in seen and k>0: k-=1

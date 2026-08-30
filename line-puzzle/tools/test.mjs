@@ -30,36 +30,10 @@ chk(blocks.reduce((a, b) => a + b, 0) / blocks.length > 10,
     `ブロックが十分ある (平均${(blocks.reduce((a, b) => a + b, 0) / blocks.length).toFixed(1)}個 / 最大${Math.max(...blocks)}個)`);
 console.log('   最短手数:', meta.sols.join(','));
 
-console.log('\n== ユーザー名バリデーション ==');
-async function tryName(name) {
-  // maxlength を迂回して値を直接入れ、バリデーション本体を必ず通す
-  await page.evaluate(n => {
-    const i = document.getElementById('username-input');
-    i.value = n;
-    i.dispatchEvent(new Event('input', { bubbles: true }));
-  }, name);
-  await page.click('#register-form button[type=submit]');
-  await page.waitForTimeout(90);
-  const onSelect = await page.isVisible('#screen-select');
-  const err = onSelect ? '' : await page.textContent('#register-error');
-  return { err, onSelect };
-}
-// 誤って登録されてしまった場合に元の状態へ戻す
-async function resetIfRegistered(r) {
-  if (!r.onSelect) return;
-  await page.evaluate(() => localStorage.removeItem('linePuzzle.save.v1'));
-  await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForTimeout(120);
-}
-for (const [name, why] of [['a', '1文字'], ['あ'.repeat(13), '13文字'], ['fuck', '英語NG'],
-                           ['まんこ', '日本語NG'], ['ﾏﾝｺ', '半角カナNG'], ['ま ん こ', '空白回避NG'],
-                           ['死ね', '漢字NG'], ['管理者', 'なりすまし'], ['ab!!cd', '記号'], ['😀たろう', '絵文字']]) {
-  const r = await tryName(name);
-  chk(!!r.err && !r.onSelect, `拒否: ${why} "${name}" → ${r.err || '(通ってしまった)'}`);
-  await resetIfRegistered(r);
-}
-let r = await tryName('ぱずる太郎');
-chk(!r.err && r.onSelect, '登録成功: ぱずる太郎');
+console.log('\n== 登録不要で始められる ==');
+chk(!(await page.$('#screen-login')), 'ログイン画面が存在しない');
+chk(!(await page.$('#username-input')), 'ユーザー名の入力欄が存在しない');
+chk(await page.isVisible('#screen-select'), '開いた直後にステージ選択が表示される');
 
 console.log('\n== ステージ選択 ==');
 const st = await page.evaluate(() => ({
@@ -69,20 +43,7 @@ const st = await page.evaluate(() => ({
 chk(st.total === 50, `ステージボタン50個 (${st.total})`);
 chk(st.locked === 49, `未クリア時のロック49個 (${st.locked})`);
 
-console.log('\n== 重複ユーザー名 ==');
-await page.click('#select-back');
-await page.waitForTimeout(120);
-for (const dup of ['ぱずる太郎', 'ぱずる太郎 ', 'パズル太郎', 'ﾊﾟｽﾞﾙ太郎']) {
-  const d = await tryName(dup);
-  chk(!!d.err && !d.onSelect, `重複拒否 "${dup}" → ${d.err || '(通ってしまった)'}`);
-}
-const listed = await page.$$eval('.user-row-name', ns => ns.map(n => n.textContent));
-chk(listed.includes('ぱずる太郎'), '既存ユーザーが一覧に表示される');
-
 console.log('\n== 全50ステージ 自動プレイ ==');
-await page.click('.user-row');
-await page.waitForTimeout(150);
-
 const KEY = { U: 'ArrowUp', D: 'ArrowDown', L: 'ArrowLeft', R: 'ArrowRight' };
 let allCleared = true;
 for (let id = 1; id <= 50; id++) {
@@ -111,14 +72,14 @@ await page.screenshot({ path: SHOTS + '/shot-select-all.png' });
 console.log('\n== 自動保存 / 再開 ==');
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(200);
-chk(await page.isVisible('#screen-select'), 'リロード後にユーザーが復元される');
+chk(await page.isVisible('#screen-select'), 'リロード後も進捗が保持される');
 const lockedAfter = await page.$$eval('.stage-btn.is-locked', n => n.length);
 chk(lockedAfter === 0, `クリア済みステージが解放されている (locked=${lockedAfter})`);
 
 console.log('\n== 部分進捗の保存 ==');
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle' });
-await tryName('てすと二号');
+await page.waitForTimeout(200);
 for (let id = 1; id <= 3; id++) {
   await page.evaluate(i => document.querySelectorAll('.stage-btn')[i - 1].click(), id);
   await page.waitForSelector('#screen-game.is-active');
@@ -142,7 +103,11 @@ await page.waitForSelector('#screen-game.is-active');
 chk((await page.textContent('#level-label')) === 'Level 4', 'つづきからで Level 4 が開く');
 
 console.log('\n== ボタン (やり直す/中断/ヒント) ==');
-await page.keyboard.press('ArrowRight'); await page.waitForTimeout(500);
+{
+  const id = parseInt((await page.textContent('#level-label')).replace(/\D/g, ''), 10);
+  const first = await page.evaluate(i => window.LEVELS[i - 1].sol[0], id);
+  await page.keyboard.press(KEY[first]); await page.waitForTimeout(500);
+}
 const movesBefore = await page.textContent('#stat-moves');
 await page.click('#btn-retry'); await page.waitForTimeout(250);
 chk(movesBefore !== '0' && (await page.textContent('#stat-moves')) === '0', 'やり直すで手数がリセットされる');
@@ -226,6 +191,63 @@ for (const [dx, dy] of [[0, 90], [0, -90], [90, 0], [-90, 0]]) {
   if ((await page.textContent('#stat-moves')) !== before) { swipeWorked = true; break; }
 }
 chk(swipeWorked, 'スワイプで移動できる（十字キーが無くても操作可能）');
+
+console.log('\n== クリア画面の再チャレンジ ==');
+await page.click('#game-back'); await page.waitForTimeout(200);
+await page.evaluate(() => document.querySelectorAll('.stage-btn:not(.is-locked)')[0].click());
+await page.waitForSelector('#screen-game.is-active');
+{
+  const sol = await page.evaluate(() => window.LEVELS[0].sol);
+  for (const ch of sol) { await page.keyboard.press(KEY[ch]); await page.waitForTimeout(460); }
+  await page.waitForFunction(() => !document.getElementById('modal-clear').hidden, null, { timeout: 4000 });
+  const order = await page.evaluate(() => Array.from(
+    document.querySelectorAll('#modal-clear button')).map(b => b.id));
+  chk(order.join(',') === 'clear-next,clear-retry,clear-select',
+      `ボタン順が 次のステージへ → 再チャレンジ → ステージ選択へ (${order.join(' / ')})`);
+  const label = await page.textContent('#clear-retry');
+  chk(label.trim() === '再チャレンジ', `再チャレンジのラベル "${label.trim()}"`);
+  await page.click('#clear-retry'); await page.waitForTimeout(400);
+  const after = await page.evaluate(() => ({
+    level: document.getElementById('level-label').textContent,
+    moves: document.getElementById('stat-moves').textContent,
+    onGame: document.getElementById('screen-game').classList.contains('is-active'),
+    modal: !document.getElementById('modal-clear').hidden,
+  }));
+  chk(after.onGame && !after.modal && after.level === 'Level 1' && after.moves === '0',
+      `再チャレンジで同じステージを最初からやり直す (${after.level} / ${after.moves}手)`);
+}
+
+console.log('\n== 星の表示 ==');
+await page.click('#game-back'); await page.waitForTimeout(300);
+const starInfo = await page.evaluate(() => {
+  const els = document.querySelectorAll('#stage-grid .stage-stars .ic');
+  const on = Array.from(els).find(e => !e.classList.contains('off'));
+  const off = Array.from(els).find(e => e.classList.contains('off'));
+  const cs = on && getComputedStyle(on);
+  const use = on && on.querySelector('use');
+  return {
+    count: els.length,
+    allStar: Array.from(els).every(e => e.classList.contains('star')),
+    color: cs && cs.color,
+    useFill: use && getComputedStyle(use).fill,
+    offOpacity: (function () {
+      // 未獲得の星が実データに無いことがあるので、同じクラスの要素で見え方を測る
+      const probe = off || (function () {
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        p.setAttribute('class', 'ic star off');
+        document.body.appendChild(p);
+        return p;
+      })();
+      const op = getComputedStyle(probe).opacity;
+      if (!off) probe.remove();
+      return op;
+    })(),
+  };
+});
+chk(starInfo.count > 0 && starInfo.allStar, `星に star クラスが付いている (${starInfo.count}個)`);
+chk(starInfo.color === 'rgb(242, 183, 5)', `星が黄色 (${starInfo.color})`);
+chk(starInfo.useFill === 'rgb(242, 183, 5)', `星が塗りつぶし (fill=${starInfo.useFill})`);
+chk(parseFloat(starInfo.offOpacity) < 0.5, `未獲得の星は薄く表示 (opacity=${starInfo.offOpacity})`);
 
 console.log('\n== アイコンがモノクロか ==');
 const colors = await page.evaluate(() => ['btn-retry', 'btn-pause', 'btn-hint'].map(id => {

@@ -15,7 +15,7 @@
     { ch: 'R', dx: 1, dy: 0 }
   ];
   var DCH = 'UDLR';
-  var STORE_KEY = 'linePuzzle.save.v1';
+  var STORE_KEY = 'linePuzzle.progress.v1';
   var SOLVE_BUDGET = 400000;   // ソルバーが辿るノード数の上限
 
   var LEVELS = window.LEVELS || [];
@@ -25,169 +25,52 @@
   function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
 
   /* ============================================================
-     1. セーブデータ
+     1. セーブデータ（この端末のブラウザに保存。ユーザー登録は不要）
      ============================================================ */
   var memoryStore = null;      // localStorage が使えない環境の代替
   var storageWarned = false;
 
-  function readStore() {
+  function blankProgress() { return { cleared: {}, lastStage: 1 }; }
+
+  function readProgress() {
     if (memoryStore) return memoryStore;
     try {
       var raw = window.localStorage.getItem(STORE_KEY);
       var data = raw ? JSON.parse(raw) : null;
-      if (!data || typeof data !== 'object') data = {};
-      if (!data.users || typeof data.users !== 'object') data.users = {};
+      if (!data || typeof data !== 'object') data = blankProgress();
+      if (!data.cleared || typeof data.cleared !== 'object') data.cleared = {};
       return data;
     } catch (e) {
       if (!storageWarned) {
         storageWarned = true;
-        toast('この環境では保存できません（セッション内のみ保持します）');
+        toast('この環境では保存できません（このセッション中のみ記録します）');
       }
-      memoryStore = { users: {}, current: null };
+      memoryStore = blankProgress();
       return memoryStore;
     }
   }
 
-  function writeStore(data) {
+  function writeProgress(data) {
     if (memoryStore) { memoryStore = data; return; }
     try {
       window.localStorage.setItem(STORE_KEY, JSON.stringify(data));
     } catch (e) {
       if (!storageWarned) {
         storageWarned = true;
-        toast('保存に失敗しました（セッション内のみ保持します）');
+        toast('保存に失敗しました（このセッション中のみ記録します）');
       }
       memoryStore = data;
     }
   }
 
-  /* ============================================================
-     2. ユーザー名の正規化・バリデーション
-     ============================================================ */
-
-  // 全角/半角・大文字小文字・カタカナ/ひらがなを吸収した比較用キー
-  function normalizeKey(name) {
-    var s = String(name);
-    if (s.normalize) s = s.normalize('NFKC');
-    s = s.toLowerCase();
-    // カタカナ → ひらがな
-    s = s.replace(/[ァ-ヶ]/g, function (c) {
-      return String.fromCharCode(c.charCodeAt(0) - 0x60);
-    });
-    // 記号・空白・長音を除去（"ま ん こ" のような回避を防ぐ）
-    s = s.replace(/[\s　ーー・.,_\-~!"#$%&'()*+/:;<=>?@\[\\\]^`{|}]/g, '');
-    return s;
+  function saveProgress(mutate) {
+    var p = readProgress();
+    mutate(p);
+    p.lastPlayed = Date.now();
+    writeProgress(p);
   }
 
-  // 使用できない語（卑猥・差別・暴力表現など）
-  var NG_WORDS = [
-    // 英語
-    'fuck', 'fuk', 'fck', 'shit', 'bitch', 'bastard', 'asshole', 'dick', 'cock',
-    'penis', 'vagina', 'pussy', 'boobs', 'tits', 'cunt', 'slut', 'whore', 'porn',
-    'sex', 'rape', 'nigger', 'nigga', 'faggot', 'retard', 'nazi', 'hitler',
-    'murder', 'suicide', 'jerk', 'damn', 'crap', 'wank', 'horny', 'nude',
-    'erotic', 'hentai', 'lolicon', 'incest', 'orgasm', 'masturbat',
-    // 日本語（ひらがな正規化後に一致させる）
-    'ちんこ', 'ちんぽ', 'ちんちん', 'ぺにす', 'まんこ', 'おまんこ', 'ばぎな',
-    'おっぱい', 'ちくび', 'せっくす', 'やりまん', 'せいえき', 'ふぇら', 'なかだし',
-    'いんけい', 'いんもう', 'ぼっき', 'おなにー', 'せんずり', 'しこしこ',
-    'えっち', 'えろ', 'すけべ', 'へんたい', 'ろりこん', 'ちかん', 'のぞき',
-    'れいぷ', 'ごうかん', 'ふうぞく', 'そーぷ', 'でりへる', 'ぬーど', 'らんこう',
-    'きんたま', 'ふぐり', 'あなる', 'けつあな', 'しょんべん', 'うんこ', 'うんち',
-    'くそ', 'ちんげ', 'びっち', 'ぱいずり', 'いんらん', 'ぶさいく', 'でぶ',
-    'しね', 'ころす', 'ころして', 'じさつ', 'きちがい', 'きしょい', 'ばか', 'あほ',
-    'まぬけ', 'ぶす', 'ごみくず', 'くたばれ', 'ぶっころ',
-    'めくら', 'つんぼ', 'びっこ', 'かたわ',
-    'ちょん', 'しなじん',
-    // 漢字表記
-    '死ね', '殺す', '自殺', '強姦', '痴漢', '売春', '援交', '射精', '勃起',
-    '陰茎', '陰毛', '性交', '変態', '馬鹿', '阿呆', '基地外', '風俗', '乱交',
-    // なりすまし防止
-    'admin', 'administrator', 'root', 'system', 'moderator', 'staff',
-    '管理人', '管理者', '運営', 'うんえい', 'かんりにん', 'かんりしゃ'
-  ];
-
-  function containsNgWord(name) {
-    var key = normalizeKey(name);
-    for (var i = 0; i < NG_WORDS.length; i++) {
-      if (key.indexOf(normalizeKey(NG_WORDS[i])) !== -1) return true;
-    }
-    return false;
-  }
-
-  // 使用を許可する文字: ひらがな・カタカナ・漢字・英数字・長音・中黒・アンダースコア
-  var ALLOWED_RE = /^[0-9A-Za-zぁ-ゖァ-ヺー一-鿿々・_]+$/;
-
-  /**
-   * @returns {{ok:boolean, name?:string, key?:string, message?:string}}
-   */
-  function validateUserName(rawInput) {
-    var name = String(rawInput == null ? '' : rawInput).trim();
-    if (name.normalize) name = name.normalize('NFKC');
-
-    if (!name) return { ok: false, message: 'ユーザー名を入力してください。' };
-
-    // 見た目の文字数（サロゲートペア＝絵文字などを1文字として数える）
-    var chars = Array.from(name);
-    if (chars.length < 2) return { ok: false, message: 'ユーザー名は2文字以上で入力してください。' };
-    if (chars.length > 12) return { ok: false, message: 'ユーザー名は12文字以内で入力してください。' };
-
-    if (!ALLOWED_RE.test(name)) {
-      return { ok: false, message: 'ひらがな・カタカナ・漢字・英数字のみ使用できます。' };
-    }
-    if (containsNgWord(name)) {
-      return { ok: false, message: 'その言葉はユーザー名に使用できません。' };
-    }
-
-    var key = normalizeKey(name);
-    if (!key) return { ok: false, message: 'ユーザー名を入力してください。' };
-
-    var store = readStore();
-    if (Object.prototype.hasOwnProperty.call(store.users, key)) {
-      return { ok: false, message: '「' + store.users[key].name + '」は既に使われています。別の名前にしてください。' };
-    }
-    return { ok: true, name: name, key: key };
-  }
-
-  /* ============================================================
-     3. ユーザー操作
-     ============================================================ */
-  var currentKey = null;
-
-  function currentUser() {
-    var store = readStore();
-    return currentKey ? store.users[currentKey] : null;
-  }
-
-  function saveUser(mutate) {
-    var store = readStore();
-    var u = store.users[currentKey];
-    if (!u) return;
-    mutate(u);
-    u.lastPlayed = Date.now();
-    store.current = currentKey;
-    writeStore(store);
-  }
-
-  function createUser(name, key) {
-    var store = readStore();
-    store.users[key] = { name: name, created: Date.now(), lastPlayed: Date.now(), cleared: {}, lastStage: 1 };
-    store.current = key;
-    writeStore(store);
-    currentKey = key;
-  }
-
-  function deleteUser(key) {
-    var store = readStore();
-    delete store.users[key];
-    if (store.current === key) store.current = null;
-    writeStore(store);
-  }
-
-  function clearedMap() {
-    var u = currentUser();
-    return (u && u.cleared) || {};
-  }
+  function clearedMap() { return readProgress().cleared; }
 
   function highestCleared() {
     var c = clearedMap(), max = 0;
@@ -293,7 +176,7 @@
   /* ============================================================
      5. 画面遷移
      ============================================================ */
-  var screens = { login: $('screen-login'), select: $('screen-select'), game: $('screen-game') };
+  var screens = { select: $('screen-select'), game: $('screen-game') };
 
   function show(name) {
     for (var k in screens) screens[k].classList.toggle('is-active', k === name);
@@ -309,93 +192,10 @@
   }
 
   /* ============================================================
-     6. ログイン画面
-     ============================================================ */
-  function renderLogin() {
-    var store = readStore();
-    var keys = Object.keys(store.users).sort(function (a, b) {
-      return (store.users[b].lastPlayed || 0) - (store.users[a].lastPlayed || 0);
-    });
-    var wrap = $('user-list-wrap');
-    var list = $('user-list');
-    list.innerHTML = '';
-    wrap.hidden = keys.length === 0;
-
-    keys.forEach(function (key) {
-      var u = store.users[key];
-      var done = Object.keys(u.cleared || {}).length;
-      var li = el('li');
-
-      var btn = el('button', 'user-row');
-      btn.type = 'button';
-      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('class', 'ic');
-      var use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-      use.setAttribute('href', '#ic-user');
-      svg.appendChild(use);
-      btn.appendChild(svg);
-
-      var nm = el('span', 'user-row-name');
-      nm.textContent = u.name;
-      btn.appendChild(nm);
-
-      var meta = el('span', 'user-row-meta');
-      meta.textContent = done + ' / ' + LEVELS.length + ' クリア';
-      btn.appendChild(meta);
-
-      btn.addEventListener('click', function () {
-        currentKey = key;
-        var s = readStore();
-        s.current = key;
-        writeStore(s);
-        openSelect();
-      });
-      li.appendChild(btn);
-
-      var del = el('button', 'user-del');
-      del.type = 'button';
-      del.textContent = '×';
-      del.setAttribute('aria-label', u.name + ' を削除');
-      del.addEventListener('click', function (ev) {
-        ev.stopPropagation();
-        if (window.confirm('「' + u.name + '」のデータを削除します。よろしいですか？')) {
-          deleteUser(key);
-          renderLogin();
-        }
-      });
-      li.appendChild(del);
-
-      list.appendChild(li);
-    });
-
-    $('register-error').textContent = '';
-    $('username-input').value = '';
-  }
-
-  $('register-form').addEventListener('submit', function (ev) {
-    ev.preventDefault();
-    var res = validateUserName($('username-input').value);
-    if (!res.ok) {
-      $('register-error').textContent = res.message;
-      return;
-    }
-    $('register-error').textContent = '';
-    createUser(res.name, res.key);
-    openSelect();
-  });
-
-  $('username-input').addEventListener('input', function () {
-    $('register-error').textContent = '';
-  });
-
-  /* ============================================================
      7. ステージ選択画面
      ============================================================ */
   function openSelect() {
-    var u = currentUser();
-    if (!u) { show('login'); renderLogin(); return; }
-    $('select-user').textContent = u.name;
-    var done = Object.keys(u.cleared || {}).length;
+    var done = Object.keys(clearedMap()).length;
     $('select-progress').textContent = 'クリア ' + done + ' / ' + LEVELS.length + '　（クリア時に自動保存）';
 
     var grid = $('stage-grid');
@@ -423,7 +223,7 @@
             btn.classList.add('is-cleared');
             var stars = el('span', 'stage-stars');
             for (var s = 1; s <= 3; s++) {
-              stars.innerHTML += '<svg class="ic' + (s <= rec.stars ? '' : ' off') + '"><use href="#ic-star"/></svg>';
+              stars.innerHTML += '<svg class="ic star' + (s <= rec.stars ? '' : ' off') + '"><use href="#ic-star"/></svg>';
             }
             btn.appendChild(stars);
           }
@@ -437,12 +237,6 @@
     show('select');
   }
 
-  $('select-back').addEventListener('click', function () {
-    currentKey = null;
-    var s = readStore(); s.current = null; writeStore(s);
-    renderLogin();
-    show('login');
-  });
   $('select-continue').addEventListener('click', function () { startStage(nextStage()); });
 
   /* ============================================================
@@ -472,7 +266,7 @@
       hints: 0
     };
     markPainted(lv.start);
-    saveUser(function (u) { u.lastStage = id; });
+    saveProgress(function (p) { p.lastStage = id; });
 
     $('level-label').textContent = 'Level ' + id;
     $('stat-best').textContent = lv.sol.length;
@@ -516,7 +310,20 @@
 
     boardEl.appendChild(hintEl);   // 盤面座標で位置決めするため board の子にする
     playerEl = el('div', 'player');
-    playerEl.innerHTML = '<span class="player-cap"></span><span class="player-body"></span>';
+    // 触角の生えた芋虫の顔
+    playerEl.innerHTML =
+      '<svg viewBox="0 0 100 100" aria-hidden="true">' +
+        '<g class="antenna">' +
+          '<path d="M38 44 C 30 30, 26 22, 22 14"/>' +
+          '<path d="M62 44 C 70 30, 74 22, 78 14"/>' +
+          '<circle cx="21" cy="11" r="7"/>' +
+          '<circle cx="79" cy="11" r="7"/>' +
+        '</g>' +
+        '<rect class="face" x="13" y="34" width="74" height="58" rx="21"/>' +
+        '<circle class="eye" cx="37" cy="58" r="6.5"/>' +
+        '<circle class="eye" cx="63" cy="58" r="6.5"/>' +
+        '<path class="mouth" d="M40 74 Q 50 82, 60 74"/>' +
+      '</svg>';
     boardEl.appendChild(playerEl);
     placePlayer(true);
   }
@@ -609,15 +416,14 @@
     });
 
     // ---- オートセーブ ----
-    saveUser(function (u) {
-      if (!u.cleared) u.cleared = {};
-      var prev = u.cleared[lv.id];
-      u.cleared[lv.id] = {
+    saveProgress(function (p) {
+      var prev = p.cleared[lv.id];
+      p.cleared[lv.id] = {
         stars: Math.max(stars, prev ? prev.stars : 0),
         moves: prev ? Math.min(used, prev.moves) : used,
         at: Date.now()
       };
-      u.lastStage = Math.min(lv.id + 1, LEVELS.length);
+      p.lastStage = Math.min(lv.id + 1, LEVELS.length);
     });
 
     setTimeout(function () {
@@ -625,6 +431,7 @@
       var starEls = $('clear-stars').querySelectorAll('.ic');
       for (var i = 0; i < starEls.length; i++) {
         starEls[i].classList.toggle('on', i < stars);
+        starEls[i].classList.toggle('off', i >= stars);
       }
       $('clear-detail').textContent = used + ' 手でクリア（最短 ' + opt + ' 手）'
         + (state.hints ? '　ヒント ' + state.hints + ' 回' : '');
@@ -638,6 +445,11 @@
     closeModal('modal-clear');
     if (id >= LEVELS.length) { openSelect(); return; }
     startStage(id + 1);
+  });
+  $('clear-retry').addEventListener('click', function () {
+    var id = state.lv.id;
+    closeModal('modal-clear');
+    startStage(id);
   });
   $('clear-select').addEventListener('click', function () {
     closeModal('modal-clear');
@@ -714,13 +526,6 @@
     closeModal('modal-pause');
     openSelect();
   });
-  $('pause-logout').addEventListener('click', function () {
-    closeModal('modal-pause');
-    currentKey = null;
-    var s = readStore(); s.current = null; writeStore(s);
-    renderLogin();
-    show('login');
-  });
 
   function openModal(id) { $(id).hidden = false; }
   function closeModal(id) { $(id).hidden = true; }
@@ -778,14 +583,7 @@
         + 'ステージデータ(levels.js)を読み込めませんでした。</p>';
       return;
     }
-    var store = readStore();
-    if (store.current && store.users[store.current]) {
-      currentKey = store.current;
-      openSelect();
-    } else {
-      renderLogin();
-      show('login');
-    }
+    openSelect();
   }
 
   boot();

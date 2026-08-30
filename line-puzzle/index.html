@@ -41,48 +41,14 @@
     <symbol id="ic-star" viewBox="0 0 24 24">
       <path d="m12 3.1 2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 17.13 6.5 20.02l1.05-6.12L3.1 9.57l6.15-.9Z"/>
     </symbol>
-    <symbol id="ic-user" viewBox="0 0 24 24">
-      <circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>
-    </symbol>
-    <symbol id="ic-exit" viewBox="0 0 24 24">
-      <path d="M14 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H14"/>
-      <polyline points="16,8.5 19.5,12 16,15.5"/><path d="M19.5 12H10"/>
-    </symbol>
-  </defs>
+          </defs>
 </svg>
-
-<!-- ============ ユーザー登録画面 ============ -->
-<section id="screen-login" class="screen is-active">
-  <div class="login-card">
-    <h1 class="title">ラインパズル</h1>
-    <p class="subtitle">まっすぐ進んで、すべてのマスを塗りつぶそう<br>一度通ったマスは、もう通れません</p>
-
-    <div id="user-list-wrap" class="user-list-wrap" hidden>
-      <h2 class="section-label">つづきから</h2>
-      <ul id="user-list" class="user-list"></ul>
-    </div>
-
-    <h2 class="section-label">新しく はじめる</h2>
-    <form id="register-form" autocomplete="off" novalidate>
-      <label class="field">
-        <span class="field-label">ユーザー名</span>
-        <input id="username-input" type="text" maxlength="12" placeholder="2〜12文字" inputmode="text" autocomplete="off" spellcheck="false">
-      </label>
-      <p id="register-error" class="error-text" role="alert" aria-live="polite"></p>
-      <button type="submit" class="btn btn-primary btn-block">登録してはじめる</button>
-    </form>
-    <p class="note">※ ユーザー名はこの端末のブラウザに保存されます。同じ名前は登録できません。</p>
-  </div>
-</section>
 
 <!-- ============ ステージ選択画面 ============ -->
 <section id="screen-select" class="screen">
   <header class="topbar">
-    <button class="icon-btn" id="select-back" type="button" aria-label="ユーザーを切り替える">
-      <svg class="ic"><use href="#ic-exit"/></svg>
-    </button>
     <div class="topbar-title">
-      <span id="select-user" class="topbar-user"></span>
+      <span class="topbar-user">ラインパズル</span>
       <span id="select-progress" class="topbar-sub"></span>
     </div>
     <button class="icon-btn" id="select-continue" type="button" aria-label="つづきのステージへ">
@@ -148,7 +114,6 @@
     <button class="btn btn-primary btn-block" id="pause-resume" type="button">つづける</button>
     <button class="btn btn-ghost btn-block" id="pause-restart" type="button">このステージをやり直す</button>
     <button class="btn btn-ghost btn-block" id="pause-select" type="button">ステージ選択へ</button>
-    <button class="btn btn-ghost btn-block" id="pause-logout" type="button">ユーザーを切り替える</button>
   </div>
 </div>
 
@@ -165,6 +130,7 @@
     <p class="clear-detail" id="clear-detail"></p>
     <p class="saved-note"><span class="dot"></span>自動保存しました</p>
     <button class="btn btn-primary btn-block" id="clear-next" type="button">次のステージへ</button>
+    <button class="btn btn-ghost btn-block" id="clear-retry" type="button">再チャレンジ</button>
     <button class="btn btn-ghost btn-block" id="clear-select" type="button">ステージ選択へ</button>
   </div>
 </div>
