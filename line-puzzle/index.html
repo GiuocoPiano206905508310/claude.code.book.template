@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#6e747c">
 <title>ラインパズル</title>
-<link rel="stylesheet" href="style.css?v=52d56c34d4">
+<link rel="stylesheet" href="style.css?v=22b9c16ab2">
 </head>
 <body>
 
@@ -74,13 +74,25 @@
     <button class="icon-btn" id="game-back" type="button" aria-label="ステージ選択へ">
       <svg class="ic"><use href="#ic-grid"/></svg>
     </button>
-    <div class="level-plate">
-      <span id="level-label">Level 1</span>
+    <div class="action-btns">
+      <button class="round-btn" id="btn-retry" type="button" aria-label="やり直す">
+        <svg class="ic"><use href="#ic-retry"/></svg>
+      </button>
+      <button class="round-btn" id="btn-hint" type="button" aria-label="ヒントを見る">
+        <svg class="ic"><use href="#ic-hint"/></svg>
+        <span class="badge" id="hint-badge">0</span>
+      </button>
     </div>
     <button class="icon-btn" id="btn-pause" type="button" aria-label="中断する">
       <svg class="ic"><use href="#ic-pause"/></svg>
     </button>
   </header>
+
+  <div class="level-row">
+    <div class="level-plate">
+      <span id="level-label">Level 1</span>
+    </div>
+  </div>
 
   <div class="stat-row">
     <span class="stat"><b id="stat-moves">0</b> 手</span>
@@ -100,19 +112,7 @@
     </div>
   </div>
 
-  <div class="pad-area">
-    <div class="action-btns">
-      <button class="round-btn" id="btn-retry" type="button" aria-label="やり直す">
-        <svg class="ic"><use href="#ic-retry"/></svg>
-      </button>
-      <button class="round-btn" id="btn-hint" type="button" aria-label="ヒントを見る">
-        <svg class="ic"><use href="#ic-hint"/></svg>
-        <span class="badge" id="hint-badge">0</span>
-      </button>
-    </div>
-  </div>
-
-  <p class="howto">スワイプ、または 矢印キー で移動</p>
+  <p class="howto">スワイプで移動</p>
 </section>
 
 <!-- ============ 中断モーダル ============ -->

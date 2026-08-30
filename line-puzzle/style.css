@@ -116,6 +116,8 @@ body {
 }
 .topbar-sub { display: block; font-size: 11.5px; opacity: .85; }
 
+/* Level のプレートは、操作ボタンの行(トップバー)の下に独立した行として置く */
+.level-row { display: flex; margin: 12px 0 8px; }
 .level-plate {
   flex: 1;
   height: 36px;
@@ -359,28 +361,23 @@ body {
   50% { opacity: 1; transform: scale(1.06); }
 }
 
-/* ---------- 操作パッド ---------- */
-/* 十字キーを廃止したぶん、盤面を大きく中央に取る。
-   やり直す・ヒントは左下のまま、少し下げて配置する。 */
-.pad-area {
-  display: flex; align-items: center; justify-content: flex-start;
-  margin-top: 10px;
-  padding: 0 4px 14px;
-}
-.action-btns { display: flex; gap: 14px; }
+/* ---------- 操作ボタン ---------- */
+/* やり直す・ヒントは最上段のトップバーに、ステージ選択・中断と並べて置く。
+   行の高さに収まるよう、丸ボタンは icon-btn より一回りだけ大きくする。 */
+.action-btns { flex: 1; display: flex; gap: 14px; justify-content: center; }
 .round-btn {
   position: relative;
-  width: 60px; height: 60px;
+  width: 46px; height: 46px;
   border: 0; border-radius: 50%;
   background: rgba(255,255,255,.94);
   color: var(--page-deep);
   display: grid; place-items: center;
   cursor: pointer;
-  box-shadow: 0 4px 0 rgba(0,0,0,.18);
+  box-shadow: 0 3px 0 rgba(0,0,0,.18);
   transition: transform .08s;
 }
-.round-btn .ic { width: 28px; height: 28px; }
-.round-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+.round-btn .ic { width: 23px; height: 23px; }
+.round-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.18); }
 .badge {
   position: absolute; right: -2px; top: -2px;
   min-width: 20px; height: 20px; padding: 0 5px;
@@ -525,7 +522,7 @@ body {
 }
 
 @media (max-height: 620px) {
-  .round-btn { width: 52px; height: 52px; }
-  .pad-area { padding-bottom: 8px; }
+  /* 縦が狭い端末では Level 行の余白を詰めて、盤面の取り分を増やす */
+  .level-row { margin: 8px 0 6px; }
   .howto { display: none; }
 }

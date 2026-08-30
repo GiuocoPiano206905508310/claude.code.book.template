@@ -186,19 +186,30 @@ chk(afterBack.moves === afterFirst.moves && afterBack.left === afterFirst.left,
 console.log('\n== ボタン配置と盤面の大きさ ==');
 const layout = await page.evaluate(() => {
   const act = document.querySelector('.action-btns').getBoundingClientRect();
+  const bar = document.querySelector('#screen-game .topbar').getBoundingClientRect();
+  const lv = document.querySelector('.level-row').getBoundingClientRect();
   const frame = document.getElementById('board-frame').getBoundingClientRect();
   const area = document.querySelector('.board-area').getBoundingClientRect();
   return {
     hasPad: !!document.querySelector('.dpad'),
-    actCx: act.left + act.width / 2, actBottom: act.bottom,
+    hasOldPadArea: !!document.querySelector('.pad-area'),
+    actCx: act.left + act.width / 2, actBottom: act.bottom, actTop: act.top,
+    barBottom: bar.bottom, lvTop: lv.top,
     frameCx: frame.left + frame.width / 2, frameCy: frame.top + frame.height / 2,
     areaCx: area.left + area.width / 2, areaCy: area.top + area.height / 2,
     frameW: frame.width, w: innerWidth, h: innerHeight,
+    howto: (document.querySelector('.howto') || {}).textContent || '',
   };
 });
 chk(!layout.hasPad, '十字ボタンは廃止されている');
-chk(layout.actCx < layout.w / 2, `やり直す・ヒントが左下 (中心x=${Math.round(layout.actCx)} < ${Math.round(layout.w / 2)})`);
-chk(layout.actBottom > layout.h * 0.8, `やり直す・ヒントが画面下部 (下端y=${Math.round(layout.actBottom)} > ${Math.round(layout.h * 0.8)})`);
+chk(!layout.hasOldPadArea, '画面下の操作パッドは廃止されている');
+chk(layout.actBottom <= layout.barBottom + 1,
+    `やり直す・ヒントが最上段(トップバー内)にある (下端y=${Math.round(layout.actBottom)} <= バー下端${Math.round(layout.barBottom)})`);
+chk(Math.abs(layout.actCx - layout.w / 2) < 12,
+    `やり直す・ヒントが横中央にある (中心x=${Math.round(layout.actCx)} ≒ ${Math.round(layout.w / 2)})`);
+chk(layout.lvTop >= layout.barBottom,
+    `Level はトップバーより下の行にある (Level上端=${Math.round(layout.lvTop)} >= バー下端=${Math.round(layout.barBottom)})`);
+chk(!/矢印キー/.test(layout.howto), `案内文に矢印キーの記載がない ("${layout.howto.trim()}")`);
 chk(Math.abs(layout.frameCx - layout.areaCx) < 2 && Math.abs(layout.frameCy - layout.areaCy) < 2,
     '盤面が表示領域の中央にある');
 chk(layout.frameW > layout.w * 0.82, `盤面が画面幅を活かしている (幅=${Math.round(layout.frameW)} / ${layout.w})`);
