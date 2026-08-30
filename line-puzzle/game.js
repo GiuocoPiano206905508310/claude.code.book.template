@@ -293,6 +293,9 @@
     paintTimers = [];
     boardEl.innerHTML = '';
     boardEl.style.gridTemplateColumns = 'repeat(' + lv.w + ', var(--cell))';
+    // ステージ帯ごとに葉色を切り替える（1-10若葉/11-20深緑/21-30黄葉/31-40紅葉/41-50枯葉）
+    for (var bi = 1; bi <= 5; bi++) boardEl.classList.remove('leaf-band-' + bi);
+    boardEl.classList.add('leaf-band-' + Math.min(5, Math.ceil(lv.id / 10)));
     cellEls = new Array(lv.n);
 
     for (var y = 0; y < lv.h; y++) {

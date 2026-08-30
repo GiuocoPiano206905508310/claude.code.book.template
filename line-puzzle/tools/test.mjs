@@ -325,6 +325,40 @@ await page.click('#btn-retry'); await page.waitForTimeout(300);
   chk(collapsed, `移動完了後は胴体が縮んで消える (matrix=${m ? m[1] + ',' + m[2] : after})`);
 }
 
+console.log('\n== ステージ帯ごとの葉色 ==');
+{
+  const bandChecks = [
+    { idx: 0,  band: 1, color: 'rgb(139, 195, 74)', label: 'Level 1 (若葉)' },
+    { idx: 10, band: 2, color: 'rgb(63, 143, 69)',  label: 'Level 11 (深緑)' },
+    { idx: 20, band: 3, color: 'rgb(224, 181, 42)', label: 'Level 21 (黄葉)' },
+    { idx: 30, band: 4, color: 'rgb(193, 68, 60)',  label: 'Level 31 (紅葉)' },
+    { idx: 40, band: 5, color: 'rgb(138, 98, 64)',  label: 'Level 41 (枯葉)' },
+  ];
+  await page.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('linePuzzle.progress.v1') || '{"cleared":{}}');
+    for (let i = 1; i <= 49; i++) d.cleared[i] = { stars: 3, moves: 9, at: Date.now() };
+    d.lastStage = 50;
+    localStorage.setItem('linePuzzle.progress.v1', JSON.stringify(d));
+  });
+  await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(250);
+  for (const bc of bandChecks) {
+    await page.evaluate(i => document.querySelectorAll('.stage-btn')[i].click(), bc.idx);
+    await page.waitForSelector('#screen-game.is-active');
+    await page.waitForTimeout(250);
+    const got = await page.evaluate(() => {
+      const cell = document.querySelector('.cell:not(.is-wall):not(.is-filled)');
+      return cell ? getComputedStyle(cell).backgroundColor : null;
+    });
+    chk(got === bc.color, `${bc.label} は帯${bc.band}の色 (期待 ${bc.color} / 実際 ${got})`);
+    const hasVeins = await page.evaluate(() => {
+      const cell = document.querySelector('.cell:not(.is-wall):not(.is-filled)');
+      return cell && getComputedStyle(cell).backgroundImage.includes('svg+xml');
+    });
+    chk(hasVeins, `${bc.label} に葉脈が描かれている`);
+    await page.click('#game-back'); await page.waitForTimeout(200);
+  }
+}
+
 console.log('\n== アイコンがモノクロか ==');
 const colors = await page.evaluate(() => ['btn-retry', 'btn-pause', 'btn-hint'].map(id => {
   const s = getComputedStyle(document.getElementById(id).querySelector('.ic'));
