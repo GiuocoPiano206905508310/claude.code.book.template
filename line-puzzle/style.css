@@ -202,14 +202,15 @@ body {
   75% { transform: translateX(5px); }
 }
 
-/* 未通過のマス＝葉っぱ1枚。マスいっぱいに主脈と側脈を描く。
-   向きは全マス揃える（回した葉は横倒しに見えて雑然とするため）。
-   緑・灰（ブロック）・紫（通過済み）の区別が鈍らないよう、葉脈は落ち着いた濃さにしている。 */
+/* 未通過のマス＝葉っぱ1枚。左下から右上への斜め主脈（太め）と、
+   右下から左上への斜め副脈（細め）を交差させ、傾いたひし形格子の葉脈にする。
+   向きは全マス揃える。緑・灰（ブロック）・紫（通過済み）の区別が鈍らないよう、
+   葉脈は落ち着いた濃さにしている。 */
 .cell {
   width: var(--cell); height: var(--cell);
   position: relative;
   background-color: var(--cell-empty);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg transform='rotate%280 50 50%29'%3E%3Cpath d='M50 99 L50 1' fill='none' stroke='rgba%2816,58,21,.34%29' stroke-width='5' stroke-linecap='round'/%3E%3Cg fill='none' stroke='rgba%2816,58,21,.26%29' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M50 86Q30 82 6 63'/%3E%3Cpath d='M50 86Q70 82 94 63'/%3E%3Cpath d='M50 65Q32 61 10 44'/%3E%3Cpath d='M50 65Q68 61 90 44'/%3E%3Cpath d='M50 45Q35 42 19 28'/%3E%3Cpath d='M50 45Q65 42 81 28'/%3E%3Cpath d='M50 27Q41 25 30 15'/%3E%3Cpath d='M50 27Q59 25 70 15'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"), linear-gradient(150deg, rgba(255,255,255,.14), rgba(0,0,0,.10));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cg stroke='rgba%2814,54,19,.36%29' stroke-width='6'%3E%3Cpath d='M-60 100 L40 0'/%3E%3Cpath d='M20 100 L120 0'/%3E%3Cpath d='M100 100 L200 0'/%3E%3C/g%3E%3Cg stroke='rgba%2814,54,19,.20%29' stroke-width='3.4'%3E%3Cpath d='M-60 0 L40 100'/%3E%3Cpath d='M20 0 L120 100'/%3E%3Cpath d='M100 0 L200 100'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"), linear-gradient(150deg, rgba(255,255,255,.14), rgba(0,0,0,.10));
   background-size: 100% 100%;
   background-repeat: no-repeat;
   /* 1マスずつが別の葉に見えるよう、輪郭をうっすら付ける */
@@ -261,6 +262,26 @@ body {
 .player .eye { fill: #2b2b2b; }
 .player .mouth {
   fill: none; stroke: #2b2b2b; stroke-width: 5; stroke-linecap: round;
+}
+
+/* 移動中に伸びる芋虫の胴体。マス1つぶんごとに区切り線（縦線）を入れる。
+   移動が終わると即座に縮めて消し、静止時は顔だけが残るようにする。 */
+.player-stretch {
+  position: absolute;
+  left: 0; top: 0;
+  width: var(--cell); height: var(--cell);
+  z-index: 2;              /* 顔(3)より背面、盤面(1)より前面 */
+  pointer-events: none;
+  background-color: rgba(91,53,182,.30);
+  transform: scaleX(0);
+}
+.player-stretch.dir-h {
+  background-image: repeating-linear-gradient(to right,
+    rgba(255,255,255,.65) 0 2px, transparent 2px var(--cell));
+}
+.player-stretch.dir-v {
+  background-image: repeating-linear-gradient(to bottom,
+    rgba(255,255,255,.65) 0 2px, transparent 2px var(--cell));
 }
 
 .hint-arrow {

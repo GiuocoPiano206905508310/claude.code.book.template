@@ -296,6 +296,35 @@ await page.waitForTimeout(300);
       `葉のマスとブロックの色が別 (${leaf.openColor} / ${leaf.wallColor})`);
 }
 
+console.log('\n== 移動中に伸びる胴体 ==');
+await page.click('#btn-retry'); await page.waitForTimeout(300);
+{
+  const dir = await page.evaluate(id => window.LEVELS[id - 1].sol[0],
+    parseInt((await page.textContent('#level-label')).replace(/\D/g, ''), 10));
+  const before = await page.evaluate(() => getComputedStyle(document.getElementById('player-stretch')).transform);
+  await page.keyboard.down(KEY[dir]);
+  await page.keyboard.up(KEY[dir]);
+  await page.waitForTimeout(30);
+  const mid = await page.evaluate(() => {
+    const el = document.getElementById('player-stretch');
+    const cs = getComputedStyle(el);
+    return { cls: el.className, transform: cs.transform, bg: cs.backgroundImage };
+  });
+  chk(before.includes('matrix') ? before.match(/matrix\(([^,]+)/)[1].trim() === '0'
+      : true, '静止時は胴体が縮んでいる（初期状態）');
+  chk(mid.cls.includes('dir-h') || mid.cls.includes('dir-v'),
+      `移動方向のクラスが付く (${mid.cls})`);
+  chk(mid.bg.includes('gradient'), '区切り線(縦線/横線)の背景が設定されている');
+  await page.waitForTimeout(2500);   // 手数の多い移動でも確実に完了するまで待つ
+  const after = await page.evaluate(() =>
+    getComputedStyle(document.getElementById('player-stretch')).transform);
+  // matrix(scaleX, 0, 0, scaleY, 0, 0)。横移動は scaleX(0) だけを、
+  // 縦移動は scaleY(0) だけを倒すので、進んだ軸のほうを見る（もう一方は1のまま）。
+  const m = after.match(/matrix\(([^,]+),[^,]+,[^,]+,([^,]+),/);
+  const collapsed = m && (Math.abs(parseFloat(m[1])) < 0.01 || Math.abs(parseFloat(m[2])) < 0.01);
+  chk(collapsed, `移動完了後は胴体が縮んで消える (matrix=${m ? m[1] + ',' + m[2] : after})`);
+}
+
 console.log('\n== アイコンがモノクロか ==');
 const colors = await page.evaluate(() => ['btn-retry', 'btn-pause', 'btn-hint'].map(id => {
   const s = getComputedStyle(document.getElementById(id).querySelector('.ic'));

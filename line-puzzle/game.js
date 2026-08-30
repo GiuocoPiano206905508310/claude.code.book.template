@@ -250,6 +250,7 @@
   var boardEl = $('board');
   // board.innerHTML の初期化で失われないよう参照を保持しておく
   var hintEl = $('hint-arrow');
+  var stretchEl = $('player-stretch');   // 移動中に伸びる胴体
   var hintTimer = null;
   var paintTimers = [];
 
@@ -309,6 +310,9 @@
     }
 
     boardEl.appendChild(hintEl);   // 盤面座標で位置決めするため board の子にする
+    boardEl.appendChild(stretchEl);
+    stretchEl.style.transitionDuration = '0ms';
+    stretchEl.style.transform = 'scaleX(0)';
     playerEl = el('div', 'player');
     // 触角の生えた芋虫の顔
     playerEl.innerHTML =
@@ -355,6 +359,39 @@
     $('stat-left').textContent = state.lv.n - state.count;
   }
 
+  /**
+   * 移動方向へ胴体を伸ばす演出。始点のマスを固定端として、顔の移動と同じ
+   * 時間(dur)をかけて scaleX/scaleY を 0→1 にする。背景に1マス間隔の区切り線
+   * （縦線）を敷き、胴体が節に分かれて伸びていくように見せる。移動終了時に
+   * 呼び出し側で瞬時に縮めて消す（静止時は顔だけが残る）。
+   */
+  function stretchBody(fromCell, toCell, horiz, d, dur) {
+    stretchEl.className = 'player-stretch ' + (horiz ? 'dir-h' : 'dir-v');
+    if (horiz) {
+      var left = Math.min(fromCell.x, toCell.x);
+      var wCells = Math.abs(toCell.x - fromCell.x) + 1;
+      stretchEl.style.left = 'calc(var(--cell) * ' + left + ')';
+      stretchEl.style.top = 'calc(var(--cell) * ' + fromCell.y + ')';
+      stretchEl.style.width = 'calc(var(--cell) * ' + wCells + ')';
+      stretchEl.style.height = 'var(--cell)';
+      stretchEl.style.transformOrigin = (d === 3 ? '0% 50%' : '100% 50%');   // R: 左端起点 / L: 右端起点
+    } else {
+      var top = Math.min(fromCell.y, toCell.y);
+      var hCells = Math.abs(toCell.y - fromCell.y) + 1;
+      stretchEl.style.top = 'calc(var(--cell) * ' + top + ')';
+      stretchEl.style.left = 'calc(var(--cell) * ' + fromCell.x + ')';
+      stretchEl.style.height = 'calc(var(--cell) * ' + hCells + ')';
+      stretchEl.style.width = 'var(--cell)';
+      stretchEl.style.transformOrigin = (d === 1 ? '50% 0%' : '50% 100%');   // D: 上端起点 / U: 下端起点
+    }
+    stretchEl.style.transitionDuration = '0ms';
+    stretchEl.style.transform = horiz ? 'scaleX(0)' : 'scaleY(0)';
+    requestAnimationFrame(function () {
+      stretchEl.style.transitionDuration = dur + 'ms';
+      stretchEl.style.transform = horiz ? 'scaleX(1)' : 'scaleY(1)';
+    });
+  }
+
   /* ---------- 移動 ---------- */
   function move(d) {
     if (!state) return;
@@ -369,8 +406,10 @@
     }
     hideHint();
     busy = true;
+    var fromCell = state.lv.cells[state.pos];   // 伸びる胴体の起点（移動前のマス）
     state.moves.push(DCH.charAt(d));
     state.pos = path[path.length - 1];
+    var toCell = state.lv.cells[state.pos];
 
     var steps = path.length;
     var per = Math.max(42, Math.min(96, 300 / steps));
@@ -379,6 +418,9 @@
     playerEl.style.transitionDuration = dur + 'ms';
     // 次フレームで transform を適用（duration 変更を確実に反映させる）
     requestAnimationFrame(function () { placePlayer(false); });
+
+    var horiz = (d === 2 || d === 3);   // L・R なら横方向
+    stretchBody(fromCell, toCell, horiz, d, dur);
 
     path.forEach(function (ci, k) {
       paintTimers.push(setTimeout(function () {
@@ -390,6 +432,8 @@
     paintTimers.push(setTimeout(function () {
       busy = false;
       updateStats();
+      stretchEl.style.transitionDuration = '0ms';
+      stretchEl.style.transform = horiz ? 'scaleX(0)' : 'scaleY(0)';
       if (state.count === state.lv.n) {
         pending = null;
         onClear();
