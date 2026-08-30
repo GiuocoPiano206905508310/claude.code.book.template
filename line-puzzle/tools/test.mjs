@@ -199,6 +199,10 @@ const layout = await page.evaluate(() => {
     areaCx: area.left + area.width / 2, areaCy: area.top + area.height / 2,
     frameW: frame.width, w: innerWidth, h: innerHeight,
     howto: (document.querySelector('.howto') || {}).textContent || '',
+    // 上のバーのボタンを左から並べた順
+    barOrder: Array.from(document.querySelectorAll('#screen-game .topbar button'))
+      .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)
+      .map(b => b.id),
   };
 });
 chk(!layout.hasPad, '十字ボタンは廃止されている');
@@ -210,6 +214,11 @@ chk(Math.abs(layout.actCx - layout.w / 2) < 12,
 chk(layout.lvTop >= layout.barBottom,
     `Level はトップバーより下の行にある (Level上端=${Math.round(layout.lvTop)} >= バー下端=${Math.round(layout.barBottom)})`);
 chk(!/矢印キー/.test(layout.howto), `案内文に矢印キーの記載がない ("${layout.howto.trim()}")`);
+{
+  const want = ['game-back', 'game-help', 'btn-hint', 'btn-retry', 'btn-pause'];
+  chk(layout.barOrder.join(',') === want.join(','),
+      `上のバーが ステージ選択→遊び方→ヒント→やり直す→中断 の順 (実際: ${layout.barOrder.join(' → ')})`);
+}
 chk(Math.abs(layout.frameCx - layout.areaCx) < 2 && Math.abs(layout.frameCy - layout.areaCy) < 2,
     '盤面が表示領域の中央にある');
 chk(layout.frameW > layout.w * 0.82, `盤面が画面幅を活かしている (幅=${Math.round(layout.frameW)} / ${layout.w})`);
@@ -430,6 +439,32 @@ console.log('\n== 遊び方（？）ボタンとチュートリアルの見返�
   chk(await page.isVisible('#modal-tutorial'), '？ボタンでチュートリアルが開く');
   const dotCount = await page.evaluate(() => document.querySelectorAll('#tut-dots span').length);
   chk(dotCount === 4, `チュートリアルが4ステップ (実際: ${dotCount})`);
+
+  // STEP2 の「！」が盤面の外にはみ出していないか（はみ出すと縁で見切れる）
+  await page.click('#tut-next'); await page.waitForTimeout(180);
+  const mark = await page.evaluate(() => {
+    const cells = document.querySelectorAll('#tut-board .cell');
+    for (const c of cells) {
+      const d = c.firstElementChild;
+      if (d && d.textContent === '!') {
+        const m = d.getBoundingClientRect(), cell = c.getBoundingClientRect();
+        const board = document.querySelector('#tut-board .board').getBoundingClientRect();
+        return {
+          insideCell: m.left >= cell.left - 0.5 && m.right <= cell.right + 0.5 &&
+                      m.top >= cell.top - 0.5 && m.bottom <= cell.bottom + 0.5,
+          insideBoard: m.left >= board.left - 0.5 && m.right <= board.right + 0.5 &&
+                       m.top >= board.top - 0.5 && m.bottom <= board.bottom + 0.5,
+          centered: Math.abs((m.left + m.right) / 2 - (cell.left + cell.right) / 2) < 1.5,
+        };
+      }
+    }
+    return null;
+  });
+  chk(!!mark && mark.insideCell, 'STEP2 の「！」がマスの内側に収まっている');
+  chk(!!mark && mark.insideBoard, 'STEP2 の「！」が盤面からはみ出さない（見切れない）');
+  chk(!!mark && mark.centered, 'STEP2 の「！」がマスの横中央にある');
+  await page.click('#tut-prev'); await page.waitForTimeout(150);
+
   for (let i = 0; i < 3; i++) { await page.click('#tut-next'); await page.waitForTimeout(120); }
   const okText = await page.evaluate(() => document.getElementById('tut-next').textContent);
   chk(okText === 'OK', `最終ステップでOKボタンになる (実際: "${okText}")`);

@@ -708,7 +708,8 @@
           c.innerHTML = '<div class="player" style="position:absolute;inset:0;width:100%;height:100%">' + PLAYER_FACE_SVG + '</div>';
         }
         if (ch === 'T') {
-          c.innerHTML = '<div style="position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;' +
+          // マスの内側(上段中央)に置く。外側だと盤面の縁で切れて見切れてしまう
+          c.innerHTML = '<div style="position:absolute;top:3px;left:calc(50% - 9px);width:18px;height:18px;border-radius:50%;' +
             'background:#fff;color:var(--accent);font-size:12px;font-weight:800;display:grid;place-items:center;' +
             'box-shadow:0 2px 4px rgba(0,0,0,.3);animation:tutpulse 1.1s ease-in-out infinite">!</div>';
         }
@@ -813,7 +814,9 @@
     }
   }
 
+  // ステージ選択画面とプレイ画面、どちらの「？」からも同じ内容を開ける
   $('select-help').addEventListener('click', openTutorial);
+  $('game-help').addEventListener('click', openTutorial);
 
   /* ============================================================
      10. 起動

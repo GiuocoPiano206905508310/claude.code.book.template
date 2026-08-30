@@ -362,9 +362,10 @@ body {
 }
 
 /* ---------- 操作ボタン ---------- */
-/* やり直す・ヒントは最上段のトップバーに、ステージ選択・中断と並べて置く。
-   行の高さに収まるよう、丸ボタンは icon-btn より一回りだけ大きくする。 */
-.action-btns { flex: 1; display: flex; gap: 14px; justify-content: center; }
+/* 遊び方・ヒント・やり直すは最上段のトップバーに、ステージ選択・中断と並べて置く。
+   行の高さに収まるよう、丸ボタンは icon-btn より一回りだけ大きくする。
+   3つ並ぶので、狭い端末でも収まるよう間隔は詰めている。 */
+.action-btns { flex: 1; display: flex; gap: 10px; justify-content: center; }
 .round-btn {
   position: relative;
   width: 46px; height: 46px;
