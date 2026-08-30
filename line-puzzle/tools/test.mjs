@@ -249,6 +249,38 @@ chk(starInfo.color === 'rgb(242, 183, 5)', `星が黄色 (${starInfo.color})`);
 chk(starInfo.useFill === 'rgb(242, 183, 5)', `星が塗りつぶし (fill=${starInfo.useFill})`);
 chk(parseFloat(starInfo.offOpacity) < 0.5, `未獲得の星は薄く表示 (opacity=${starInfo.offOpacity})`);
 
+console.log('\n== 葉っぱの背景 ==');
+await page.evaluate(() => document.querySelectorAll('.stage-btn:not(.is-locked)')[0].click());
+await page.waitForSelector('#screen-game.is-active');
+await page.waitForTimeout(300);
+{
+  // 1手進めて、通過済み・ブロック・未通過の3種類を同時に見られる状態にする
+  const first = await page.evaluate(() => window.LEVELS[0].sol[0]);
+  await page.keyboard.press(KEY[first]); await page.waitForTimeout(500);
+  const leaf = await page.evaluate(() => {
+    const all = Array.from(document.querySelectorAll('.cell'));
+    const bg = e => getComputedStyle(e).backgroundImage;
+    const open = all.filter(c => !c.classList.contains('is-wall') && !c.classList.contains('is-filled'));
+    const walls = all.filter(c => c.classList.contains('is-wall'));
+    const filled = all.filter(c => c.classList.contains('is-filled'));
+    return {
+      openCount: open.length,
+      openAllLeaf: open.every(c => bg(c).includes('data:image/svg+xml')),
+      variants: new Set(open.map(bg)).size,
+      wallsClean: walls.length > 0 && walls.every(c => bg(c) === 'none'),
+      filledClean: filled.length > 0 && filled.every(c => bg(c) === 'none'),
+      openColor: open[0] && getComputedStyle(open[0]).backgroundColor,
+      wallColor: walls[0] && getComputedStyle(walls[0]).backgroundColor,
+    };
+  });
+  chk(leaf.openAllLeaf, `未通過のマスすべてに葉が描かれている (${leaf.openCount}マス)`);
+  chk(leaf.variants >= 2, `葉の向きが複数ある (${leaf.variants}種類)`);
+  chk(leaf.wallsClean, 'お邪魔ブロックには葉が乗らない');
+  chk(leaf.filledClean, '通過済みのマスには葉が乗らない');
+  chk(leaf.openColor !== leaf.wallColor,
+      `葉のマスとブロックの色が別 (${leaf.openColor} / ${leaf.wallColor})`);
+}
+
 console.log('\n== アイコンがモノクロか ==');
 const colors = await page.evaluate(() => ['btn-retry', 'btn-pause', 'btn-hint'].map(id => {
   const s = getComputedStyle(document.getElementById(id).querySelector('.ic'));

@@ -302,6 +302,7 @@
           c.classList.add('is-wall');   // 緑のブロック＝進入できないマス
         } else {
           cellEls[i] = c;
+          c.classList.add('leaf' + ((x + y * 2) % 4));   // 葉の向きを散らす
           if (state.painted[i]) c.classList.add('is-filled');
         }
         boardEl.appendChild(c);
