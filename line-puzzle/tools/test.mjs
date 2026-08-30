@@ -289,7 +289,7 @@ await page.waitForTimeout(300);
     };
   });
   chk(leaf.openAllLeaf, `未通過のマスすべてに葉が描かれている (${leaf.openCount}マス)`);
-  chk(leaf.variants >= 2, `葉の向きが複数ある (${leaf.variants}種類)`);
+  chk(leaf.variants === 1, `葉の向きが揃っている (${leaf.variants}種類)`);
   chk(leaf.wallsClean, 'お邪魔ブロックには葉が乗らない');
   chk(leaf.filledClean, '通過済みのマスには葉が乗らない');
   chk(leaf.openColor !== leaf.wallColor,

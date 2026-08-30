@@ -202,22 +202,20 @@ body {
   75% { transform: translateX(5px); }
 }
 
-/* 未通過のマスは葉っぱ。芋虫が食べ進むイメージ。
-   4方向ぶんの葉を用意し、マスの位置で振り分けて単調な繰り返しを避ける。
-   緑・灰（ブロック）・紫（通過済み）の区別が鈍らないよう、葉脈は低コントラストにしている。 */
+/* 未通過のマス＝葉っぱ1枚。マスいっぱいに主脈と側脈を描く。
+   向きは全マス揃える（回した葉は横倒しに見えて雑然とするため）。
+   緑・灰（ブロック）・紫（通過済み）の区別が鈍らないよう、葉脈は落ち着いた濃さにしている。 */
 .cell {
   width: var(--cell); height: var(--cell);
   position: relative;
   background-color: var(--cell-empty);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='rotate%2810 50 50%29'%3E%3Cpath d='M22 78C22 46 46 22 78 22C78 54 54 78 22 78Z' fill='rgba%28255,255,255,.07%29' stroke='rgba%2818,64,23,.22%29' stroke-width='3.2'/%3E%3Cpath d='M22 78L78 22' stroke='rgba%2818,64,23,.30%29' stroke-width='4.4' stroke-linecap='round' fill='none'/%3E%3Cg stroke='rgba%2818,64,23,.22%29' stroke-width='3.2' stroke-linecap='round' fill='none'%3E%3Cpath d='M35 65L37 47'/%3E%3Cpath d='M35 65L53 63'/%3E%3Cpath d='M48 52L50 36'/%3E%3Cpath d='M48 52L66 50'/%3E%3Cpath d='M60 40L62 29'/%3E%3Cpath d='M60 40L71 38'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  background-size: 112% 112%;
-  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg transform='rotate%280 50 50%29'%3E%3Cpath d='M50 99 L50 1' fill='none' stroke='rgba%2816,58,21,.34%29' stroke-width='5' stroke-linecap='round'/%3E%3Cg fill='none' stroke='rgba%2816,58,21,.26%29' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M50 86Q30 82 6 63'/%3E%3Cpath d='M50 86Q70 82 94 63'/%3E%3Cpath d='M50 65Q32 61 10 44'/%3E%3Cpath d='M50 65Q68 61 90 44'/%3E%3Cpath d='M50 45Q35 42 19 28'/%3E%3Cpath d='M50 45Q65 42 81 28'/%3E%3Cpath d='M50 27Q41 25 30 15'/%3E%3Cpath d='M50 27Q59 25 70 15'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"), linear-gradient(150deg, rgba(255,255,255,.14), rgba(0,0,0,.10));
+  background-size: 100% 100%;
   background-repeat: no-repeat;
-  box-shadow: inset 0 -2px 0 rgba(0,0,0,.10);
+  /* 1マスずつが別の葉に見えるよう、輪郭をうっすら付ける */
+  box-shadow: inset 0 0 0 1.5px rgba(16,58,21,.16), inset 0 -3px 0 rgba(0,0,0,.08);
 }
-.cell.leaf1 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='rotate%2884 50 50%29'%3E%3Cpath d='M22 78C22 46 46 22 78 22C78 54 54 78 22 78Z' fill='rgba%28255,255,255,.07%29' stroke='rgba%2818,64,23,.22%29' stroke-width='3.2'/%3E%3Cpath d='M22 78L78 22' stroke='rgba%2818,64,23,.30%29' stroke-width='4.4' stroke-linecap='round' fill='none'/%3E%3Cg stroke='rgba%2818,64,23,.22%29' stroke-width='3.2' stroke-linecap='round' fill='none'%3E%3Cpath d='M35 65L37 47'/%3E%3Cpath d='M35 65L53 63'/%3E%3Cpath d='M48 52L50 36'/%3E%3Cpath d='M48 52L66 50'/%3E%3Cpath d='M60 40L62 29'/%3E%3Cpath d='M60 40L71 38'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
-.cell.leaf2 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='rotate%28190 50 50%29'%3E%3Cpath d='M22 78C22 46 46 22 78 22C78 54 54 78 22 78Z' fill='rgba%28255,255,255,.07%29' stroke='rgba%2818,64,23,.22%29' stroke-width='3.2'/%3E%3Cpath d='M22 78L78 22' stroke='rgba%2818,64,23,.30%29' stroke-width='4.4' stroke-linecap='round' fill='none'/%3E%3Cg stroke='rgba%2818,64,23,.22%29' stroke-width='3.2' stroke-linecap='round' fill='none'%3E%3Cpath d='M35 65L37 47'/%3E%3Cpath d='M35 65L53 63'/%3E%3Cpath d='M48 52L50 36'/%3E%3Cpath d='M48 52L66 50'/%3E%3Cpath d='M60 40L62 29'/%3E%3Cpath d='M60 40L71 38'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
-.cell.leaf3 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='rotate%28264 50 50%29'%3E%3Cpath d='M22 78C22 46 46 22 78 22C78 54 54 78 22 78Z' fill='rgba%28255,255,255,.07%29' stroke='rgba%2818,64,23,.22%29' stroke-width='3.2'/%3E%3Cpath d='M22 78L78 22' stroke='rgba%2818,64,23,.30%29' stroke-width='4.4' stroke-linecap='round' fill='none'/%3E%3Cg stroke='rgba%2818,64,23,.22%29' stroke-width='3.2' stroke-linecap='round' fill='none'%3E%3Cpath d='M35 65L37 47'/%3E%3Cpath d='M35 65L53 63'/%3E%3Cpath d='M48 52L50 36'/%3E%3Cpath d='M48 52L66 50'/%3E%3Cpath d='M60 40L62 29'/%3E%3Cpath d='M60 40L71 38'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+
 .cell.is-wall {
   background-image: none;
   background-color: var(--wall);
