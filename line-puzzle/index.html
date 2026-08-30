@@ -55,7 +55,7 @@
 <section id="screen-login" class="screen is-active">
   <div class="login-card">
     <h1 class="title">ラインパズル</h1>
-    <p class="subtitle">まっすぐ進んで、すべてのマスを塗りつぶそう</p>
+    <p class="subtitle">まっすぐ進んで、すべてのマスを塗りつぶそう<br>一度通ったマスは、もう通れません</p>
 
     <div id="user-list-wrap" class="user-list-wrap" hidden>
       <h2 class="section-label">つづきから</h2>
@@ -126,13 +126,6 @@
   </div>
 
   <div class="pad-area">
-    <div class="dpad">
-      <button class="pad-btn pad-u" data-dir="U" type="button" aria-label="上へ進む"></button>
-      <button class="pad-btn pad-l" data-dir="L" type="button" aria-label="左へ進む"></button>
-      <button class="pad-btn pad-r" data-dir="R" type="button" aria-label="右へ進む"></button>
-      <button class="pad-btn pad-d" data-dir="D" type="button" aria-label="下へ進む"></button>
-      <span class="dpad-core"></span>
-    </div>
     <div class="action-btns">
       <button class="round-btn" id="btn-retry" type="button" aria-label="やり直す">
         <svg class="ic"><use href="#ic-retry"/></svg>
@@ -141,6 +134,13 @@
         <svg class="ic"><use href="#ic-hint"/></svg>
         <span class="badge" id="hint-badge">0</span>
       </button>
+    </div>
+    <div class="dpad">
+      <button class="pad-btn pad-u" data-dir="U" type="button" aria-label="上へ進む"></button>
+      <button class="pad-btn pad-l" data-dir="L" type="button" aria-label="左へ進む"></button>
+      <button class="pad-btn pad-r" data-dir="R" type="button" aria-label="右へ進む"></button>
+      <button class="pad-btn pad-d" data-dir="D" type="button" aria-label="下へ進む"></button>
+      <span class="dpad-core"></span>
     </div>
   </div>
 
@@ -173,6 +173,16 @@
     <p class="saved-note"><span class="dot"></span>自動保存しました</p>
     <button class="btn btn-primary btn-block" id="clear-next" type="button">次のステージへ</button>
     <button class="btn btn-ghost btn-block" id="clear-select" type="button">ステージ選択へ</button>
+  </div>
+</div>
+
+<!-- ============ 行き止まり ============ -->
+<div id="modal-stuck" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="stuck-title">
+    <h2 id="stuck-title" class="modal-title">行き止まり</h2>
+    <p class="modal-text">通ったマスは二度通れません。<br>この配置では残りのマスを塗れなくなりました。</p>
+    <button class="btn btn-primary btn-block" id="stuck-retry" type="button">はじめからやり直す</button>
+    <button class="btn btn-ghost btn-block" id="stuck-select" type="button">ステージ選択へ</button>
   </div>
 </div>
 

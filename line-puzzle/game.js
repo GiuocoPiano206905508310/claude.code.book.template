@@ -1,7 +1,7 @@
 /* ============================================================
    ラインパズル — まっすぐ進んで全マスを塗りつぶすパズル
-   ・直線にしか進めない（壁に当たるまで滑る）
-   ・すべてのマスを塗ればクリア
+   ・壁・盤面の端・すでに通ったマス に当たるまで直進する
+   ・すべてのマスを塗ればクリア（同じマスは二度通れない）
    ・全50ステージ / ユーザー名登録 / クリア時オートセーブ
    ============================================================ */
 (function () {
@@ -16,6 +16,7 @@
   ];
   var DCH = 'UDLR';
   var STORE_KEY = 'linePuzzle.save.v1';
+  var SOLVE_BUDGET = 400000;   // ソルバーが辿るノード数の上限
 
   var LEVELS = window.LEVELS || [];
 
@@ -96,7 +97,7 @@
     'くそ', 'ちんげ', 'びっち', 'ぱいずり', 'いんらん', 'ぶさいく', 'でぶ',
     'しね', 'ころす', 'ころして', 'じさつ', 'きちがい', 'きしょい', 'ばか', 'あほ',
     'まぬけ', 'ぶす', 'ごみくず', 'くたばれ', 'ぶっころ',
-    'きちがい', 'めくら', 'つんぼ', 'びっこ', 'かたわ',
+    'めくら', 'つんぼ', 'びっこ', 'かたわ',
     'ちょん', 'しなじん',
     // 漢字表記
     '死ね', '殺す', '自殺', '強姦', '痴漢', '売春', '援交', '射精', '勃起',
@@ -207,10 +208,10 @@
   }
 
   /* ============================================================
-     4. レベルモデル（滑る移動 + ソルバー）
+     4. レベルモデル（直進移動 + ソルバー）
      ============================================================ */
 
-  /** 生データからインデックス・移動表を構築 */
+  /** 生データから、各マス・各方向の「まっすぐ並ぶマス列」を作る */
   function compile(raw) {
     var w = raw.w, h = raw.h, rows = raw.g;
     var idx = [], cells = [], n = 0;
@@ -222,33 +223,27 @@
         else idx[y].push(-1);
       }
     }
-    // moveTable[i][d] = {to, lo, hi, path:[cellIndex...]} または null
-    var moveTable = [];
+    // ray[i][d] = マス i から方向 d に、壁か盤面の端まで並ぶマスの並び
+    var ray = [];
     for (var i = 0; i < n; i++) {
       var row = [];
       for (var d = 0; d < 4; d++) {
-        var cx = cells[i].x, cy = cells[i].y;
-        var lo = 0, hi = 0, path = [];
+        var cx = cells[i].x, cy = cells[i].y, seq = [];
         for (;;) {
           var nx = cx + DIRS[d].dx, ny = cy + DIRS[d].dy;
           if (nx < 0 || ny < 0 || nx >= w || ny >= h) break;
           var ni = idx[ny][nx];
           if (ni < 0) break;
+          seq.push(ni);
           cx = nx; cy = ny;
-          path.push(ni);
-          if (ni < 32) lo |= (1 << ni); else hi |= (1 << (ni - 32));
         }
-        row.push(path.length ? { to: idx[cy][cx], lo: lo, hi: hi, path: path } : null);
+        row.push(seq);
       }
-      moveTable.push(row);
+      ray.push(row);
     }
-    var fullLo = n >= 32 ? -1 : ((1 << n) - 1);
-    var fullHi = n <= 32 ? 0 : (n - 32 >= 32 ? -1 : ((1 << (n - 32)) - 1));
-
     return {
       id: raw.id, w: w, h: h, rows: rows, cells: cells, idx: idx, n: n,
-      start: idx[raw.s[1]][raw.s[0]], sol: raw.sol,
-      moveTable: moveTable, fullLo: fullLo | 0, fullHi: fullHi | 0
+      start: idx[raw.s[1]][raw.s[0]], sol: raw.sol, ray: ray
     };
   }
 
@@ -263,42 +258,45 @@
   }
 
   /**
-   * 現在の状態から最短手順を幅優先探索で求める（ヒント用）。
-   * 探索が打ち切られた場合は null を返す。
+   * マス pos から方向 d に滑ったときに通るマスを返す。
+   * 壁・盤面の端・すでに塗ったマスの手前で止まる。動けないときは空配列。
    */
-  function solveFrom(lv, pos, lo, hi, cap) {
-    cap = cap || 120000;
-    if ((lo | 0) === lv.fullLo && (hi | 0) === lv.fullHi) return [];
-    var startKey = pos + ':' + (lo >>> 0) + ':' + (hi >>> 0);
-    var parent = Object.create(null);
-    parent[startKey] = null;
-    var queue = [{ p: pos, lo: lo | 0, hi: hi | 0, k: startKey }];
-    var head = 0, visited = 0;
-    var deadline = Date.now() + 600;
+  function slidePath(lv, pos, painted, d) {
+    var seq = lv.ray[pos][d], path = [];
+    for (var k = 0; k < seq.length; k++) {
+      if (painted[seq[k]]) break;
+      path.push(seq[k]);
+    }
+    return path;
+  }
 
-    while (head < queue.length) {
-      if (++visited > cap) return null;
-      if ((visited & 1023) === 0 && Date.now() > deadline) return null;
-      var cur = queue[head++];
-      var row = lv.moveTable[cur.p];
-      for (var d = 0; d < 4; d++) {
-        var mv = row[d];
-        if (!mv) continue;
-        var nlo = (cur.lo | mv.lo) | 0;
-        var nhi = (cur.hi | mv.hi) | 0;
-        var key = mv.to + ':' + (nlo >>> 0) + ':' + (nhi >>> 0);
-        if (key in parent) continue;
-        parent[key] = { k: cur.k, d: d };
-        if (nlo === lv.fullLo && nhi === lv.fullHi) {
-          var path = [], node = parent[key];
-          path.push(d);
-          while (node && parent[node.k]) { path.push(parent[node.k].d); node = parent[node.k]; }
-          return path.reverse();
-        }
-        queue.push({ p: mv.to, lo: nlo, hi: nhi, k: key });
-      }
+  /**
+   * 現在の局面から全マスを塗り切れるかを深さ優先で探索する。
+   * painted は破壊的に使い、呼び出し後は元に戻す。
+   * @returns {string[]|null} 手順（空配列＝すでにクリア）／null＝解なし
+   */
+  function solveFrom(lv, pos, painted, remaining, budget) {
+    if (remaining === 0) return [];
+    if (--budget.left < 0) { budget.out = true; return null; }
+    for (var d = 0; d < 4; d++) {
+      var path = slidePath(lv, pos, painted, d);
+      if (!path.length) continue;
+      for (var k = 0; k < path.length; k++) painted[path[k]] = 1;
+      var rest = solveFrom(lv, path[path.length - 1], painted, remaining - path.length, budget);
+      for (k = 0; k < path.length; k++) painted[path[k]] = 0;
+      if (rest) return [DCH.charAt(d)].concat(rest);
+      if (budget.out) return null;
     }
     return null;
+  }
+
+  /** 現在の局面から解けるか。判定できなかった場合は null（＝不明）。 */
+  function stillSolvable() {
+    var copy = new Uint8Array(state.painted);
+    var budget = { left: SOLVE_BUDGET, out: false };
+    var res = solveFrom(state.lv, state.pos, copy, state.lv.n - state.count, budget);
+    if (budget.out) return null;
+    return res !== null;
   }
 
   /* ============================================================
@@ -316,7 +314,7 @@
     t.textContent = msg;
     t.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.hidden = true; }, 2600); // eslint-disable-line
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
   }
 
   /* ============================================================
@@ -459,7 +457,7 @@
   /* ============================================================
      8. ゲーム本体
      ============================================================ */
-  var state = null;   // {lv, pos, lo, hi, painted, moves[], hints}
+  var state = null;   // {lv, pos, painted(Uint8Array), count, moves[], hints}
   var busy = false;
   var pending = null;  // アニメーション中に入力された次の一手（1つだけ先読み）
   var cellEls = [];
@@ -477,8 +475,8 @@
     state = {
       lv: lv,
       pos: lv.start,
-      lo: 0, hi: 0,
-      painted: 0,
+      painted: new Uint8Array(lv.n),
+      count: 0,
       moves: [],
       hints: 0
     };
@@ -490,6 +488,7 @@
     $('hint-badge').textContent = '0';
     $('hint-badge').classList.add('is-zero');
     hideHint();
+    closeModal('modal-stuck');
     buildBoard();
     updateStats();
     show('game');
@@ -497,19 +496,10 @@
   }
 
   function markPainted(i) {
-    if (i < 32) {
-      if (state.lo & (1 << i)) return false;
-      state.lo |= (1 << i);
-    } else {
-      if (state.hi & (1 << (i - 32))) return false;
-      state.hi |= (1 << (i - 32));
-    }
-    state.painted++;
+    if (state.painted[i]) return false;
+    state.painted[i] = 1;
+    state.count++;
     return true;
-  }
-
-  function isPainted(i) {
-    return i < 32 ? !!(state.lo & (1 << i)) : !!(state.hi & (1 << (i - 32)));
   }
 
   function buildBoard() {
@@ -528,7 +518,7 @@
           c.classList.add('is-wall');   // 緑のブロック＝進入できないマス
         } else {
           cellEls[i] = c;
-          if (isPainted(i)) c.classList.add('is-filled');
+          if (state.painted[i]) c.classList.add('is-filled');
         }
         boardEl.appendChild(c);
       }
@@ -556,7 +546,7 @@
     var availH = area.clientHeight - 26;
     if (availW <= 0 || availH <= 0) return;
     var size = Math.floor(Math.min(availW / lv.w, availH / lv.h));
-    size = Math.max(20, Math.min(80, size));
+    size = Math.max(16, Math.min(80, size));
     boardEl.style.setProperty('--cell', size + 'px');
     boardEl.parentElement.style.setProperty('--cell', size + 'px');
   }
@@ -565,7 +555,7 @@
 
   function updateStats() {
     $('stat-moves').textContent = state.moves.length;
-    $('stat-left').textContent = state.lv.n - state.painted;
+    $('stat-left').textContent = state.lv.n - state.count;
   }
 
   /* ---------- 移動 ---------- */
@@ -573,8 +563,8 @@
     if (!state) return;
     // アニメーション中の入力は捨てずに1手だけ保持し、終わり次第つなげて動かす
     if (busy) { pending = d; return; }
-    var mv = state.lv.moveTable[state.pos][d];
-    if (!mv) {
+    var path = slidePath(state.lv, state.pos, state.painted, d);
+    if (!path.length) {
       boardEl.classList.remove('is-shake');
       void boardEl.offsetWidth;
       boardEl.classList.add('is-shake');
@@ -583,17 +573,17 @@
     hideHint();
     busy = true;
     state.moves.push(DCH.charAt(d));
-    state.pos = mv.to;
+    state.pos = path[path.length - 1];
 
-    var steps = mv.path.length;
-    var per = Math.max(46, Math.min(96, 300 / steps));
+    var steps = path.length;
+    var per = Math.max(42, Math.min(96, 300 / steps));
     var dur = per * steps;
 
     playerEl.style.transitionDuration = dur + 'ms';
     // 次フレームで transform を適用（duration 変更を確実に反映させる）
     requestAnimationFrame(function () { placePlayer(false); });
 
-    mv.path.forEach(function (ci, k) {
+    path.forEach(function (ci, k) {
       paintTimers.push(setTimeout(function () {
         if (markPainted(ci) && cellEls[ci]) cellEls[ci].classList.add('is-filled');
         updateStats();
@@ -603,13 +593,15 @@
     paintTimers.push(setTimeout(function () {
       busy = false;
       updateStats();
-      if (state.painted === state.lv.n) {
+      if (state.count === state.lv.n) {
         pending = null;
         onClear();
       } else if (pending !== null) {
         var nx = pending;
         pending = null;
         move(nx);
+      } else if (stillSolvable() === false) {
+        openModal('modal-stuck');
       }
     }, dur + 40));
   }
@@ -625,7 +617,7 @@
     // 盤面をきらめかせる
     cellEls.forEach(function (c, i) {
       if (!c) return;
-      paintTimers.push(setTimeout(function () { c.classList.add('is-goalflash'); }, i * 8));
+      paintTimers.push(setTimeout(function () { c.classList.add('is-goalflash'); }, i * 6));
     });
 
     // ---- オートセーブ ----
@@ -649,9 +641,8 @@
       $('clear-detail').textContent = used + ' 手でクリア（最短 ' + opt + ' 手）'
         + (state.hints ? '　ヒント ' + state.hints + ' 回' : '');
       $('clear-next').textContent = lv.id >= LEVELS.length ? '全ステージ制覇！' : '次のステージへ';
-      $('clear-next').disabled = false;
       openModal('modal-clear');
-    }, Math.min(700, lv.n * 8 + 300));
+    }, Math.min(700, lv.n * 6 + 300));
   }
 
   $('clear-next').addEventListener('click', function () {
@@ -665,6 +656,16 @@
     openSelect();
   });
 
+  /* ---------- 行き止まり ---------- */
+  $('stuck-retry').addEventListener('click', function () {
+    closeModal('modal-stuck');
+    startStage(state.lv.id);
+  });
+  $('stuck-select').addEventListener('click', function () {
+    closeModal('modal-stuck');
+    openSelect();
+  });
+
   /* ---------- ヒント ---------- */
   function requestHint() {
     if (!state || busy) return;
@@ -672,17 +673,23 @@
     var hist = state.moves.join('');
     var d = -1;
 
-    // 用意された最短手順をなぞっている間は、その次の手を返す
+    // 用意された手順をなぞっている間は、その次の手を返す
     if (lv.sol.indexOf(hist) === 0 && hist.length < lv.sol.length) {
       d = DCH.indexOf(lv.sol.charAt(hist.length));
     } else {
-      var path = solveFrom(lv, state.pos, state.lo, state.hi);
-      if (path === null) {
-        toast('ヒントを計算できませんでした。やり直してみてください。');
+      var copy = new Uint8Array(state.painted);
+      var budget = { left: SOLVE_BUDGET, out: false };
+      var path = solveFrom(lv, state.pos, copy, lv.n - state.count, budget);
+      if (budget.out) {
+        toast('ヒントを計算できませんでした。');
+        return;
+      }
+      if (!path) {
+        openModal('modal-stuck');
         return;
       }
       if (!path.length) return;
-      d = path[0];
+      d = DCH.indexOf(path[0]);
     }
     if (d < 0) return;
 
@@ -693,9 +700,9 @@
   }
 
   function showHint(d) {
-    var mv = state.lv.moveTable[state.pos][d];
-    if (!mv) return;
-    var c = state.lv.cells[mv.path[0]];   // 進む方向の隣のマスに矢印を置く
+    var path = slidePath(state.lv, state.pos, state.painted, d);
+    if (!path.length) return;
+    var c = state.lv.cells[path[0]];   // 進む方向の隣のマスに矢印を置く
     var a = hintEl;
     a.style.transform = 'translate(calc(var(--cell) * ' + c.x + '), calc(var(--cell) * ' + c.y + ')) '
       + 'rotate(' + (d === 0 ? 0 : d === 1 ? 180 : d === 2 ? -90 : 90) + 'deg)';
@@ -741,7 +748,7 @@
   function closeModal(id) { $(id).hidden = true; }
 
   function anyModalOpen() {
-    return !$('modal-pause').hidden || !$('modal-clear').hidden;
+    return !$('modal-pause').hidden || !$('modal-clear').hidden || !$('modal-stuck').hidden;
   }
 
   /* ---------- 入力 ---------- */
@@ -761,7 +768,7 @@
     if (!screens.game.classList.contains('is-active')) return;
     if (ev.key === 'Escape') {
       if (!$('modal-pause').hidden) closeModal('modal-pause');
-      else if ($('modal-clear').hidden) openModal('modal-pause');
+      else if ($('modal-clear').hidden && $('modal-stuck').hidden) openModal('modal-pause');
       return;
     }
     if (anyModalOpen()) return;

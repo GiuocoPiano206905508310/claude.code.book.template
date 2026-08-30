@@ -153,14 +153,50 @@ chk(await page.isVisible('#hint-arrow'), 'ヒントで矢印が表示される')
 chk((await page.textContent('#hint-badge')) === '1', 'ヒント使用回数が記録される');
 await page.screenshot({ path: SHOTS + '/shot-hint.png' });
 
-// 手順から外れた状態でもヒントが機能するか
+// 手順から外れた状態でもヒントが機能するか（行き止まりに入った場合はその表示を確認）
 await page.click('#btn-retry'); await page.waitForTimeout(250);
 const dirs = ['ArrowDown', 'ArrowLeft', 'ArrowUp', 'ArrowRight'];
 for (const d of dirs) { await page.keyboard.press(d); await page.waitForTimeout(460); }
-const t0 = Date.now();
-await page.click('#btn-hint');
-await page.waitForTimeout(300);
-chk(Date.now() - t0 < 2500, `任意局面からのヒント計算が高速 (${Date.now() - t0}ms)`);
+if (await page.isVisible('#modal-stuck')) {
+  chk(true, '手順から外れて詰んだ局面で「行き止まり」を自動表示する');
+  await page.click('#stuck-retry'); await page.waitForTimeout(300);
+} else {
+  const t0 = Date.now();
+  await page.click('#btn-hint');
+  await page.waitForTimeout(300);
+  chk(Date.now() - t0 < 2500, `任意局面からのヒント計算が高速 (${Date.now() - t0}ms)`);
+}
+
+console.log('\n== 新ルール: 通ったマスは通れない ==');
+await page.click('#game-back'); await page.waitForTimeout(150);
+await page.evaluate(() => document.querySelectorAll('.stage-btn:not(.is-locked)')[0].click());
+await page.waitForSelector('#screen-game.is-active');
+await page.waitForTimeout(150);
+const firstDir = await page.evaluate(() => window.LEVELS[0].sol[0]);
+const backDir = { U: 'D', D: 'U', L: 'R', R: 'L' }[firstDir];
+await page.keyboard.press(KEY[firstDir]); await page.waitForTimeout(500);
+const afterFirst = await page.evaluate(() => ({
+  moves: document.getElementById('stat-moves').textContent,
+  left: document.getElementById('stat-left').textContent,
+}));
+// 来た道を戻ろうとしても、そこは塗り済みなので1マスも動けない
+await page.keyboard.press(KEY[backDir]); await page.waitForTimeout(500);
+const afterBack = await page.evaluate(() => ({
+  moves: document.getElementById('stat-moves').textContent,
+  left: document.getElementById('stat-left').textContent,
+}));
+chk(afterFirst.moves === '1', `1手目が成立する (手数=${afterFirst.moves})`);
+chk(afterBack.moves === afterFirst.moves && afterBack.left === afterFirst.left,
+    `塗り済みのマスへは戻れず手数が増えない (${afterFirst.moves}手→${afterBack.moves}手)`);
+
+console.log('\n== ボタン配置 ==');
+const layout = await page.evaluate(() => {
+  const pad = document.querySelector('.dpad').getBoundingClientRect();
+  const act = document.querySelector('.action-btns').getBoundingClientRect();
+  return { padCx: pad.left + pad.width / 2, actCx: act.left + act.width / 2, mid: innerWidth / 2 };
+});
+chk(layout.padCx > layout.mid, `十字ボタンが右側 (中心x=${Math.round(layout.padCx)} > ${Math.round(layout.mid)})`);
+chk(layout.actCx < layout.mid, `やり直す・ヒントが左側 (中心x=${Math.round(layout.actCx)} < ${Math.round(layout.mid)})`);
 
 console.log('\n== アイコンがモノクロか ==');
 const colors = await page.evaluate(() => ['btn-retry', 'btn-pause', 'btn-hint'].map(id => {
@@ -173,6 +209,7 @@ chk(colors.every(c => c.stroke === c.color || c.stroke === 'none'), '各アイ�
 console.log('\n== 全ステージのソルバー整合性 (ブラウザ内) ==');
 const solverCheck = await page.evaluate(() => {
   // levels.js の sol が本当に全マス塗るか、ページ内で再検証
+  // 新ルール: 壁・盤面の端・すでに塗ったマス の手前で止まる
   const D = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] };
   const bad = [];
   for (const lv of window.LEVELS) {
@@ -184,7 +221,11 @@ const solverCheck = await page.evaluate(() => {
     let noop = false;
     for (const ch of lv.sol) {
       const [dx, dy] = D[ch]; let steps = 0;
-      while (floor.has((px + dx) + ',' + (py + dy))) { px += dx; py += dy; painted.add(px + ',' + py); steps++; }
+      for (;;) {
+        const k = (px + dx) + ',' + (py + dy);
+        if (!floor.has(k) || painted.has(k)) break;   // 通過済みも壁として扱う
+        px += dx; py += dy; painted.add(k); steps++;
+      }
       if (!steps) noop = true;
     }
     if (noop) bad.push(lv.id + ':noop');
