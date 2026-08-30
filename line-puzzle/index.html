@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#3f9a45">
+<title>ラインパズル</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ モノクロアイコン定義 ============ -->
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- ↪️ やり直す -->
+    <symbol id="ic-retry" viewBox="0 0 24 24">
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/>
+      <polyline points="3.2,4.2 3.2,10 9,10"/>
+    </symbol>
+    <!-- ⏸️ 中断 -->
+    <symbol id="ic-pause" viewBox="0 0 24 24">
+      <rect x="7" y="5" width="3.4" height="14" rx="1.3"/>
+      <rect x="13.6" y="5" width="3.4" height="14" rx="1.3"/>
+    </symbol>
+    <!-- 💡 ヒント -->
+    <symbol id="ic-hint" viewBox="0 0 24 24">
+      <path d="M9 17.5h6"/>
+      <path d="M10 20.5h4"/>
+      <path d="M12 2.8a6.2 6.2 0 0 0-3.6 11.25c.5.36.8.93.8 1.55v.4h5.6v-.4c0-.62.3-1.19.8-1.55A6.2 6.2 0 0 0 12 2.8Z"/>
+    </symbol>
+    <symbol id="ic-back" viewBox="0 0 24 24"><polyline points="14.5,5 7.5,12 14.5,19"/></symbol>
+    <symbol id="ic-play" viewBox="0 0 24 24"><path d="M8 5.2 18 12 8 18.8Z"/></symbol>
+    <symbol id="ic-grid" viewBox="0 0 24 24">
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/>
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>
+    </symbol>
+    <symbol id="ic-lock" viewBox="0 0 24 24">
+      <rect x="4.8" y="10.5" width="14.4" height="10" rx="2.2"/>
+      <path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/>
+    </symbol>
+    <symbol id="ic-star" viewBox="0 0 24 24">
+      <path d="m12 3.1 2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 17.13 6.5 20.02l1.05-6.12L3.1 9.57l6.15-.9Z"/>
+    </symbol>
+    <symbol id="ic-user" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>
+    </symbol>
+    <symbol id="ic-exit" viewBox="0 0 24 24">
+      <path d="M14 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H14"/>
+      <polyline points="16,8.5 19.5,12 16,15.5"/><path d="M19.5 12H10"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ============ ユーザー登録画面 ============ -->
+<section id="screen-login" class="screen is-active">
+  <div class="login-card">
+    <h1 class="title">ラインパズル</h1>
+    <p class="subtitle">まっすぐ進んで、すべてのマスを塗りつぶそう</p>
+
+    <div id="user-list-wrap" class="user-list-wrap" hidden>
+      <h2 class="section-label">つづきから</h2>
+      <ul id="user-list" class="user-list"></ul>
+    </div>
+
+    <h2 class="section-label">新しく はじめる</h2>
+    <form id="register-form" autocomplete="off" novalidate>
+      <label class="field">
+        <span class="field-label">ユーザー名</span>
+        <input id="username-input" type="text" maxlength="12" placeholder="2〜12文字" inputmode="text" autocomplete="off" spellcheck="false">
+      </label>
+      <p id="register-error" class="error-text" role="alert" aria-live="polite"></p>
+      <button type="submit" class="btn btn-primary btn-block">登録してはじめる</button>
+    </form>
+    <p class="note">※ ユーザー名はこの端末のブラウザに保存されます。同じ名前は登録できません。</p>
+  </div>
+</section>
+
+<!-- ============ ステージ選択画面 ============ -->
+<section id="screen-select" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="select-back" type="button" aria-label="ユーザーを切り替える">
+      <svg class="ic"><use href="#ic-exit"/></svg>
+    </button>
+    <div class="topbar-title">
+      <span id="select-user" class="topbar-user"></span>
+      <span id="select-progress" class="topbar-sub"></span>
+    </div>
+    <button class="icon-btn" id="select-continue" type="button" aria-label="つづきのステージへ">
+      <svg class="ic"><use href="#ic-play"/></svg>
+    </button>
+  </header>
+  <div class="stage-scroll">
+    <ul id="stage-grid" class="stage-grid"></ul>
+  </div>
+</section>
+
+<!-- ============ ゲーム画面 ============ -->
+<section id="screen-game" class="screen">
+  <header class="topbar game-topbar">
+    <button class="icon-btn" id="game-back" type="button" aria-label="ステージ選択へ">
+      <svg class="ic"><use href="#ic-grid"/></svg>
+    </button>
+    <div class="level-plate">
+      <span id="level-label">Level 1</span>
+    </div>
+    <button class="icon-btn" id="btn-pause" type="button" aria-label="中断する">
+      <svg class="ic"><use href="#ic-pause"/></svg>
+    </button>
+  </header>
+
+  <div class="stat-row">
+    <span class="stat"><b id="stat-moves">0</b> 手</span>
+    <span class="stat-sep"></span>
+    <span class="stat">最短 <b id="stat-best">-</b> 手</span>
+    <span class="stat-sep"></span>
+    <span class="stat">残り <b id="stat-left">0</b> マス</span>
+  </div>
+
+  <div class="board-area">
+    <div id="board-frame" class="board-frame">
+      <div id="board" class="board"></div>
+      <div id="hint-arrow" class="hint-arrow" hidden>
+        <svg viewBox="0 0 24 24"><path d="M12 3.5v17M12 3.5 5.5 10M12 3.5 18.5 10"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="pad-area">
+    <div class="dpad">
+      <button class="pad-btn pad-u" data-dir="U" type="button" aria-label="上へ進む"></button>
+      <button class="pad-btn pad-l" data-dir="L" type="button" aria-label="左へ進む"></button>
+      <button class="pad-btn pad-r" data-dir="R" type="button" aria-label="右へ進む"></button>
+      <button class="pad-btn pad-d" data-dir="D" type="button" aria-label="下へ進む"></button>
+      <span class="dpad-core"></span>
+    </div>
+    <div class="action-btns">
+      <button class="round-btn" id="btn-retry" type="button" aria-label="やり直す">
+        <svg class="ic"><use href="#ic-retry"/></svg>
+      </button>
+      <button class="round-btn" id="btn-hint" type="button" aria-label="ヒントを見る">
+        <svg class="ic"><use href="#ic-hint"/></svg>
+        <span class="badge" id="hint-badge">0</span>
+      </button>
+    </div>
+  </div>
+
+  <p class="howto">スワイプ / 矢印キー / 十字ボタン で移動</p>
+</section>
+
+<!-- ============ 中断モーダル ============ -->
+<div id="modal-pause" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+    <h2 id="pause-title" class="modal-title">中断中</h2>
+    <p class="modal-text">進行状況はクリア時に自動保存されます。</p>
+    <button class="btn btn-primary btn-block" id="pause-resume" type="button">つづける</button>
+    <button class="btn btn-ghost btn-block" id="pause-restart" type="button">このステージをやり直す</button>
+    <button class="btn btn-ghost btn-block" id="pause-select" type="button">ステージ選択へ</button>
+    <button class="btn btn-ghost btn-block" id="pause-logout" type="button">ユーザーを切り替える</button>
+  </div>
+</div>
+
+<!-- ============ クリア演出 ============ -->
+<div id="modal-clear" class="modal" hidden>
+  <div class="modal-card clear-card" role="dialog" aria-modal="true" aria-labelledby="clear-title">
+    <p class="clear-eyebrow">STAGE CLEAR</p>
+    <h2 id="clear-title" class="modal-title">Level 1</h2>
+    <div class="stars" id="clear-stars">
+      <svg class="ic star"><use href="#ic-star"/></svg>
+      <svg class="ic star"><use href="#ic-star"/></svg>
+      <svg class="ic star"><use href="#ic-star"/></svg>
+    </div>
+    <p class="clear-detail" id="clear-detail"></p>
+    <p class="saved-note"><span class="dot"></span>自動保存しました</p>
+    <button class="btn btn-primary btn-block" id="clear-next" type="button">次のステージへ</button>
+    <button class="btn btn-ghost btn-block" id="clear-select" type="button">ステージ選択へ</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="levels.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

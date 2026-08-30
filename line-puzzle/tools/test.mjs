@@ -1,0 +1,201 @@
+// playwright はローカル/グローバルどちらのインストールでも動くように解決する
+const { chromium } = await import('playwright')
+  .catch(() => import('/opt/node22/lib/node_modules/playwright/index.mjs'));
+
+const BASE = process.env.BASE || 'http://127.0.0.1:8777/line-puzzle/';
+const SHOTS = process.env.SP || new URL('.', import.meta.url).pathname;
+const fail = [];
+function chk(cond, msg) { console.log((cond ? '  ok  ' : '  FAIL') + ' ' + msg); if (!cond) fail.push(msg); }
+
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 420, height: 860 }, deviceScaleFactor: 2 });
+const errs = [];
+page.on('pageerror', e => errs.push('pageerror: ' + e.message));
+page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
+
+await page.goto(BASE, { waitUntil: 'networkidle' });
+
+console.log('\n== レベルデータ ==');
+const meta = await page.evaluate(() => ({
+  n: window.LEVELS.length,
+  cells: window.LEVELS.map(l => l.g.join('').split('').filter(c => c === '.').length),
+  sols: window.LEVELS.map(l => l.sol.length),
+}));
+chk(meta.n === 50, `50ステージ (実際: ${meta.n})`);
+chk(meta.sols.every(s => s >= 3), '全ステージ 3手以上');
+console.log('   最短手数:', meta.sols.join(','));
+
+console.log('\n== ユーザー名バリデーション ==');
+async function tryName(name) {
+  // maxlength を迂回して値を直接入れ、バリデーション本体を必ず通す
+  await page.evaluate(n => {
+    const i = document.getElementById('username-input');
+    i.value = n;
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+  }, name);
+  await page.click('#register-form button[type=submit]');
+  await page.waitForTimeout(90);
+  const onSelect = await page.isVisible('#screen-select');
+  const err = onSelect ? '' : await page.textContent('#register-error');
+  return { err, onSelect };
+}
+// 誤って登録されてしまった場合に元の状態へ戻す
+async function resetIfRegistered(r) {
+  if (!r.onSelect) return;
+  await page.evaluate(() => localStorage.removeItem('linePuzzle.save.v1'));
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(120);
+}
+for (const [name, why] of [['a', '1文字'], ['あ'.repeat(13), '13文字'], ['fuck', '英語NG'],
+                           ['まんこ', '日本語NG'], ['ﾏﾝｺ', '半角カナNG'], ['ま ん こ', '空白回避NG'],
+                           ['死ね', '漢字NG'], ['管理者', 'なりすまし'], ['ab!!cd', '記号'], ['😀たろう', '絵文字']]) {
+  const r = await tryName(name);
+  chk(!!r.err && !r.onSelect, `拒否: ${why} "${name}" → ${r.err || '(通ってしまった)'}`);
+  await resetIfRegistered(r);
+}
+let r = await tryName('ぱずる太郎');
+chk(!r.err && r.onSelect, '登録成功: ぱずる太郎');
+
+console.log('\n== ステージ選択 ==');
+const st = await page.evaluate(() => ({
+  total: document.querySelectorAll('.stage-btn').length,
+  locked: document.querySelectorAll('.stage-btn.is-locked').length,
+}));
+chk(st.total === 50, `ステージボタン50個 (${st.total})`);
+chk(st.locked === 49, `未クリア時のロック49個 (${st.locked})`);
+
+console.log('\n== 重複ユーザー名 ==');
+await page.click('#select-back');
+await page.waitForTimeout(120);
+for (const dup of ['ぱずる太郎', 'ぱずる太郎 ', 'パズル太郎', 'ﾊﾟｽﾞﾙ太郎']) {
+  const d = await tryName(dup);
+  chk(!!d.err && !d.onSelect, `重複拒否 "${dup}" → ${d.err || '(通ってしまった)'}`);
+}
+const listed = await page.$$eval('.user-row-name', ns => ns.map(n => n.textContent));
+chk(listed.includes('ぱずる太郎'), '既存ユーザーが一覧に表示される');
+
+console.log('\n== 全50ステージ 自動プレイ ==');
+await page.click('.user-row');
+await page.waitForTimeout(150);
+
+const KEY = { U: 'ArrowUp', D: 'ArrowDown', L: 'ArrowLeft', R: 'ArrowRight' };
+let allCleared = true;
+for (let id = 1; id <= 50; id++) {
+  await page.evaluate(i => document.querySelectorAll('.stage-btn')[i - 1].click(), id);
+  await page.waitForSelector('#screen-game.is-active');
+  await page.waitForTimeout(60);
+  const sol = await page.evaluate(i => window.LEVELS[i - 1].sol, id);
+  for (const ch of sol) {
+    await page.keyboard.press(KEY[ch]);
+    await page.waitForTimeout(460);   // 1手の最長アニメーション(約362ms)より長く待つ
+  }
+  await page.waitForFunction(() => !document.getElementById('modal-clear').hidden,
+                             null, { timeout: 4000 }).catch(() => {});
+  const left = await page.textContent('#stat-left');
+  const clearShown = await page.isVisible('#modal-clear');
+  if (left !== '0' || !clearShown) { allCleared = false; console.log(`  FAIL Level ${id}: 残り=${left} clear=${clearShown}`); }
+  if (id === 1) await page.screenshot({ path: SHOTS + '/shot-clear.png' });
+  await page.click('#clear-select');
+  await page.waitForTimeout(120);
+}
+chk(allCleared, '50ステージすべて手順通りにクリアできる');
+const prog = await page.textContent('#select-progress');
+chk(/50 \/ 50/.test(prog), `進捗表示 "${prog}"`);
+await page.screenshot({ path: SHOTS + '/shot-select-all.png' });
+
+console.log('\n== 自動保存 / 再開 ==');
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(200);
+chk(await page.isVisible('#screen-select'), 'リロード後にユーザーが復元される');
+const lockedAfter = await page.$$eval('.stage-btn.is-locked', n => n.length);
+chk(lockedAfter === 0, `クリア済みステージが解放されている (locked=${lockedAfter})`);
+
+console.log('\n== 部分進捗の保存 ==');
+await page.evaluate(() => localStorage.clear());
+await page.reload({ waitUntil: 'networkidle' });
+await tryName('てすと二号');
+for (let id = 1; id <= 3; id++) {
+  await page.evaluate(i => document.querySelectorAll('.stage-btn')[i - 1].click(), id);
+  await page.waitForSelector('#screen-game.is-active');
+  const sol = await page.evaluate(i => window.LEVELS[i - 1].sol, id);
+  for (const ch of sol) { await page.keyboard.press(KEY[ch]); await page.waitForTimeout(460); }
+  await page.waitForFunction(() => !document.getElementById('modal-clear').hidden,
+                             null, { timeout: 4000 });
+  await page.click('#clear-select');
+  await page.waitForTimeout(120);
+}
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(200);
+const after = await page.evaluate(() => ({
+  prog: document.getElementById('select-progress').textContent,
+  locked: document.querySelectorAll('.stage-btn.is-locked').length,
+}));
+chk(/3 \/ 50/.test(after.prog), `3ステージ分が保存されている "${after.prog}"`);
+chk(after.locked === 46, `4番目まで解放 (locked=${after.locked}, 期待46)`);
+await page.click('#select-continue');
+await page.waitForSelector('#screen-game.is-active');
+chk((await page.textContent('#level-label')) === 'Level 4', 'つづきからで Level 4 が開く');
+
+console.log('\n== ボタン (やり直す/中断/ヒント) ==');
+await page.keyboard.press('ArrowRight'); await page.waitForTimeout(500);
+const movesBefore = await page.textContent('#stat-moves');
+await page.click('#btn-retry'); await page.waitForTimeout(250);
+chk(movesBefore !== '0' && (await page.textContent('#stat-moves')) === '0', 'やり直すで手数がリセットされる');
+
+await page.click('#btn-pause'); await page.waitForTimeout(200);
+chk(await page.isVisible('#modal-pause'), '中断ボタンでモーダルが開く');
+await page.screenshot({ path: SHOTS + '/shot-pause.png' });
+await page.click('#pause-resume'); await page.waitForTimeout(150);
+chk(!(await page.isVisible('#modal-pause')), 'つづけるで閉じる');
+
+await page.click('#btn-hint'); await page.waitForTimeout(250);
+chk(await page.isVisible('#hint-arrow'), 'ヒントで矢印が表示される');
+chk((await page.textContent('#hint-badge')) === '1', 'ヒント使用回数が記録される');
+await page.screenshot({ path: SHOTS + '/shot-hint.png' });
+
+// 手順から外れた状態でもヒントが機能するか
+await page.click('#btn-retry'); await page.waitForTimeout(250);
+const dirs = ['ArrowDown', 'ArrowLeft', 'ArrowUp', 'ArrowRight'];
+for (const d of dirs) { await page.keyboard.press(d); await page.waitForTimeout(460); }
+const t0 = Date.now();
+await page.click('#btn-hint');
+await page.waitForTimeout(300);
+chk(Date.now() - t0 < 2500, `任意局面からのヒント計算が高速 (${Date.now() - t0}ms)`);
+
+console.log('\n== アイコンがモノクロか ==');
+const colors = await page.evaluate(() => ['btn-retry', 'btn-pause', 'btn-hint'].map(id => {
+  const s = getComputedStyle(document.getElementById(id).querySelector('.ic'));
+  return { id, stroke: s.stroke, fill: s.fill, color: s.color };
+}));
+console.log('  ', JSON.stringify(colors));
+chk(colors.every(c => c.stroke === c.color || c.stroke === 'none'), '各アイコンは currentColor 1色で描画');
+
+console.log('\n== 全ステージのソルバー整合性 (ブラウザ内) ==');
+const solverCheck = await page.evaluate(() => {
+  // levels.js の sol が本当に全マス塗るか、ページ内で再検証
+  const D = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] };
+  const bad = [];
+  for (const lv of window.LEVELS) {
+    const floor = new Set();
+    for (let y = 0; y < lv.h; y++) for (let x = 0; x < lv.w; x++) if (lv.g[y][x] === '.') floor.add(x + ',' + y);
+    let [px, py] = lv.s;
+    if (!floor.has(px + ',' + py)) { bad.push(lv.id + ':start'); continue; }
+    const painted = new Set([px + ',' + py]);
+    let noop = false;
+    for (const ch of lv.sol) {
+      const [dx, dy] = D[ch]; let steps = 0;
+      while (floor.has((px + dx) + ',' + (py + dy))) { px += dx; py += dy; painted.add(px + ',' + py); steps++; }
+      if (!steps) noop = true;
+    }
+    if (noop) bad.push(lv.id + ':noop');
+    if (painted.size !== floor.size) bad.push(lv.id + ':incomplete');
+  }
+  return bad;
+});
+chk(solverCheck.length === 0, `解答データ検証 ${solverCheck.length ? solverCheck.join(',') : '全50件OK'}`);
+
+await browser.close();
+console.log('\n== JSエラー ==');
+if (errs.length) { errs.forEach(e => console.log('  ' + e)); fail.push('JS errors'); } else console.log('  なし');
+console.log(fail.length ? `\n❌ ${fail.length} 件失敗` : '\n✅ すべて成功');
+process.exit(fail.length ? 1 : 0);
