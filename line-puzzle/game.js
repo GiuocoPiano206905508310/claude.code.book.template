@@ -290,15 +290,6 @@
     return null;
   }
 
-  /** 現在の局面から解けるか。判定できなかった場合は null（＝不明）。 */
-  function stillSolvable() {
-    var copy = new Uint8Array(state.painted);
-    var budget = { left: SOLVE_BUDGET, out: false };
-    var res = solveFrom(state.lv, state.pos, copy, state.lv.n - state.count, budget);
-    if (budget.out) return null;
-    return res !== null;
-  }
-
   /* ============================================================
      5. 画面遷移
      ============================================================ */
@@ -488,7 +479,6 @@
     $('hint-badge').textContent = '0';
     $('hint-badge').classList.add('is-zero');
     hideHint();
-    closeModal('modal-stuck');
     buildBoard();
     updateStats();
     show('game');
@@ -600,8 +590,6 @@
         var nx = pending;
         pending = null;
         move(nx);
-      } else if (stillSolvable() === false) {
-        openModal('modal-stuck');
       }
     }, dur + 40));
   }
@@ -656,16 +644,6 @@
     openSelect();
   });
 
-  /* ---------- 行き止まり ---------- */
-  $('stuck-retry').addEventListener('click', function () {
-    closeModal('modal-stuck');
-    startStage(state.lv.id);
-  });
-  $('stuck-select').addEventListener('click', function () {
-    closeModal('modal-stuck');
-    openSelect();
-  });
-
   /* ---------- ヒント ---------- */
   function requestHint() {
     if (!state || busy) return;
@@ -685,7 +663,7 @@
         return;
       }
       if (!path) {
-        openModal('modal-stuck');
+        toast('この局面からはクリアできません。↪ でやり直してください。');
         return;
       }
       if (!path.length) return;
@@ -748,7 +726,7 @@
   function closeModal(id) { $(id).hidden = true; }
 
   function anyModalOpen() {
-    return !$('modal-pause').hidden || !$('modal-clear').hidden || !$('modal-stuck').hidden;
+    return !$('modal-pause').hidden || !$('modal-clear').hidden;
   }
 
   /* ---------- 入力 ---------- */
@@ -768,7 +746,7 @@
     if (!screens.game.classList.contains('is-active')) return;
     if (ev.key === 'Escape') {
       if (!$('modal-pause').hidden) closeModal('modal-pause');
-      else if ($('modal-clear').hidden && $('modal-stuck').hidden) openModal('modal-pause');
+      else if ($('modal-clear').hidden) openModal('modal-pause');
       return;
     }
     if (anyModalOpen()) return;

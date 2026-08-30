@@ -153,19 +153,18 @@ chk(await page.isVisible('#hint-arrow'), 'ヒントで矢印が表示される')
 chk((await page.textContent('#hint-badge')) === '1', 'ヒント使用回数が記録される');
 await page.screenshot({ path: SHOTS + '/shot-hint.png' });
 
-// 手順から外れた状態でもヒントが機能するか（行き止まりに入った場合はその表示を確認）
+// 手順から外れた状態でもヒントが応答するか（詰んでいる場合は案内、解ける場合は矢印）
 await page.click('#btn-retry'); await page.waitForTimeout(250);
 const dirs = ['ArrowDown', 'ArrowLeft', 'ArrowUp', 'ArrowRight'];
 for (const d of dirs) { await page.keyboard.press(d); await page.waitForTimeout(460); }
-if (await page.isVisible('#modal-stuck')) {
-  chk(true, '手順から外れて詰んだ局面で「行き止まり」を自動表示する');
-  await page.click('#stuck-retry'); await page.waitForTimeout(300);
-} else {
-  const t0 = Date.now();
-  await page.click('#btn-hint');
-  await page.waitForTimeout(300);
-  chk(Date.now() - t0 < 2500, `任意局面からのヒント計算が高速 (${Date.now() - t0}ms)`);
-}
+chk(!(await page.$('#modal-stuck')), '行き止まりの自動表示は行わない（要素そのものが無い）');
+const t0 = Date.now();
+await page.click('#btn-hint');
+await page.waitForTimeout(400);
+const hinted = await page.isVisible('#hint-arrow');
+const toasted = await page.isVisible('#toast');
+chk(hinted || toasted, `任意局面でヒントが必ず応答する (矢印=${hinted} 案内=${toasted})`);
+chk(Date.now() - t0 < 2500, `任意局面からのヒント計算が高速 (${Date.now() - t0}ms)`);
 
 console.log('\n== 新ルール: 通ったマスは通れない ==');
 await page.click('#game-back'); await page.waitForTimeout(150);
