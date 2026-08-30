@@ -23,6 +23,11 @@ const meta = await page.evaluate(() => ({
 }));
 chk(meta.n === 50, `50ステージ (実際: ${meta.n})`);
 chk(meta.sols.every(s => s >= 3), '全ステージ 3手以上');
+const blocks = await page.evaluate(() =>
+  window.LEVELS.map(l => l.g.join('').split('').filter(c => c === '#').length));
+chk(blocks.every(b => b >= 1), `全ステージにお邪魔ブロックがある (最少${Math.min(...blocks)}個)`);
+chk(blocks.reduce((a, b) => a + b, 0) / blocks.length > 10,
+    `ブロックが十分ある (平均${(blocks.reduce((a, b) => a + b, 0) / blocks.length).toFixed(1)}個 / 最大${Math.max(...blocks)}個)`);
 console.log('   最短手数:', meta.sols.join(','));
 
 console.log('\n== ユーザー名バリデーション ==');
@@ -188,14 +193,39 @@ chk(afterFirst.moves === '1', `1手目が成立する (手数=${afterFirst.moves
 chk(afterBack.moves === afterFirst.moves && afterBack.left === afterFirst.left,
     `塗り済みのマスへは戻れず手数が増えない (${afterFirst.moves}手→${afterBack.moves}手)`);
 
-console.log('\n== ボタン配置 ==');
+console.log('\n== ボタン配置と盤面の大きさ ==');
 const layout = await page.evaluate(() => {
-  const pad = document.querySelector('.dpad').getBoundingClientRect();
   const act = document.querySelector('.action-btns').getBoundingClientRect();
-  return { padCx: pad.left + pad.width / 2, actCx: act.left + act.width / 2, mid: innerWidth / 2 };
+  const frame = document.getElementById('board-frame').getBoundingClientRect();
+  const area = document.querySelector('.board-area').getBoundingClientRect();
+  return {
+    hasPad: !!document.querySelector('.dpad'),
+    actCx: act.left + act.width / 2, actBottom: act.bottom,
+    frameCx: frame.left + frame.width / 2, frameCy: frame.top + frame.height / 2,
+    areaCx: area.left + area.width / 2, areaCy: area.top + area.height / 2,
+    frameW: frame.width, w: innerWidth, h: innerHeight,
+  };
 });
-chk(layout.padCx > layout.mid, `十字ボタンが右側 (中心x=${Math.round(layout.padCx)} > ${Math.round(layout.mid)})`);
-chk(layout.actCx < layout.mid, `やり直す・ヒントが左側 (中心x=${Math.round(layout.actCx)} < ${Math.round(layout.mid)})`);
+chk(!layout.hasPad, '十字ボタンは廃止されている');
+chk(layout.actCx < layout.w / 2, `やり直す・ヒントが左下 (中心x=${Math.round(layout.actCx)} < ${Math.round(layout.w / 2)})`);
+chk(layout.actBottom > layout.h * 0.8, `やり直す・ヒントが画面下部 (下端y=${Math.round(layout.actBottom)} > ${Math.round(layout.h * 0.8)})`);
+chk(Math.abs(layout.frameCx - layout.areaCx) < 2 && Math.abs(layout.frameCy - layout.areaCy) < 2,
+    '盤面が表示領域の中央にある');
+chk(layout.frameW > layout.w * 0.82, `盤面が画面幅を活かしている (幅=${Math.round(layout.frameW)} / ${layout.w})`);
+
+console.log('\n== スワイプ操作 ==');
+await page.click('#btn-retry'); await page.waitForTimeout(300);
+const before = await page.textContent('#stat-moves');
+const box = await page.locator('#board').boundingBox();
+const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+let swipeWorked = false;
+for (const [dx, dy] of [[0, 90], [0, -90], [90, 0], [-90, 0]]) {
+  await page.mouse.move(cx, cy); await page.mouse.down();
+  await page.mouse.move(cx + dx, cy + dy, { steps: 8 }); await page.mouse.up();
+  await page.waitForTimeout(500);
+  if ((await page.textContent('#stat-moves')) !== before) { swipeWorked = true; break; }
+}
+chk(swipeWorked, 'スワイプで移動できる（十字キーが無くても操作可能）');
 
 console.log('\n== アイコンがモノクロか ==');
 const colors = await page.evaluate(() => ['btn-retry', 'btn-pause', 'btn-hint'].map(id => {

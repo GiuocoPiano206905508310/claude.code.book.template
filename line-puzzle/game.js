@@ -536,7 +536,7 @@
     var availH = area.clientHeight - 26;
     if (availW <= 0 || availH <= 0) return;
     var size = Math.floor(Math.min(availW / lv.w, availH / lv.h));
-    size = Math.max(16, Math.min(80, size));
+    size = Math.max(16, Math.min(96, size));
     boardEl.style.setProperty('--cell', size + 'px');
     boardEl.parentElement.style.setProperty('--cell', size + 'px');
   }
@@ -730,13 +730,6 @@
   }
 
   /* ---------- 入力 ---------- */
-  document.querySelectorAll('.pad-btn').forEach(function (b) {
-    b.addEventListener('click', function () {
-      if (anyModalOpen()) return;
-      move(DCH.indexOf(b.dataset.dir));
-    });
-  });
-
   var KEYMAP = {
     ArrowUp: 0, ArrowDown: 1, ArrowLeft: 2, ArrowRight: 3,
     w: 0, s: 1, a: 2, d: 3, W: 0, S: 1, A: 2, D: 3,
