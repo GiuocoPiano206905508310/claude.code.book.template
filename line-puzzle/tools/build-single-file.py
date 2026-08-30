@@ -24,7 +24,8 @@ title = re.search(r'<title>(.*?)</title>', html, re.S).group(1)
 
 # 外部参照の script タグを、中身をそのまま埋め込んだ script に置き換える
 inline = '<script>\n%s</script>\n<script>\n%s</script>' % (levels, game)
-body, hit = re.subn(r'<script src="levels\.js"></script>\s*<script src="game\.js"></script>',
+body, hit = re.subn(r'<script src="levels\.js(?:\?v=[0-9a-f]+)?"></script>\s*'
+                    r'<script src="game\.js(?:\?v=[0-9a-f]+)?"></script>',
                     lambda m: inline, body)
 assert hit == 1, 'script タグを置換できなかった'
 

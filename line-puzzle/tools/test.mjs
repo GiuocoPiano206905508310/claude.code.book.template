@@ -7,6 +7,21 @@ const SHOTS = process.env.SP || new URL('.', import.meta.url).pathname;
 const fail = [];
 function chk(cond, msg) { console.log((cond ? '  ok  ' : '  FAIL') + ' ' + msg); if (!cond) fail.push(msg); }
 
+console.log('\n== 版数(?v=) の整合 ==');
+// 版数が中身とずれていると、ブラウザのキャッシュが効いて更新が利用者に届かない
+{
+  const { readFileSync } = await import('node:fs');
+  const { createHash } = await import('node:crypto');
+  const APP = new URL('../', import.meta.url).pathname;
+  const html = readFileSync(APP + 'index.html', 'utf8');
+  for (const name of ['style.css', 'levels.js', 'game.js']) {
+    const want = createHash('sha1').update(readFileSync(APP + name)).digest('hex').slice(0, 10);
+    const m = html.match(new RegExp(name.replace('.', '\\.') + '\\?v=([0-9a-f]+)'));
+    chk(m && m[1] === want,
+        `${name} の版数が中身と一致 (記載=${m ? m[1] : 'なし'} / 実際=${want})`);
+  }
+}
+
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 420, height: 860 }, deviceScaleFactor: 2 });
 const errs = [];
