@@ -213,6 +213,7 @@
      7. ステージ選択画面
      ============================================================ */
   function openSelect() {
+    closeModal('modal-stuck');
     var done = Object.keys(clearedMap()).length;
     $('select-progress').textContent = 'クリア ' + done + ' / ' + LEVELS.length + '　（クリア時に自動保存）';
 
@@ -276,6 +277,7 @@
     var lv = getLevel(id);
     if (!lv) return;
     pending = null;
+    closeModal('modal-stuck');
     state = {
       lv: lv,
       pos: lv.start,
@@ -401,6 +403,17 @@
     });
   }
 
+  /**
+   * 上下左右のどの向きにも1マスも進めない（＝完全に手詰まり）か。
+   * 「解が残っているか」は見ない。確実に動けない場合だけ true。
+   */
+  function isStuck() {
+    for (var d = 0; d < 4; d++) {
+      if (slidePath(state.lv, state.pos, state.painted, d).length) return false;
+    }
+    return true;
+  }
+
   /* ---------- 移動 ---------- */
   function move(d) {
     if (!state) return;
@@ -446,6 +459,10 @@
       if (state.count === state.lv.n) {
         pending = null;
         onClear();
+      } else if (isStuck()) {
+        // 手詰まりなら溜めていた入力は捨てて、そのままお知らせを出す
+        pending = null;
+        openModal('modal-stuck');
       } else if (pending !== null) {
         var nx = pending;
         pending = null;
@@ -580,11 +597,17 @@
     openSelect();
   });
 
+  $('stuck-restart').addEventListener('click', function () {
+    startStage(state.lv.id);
+  });
+  $('stuck-select').addEventListener('click', openSelect);
+
   function openModal(id) { $(id).hidden = false; }
   function closeModal(id) { $(id).hidden = true; }
 
   function anyModalOpen() {
-    return !$('modal-pause').hidden || !$('modal-clear').hidden || !$('modal-tutorial').hidden;
+    return !$('modal-pause').hidden || !$('modal-clear').hidden ||
+           !$('modal-tutorial').hidden || !$('modal-stuck').hidden;
   }
 
   /* ---------- 入力 ---------- */
@@ -670,9 +693,11 @@
       board: ['F F F F', 'F P F T', 'F F F F']
     },
     {
-      title: '行き止まったら、やり直す',
-      caption: '進めなくなったら、やり直すボタンでこのステージを最初からやり直せます。',
-      board: ['W P F F F', 'F F F F F', 'W W W L L'],
+      // 行き止まりは自動でお知らせするので、ここは「やり直すボタン」の説明だけにする。
+      // 見本盤面も行き止まりの場面ではなく、ふつうのプレイ途中の盤面を出す。
+      title: 'やり直す',
+      caption: 'やり直すボタンで、このステージを最初からやり直せます。',
+      board: ['W L L L', 'F F P L', 'L L L W'],
       action: { icon: 'ic-retry', label: 'やり直すボタンを押す' }
     },
     {

@@ -129,6 +129,16 @@
   </div>
 </div>
 
+<!-- ============ 行き止まり（上下左右どこにも進めない） ============ -->
+<div id="modal-stuck" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="stuck-title">
+    <h2 id="stuck-title" class="modal-title">行き止まり</h2>
+    <p class="modal-text">どこにも進めなくなりました。</p>
+    <button class="btn btn-primary btn-block" id="stuck-restart" type="button">このステージをやり直す</button>
+    <button class="btn btn-ghost btn-block" id="stuck-select" type="button">ステージ選択へ</button>
+  </div>
+</div>
+
 <!-- ============ クリア演出 ============ -->
 <div id="modal-clear" class="modal" hidden>
   <div class="modal-card clear-card" role="dialog" aria-modal="true" aria-labelledby="clear-title">
@@ -153,6 +163,6 @@
 <div id="toast" class="toast" hidden></div>
 
 <script src="levels.js?v=838e9209e8"></script>
-<script src="game.js?v=15e9b11a7b"></script>
+<script src="game.js?v=05493c3ba5"></script>
 </body>
 </html>

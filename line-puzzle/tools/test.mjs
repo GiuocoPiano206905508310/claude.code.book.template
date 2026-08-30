@@ -152,7 +152,9 @@ await page.screenshot({ path: SHOTS + '/shot-hint.png' });
 await page.click('#btn-retry'); await page.waitForTimeout(250);
 const dirs = ['ArrowDown', 'ArrowLeft', 'ArrowUp', 'ArrowRight'];
 for (const d of dirs) { await page.keyboard.press(d); await page.waitForTimeout(460); }
-chk(!(await page.$('#modal-stuck')), '行き止まりの自動表示は行わない（要素そのものが無い）');
+// 手詰まりになっていたら「行き止まり」が覆いかぶさるので、ヒントの確認前に伏せておく
+// （行き止まりの表示そのものは、この下の専用セクションで確かめる）
+await page.evaluate(() => { document.getElementById('modal-stuck').hidden = true; });
 const t0 = Date.now();
 await page.click('#btn-hint');
 await page.waitForTimeout(400);
@@ -160,6 +162,93 @@ const hinted = await page.isVisible('#hint-arrow');
 const toasted = await page.isVisible('#toast');
 chk(hinted || toasted, `任意局面でヒントが必ず応答する (矢印=${hinted} 案内=${toasted})`);
 chk(Date.now() - t0 < 2500, `任意局面からのヒント計算が高速 (${Date.now() - t0}ms)`);
+
+console.log('\n== 行き止まり（上下左右どこにも進めない） ==');
+{
+  // ステージ1で、どこにも進めなくなる手順を探しておく（クリアはしない手順）
+  const goStage1 = async () => {
+    if (await page.isVisible('#screen-game')) { await page.click('#game-back'); await page.waitForTimeout(150); }
+    await page.evaluate(() => document.querySelectorAll('.stage-btn:not(.is-locked)')[0].click());
+    await page.waitForSelector('#screen-game.is-active');
+    await page.waitForTimeout(200);
+  };
+  await goStage1();
+
+  const seq = await page.evaluate(() => {
+    const lv = window.LEVELS[0];
+    const { w: W, h: H, g } = lv;
+    const open = (x, y) => x >= 0 && y >= 0 && x < W && y < H && g[y][x] !== '#';
+    const total = g.join('').split('').filter(c => c !== '#').length;
+    const D = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] };
+    const key = (x, y) => y * W + x;
+    const painted = new Set([key(lv.s[0], lv.s[1])]);
+    const slide = (x, y, d) => {
+      const [dx, dy] = D[d];
+      let cx = x, cy = y; const path = [];
+      for (;;) {
+        const nx = cx + dx, ny = cy + dy;
+        if (!open(nx, ny) || painted.has(key(nx, ny))) break;
+        cx = nx; cy = ny; path.push([cx, cy]);
+      }
+      return path;
+    };
+    const dfs = (x, y, moves) => {
+      if (moves.length > 12) return null;
+      const legal = Object.keys(D).map(d => [d, slide(x, y, d)]).filter(p => p[1].length);
+      if (!legal.length) return painted.size < total ? moves : null;   // 手詰まり かつ 未クリア
+      for (const [d, path] of legal) {
+        for (const [px, py] of path) painted.add(key(px, py));
+        const r = dfs(path[path.length - 1][0], path[path.length - 1][1], moves.concat(d));
+        if (r) return r;
+        for (const [px, py] of path) painted.delete(key(px, py));
+      }
+      return null;
+    };
+    return dfs(lv.s[0], lv.s[1], []);
+  });
+  chk(Array.isArray(seq) && seq.length > 0, `ステージ1に行き止まりの手順がある (${seq ? seq.join('') : 'なし'})`);
+
+  const runSeq = async () => {
+    for (const d of seq) { await page.keyboard.press(KEY[d]); await page.waitForTimeout(460); }
+    await page.waitForTimeout(200);
+  };
+  await runSeq();
+
+  chk(await page.isVisible('#modal-stuck'), 'どこにも進めなくなると「行き止まり」が自動で表示される');
+  chk((await page.textContent('#stuck-title')).trim() === '行き止まり', '見出しが「行き止まり」');
+  const btns = await page.evaluate(() => Array.from(
+    document.querySelectorAll('#modal-stuck button')).map(b => ({ id: b.id, text: b.textContent.trim() })));
+  chk(btns.length === 2 &&
+      btns[0].id === 'stuck-restart' && btns[0].text === 'このステージをやり直す' &&
+      btns[1].id === 'stuck-select' && btns[1].text === 'ステージ選択へ',
+      `上から「このステージをやり直す」「ステージ選択へ」の2つ (実際: ${btns.map(b => b.text).join(' / ')})`);
+  const emph = await page.evaluate(() => {
+    const r = document.getElementById('stuck-restart');
+    const s = document.getElementById('stuck-select');
+    return { restart: r.className, select: s.className, bg: getComputedStyle(r).backgroundColor };
+  });
+  chk(/btn-primary/.test(emph.restart) && /btn-ghost/.test(emph.select),
+      `「このステージをやり直す」だけが紫で強調されている (${emph.bg})`);
+  await page.screenshot({ path: SHOTS + '/shot-stuck.png' });
+
+  // 表示中はスワイプ・矢印キーでの操作を受け付けない
+  const posBefore = await page.textContent('#stat-moves');
+  for (const d of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']) await page.keyboard.press(d);
+  await page.waitForTimeout(250);
+  chk((await page.textContent('#stat-moves')) === posBefore, '表示中は矢印キーでの操作が効かない');
+
+  await page.click('#stuck-restart'); await page.waitForTimeout(300);
+  chk(!(await page.isVisible('#modal-stuck')) && (await page.textContent('#stat-moves')) === '0',
+      '「このステージをやり直す」で閉じて最初からやり直せる');
+
+  await runSeq();
+  chk(await page.isVisible('#modal-stuck'), 'やり直した後も行き止まりで再び表示される');
+  await page.click('#stuck-select'); await page.waitForTimeout(300);
+  chk(!(await page.isVisible('#modal-stuck')) && (await page.isVisible('#screen-select')),
+      '「ステージ選択へ」で閉じてステージ選択に戻る');
+
+  await goStage1();   // 以降のセクションはプレイ画面から始まる
+}
 
 console.log('\n== 新ルール: 通ったマスは通れない ==');
 await page.click('#game-back'); await page.waitForTimeout(150);
