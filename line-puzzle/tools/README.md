@@ -31,3 +31,12 @@ node tools/test.mjs      # 要 playwright
 
 ユーザー名バリデーション（重複・NGワード・文字種）、全50ステージの自動クリア、
 オートセーブと再開、各ボタンの動作、アイコンが単色かどうかを確認します。
+
+## 4. 1ファイルにまとめて配布する
+
+```sh
+python3 build-single-file.py out.html --standalone   # 単体で開ける完全なHTML
+python3 build-single-file.py out.html                # head を配布先が用意する形式（本文のみ）
+```
+
+CSS と JS をすべて埋め込むので、1枚のHTMLだけを置ける場所にそのまま配布できます。
