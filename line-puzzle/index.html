@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#6e747c">
 <title>ラインパズル</title>
-<link rel="stylesheet" href="style.css?v=00d1ac4108">
+<link rel="stylesheet" href="style.css?v=a75cef5c7c">
 </head>
 <body>
 
@@ -91,9 +91,6 @@
         <svg class="ic"><use href="#ic-hint"/></svg>
         <span class="badge" id="hint-badge">0</span>
       </button>
-      <button class="round-btn" id="btn-retry" type="button" aria-label="やり直す">
-        <svg class="ic"><use href="#ic-retry"/></svg>
-      </button>
     </div>
     <button class="icon-btn" id="btn-pause" type="button" aria-label="中断する">
       <svg class="ic"><use href="#ic-pause"/></svg>
@@ -124,7 +121,13 @@
     </div>
   </div>
 
-  <p class="howto">スワイプで移動</p>
+  <!-- やり直すは親指の届く画面右下、案内文と同じ行の右端に置く -->
+  <div class="howto-row">
+    <p class="howto">スワイプで移動</p>
+    <button class="round-btn" id="btn-retry" type="button" aria-label="やり直す">
+      <svg class="ic"><use href="#ic-retry"/></svg>
+    </button>
+  </div>
 </section>
 
 <!-- ============ 中断モーダル ============ -->

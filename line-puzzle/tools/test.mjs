@@ -14,7 +14,7 @@ console.log('\n== 版数(?v=) の整合 ==');
   const { createHash } = await import('node:crypto');
   const APP = new URL('../', import.meta.url).pathname;
   const html = readFileSync(APP + 'index.html', 'utf8');
-  for (const name of ['style.css', 'levels.js', 'game.js']) {
+  for (const name of ['style.css', 'levels.js', 'ura-levels.js', 'game.js']) {
     const want = createHash('sha1').update(readFileSync(APP + name)).digest('hex').slice(0, 10);
     const m = html.match(new RegExp(name.replace('.', '\\.') + '\\?v=([0-9a-f]+)'));
     chk(m && m[1] === want,
@@ -301,10 +301,20 @@ const layout = await page.evaluate(() => {
   const bar = document.querySelector('#screen-game .topbar').getBoundingClientRect();
   const lv = document.querySelector('.level-row').getBoundingClientRect();
   const frame = document.getElementById('board-frame').getBoundingClientRect();
+  const retry = document.getElementById('btn-retry').getBoundingClientRect();
+  // 案内文は左に余白を持つので、枠ではなく文字そのものの位置を測る
+  const range = document.createRange();
+  range.selectNodeContents(document.querySelector('.howto'));
+  const howtoP = range.getBoundingClientRect();
   const area = document.querySelector('.board-area').getBoundingClientRect();
   return {
     hasPad: !!document.querySelector('.dpad'),
     hasOldPadArea: !!document.querySelector('.pad-area'),
+    retryInBar: !!document.querySelector('#screen-game .topbar #btn-retry'),
+    retryInHowtoRow: !!document.querySelector('.howto-row #btn-retry'),
+    retryRight: retry.right, retryCy: retry.top + retry.height / 2,
+    howtoCx: howtoP.left + howtoP.width / 2, howtoCy: howtoP.top + howtoP.height / 2,
+    boardBottom: frame.bottom,
     actCx: act.left + act.width / 2, actBottom: act.bottom, actTop: act.top,
     barBottom: bar.bottom, lvTop: lv.top,
     frameCx: frame.left + frame.width / 2, frameCy: frame.top + frame.height / 2,
@@ -320,17 +330,45 @@ const layout = await page.evaluate(() => {
 chk(!layout.hasPad, '十字ボタンは廃止されている');
 chk(!layout.hasOldPadArea, '画面下の操作パッドは廃止されている');
 chk(layout.actBottom <= layout.barBottom + 1,
-    `やり直す・ヒントが最上段(トップバー内)にある (下端y=${Math.round(layout.actBottom)} <= バー下端${Math.round(layout.barBottom)})`);
+    `遊び方・ヒントが最上段(トップバー内)にある (下端y=${Math.round(layout.actBottom)} <= バー下端${Math.round(layout.barBottom)})`);
 chk(Math.abs(layout.actCx - layout.w / 2) < 12,
-    `やり直す・ヒントが横中央にある (中心x=${Math.round(layout.actCx)} ≒ ${Math.round(layout.w / 2)})`);
+    `遊び方・ヒントが横中央にある (中心x=${Math.round(layout.actCx)} ≒ ${Math.round(layout.w / 2)})`);
 chk(layout.lvTop >= layout.barBottom,
     `Level はトップバーより下の行にある (Level上端=${Math.round(layout.lvTop)} >= バー下端=${Math.round(layout.barBottom)})`);
 chk(!/矢印キー/.test(layout.howto), `案内文に矢印キーの記載がない ("${layout.howto.trim()}")`);
 {
-  const want = ['game-back', 'game-help', 'btn-hint', 'btn-retry', 'btn-pause'];
+  const want = ['game-back', 'game-help', 'btn-hint', 'btn-pause'];
   chk(layout.barOrder.join(',') === want.join(','),
-      `上のバーが ステージ選択→遊び方→ヒント→やり直す→中断 の順 (実際: ${layout.barOrder.join(' → ')})`);
+      `上のバーが ステージ選択→遊び方→ヒント→中断 の順 (実際: ${layout.barOrder.join(' → ')})`);
 }
+
+// やり直すだけは画面右下（案内文と同じ行の右端）
+chk(!layout.retryInBar && layout.retryInHowtoRow,
+    'やり直すは上のバーではなく案内文の行にある');
+chk(Math.abs(layout.retryCy - layout.howtoCy) < 3,
+    `やり直すが「スワイプで移動」と同じ行にある (ボタン中心y=${Math.round(layout.retryCy)} ≒ 文字中心y=${Math.round(layout.howtoCy)})`);
+chk(layout.retryRight > layout.howtoCx && layout.w - layout.retryRight < 20,
+    `やり直すがその行の右端にある (右端x=${Math.round(layout.retryRight)} / 画面幅${layout.w})`);
+chk(Math.abs(layout.howtoCx - layout.w / 2) < 3,
+    `「スワイプで移動」は画面の横中央のまま (中心x=${Math.round(layout.howtoCx)} ≒ ${Math.round(layout.w / 2)})`);
+chk(layout.retryCy > layout.boardBottom,
+    `やり直すが盤面より下にある (ボタン中心y=${Math.round(layout.retryCy)} > 盤面下端=${Math.round(layout.boardBottom)})`);
+// 縦が狭い端末では案内文を隠すが、やり直すボタンは右下に残す
+{
+  await page.setViewportSize({ width: 420, height: 600 });
+  await page.waitForTimeout(200);
+  const small = await page.evaluate(() => {
+    const r = document.getElementById('btn-retry').getBoundingClientRect();
+    const t = getComputedStyle(document.querySelector('.howto'));
+    return { retryW: r.width, retryRight: r.right, hidden: t.visibility === 'hidden' || t.display === 'none', w: innerWidth };
+  });
+  chk(small.hidden, '縦が狭い端末では「スワイプで移動」の文字は出ない');
+  chk(small.retryW > 0 && small.w - small.retryRight < 20,
+      `縦が狭い端末でもやり直すは右下に残る (幅=${Math.round(small.retryW)} / 右端x=${Math.round(small.retryRight)})`);
+  await page.setViewportSize({ width: 420, height: 860 });
+  await page.waitForTimeout(200);
+}
+
 chk(Math.abs(layout.frameCx - layout.areaCx) < 2 && Math.abs(layout.frameCy - layout.areaCy) < 2,
     '盤面が表示領域の中央にある');
 chk(layout.frameW > layout.w * 0.82, `盤面が画面幅を活かしている (幅=${Math.round(layout.frameW)} / ${layout.w})`);

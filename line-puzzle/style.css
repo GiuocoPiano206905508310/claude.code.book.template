@@ -362,9 +362,9 @@ body {
 }
 
 /* ---------- 操作ボタン ---------- */
-/* 遊び方・ヒント・やり直すは最上段のトップバーに、ステージ選択・中断と並べて置く。
+/* 遊び方・ヒントは最上段のトップバーに、ステージ選択・中断と並べて置く。
    行の高さに収まるよう、丸ボタンは icon-btn より一回りだけ大きくする。
-   3つ並ぶので、狭い端末でも収まるよう間隔は詰めている。 */
+   やり直すだけは、親指の届く画面右下（案内文と同じ行の右端）に置く。 */
 .action-btns { flex: 1; display: flex; gap: 10px; justify-content: center; }
 .round-btn {
   position: relative;
@@ -389,12 +389,18 @@ body {
 }
 .badge.is-zero { display: none; }
 
+/* 案内文とやり直すボタンの行。案内文は画面の中央に見えるよう、
+   ボタンと同じ幅の余白を左にも取る（46px + gap 10px）。 */
+.howto-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .howto {
-  margin: 10px 0 0;
+  flex: 1;
+  margin: 0;
+  padding-left: 56px;
   text-align: center;
   font-size: 11.5px;
   color: rgba(255,255,255,.85);
 }
+.howto-row .round-btn { flex: none; }
 
 /* ---------- モーダル ---------- */
 .modal {
@@ -525,7 +531,9 @@ body {
 @media (max-height: 620px) {
   /* 縦が狭い端末では Level 行の余白を詰めて、盤面の取り分を増やす */
   .level-row { margin: 8px 0 6px; }
-  .howto { display: none; }
+  /* 案内文は隠すが、同じ行にあるやり直すボタンは残す（display:none だと
+     行ごと詰まってボタンまで消えてしまうため、文字だけを見えなくする） */
+  .howto { visibility: hidden; }
 }
 
 /* ---------- 裏ステージ ---------- */
