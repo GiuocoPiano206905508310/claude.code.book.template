@@ -1,2 +1,4 @@
 shot-*.png
 pool.json
+scattered.json
+__pycache__/

@@ -2,7 +2,8 @@
    ラインパズル — まっすぐ進んで全マスを塗りつぶすパズル
    ・壁・盤面の端・すでに通ったマス に当たるまで直進する
    ・すべてのマスを塗ればクリア（同じマスは二度通れない）
-   ・全50ステージ / ユーザー名登録 / クリア時オートセーブ
+   ・全50ステージ + 裏30ステージ / クリア時オートセーブ
+   ・裏ステージ(もみじの盤面)は、本編50ステージをすべてクリアすると解放される
    ============================================================ */
 (function () {
   'use strict';
@@ -34,6 +35,9 @@
     '</svg>';
 
   var LEVELS = window.LEVELS || [];
+  // 裏ステージ。本編をすべてクリアすると解放される、石が点在する難しい盤面
+  var URA_LEVELS = window.URA_LEVELS || [];
+  function levelsOf(ura) { return ura ? URA_LEVELS : LEVELS; }
 
   /* ---------- DOM ヘルパ ---------- */
   function $(id) { return document.getElementById(id); }
@@ -45,7 +49,9 @@
   var memoryStore = null;      // localStorage が使えない環境の代替
   var storageWarned = false;
 
-  function blankProgress() { return { cleared: {}, lastStage: 1, tutorialSeen: false }; }
+  function blankProgress() {
+    return { cleared: {}, uraCleared: {}, lastStage: 1, lastUra: 1, tutorialSeen: false };
+  }
 
   function readProgress() {
     if (memoryStore) return memoryStore;
@@ -54,6 +60,8 @@
       var data = raw ? JSON.parse(raw) : null;
       if (!data || typeof data !== 'object') data = blankProgress();
       if (!data.cleared || typeof data.cleared !== 'object') data.cleared = {};
+      // 裏ステージは後から足した項目なので、古い保存データには入っていない
+      if (!data.uraCleared || typeof data.uraCleared !== 'object') data.uraCleared = {};
       return data;
     } catch (e) {
       if (!storageWarned) {
@@ -85,28 +93,42 @@
     writeProgress(p);
   }
 
-  function clearedMap() { return readProgress().cleared; }
+  // 本編と裏で別々の記録を持つ
+  function clearedMap(ura) {
+    var p = readProgress();
+    return ura ? p.uraCleared : p.cleared;
+  }
 
-  function highestCleared() {
-    var c = clearedMap(), max = 0;
+  function highestCleared(ura) {
+    var c = clearedMap(ura), max = 0;
     for (var k in c) { var n = parseInt(k, 10); if (n > max) max = n; }
     return max;
   }
 
-  function nextStage() {
-    var c = clearedMap();
-    for (var i = 1; i <= LEVELS.length; i++) {
+  function nextStage(ura) {
+    var c = clearedMap(ura), levels = levelsOf(ura);
+    for (var i = 1; i <= levels.length; i++) {
       if (!c[i]) return i;
     }
-    return LEVELS.length;
+    return levels.length;
   }
 
-  function isUnlocked(id) {
-    return id <= highestCleared() + 1;
+  function isUnlocked(id, ura) {
+    return id <= highestCleared(ura) + 1;
   }
 
-  /* ステージ帯（1-10若葉/11-20深緑/21-30黄葉/31-40紅葉/41-50枯葉）を求める */
-  function bandOf(id) { return Math.min(5, Math.ceil(id / 10)); }
+  /* 裏ステージは、本編50ステージをすべてクリアすると解放される */
+  function uraUnlocked() {
+    return URA_LEVELS.length > 0 &&
+           Object.keys(clearedMap(false)).length >= LEVELS.length;
+  }
+
+  /* ステージ帯を求める。
+     本編は 1-10若葉/11-20深緑/21-30黄葉/31-40紅葉/41-50枯葉 の5帯、
+     裏は 裏1-10緑/裏11-20黄/裏21-30赤 のもみじ3帯。 */
+  function bandOf(id, ura) {
+    return ura ? Math.min(3, Math.ceil(id / 10)) : Math.min(5, Math.ceil(id / 10));
+  }
 
   /* ============================================================
      4. レベルモデル（直進移動 + ソルバー）
@@ -148,14 +170,15 @@
     };
   }
 
-  var compiled = {};
-  function getLevel(id) {
-    if (!compiled[id]) {
-      var raw = LEVELS[id - 1];
+  var compiled = { normal: {}, ura: {} };
+  function getLevel(id, ura) {
+    var cache = ura ? compiled.ura : compiled.normal;
+    if (!cache[id]) {
+      var raw = levelsOf(ura)[id - 1];
       if (!raw) return null;
-      compiled[id] = compile(raw);
+      cache[id] = compile(raw);
     }
-    return compiled[id];
+    return cache[id];
   }
 
   /**
@@ -212,51 +235,80 @@
   /* ============================================================
      7. ステージ選択画面
      ============================================================ */
+  /** ステージボタンを1つ作る。本編と裏で作りは同じで、色の帯だけが違う。 */
+  function stageButton(id, ura, cleared, nxt) {
+    var li = el('li');
+    var btn = el('button', 'stage-btn');
+    btn.type = 'button';
+    var rec = cleared[id];
+    var name = (ura ? '裏 Level ' : 'Level ') + id;
+
+    if (!isUnlocked(id, ura)) {
+      btn.classList.add('is-locked');
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="ic"><use href="#ic-lock"/></svg>';
+      btn.setAttribute('aria-label', name + '（未開放）');
+    } else {
+      btn.textContent = id;
+      btn.setAttribute('aria-label', name);
+      if (rec) {
+        btn.classList.add('is-cleared', (ura ? 'ura-band-' : 'band-') + bandOf(id, ura));
+        var stars = el('span', 'stage-stars');
+        for (var s = 1; s <= 3; s++) {
+          stars.innerHTML += '<svg class="ic star' + (s <= rec.stars ? '' : ' off') + '"><use href="#ic-star"/></svg>';
+        }
+        btn.appendChild(stars);
+      }
+      if (id === nxt && !rec) btn.classList.add('is-next');
+      btn.addEventListener('click', function () { startStage(id, ura); });
+    }
+    li.appendChild(btn);
+    return li;
+  }
+
+  function fillGrid(grid, ura) {
+    grid.innerHTML = '';
+    var cleared = clearedMap(ura), nxt = nextStage(ura), levels = levelsOf(ura);
+    for (var i = 1; i <= levels.length; i++) {
+      grid.appendChild(stageButton(i, ura, cleared, nxt));
+    }
+  }
+
   function openSelect() {
     closeModal('modal-stuck');
-    var done = Object.keys(clearedMap()).length;
-    $('select-progress').textContent = 'クリア ' + done + ' / ' + LEVELS.length + '　（クリア時に自動保存）';
+    var done = Object.keys(clearedMap(false)).length;
+    var label = 'クリア ' + done + ' / ' + LEVELS.length;
+    // 裏が解放されたら裏の進捗も出す。2行に折り返さないよう、
+    // そのときは自動保存の注意書きは省く（本編50ステージのあいだに読めている）
+    if (uraUnlocked()) label += '　裏 ' + Object.keys(clearedMap(true)).length + ' / ' + URA_LEVELS.length;
+    else label += '　（クリア時に自動保存）';
+    $('select-progress').textContent = label;
 
-    var grid = $('stage-grid');
-    grid.innerHTML = '';
-    var cleared = clearedMap();
-    var nxt = nextStage();
+    fillGrid($('stage-grid'), false);
 
-    for (var i = 1; i <= LEVELS.length; i++) {
-      (function (id) {
-        var li = el('li');
-        var btn = el('button', 'stage-btn');
-        btn.type = 'button';
-        var rec = cleared[id];
-        var unlocked = isUnlocked(id);
-
-        if (!unlocked) {
-          btn.classList.add('is-locked');
-          btn.disabled = true;
-          btn.innerHTML = '<svg class="ic"><use href="#ic-lock"/></svg>';
-          btn.setAttribute('aria-label', 'Level ' + id + '（未開放）');
-        } else {
-          btn.textContent = id;
-          btn.setAttribute('aria-label', 'Level ' + id);
-          if (rec) {
-            btn.classList.add('is-cleared', 'band-' + bandOf(id));
-            var stars = el('span', 'stage-stars');
-            for (var s = 1; s <= 3; s++) {
-              stars.innerHTML += '<svg class="ic star' + (s <= rec.stars ? '' : ' off') + '"><use href="#ic-star"/></svg>';
-            }
-            btn.appendChild(stars);
-          }
-          if (id === nxt && !rec) btn.classList.add('is-next');
-          btn.addEventListener('click', function () { startStage(id); });
-        }
-        li.appendChild(btn);
-        grid.appendChild(li);
-      })(i);
+    // 裏ステージ。本編を全部クリアするまでは、鍵つきの案内だけを出す
+    var sec = $('ura-section'), lock = $('ura-locked'), ugrid = $('ura-grid');
+    if (URA_LEVELS.length) {
+      sec.hidden = false;
+      var open = uraUnlocked();
+      lock.hidden = open;
+      ugrid.hidden = !open;
+      if (open) fillGrid(ugrid, true);
+      else ugrid.innerHTML = '';
+    } else {
+      sec.hidden = true;
     }
     show('select');
   }
 
-  $('select-continue').addEventListener('click', function () { startStage(nextStage()); });
+  // つづきから: 本編が残っていれば本編、全部クリア済みなら裏のつづきへ
+  $('select-continue').addEventListener('click', function () {
+    if (uraUnlocked() && Object.keys(clearedMap(true)).length < URA_LEVELS.length) {
+      startStage(nextStage(true), true);
+    } else {
+      startStage(nextStage(false), false);
+    }
+  });
 
   /* ============================================================
      8. ゲーム本体
@@ -273,13 +325,15 @@
   var hintTimer = null;
   var paintTimers = [];
 
-  function startStage(id) {
-    var lv = getLevel(id);
+  function startStage(id, ura) {
+    ura = !!ura;
+    var lv = getLevel(id, ura);
     if (!lv) return;
     pending = null;
     closeModal('modal-stuck');
     state = {
       lv: lv,
+      ura: ura,
       pos: lv.start,
       painted: new Uint8Array(lv.n),
       count: 0,
@@ -287,9 +341,12 @@
       hints: 0
     };
     markPainted(lv.start);
-    saveProgress(function (p) { p.lastStage = id; });
+    saveProgress(function (p) {
+      if (ura) p.lastUra = id; else p.lastStage = id;
+    });
 
-    $('level-label').textContent = 'Level ' + id;
+    $('level-label').textContent = (ura ? '裏 Level ' : 'Level ') + id;
+    $('level-label').parentNode.classList.toggle('is-ura', ura);
     $('stat-best').textContent = lv.sol.length;
     $('hint-badge').textContent = '0';
     $('hint-badge').classList.add('is-zero');
@@ -298,7 +355,7 @@
     updateStats();
     show('game');
     requestAnimationFrame(fitBoard);
-    maybeAutoTutorial(id);
+    maybeAutoTutorial(id, ura);
   }
 
   function markPainted(i) {
@@ -314,9 +371,13 @@
     paintTimers = [];
     boardEl.innerHTML = '';
     boardEl.style.gridTemplateColumns = 'repeat(' + lv.w + ', var(--cell))';
-    // ステージ帯ごとに葉色を切り替える（1-10若葉/11-20深緑/21-30黄葉/31-40紅葉/41-50枯葉）
-    for (var bi = 1; bi <= 5; bi++) boardEl.classList.remove('leaf-band-' + bi);
-    boardEl.classList.add('leaf-band-' + Math.min(5, Math.ceil(lv.id / 10)));
+    // ステージ帯ごとに葉の絵を切り替える。
+    // 本編は葉っぱの5帯、裏はもみじの3帯。
+    for (var bi = 1; bi <= 5; bi++) {
+      boardEl.classList.remove('leaf-band-' + bi);
+      boardEl.classList.remove('ura-band-' + bi);
+    }
+    boardEl.classList.add((state.ura ? 'ura-band-' : 'leaf-band-') + bandOf(lv.id, state.ura));
     cellEls = new Array(lv.n);
 
     for (var y = 0; y < lv.h; y++) {
@@ -486,18 +547,22 @@
     });
 
     // ---- オートセーブ ----
+    var ura = state.ura;
+    var total = levelsOf(ura).length;
     saveProgress(function (p) {
-      var prev = p.cleared[lv.id];
-      p.cleared[lv.id] = {
+      var map = ura ? p.uraCleared : p.cleared;
+      var prev = map[lv.id];
+      map[lv.id] = {
         stars: Math.max(stars, prev ? prev.stars : 0),
         moves: prev ? Math.min(used, prev.moves) : used,
         at: Date.now()
       };
-      p.lastStage = Math.min(lv.id + 1, LEVELS.length);
+      if (ura) p.lastUra = Math.min(lv.id + 1, total);
+      else p.lastStage = Math.min(lv.id + 1, total);
     });
 
     setTimeout(function () {
-      $('clear-title').textContent = 'Level ' + lv.id;
+      $('clear-title').textContent = (ura ? '裏 Level ' : 'Level ') + lv.id;
       var starEls = $('clear-stars').querySelectorAll('.ic');
       for (var i = 0; i < starEls.length; i++) {
         starEls[i].classList.toggle('on', i < stars);
@@ -505,21 +570,22 @@
       }
       $('clear-detail').textContent = used + ' 手でクリア（最短 ' + opt + ' 手）'
         + (state.hints ? '　ヒント ' + state.hints + ' 回' : '');
-      $('clear-next').textContent = lv.id >= LEVELS.length ? '全ステージ制覇！' : '次のステージへ';
+      $('clear-next').textContent = lv.id >= total
+        ? (ura ? '裏ステージ制覇！' : '全ステージ制覇！') : '次のステージへ';
       openModal('modal-clear');
     }, Math.min(700, lv.n * 6 + 300));
   }
 
   $('clear-next').addEventListener('click', function () {
-    var id = state.lv.id;
+    var id = state.lv.id, ura = state.ura;
     closeModal('modal-clear');
-    if (id >= LEVELS.length) { openSelect(); return; }
-    startStage(id + 1);
+    if (id >= levelsOf(ura).length) { openSelect(); return; }
+    startStage(id + 1, ura);
   });
   $('clear-retry').addEventListener('click', function () {
-    var id = state.lv.id;
+    var id = state.lv.id, ura = state.ura;
     closeModal('modal-clear');
-    startStage(id);
+    startStage(id, ura);
   });
   $('clear-select').addEventListener('click', function () {
     closeModal('modal-clear');
@@ -578,7 +644,7 @@
   /* ---------- ボタン ---------- */
   $('btn-retry').addEventListener('click', function () {
     if (!state) return;
-    startStage(state.lv.id);
+    startStage(state.lv.id, state.ura);
   });
   $('btn-hint').addEventListener('click', requestHint);
   $('btn-pause').addEventListener('click', function () {
@@ -590,7 +656,7 @@
   $('pause-resume').addEventListener('click', function () { closeModal('modal-pause'); });
   $('pause-restart').addEventListener('click', function () {
     closeModal('modal-pause');
-    startStage(state.lv.id);
+    startStage(state.lv.id, state.ura);
   });
   $('pause-select').addEventListener('click', function () {
     closeModal('modal-pause');
@@ -598,7 +664,7 @@
   });
 
   $('stuck-restart').addEventListener('click', function () {
-    startStage(state.lv.id);
+    startStage(state.lv.id, state.ura);
   });
   $('stuck-select').addEventListener('click', openSelect);
 
@@ -625,7 +691,7 @@
       return;
     }
     if (anyModalOpen()) return;
-    if (ev.key === 'r' || ev.key === 'R') { startStage(state.lv.id); return; }
+    if (ev.key === 'r' || ev.key === 'R') { startStage(state.lv.id, state.ura); return; }
     var d = KEYMAP[ev.key];
     if (d === undefined) return;
     ev.preventDefault();
@@ -831,9 +897,9 @@
     closeModal('modal-tutorial');
   }
 
-  function maybeAutoTutorial(id) {
+  function maybeAutoTutorial(id, ura) {
     var p = readProgress();
-    if (id === 1 && highestCleared() === 0 && !p.tutorialSeen) {
+    if (!ura && id === 1 && highestCleared(false) === 0 && !p.tutorialSeen) {
       saveProgress(function (pr) { pr.tutorialSeen = true; });
       openTutorial();
     }

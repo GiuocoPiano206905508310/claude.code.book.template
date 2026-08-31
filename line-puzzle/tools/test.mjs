@@ -52,17 +52,40 @@ chk(await page.isVisible('#screen-select'), '開いた直後にステージ選�
 
 console.log('\n== ステージ選択 ==');
 const st = await page.evaluate(() => ({
-  total: document.querySelectorAll('.stage-btn').length,
-  locked: document.querySelectorAll('.stage-btn.is-locked').length,
+  total: document.querySelectorAll('#stage-grid .stage-btn').length,
+  locked: document.querySelectorAll('#stage-grid .stage-btn.is-locked').length,
 }));
 chk(st.total === 50, `ステージボタン50個 (${st.total})`);
 chk(st.locked === 49, `未クリア時のロック49個 (${st.locked})`);
 
 console.log('\n== 全50ステージ 自動プレイ ==');
 const KEY = { U: 'ArrowUp', D: 'ArrowDown', L: 'ArrowLeft', R: 'ArrowRight' };
+const DIR = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] };
+
+// 手順どおりに1手ずつ入力する。1手の待ち時間は進むマス数から求める
+// （game.js と同じ式: per = clamp(300/歩数, 42, 96) / アニメーション = per*歩数 + 40ms）。
+// 長い手（11マス以上）は一律460msでは待ち足りず、入力が次の手に溜め込まれてしまう。
+async function playSolution(lv) {
+  let [x, y] = lv.s;
+  const painted = new Set([x + ',' + y]);
+  for (const ch of lv.sol) {
+    const [dx, dy] = DIR[ch];
+    let steps = 0;
+    for (;;) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= lv.w || ny >= lv.h) break;
+      if (lv.g[ny][nx] === '#' || painted.has(nx + ',' + ny)) break;
+      x = nx; y = ny; painted.add(x + ',' + y); steps++;
+    }
+    const per = Math.max(42, Math.min(96, 300 / Math.max(1, steps)));
+    await page.keyboard.press(KEY[ch]);
+    await page.waitForTimeout(per * steps + 80);
+  }
+  await page.waitForTimeout(150);
+}
 let allCleared = true;
 for (let id = 1; id <= 50; id++) {
-  await page.evaluate(i => document.querySelectorAll('.stage-btn')[i - 1].click(), id);
+  await page.evaluate(i => document.querySelectorAll('#stage-grid .stage-btn')[i - 1].click(), id);
   await page.waitForSelector('#screen-game.is-active');
   await page.waitForTimeout(60);
   if (id === 1) {
@@ -96,7 +119,7 @@ console.log('\n== 自動保存 / 再開 ==');
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(200);
 chk(await page.isVisible('#screen-select'), 'リロード後も進捗が保持される');
-const lockedAfter = await page.$$eval('.stage-btn.is-locked', n => n.length);
+const lockedAfter = await page.$$eval('#stage-grid .stage-btn.is-locked', n => n.length);
 chk(lockedAfter === 0, `クリア済みステージが解放されている (locked=${lockedAfter})`);
 
 console.log('\n== 部分進捗の保存 ==');
@@ -106,7 +129,7 @@ await page.evaluate(() => localStorage.setItem('linePuzzle.progress.v1',
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(200);
 for (let id = 1; id <= 3; id++) {
-  await page.evaluate(i => document.querySelectorAll('.stage-btn')[i - 1].click(), id);
+  await page.evaluate(i => document.querySelectorAll('#stage-grid .stage-btn')[i - 1].click(), id);
   await page.waitForSelector('#screen-game.is-active');
   const sol = await page.evaluate(i => window.LEVELS[i - 1].sol, id);
   for (const ch of sol) { await page.keyboard.press(KEY[ch]); await page.waitForTimeout(460); }
@@ -119,7 +142,7 @@ await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(200);
 const after = await page.evaluate(() => ({
   prog: document.getElementById('select-progress').textContent,
-  locked: document.querySelectorAll('.stage-btn.is-locked').length,
+  locked: document.querySelectorAll('#stage-grid .stage-btn.is-locked').length,
 }));
 chk(/3 \/ 50/.test(after.prog), `3ステージ分が保存されている "${after.prog}"`);
 chk(after.locked === 46, `4番目まで解放 (locked=${after.locked}, 期待46)`);
@@ -168,7 +191,7 @@ console.log('\n== 行き止まり（上下左右どこにも進めない） ==')
   // ステージ1で、どこにも進めなくなる手順を探しておく（クリアはしない手順）
   const goStage1 = async () => {
     if (await page.isVisible('#screen-game')) { await page.click('#game-back'); await page.waitForTimeout(150); }
-    await page.evaluate(() => document.querySelectorAll('.stage-btn:not(.is-locked)')[0].click());
+    await page.evaluate(() => document.querySelectorAll('#stage-grid .stage-btn:not(.is-locked)')[0].click());
     await page.waitForSelector('#screen-game.is-active');
     await page.waitForTimeout(200);
   };
@@ -252,7 +275,7 @@ console.log('\n== 行き止まり（上下左右どこにも進めない） ==')
 
 console.log('\n== 新ルール: 通ったマスは通れない ==');
 await page.click('#game-back'); await page.waitForTimeout(150);
-await page.evaluate(() => document.querySelectorAll('.stage-btn:not(.is-locked)')[0].click());
+await page.evaluate(() => document.querySelectorAll('#stage-grid .stage-btn:not(.is-locked)')[0].click());
 await page.waitForSelector('#screen-game.is-active');
 await page.waitForTimeout(150);
 const firstDir = await page.evaluate(() => window.LEVELS[0].sol[0]);
@@ -328,7 +351,7 @@ chk(swipeWorked, 'スワイプで移動できる（十字キーが無くても�
 
 console.log('\n== クリア画面の再チャレンジ ==');
 await page.click('#game-back'); await page.waitForTimeout(200);
-await page.evaluate(() => document.querySelectorAll('.stage-btn:not(.is-locked)')[0].click());
+await page.evaluate(() => document.querySelectorAll('#stage-grid .stage-btn:not(.is-locked)')[0].click());
 await page.waitForSelector('#screen-game.is-active');
 {
   const sol = await page.evaluate(() => window.LEVELS[0].sol);
@@ -384,7 +407,7 @@ chk(starInfo.useFill === 'rgb(242, 183, 5)', `星が塗りつぶし (fill=${star
 chk(parseFloat(starInfo.offOpacity) < 0.5, `未獲得の星は薄く表示 (opacity=${starInfo.offOpacity})`);
 
 console.log('\n== 葉っぱの背景 ==');
-await page.evaluate(() => document.querySelectorAll('.stage-btn:not(.is-locked)')[0].click());
+await page.evaluate(() => document.querySelectorAll('#stage-grid .stage-btn:not(.is-locked)')[0].click());
 await page.waitForSelector('#screen-game.is-active');
 await page.waitForTimeout(300);
 {
@@ -463,7 +486,7 @@ console.log('\n== ステージ帯ごとの葉色 ==');
   });
   await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(250);
   for (const bc of bandChecks) {
-    await page.evaluate(i => document.querySelectorAll('.stage-btn')[i].click(), bc.idx);
+    await page.evaluate(i => document.querySelectorAll('#stage-grid .stage-btn')[i].click(), bc.idx);
     await page.waitForSelector('#screen-game.is-active');
     await page.waitForTimeout(250);
     const got = await page.evaluate(() => {
@@ -489,7 +512,7 @@ console.log('\n== ホーム画面: 横5マスの固定グリッドと帯ごと�
 
   const bandColor = { 1: 'rgb(139, 195, 74)', 2: 'rgb(63, 143, 69)', 3: 'rgb(224, 181, 42)', 4: 'rgb(193, 68, 60)', 5: 'rgb(138, 98, 64)' };
   const bandSamples = await page.evaluate(() => {
-    const btns = document.querySelectorAll('.stage-btn');
+    const btns = document.querySelectorAll('#stage-grid .stage-btn');
     return [0, 10, 20, 30].map(i => ({
       id: i + 1,
       cls: btns[i].className,
@@ -504,7 +527,7 @@ console.log('\n== ホーム画面: 横5マスの固定グリッドと帯ごと�
   // 数字と星が重ならないよう間隔が空いていることを、星の上端が数字の下端より
   // 下にあることで確認する
   const overlap = await page.evaluate(() => {
-    const btn = document.querySelector('.stage-btn.is-cleared');
+    const btn = document.querySelector('#stage-grid .stage-btn.is-cleared');
     const stars = btn.querySelector('.stage-stars');
     const bRect = btn.getBoundingClientRect(), sRect = stars.getBoundingClientRect();
     return sRect.top < bRect.top + bRect.height * 0.55;   // 星がボタン上半分に食い込んでいないか
@@ -598,6 +621,149 @@ const solverCheck = await page.evaluate(() => {
   return bad;
 });
 chk(solverCheck.length === 0, `解答データ検証 ${solverCheck.length ? solverCheck.join(',') : '全50件OK'}`);
+
+
+console.log('\n== 裏ステージ ==');
+{
+  // 裏ステージのデータ検証（手順を再生して全マス塗れるか / 石がまばらか）
+  const ura = await page.evaluate(() => {
+    const D = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] };
+    const N = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    return window.URA_LEVELS.map(lv => {
+      const floor = new Set(), stone = new Set();
+      for (let y = 0; y < lv.h; y++)
+        for (let x = 0; x < lv.w; x++)
+          (lv.g[y][x] === '.' ? floor : stone).add(x + ',' + y);
+      // 手順の再生
+      let [px, py] = lv.s;
+      let ok = floor.has(px + ',' + py), noop = false;
+      const painted = new Set([px + ',' + py]);
+      for (const ch of lv.sol) {
+        const [dx, dy] = D[ch];
+        let steps = 0;
+        for (;;) {
+          const k = (px + dx) + ',' + (py + dy);
+          if (!floor.has(k) || painted.has(k)) break;
+          px += dx; py += dy; painted.add(k); steps++;
+        }
+        if (!steps) noop = true;
+      }
+      // 石のまばらさ
+      const all = [...stone].map(k => k.split(',').map(Number));
+      const iso = all.filter(([x, y]) => !N.some(([dx, dy]) => stone.has((x + dx) + ',' + (y + dy)))).length;
+      const seen = new Set();
+      let clump = 0;
+      for (const k of stone) {
+        if (seen.has(k)) continue;
+        seen.add(k);
+        const st = [k];
+        let n = 0;
+        while (st.length) {
+          const [x, y] = st.pop().split(',').map(Number);
+          n++;
+          for (const [dx, dy] of N) {
+            const nk = (x + dx) + ',' + (y + dy);
+            if (stone.has(nk) && !seen.has(nk)) { seen.add(nk); st.push(nk); }
+          }
+        }
+        clump = Math.max(clump, n);
+      }
+      return { id: lv.id, ok: ok && !noop && painted.size === floor.size,
+               stones: stone.size, iso: stone.size ? iso / stone.size : 1, clump,
+               moves: lv.sol.length };
+    });
+  });
+  chk(ura.length === 30, `裏ステージ30面 (実際: ${ura.length})`);
+  const bad = ura.filter(u => !u.ok);
+  chk(bad.length === 0,
+      `裏の解答データ検証 ${bad.length ? bad.map(u => '裏' + u.id).join(',') : '全30面OK'}`);
+  const clumped = ura.filter(u => u.clump > 2);
+  chk(clumped.length === 0,
+      `裏は石が3マス以上つながっていない ${clumped.length ? clumped.map(u => `裏${u.id}:${u.clump}`).join(',') : '全30面OK'}`);
+  const dense = ura.filter(u => u.iso < 0.45);
+  chk(dense.length === 0,
+      `裏は石の孤立率45%以上＝まばら ${dense.length ? dense.map(u => `裏${u.id}:${Math.round(u.iso * 100)}%`).join(',') : '全30面OK'}`);
+  const short = ura.filter(u => u.moves < 30);
+  chk(short.length === 0,
+      `裏の最短手数が30手以上 ${short.length ? short.map(u => `裏${u.id}:${u.moves}手`).join(',') : `全30面OK (最小${Math.min(...ura.map(u => u.moves))}手)`}`);
+  const normalMoves = await page.evaluate(() => window.LEVELS.map(l => l.sol.length));
+  const avgN = normalMoves.reduce((a, b) => a + b, 0) / normalMoves.length;
+  const avgU = ura.reduce((a, u) => a + u.moves, 0) / ura.length;
+  chk(avgU > avgN * 2,
+      `裏のほうが手数が多い (本編の平均${avgN.toFixed(1)}手 → 裏の平均${avgU.toFixed(1)}手)`);
+
+  // ---- 解放の条件: 本編50をすべてクリアするまでは開かない ----
+  await page.evaluate(() => localStorage.setItem('linePuzzle.progress.v1',
+    JSON.stringify({ cleared: {}, uraCleared: {}, lastStage: 1, tutorialSeen: true })));
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(200);
+  chk(await page.isVisible('#ura-locked'), '未クリアのうちは「50ステージすべてクリアで解放」の案内が出る');
+  chk(!(await page.isVisible('#ura-grid')), '未クリアのうちは裏ステージのボタンが出ない');
+
+  // 49ステージまでクリアしても、まだ開かない
+  await page.evaluate(() => {
+    const cleared = {};
+    for (let i = 1; i <= window.LEVELS.length - 1; i++) cleared[i] = { stars: 3, moves: 1, at: 1 };
+    localStorage.setItem('linePuzzle.progress.v1',
+      JSON.stringify({ cleared, uraCleared: {}, lastStage: 50, tutorialSeen: true }));
+  });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(200);
+  chk(await page.isVisible('#ura-locked'), '49ステージまでではまだ解放されない');
+
+  // 50ステージすべてクリアすると開く
+  await page.evaluate(() => {
+    const cleared = {};
+    for (let i = 1; i <= window.LEVELS.length; i++) cleared[i] = { stars: 3, moves: 1, at: 1 };
+    localStorage.setItem('linePuzzle.progress.v1',
+      JSON.stringify({ cleared, uraCleared: {}, lastStage: 50, tutorialSeen: true }));
+  });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(200);
+  chk(!(await page.isVisible('#ura-locked')), '50ステージすべてクリアで解放される');
+  chk(await page.isVisible('#ura-grid'), '解放後は裏ステージのボタンが出る');
+  const uc = await page.evaluate(() => ({
+    total: document.querySelectorAll('#ura-grid .stage-btn').length,
+    locked: document.querySelectorAll('#ura-grid .stage-btn.is-locked').length,
+  }));
+  chk(uc.total === 30, `裏ステージボタン30個 (${uc.total})`);
+  chk(uc.locked === 29, `裏も1面ずつ開く (未開放${uc.locked}個)`);
+  chk(/裏 0 \/ 30/.test(await page.textContent('#select-progress')),
+      `進捗に裏の件数が出る "${await page.textContent('#select-progress')}"`);
+  await page.screenshot({ path: SHOTS + '/shot-ura-select.png' });
+
+  // ---- 裏ステージを実際に遊ぶ ----
+  await page.evaluate(() => document.querySelectorAll('#ura-grid .stage-btn')[0].click());
+  await page.waitForSelector('#screen-game.is-active');
+  await page.waitForTimeout(150);
+  chk((await page.textContent('#level-label')) === '裏 Level 1',
+      `裏だと分かる見出し "${await page.textContent('#level-label')}"`);
+  const cls = await page.getAttribute('#board', 'class');
+  chk(/ura-band-1/.test(cls) && !/leaf-band/.test(cls),
+      `盤面がもみじの帯になる (class="${cls}")`);
+  await page.screenshot({ path: SHOTS + '/shot-ura-play.png' });
+
+  await playSolution(await page.evaluate(() => window.URA_LEVELS[0]));
+  await page.waitForFunction(() => !document.getElementById('modal-clear').hidden,
+                             null, { timeout: 4000 }).catch(() => {});
+  chk(await page.isVisible('#modal-clear'), '裏ステージをクリアできる');
+  chk((await page.textContent('#clear-title')) === '裏 Level 1',
+      `クリア画面も裏の見出し "${await page.textContent('#clear-title')}"`);
+  await page.click('#clear-select');
+  await page.waitForTimeout(200);
+  chk(/裏 1 \/ 30/.test(await page.textContent('#select-progress')),
+      `裏の進捗が保存される "${await page.textContent('#select-progress')}"`);
+  const uc2 = await page.evaluate(() => document.querySelectorAll('#ura-grid .stage-btn.is-locked').length);
+  chk(uc2 === 28, `裏2面目が解放される (未開放${uc2}個)`);
+
+  // 本編の記録は裏と混ざらない
+  const both = await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('linePuzzle.progress.v1'));
+    return { normal: Object.keys(p.cleared).length, ura: Object.keys(p.uraCleared).length };
+  });
+  chk(both.normal === 50 && both.ura === 1,
+      `本編と裏の記録が別々に保存される (本編${both.normal}件 / 裏${both.ura}件)`);
+}
 
 await browser.close();
 console.log('\n== JSエラー ==');
