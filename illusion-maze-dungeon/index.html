@@ -23,12 +23,21 @@
       <dt>矢印キー / WASD</dt><dd>移動</dd>
       <dt>[ / ]</dt><dd>カメラを90度回転</dd>
       <dt>G</dt><dd>重力面を切り替える(床 → 北の壁 → 天井)</dd>
+      <dt>E</dt><dd>宝箱を調べる</dd>
+      <dt>Q / R</dt><dd>回復薬・盾を使う</dd>
       <dt>H / J</dt><dd>ダメージ・回復のテスト</dd>
     </dl>
     <div class="hint-note">赤茶色の床は罠タイル。踏むとダメージを受けます。</div>
   </div>
 
   <div id="face-badge">床</div>
+
+  <div id="examine-prompt" hidden>宝箱を調べる(E)</div>
+
+  <div id="inventory">
+    <div class="inv-item"><span class="inv-icon potion"></span><span class="inv-count" id="potion-count">0</span></div>
+    <div class="inv-item"><span class="inv-icon shield"></span><span class="inv-count" id="shield-count">0</span></div>
+  </div>
 
   <div id="game-over" hidden>
     <div class="go-panel">

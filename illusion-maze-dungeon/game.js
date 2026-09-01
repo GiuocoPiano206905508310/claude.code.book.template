@@ -103,6 +103,17 @@ shield.rotation.z = Math.PI / 2;
 shield.position.set(-0.4, 0.85, 0);
 player.add(shield);
 
+// Gold ring that appears while a guard charm is active, per the design doc's
+// "防御膜" (defense membrane) visual for the shield item.
+const shieldRing = new THREE.Mesh(
+  new THREE.TorusGeometry(0.55, 0.04, 8, 32),
+  new THREE.MeshStandardMaterial({ color: 0xe0b95f, emissive: 0xe0b95f, emissiveIntensity: 0.6, roughness: 0.3 }),
+);
+shieldRing.rotation.x = Math.PI / 2;
+shieldRing.position.y = 0.05;
+shieldRing.visible = false;
+player.add(shieldRing);
+
 player.position.set(0, 0, 2);
 scene.add(player);
 
@@ -240,13 +251,21 @@ function updateHpUI() {
 }
 
 function flashHpBar(kind) {
-  hpBarEl.classList.remove('flash-damage', 'flash-heal');
+  hpBarEl.classList.remove('flash-damage', 'flash-heal', 'flash-block');
   void hpBarEl.offsetWidth; // restart the CSS animation
   hpBarEl.classList.add(kind);
 }
 
 function takeDamage(amount) {
   if (invincible || gameOver || amount <= 0) return;
+  if (shieldActive) {
+    shieldActive = false;
+    shieldRing.visible = false;
+    flashHpBar('flash-block');
+    invincible = true;
+    invincibleTimer = INVINCIBLE_DURATION;
+    return;
+  }
   hp = Math.max(0, hp - amount);
   updateHpUI();
   flashHpBar('flash-damage');
@@ -280,6 +299,16 @@ function resetGame() {
   shifting = false;
   player.position.set(0, 0, 2);
   player.quaternion.identity();
+
+  potionCount = 0;
+  shieldCount = 0;
+  shieldActive = false;
+  shieldRing.visible = false;
+  updateInventoryUI();
+  for (const c of chests) {
+    c.opened = false;
+    c.lidPivot.rotation.x = 0;
+  }
 }
 
 document.getElementById('retry-btn').addEventListener('click', resetGame);
@@ -294,6 +323,138 @@ function updateTrap() {
   wasInTrap = inside;
 }
 
+// ---------- chests & items ----------
+// A chest is a group (base + hinged lid) plus which item it awards. Walking
+// within range shows the "調べる" prompt from the UI design doc; opening it
+// adds one of the two items to inventory, matching this roadmap step's
+// scope (回復薬・守りの盾) rather than the full five-item chest table.
+const chestBaseMat = new THREE.MeshStandardMaterial({ color: 0x233a63, roughness: 0.7 });
+const chestTrimMat = new THREE.MeshStandardMaterial({ color: 0xc7902f, roughness: 0.4, metalness: 0.4 });
+
+function createChest(x, z, itemType) {
+  const group = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.36, 0.5), chestBaseMat);
+  base.position.y = 0.18;
+  group.add(base);
+  const trimBand = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.06, 0.52), chestTrimMat);
+  trimBand.position.y = 0.06;
+  group.add(trimBand);
+
+  const lidPivot = new THREE.Group();
+  lidPivot.position.set(0, 0.36, -0.25);
+  group.add(lidPivot);
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.14, 0.52), chestBaseMat);
+  lid.position.set(0, 0.07, 0.25);
+  lidPivot.add(lid);
+
+  group.position.set(x, 0, z);
+  scene.add(group);
+  return { group, lidPivot, opened: false, itemType };
+}
+
+const chests = [
+  createChest(3, -1, 'potion'),
+  createChest(-1, 4, 'shield'),
+];
+
+const openingLids = [];
+function animateLidOpen(chest) {
+  openingLids.push({ pivot: chest.lidPivot, t: 0 });
+}
+function updateLids(dt) {
+  for (const item of openingLids) item.t = Math.min(1, item.t + dt / 0.4);
+  for (const item of openingLids) {
+    const eased = item.t * item.t * (3 - 2 * item.t);
+    item.pivot.rotation.x = -1.9 * eased;
+  }
+  for (let i = openingLids.length - 1; i >= 0; i--) {
+    if (openingLids[i].t >= 1) openingLids.splice(i, 1);
+  }
+}
+
+const bursts = [];
+function spawnBurst(position, color) {
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.1, 0.03, 8, 24),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 }),
+  );
+  ring.position.copy(position);
+  ring.rotation.x = Math.PI / 2;
+  scene.add(ring);
+  bursts.push({ mesh: ring, age: 0 });
+}
+function updateBursts(dt) {
+  for (let i = bursts.length - 1; i >= 0; i--) {
+    const b = bursts[i];
+    b.age += dt;
+    const t = b.age / 0.6;
+    b.mesh.scale.setScalar(1 + t * 6);
+    b.mesh.material.opacity = Math.max(0, 0.9 * (1 - t));
+    if (t >= 1) {
+      scene.remove(b.mesh);
+      bursts.splice(i, 1);
+    }
+  }
+}
+
+let potionCount = 0;
+let shieldCount = 0;
+let shieldActive = false;
+
+const potionCountEl = document.getElementById('potion-count');
+const shieldCountEl = document.getElementById('shield-count');
+function updateInventoryUI() {
+  potionCountEl.textContent = potionCount;
+  shieldCountEl.textContent = shieldCount;
+}
+updateInventoryUI();
+
+function usePotion() {
+  if (potionCount <= 0 || gameOver) return;
+  potionCount--;
+  heal(30);
+  updateInventoryUI();
+}
+function useShield() {
+  if (shieldCount <= 0 || gameOver || shieldActive) return;
+  shieldCount--;
+  shieldActive = true;
+  shieldRing.visible = true;
+  updateInventoryUI();
+}
+
+const examinePromptEl = document.getElementById('examine-prompt');
+let nearbyChest = null;
+
+function updateChestProximity() {
+  nearbyChest = null;
+  if (currentFaceKey === 'floor') {
+    for (const c of chests) {
+      if (c.opened) continue;
+      const dx = player.position.x - c.group.position.x;
+      const dz = player.position.z - c.group.position.z;
+      if (Math.hypot(dx, dz) < 1.3) { nearbyChest = c; break; }
+    }
+  }
+  examinePromptEl.hidden = !nearbyChest;
+}
+
+function tryExamine() {
+  if (!nearbyChest) return;
+  openChest(nearbyChest);
+}
+
+function openChest(chest) {
+  chest.opened = true;
+  animateLidOpen(chest);
+  const color = chest.itemType === 'potion' ? 0x6fc9b3 : 0xe0b95f;
+  spawnBurst(chest.group.position.clone().add(new THREE.Vector3(0, 0.4, 0)), color);
+  if (chest.itemType === 'potion') potionCount++;
+  else shieldCount++;
+  updateInventoryUI();
+  examinePromptEl.hidden = true;
+}
+
 // ---------- input ----------
 const keys = new Set();
 window.addEventListener('keydown', (e) => {
@@ -303,6 +464,9 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyG') cycleGravityFace();
   if (e.code === 'KeyH') takeDamage(10);
   if (e.code === 'KeyJ') heal(20);
+  if (e.code === 'KeyE') tryExamine();
+  if (e.code === 'KeyQ') usePotion();
+  if (e.code === 'KeyR') useShield();
 });
 window.addEventListener('keyup', (e) => keys.delete(e.code));
 
@@ -387,8 +551,13 @@ function tick() {
   if (!gameOver) {
     updateGravityShift(dt);
     updateTrap();
+    updateChestProximity();
   }
+  updateLids(dt);
+  updateBursts(dt);
   updateCamera(dt);
+
+  if (shieldActive) shieldRing.rotation.z += dt * 1.5;
 
   if (invincible) {
     invincibleTimer -= dt;

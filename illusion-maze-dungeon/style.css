@@ -74,6 +74,7 @@ html, body {
 
 .hp-bar.flash-damage { animation: hpFlashDamage .4s ease; }
 .hp-bar.flash-heal { animation: hpFlashHeal .4s ease; }
+.hp-bar.flash-block { animation: hpFlashBlock .4s ease; }
 @keyframes hpFlashDamage {
   0% { box-shadow: 0 0 0 4px rgba(207, 106, 85, .8); }
   100% { box-shadow: 0 0 0 0 rgba(207, 106, 85, 0); }
@@ -81,6 +82,10 @@ html, body {
 @keyframes hpFlashHeal {
   0% { box-shadow: 0 0 0 4px rgba(111, 201, 179, .8); }
   100% { box-shadow: 0 0 0 0 rgba(111, 201, 179, 0); }
+}
+@keyframes hpFlashBlock {
+  0% { box-shadow: 0 0 0 4px rgba(224, 185, 95, .85); }
+  100% { box-shadow: 0 0 0 0 rgba(224, 185, 95, 0); }
 }
 
 .hp-text {
@@ -187,3 +192,47 @@ html, body {
   cursor: pointer;
 }
 #retry-btn:hover { filter: brightness(1.08); }
+
+#examine-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  background: var(--surface);
+  color: #f1ead9;
+  border: 1px solid rgba(199, 144, 47, .5);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#inventory {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.inv-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border-radius: 999px;
+  color: #f1ead9;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.inv-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.inv-icon.potion { background: var(--teal-bright); box-shadow: inset 0 0 0 2px rgba(0,0,0,.15); }
+.inv-icon.shield { background: var(--gold); box-shadow: inset 0 0 0 2px rgba(0,0,0,.15); }
