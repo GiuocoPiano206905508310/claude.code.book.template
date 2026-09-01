@@ -71,6 +71,14 @@ const goalMarker = new THREE.Mesh(new THREE.OctahedronGeometry(0.35), goldMat);
 goalMarker.position.set(4, 0.35, 4);
 scene.add(goalMarker);
 
+// A simple contact trap: red-brown, sits flush with the floor, deals damage
+// once per entry. Stand-in for the "罠" damage source until real hazards
+// (falling rocks, crumbling floor) exist in roadmap step 6.
+const trapMat = new THREE.MeshStandardMaterial({ color: 0x9c4a3c, roughness: 0.85 });
+const trap = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 1.8), trapMat);
+trap.position.set(-3, 0.06, -2.5);
+scene.add(trap);
+
 // ---------- player ----------
 const player = new THREE.Group();
 const body = new THREE.Mesh(
@@ -209,6 +217,83 @@ function cycleGravityFace() {
   setGravityFace(GRAVITY_CYCLE[(idx + 1) % GRAVITY_CYCLE.length]);
 }
 
+// ---------- HP / damage ----------
+// A single entry point for every damage source (traps, monsters, falling --
+// whatever comes later) so invincibility, the HP bar, and game over all stay
+// consistent no matter where the damage came from.
+const MAX_HP = 100;
+const INVINCIBLE_DURATION = 0.8;
+
+let hp = MAX_HP;
+let invincible = false;
+let invincibleTimer = 0;
+let gameOver = false;
+
+const hpFillEl = document.getElementById('hp-fill');
+const hpBarEl = hpFillEl.parentElement;
+const hpTextEl = document.getElementById('hp-text');
+const gameOverEl = document.getElementById('game-over');
+
+function updateHpUI() {
+  hpFillEl.style.width = `${(hp / MAX_HP) * 100}%`;
+  hpTextEl.textContent = `${hp} / ${MAX_HP}`;
+}
+
+function flashHpBar(kind) {
+  hpBarEl.classList.remove('flash-damage', 'flash-heal');
+  void hpBarEl.offsetWidth; // restart the CSS animation
+  hpBarEl.classList.add(kind);
+}
+
+function takeDamage(amount) {
+  if (invincible || gameOver || amount <= 0) return;
+  hp = Math.max(0, hp - amount);
+  updateHpUI();
+  flashHpBar('flash-damage');
+  invincible = true;
+  invincibleTimer = INVINCIBLE_DURATION;
+  if (hp <= 0) triggerGameOver();
+}
+
+function heal(amount) {
+  if (gameOver || amount <= 0) return;
+  hp = Math.min(MAX_HP, hp + amount);
+  updateHpUI();
+  flashHpBar('flash-heal');
+}
+
+function triggerGameOver() {
+  gameOver = true;
+  gameOverEl.hidden = false;
+}
+
+function resetGame() {
+  hp = MAX_HP;
+  gameOver = false;
+  invincible = false;
+  invincibleTimer = 0;
+  gameOverEl.hidden = true;
+  updateHpUI();
+
+  currentFaceKey = 'floor';
+  document.getElementById('face-badge').textContent = GRAVITY_FACES.floor.label;
+  shifting = false;
+  player.position.set(0, 0, 2);
+  player.quaternion.identity();
+}
+
+document.getElementById('retry-btn').addEventListener('click', resetGame);
+updateHpUI();
+
+let wasInTrap = false;
+function updateTrap() {
+  const dx = player.position.x - trap.position.x;
+  const dz = player.position.z - trap.position.z;
+  const inside = currentFaceKey === 'floor' && Math.abs(dx) < 1 && Math.abs(dz) < 1;
+  if (inside && !wasInTrap) takeDamage(15);
+  wasInTrap = inside;
+}
+
 // ---------- input ----------
 const keys = new Set();
 window.addEventListener('keydown', (e) => {
@@ -216,6 +301,8 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'BracketRight') rotateCameraBy(90);
   if (e.code === 'BracketLeft') rotateCameraBy(-90);
   if (e.code === 'KeyG') cycleGravityFace();
+  if (e.code === 'KeyH') takeDamage(10);
+  if (e.code === 'KeyJ') heal(20);
 });
 window.addEventListener('keyup', (e) => keys.delete(e.code));
 
@@ -296,9 +383,23 @@ const clock = new THREE.Clock();
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  if (!shifting) updateMovement(dt);
-  updateGravityShift(dt);
+  if (!shifting && !gameOver) updateMovement(dt);
+  if (!gameOver) {
+    updateGravityShift(dt);
+    updateTrap();
+  }
   updateCamera(dt);
+
+  if (invincible) {
+    invincibleTimer -= dt;
+    body.material.opacity = 0.35 + 0.65 * (Math.sin(invincibleTimer * 40) * 0.5 + 0.5);
+    body.material.transparent = true;
+    if (invincibleTimer <= 0) {
+      invincible = false;
+      body.material.opacity = 1;
+      body.material.transparent = false;
+    }
+  }
 
   renderer.render(scene, camera);
   requestAnimationFrame(tick);

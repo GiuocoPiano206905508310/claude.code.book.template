@@ -9,16 +9,34 @@
 <body>
   <canvas id="scene"></canvas>
 
+  <div id="hp-panel">
+    <div class="stage-label">STAGE 0 — 動作確認用フロア</div>
+    <div class="hp-row">
+      <span class="hp-label">HP</span>
+      <div class="hp-bar"><div class="hp-fill" id="hp-fill"></div></div>
+      <span class="hp-text" id="hp-text">100 / 100</span>
+    </div>
+  </div>
+
   <div id="hint">
-    <div class="stage-name">STAGE 0 — 動作確認用フロア</div>
     <dl>
       <dt>矢印キー / WASD</dt><dd>移動</dd>
       <dt>[ / ]</dt><dd>カメラを90度回転</dd>
       <dt>G</dt><dd>重力面を切り替える(床 → 北の壁 → 天井)</dd>
+      <dt>H / J</dt><dd>ダメージ・回復のテスト</dd>
     </dl>
+    <div class="hint-note">赤茶色の床は罠タイル。踏むとダメージを受けます。</div>
   </div>
 
   <div id="face-badge">床</div>
+
+  <div id="game-over" hidden>
+    <div class="go-panel">
+      <div class="go-title">GAME OVER</div>
+      <p class="go-sub">HPが0になりました</p>
+      <button id="retry-btn" type="button">もう一度挑戦する</button>
+    </div>
+  </div>
 
   <script type="module" src="game.js"></script>
 </body>
