@@ -114,6 +114,17 @@ shieldRing.position.y = 0.05;
 shieldRing.visible = false;
 player.add(shieldRing);
 
+// Sword: a pivot at the shoulder so a swing is just one rotation to animate.
+const swordPivot = new THREE.Group();
+swordPivot.position.set(0.4, 0.9, 0);
+player.add(swordPivot);
+const swordBlade = new THREE.Mesh(
+  new THREE.BoxGeometry(0.06, 0.5, 0.06),
+  new THREE.MeshStandardMaterial({ color: 0xdfe6e4, metalness: 0.6, roughness: 0.3 }),
+);
+swordBlade.position.y = 0.25;
+swordPivot.add(swordBlade);
+
 player.position.set(0, 0, 2);
 scene.add(player);
 
@@ -309,6 +320,17 @@ function resetGame() {
     c.opened = false;
     c.lidPivot.rotation.x = 0;
   }
+
+  for (const enemy of enemies) {
+    if (enemy.state === ENEMY_STATE.DEAD) scene.add(enemy.group);
+    enemy.hp = enemy.maxHp;
+    enemy.state = ENEMY_STATE.PATROL;
+    enemy.patrolDir = 1;
+    enemy.hitFlashTimer = 0;
+    enemy.bodyMesh.material.emissiveIntensity = 0;
+    enemy.group.position.copy(enemy.home);
+    enemy.group.rotation.y = 0;
+  }
 }
 
 document.getElementById('retry-btn').addEventListener('click', resetGame);
@@ -455,6 +477,163 @@ function openChest(chest) {
   examinePromptEl.hidden = true;
 }
 
+// ---------- enemies ----------
+// A small state machine (待機/巡回 -> 発見 -> 追跡 -> 攻撃 -> 撃破) shared by
+// every enemy; a new monster type only needs its own factory function with
+// different stats/visuals, reusing updateEnemy() as-is. Only the slime from
+// the design doc is implemented here -- the other three (bat, stone guardian,
+// grimoire) come later once this loop is proven out.
+const ENEMY_STATE = { PATROL: 'patrol', CHASE: 'chase', ATTACK: 'attack', DEAD: 'dead' };
+const DETECT_RADIUS = 3.5;
+const LOSE_RADIUS = 5.5;
+const ENEMY_ATTACK_RANGE = 0.8;
+
+const slimeBodyMat = new THREE.MeshStandardMaterial({ color: 0x8fb9c4, transparent: true, opacity: 0.85, roughness: 0.6 });
+const slimeCoreMat = new THREE.MeshStandardMaterial({ color: 0x7fd9c0, emissive: 0x7fd9c0, emissiveIntensity: 0.7 });
+
+function createSlime(x, z, patrolToX, patrolToZ) {
+  const group = new THREE.Group();
+  const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), slimeBodyMat.clone());
+  bodyMesh.scale.set(1, 0.7, 1);
+  bodyMesh.position.y = 0.22;
+  group.add(bodyMesh);
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), slimeCoreMat);
+  core.position.y = 0.24;
+  group.add(core);
+
+  group.position.set(x, 0, z);
+  scene.add(group);
+
+  return {
+    group, bodyMesh,
+    hp: 20, maxHp: 20, attackPower: 8,
+    state: ENEMY_STATE.PATROL,
+    home: new THREE.Vector3(x, 0, z),
+    patrolTarget: new THREE.Vector3(patrolToX, 0, patrolToZ),
+    patrolDir: 1,
+    speed: 1.1,
+    chaseSpeed: 1.8,
+    hopPhase: Math.random() * 10,
+    attackCooldown: 0,
+    hitFlashTimer: 0,
+  };
+}
+
+const enemies = [
+  createSlime(1, -5, 3, -5),
+  createSlime(-5, -1, -5, 2),
+];
+
+function updateEnemy(enemy, dt) {
+  if (enemy.state === ENEMY_STATE.DEAD) return;
+
+  const toPlayer = new THREE.Vector3().subVectors(player.position, enemy.group.position);
+  toPlayer.y = 0;
+  const dist = toPlayer.length();
+  const canSeePlayer = currentFaceKey === 'floor' && !gameOver;
+
+  if (enemy.state === ENEMY_STATE.PATROL) {
+    if (canSeePlayer && dist < DETECT_RADIUS) {
+      enemy.state = ENEMY_STATE.CHASE;
+    } else {
+      const target = enemy.patrolDir > 0 ? enemy.patrolTarget : enemy.home;
+      const toTarget = new THREE.Vector3().subVectors(target, enemy.group.position);
+      if (toTarget.length() < 0.15) {
+        enemy.patrolDir *= -1;
+      } else {
+        toTarget.normalize();
+        enemy.group.position.addScaledVector(toTarget, enemy.speed * dt);
+      }
+    }
+  } else if (enemy.state === ENEMY_STATE.CHASE) {
+    if (!canSeePlayer || dist > LOSE_RADIUS) {
+      enemy.state = ENEMY_STATE.PATROL;
+    } else if (dist < ENEMY_ATTACK_RANGE) {
+      enemy.state = ENEMY_STATE.ATTACK;
+      enemy.attackCooldown = 0;
+    } else {
+      toPlayer.normalize();
+      enemy.group.position.addScaledVector(toPlayer, enemy.chaseSpeed * dt);
+    }
+  } else if (enemy.state === ENEMY_STATE.ATTACK) {
+    enemy.attackCooldown -= dt;
+    if (!canSeePlayer || dist > ENEMY_ATTACK_RANGE * 1.5) {
+      enemy.state = ENEMY_STATE.CHASE;
+    } else if (enemy.attackCooldown <= 0) {
+      takeDamage(enemy.attackPower);
+      enemy.attackCooldown = 1.0;
+    }
+  }
+
+  const isMoving = enemy.state === ENEMY_STATE.PATROL || enemy.state === ENEMY_STATE.CHASE;
+  if (isMoving) {
+    enemy.hopPhase += dt * (enemy.state === ENEMY_STATE.CHASE ? 8 : 4);
+    const hop = Math.abs(Math.sin(enemy.hopPhase));
+    enemy.bodyMesh.scale.y = 0.7 + hop * 0.25;
+    enemy.group.position.y = hop * 0.12;
+  }
+  if ((enemy.state === ENEMY_STATE.CHASE || enemy.state === ENEMY_STATE.ATTACK) && dist > 0.05) {
+    enemy.group.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
+  }
+
+  if (enemy.hitFlashTimer > 0) {
+    enemy.hitFlashTimer -= dt;
+    enemy.bodyMesh.material.emissive = new THREE.Color(0xffffff);
+    enemy.bodyMesh.material.emissiveIntensity = Math.max(0, enemy.hitFlashTimer / 0.15) * 0.9;
+  }
+}
+
+function damageEnemy(enemy, amount) {
+  if (enemy.state === ENEMY_STATE.DEAD) return;
+  enemy.hp -= amount;
+  enemy.hitFlashTimer = 0.15;
+  if (enemy.hp <= 0) killEnemy(enemy);
+}
+
+function killEnemy(enemy) {
+  enemy.state = ENEMY_STATE.DEAD;
+  spawnBurst(enemy.group.position.clone().add(new THREE.Vector3(0, 0.3, 0)), 0x7fd9c0);
+  scene.remove(enemy.group);
+}
+
+// ---------- hero attack ----------
+const ATTACK_DAMAGE = 15;
+const ATTACK_RANGE = 1.1;
+const ATTACK_ARC = Math.PI * 0.7;
+const ATTACK_COOLDOWN = 0.45;
+const ATTACK_ANIM_DURATION = 0.25;
+
+let attackCooldownTimer = 0;
+let attackAnimTimer = 0;
+
+function performAttack() {
+  if (gameOver || attackCooldownTimer > 0) return;
+  attackCooldownTimer = ATTACK_COOLDOWN;
+  attackAnimTimer = ATTACK_ANIM_DURATION;
+
+  const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.quaternion);
+  for (const enemy of enemies) {
+    if (enemy.state === ENEMY_STATE.DEAD) continue;
+    const toEnemy = new THREE.Vector3().subVectors(enemy.group.position, player.position);
+    toEnemy.y = 0;
+    const dist = toEnemy.length();
+    if (dist > ATTACK_RANGE || dist < 1e-4) continue;
+    toEnemy.normalize();
+    if (forward.angleTo(toEnemy) < ATTACK_ARC / 2) damageEnemy(enemy, ATTACK_DAMAGE);
+  }
+}
+
+function updateAttack(dt) {
+  if (attackCooldownTimer > 0) attackCooldownTimer -= dt;
+  if (attackAnimTimer > 0) {
+    attackAnimTimer -= dt;
+    const t = 1 - attackAnimTimer / ATTACK_ANIM_DURATION;
+    swordPivot.rotation.x = -Math.sin(t * Math.PI) * 1.4;
+  } else {
+    swordPivot.rotation.x = 0;
+  }
+}
+
 // ---------- input ----------
 const keys = new Set();
 window.addEventListener('keydown', (e) => {
@@ -467,6 +646,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyE') tryExamine();
   if (e.code === 'KeyQ') usePotion();
   if (e.code === 'KeyR') useShield();
+  if (e.code === 'Space') { e.preventDefault(); performAttack(); }
 });
 window.addEventListener('keyup', (e) => keys.delete(e.code));
 
@@ -552,7 +732,9 @@ function tick() {
     updateGravityShift(dt);
     updateTrap();
     updateChestProximity();
+    for (const enemy of enemies) updateEnemy(enemy, dt);
   }
+  updateAttack(dt);
   updateLids(dt);
   updateBursts(dt);
   updateCamera(dt);
