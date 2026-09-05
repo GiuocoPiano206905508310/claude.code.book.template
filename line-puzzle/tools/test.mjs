@@ -1120,7 +1120,7 @@ console.log('\n== 登録内容の変更 ==');
   // ユーザー名（すぐ変わる）
   await page.click('#account-name');
   await page.waitForTimeout(150);
-  await page.fill('#account-input', 'あおい2');
+  await page.fill('#account-input-1', 'あおい2');
   await page.click('#account-save');
   await page.waitForTimeout(400);
   chk((await page.textContent('#select-user')) === 'あおい2',
@@ -1131,7 +1131,7 @@ console.log('\n== 登録内容の変更 ==');
   await page.click('#select-account');
   await page.click('#account-email');
   await page.waitForTimeout(150);
-  await page.fill('#account-input', 'aoi-new@example.com');
+  await page.fill('#account-input-1', 'aoi-new@example.com');
   await page.click('#account-save');
   await page.waitForTimeout(400);
   chk(/確認メール/.test(await page.textContent('#account-msg')),
@@ -1144,29 +1144,46 @@ console.log('\n== 登録内容の変更 ==');
   chk(/aoi-new@example\.com/.test(await page.textContent('#account-who')),
       `リンクを開くとメールアドレスが変わる "${await page.textContent('#account-who')}"`);
 
-  // パスワード（メールのリンクを開いた画面で決める）
-  fakeMails.length = 0;
+  // パスワード（現在のパスワード + 新しいパスワード + 確認）
   await page.click('#account-password');
   await page.waitForTimeout(150);
-  chk(!(await page.isVisible('#account-input')),
-      'パスワード変更はその場では入力させず、メールを送るだけ');
-  await page.click('#account-save');
-  await page.waitForTimeout(400);
-  chk(/メールを送りました/.test(await page.textContent('#account-msg')),
-      `パスワード変更用のメールを送る "${(await page.textContent('#account-msg')).trim()}"`);
-  chk(fakeMails.length === 1 && fakeMails[0].to === 'aoi-new@example.com'
-      && fakeMails[0].type === 'recovery',
-      `登録メールアドレス宛に届く (${fakeMails.map(m => m.to + ':' + m.type).join(', ')})`);
+  const pwFields = await page.evaluate(() => [1, 2, 3]
+    .filter(i => !document.getElementById('account-field-' + i).hidden)
+    .map(i => document.getElementById('account-label-' + i).textContent));
+  chk(pwFields.join(' / ') === '現在のパスワード / 新しいパスワード / 新しいパスワード（確認）',
+      `入力欄は現在・新しい・確認の3つ (${pwFields.join(' / ')})`);
+  chk(await page.evaluate(() => [1, 2, 3].every(i =>
+        document.getElementById('account-input-' + i).type === 'password')),
+      '3つとも伏せ字で入力する');
 
-  await openMailLink(fakeMails[0]);
-  chk(await page.isVisible('#account-form'), 'リンクを開くと新しいパスワードの入力が出る');
-  chk((await page.textContent('#account-title')) === '新しいパスワード',
-      `その画面だと分かる見出し "${await page.textContent('#account-title')}"`);
-  await page.screenshot({ path: SHOTS + '/shot-newpass.png' });
-  await page.fill('#account-input', 'newpass77');
+  // 確認欄が合っていないと送らない
+  await page.fill('#account-input-1', 'pass1234');
+  await page.fill('#account-input-2', 'newpass77');
+  await page.fill('#account-input-3', 'newpass78');
+  await page.click('#account-save');
+  await page.waitForTimeout(300);
+  chk(/一致しません/.test(await page.textContent('#account-msg')),
+      `確認欄が違うと知らせる "${(await page.textContent('#account-msg')).trim()}"`);
+
+  // 現在のパスワードが違うと変えられない
+  await page.fill('#account-input-1', 'wrongpass');
+  await page.fill('#account-input-2', 'newpass77');
+  await page.fill('#account-input-3', 'newpass77');
   await page.click('#account-save');
   await page.waitForTimeout(400);
-  chk(await page.isVisible('#screen-select'), 'パスワードを決めるとゲームに戻る');
+  chk(/現在のパスワードが違います/.test(await page.textContent('#account-msg')),
+      `現在のパスワードが違うと知らせる "${(await page.textContent('#account-msg')).trim()}"`);
+  chk(await page.isVisible('#account-form'), '間違えたままでは変わらない');
+
+  await page.screenshot({ path: SHOTS + '/shot-password.png' });
+
+  // 正しく入れれば変わる
+  await page.fill('#account-input-1', 'pass1234');
+  await page.fill('#account-input-2', 'newpass77');
+  await page.fill('#account-input-3', 'newpass77');
+  await page.click('#account-save');
+  await page.waitForTimeout(500);
+  chk(await page.isVisible('#screen-select'), 'パスワードを変えるとゲームに戻る');
 
   // 新しいパスワードでログインできる
   await page.click('#select-account');
@@ -1177,6 +1194,50 @@ console.log('\n== 登録内容の変更 ==');
   await page.click('#do-login');
   await page.waitForSelector('#screen-select.is-active', { timeout: 5000 });
   chk(await page.isVisible('#screen-select'), '新しいパスワードでログインできる');
+
+  // 「パスワードを忘れた」→ メールのリンク → その画面で決め直す
+  // （今のパスワードを知らない人の経路なので、現在のパスワードは聞かない）
+  await page.click('#select-account');
+  await page.click('#account-logout');
+  await page.waitForSelector('#screen-login.is-active', { timeout: 4000 });
+  fakeMails.length = 0;
+  await page.fill('#login-email', 'aoi-new@example.com');
+  await page.click('#do-reset');
+  await page.waitForTimeout(400);
+  chk(/送りました/.test(await page.textContent('#login-msg')),
+      `パスワードを忘れた人にはメールを送る "${(await page.textContent('#login-msg')).trim()}"`);
+  chk(fakeMails.length === 1 && fakeMails[0].type === 'recovery',
+      `再設定のメールが届く (${fakeMails.map(m => m.to + ':' + m.type).join(', ')})`);
+
+  await openMailLink(fakeMails[0]);
+  chk((await page.textContent('#account-title')) === '新しいパスワード',
+      `リンクを開くと決め直す画面になる "${await page.textContent('#account-title')}"`);
+  const resetFields = await page.evaluate(() => [1, 2, 3]
+    .filter(i => !document.getElementById('account-field-' + i).hidden)
+    .map(i => document.getElementById('account-label-' + i).textContent));
+  chk(resetFields.join(' / ') === '新しいパスワード / 新しいパスワード（確認）',
+      `この経路では現在のパスワードは聞かない (${resetFields.join(' / ')})`);
+  await page.screenshot({ path: SHOTS + '/shot-newpass.png' });
+  await page.fill('#account-input-1', 'forgot123');
+  await page.fill('#account-input-2', 'forgot124');
+  await page.click('#account-save');
+  await page.waitForTimeout(300);
+  chk(/一致しません/.test(await page.textContent('#account-msg')),
+      'ここでも確認欄が違えば送らない');
+  await page.fill('#account-input-1', 'forgot123');
+  await page.fill('#account-input-2', 'forgot123');
+  await page.click('#account-save');
+  await page.waitForTimeout(500);
+  chk(await page.isVisible('#screen-select'), '決め直すとゲームに戻る');
+
+  await page.click('#select-account');
+  await page.click('#account-logout');
+  await page.waitForSelector('#screen-login.is-active', { timeout: 4000 });
+  await page.fill('#login-email', 'aoi-new@example.com');
+  await page.fill('#login-password', 'forgot123');
+  await page.click('#do-login');
+  await page.waitForSelector('#screen-select.is-active', { timeout: 5000 });
+  chk(await page.isVisible('#screen-select'), '決め直したパスワードでログインできる');
   fakeConfirmMail = false;
 }
 

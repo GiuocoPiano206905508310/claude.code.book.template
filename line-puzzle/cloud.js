@@ -108,6 +108,8 @@
     } else if (low.indexOf('already registered') >= 0 || low.indexOf('already exists') >= 0 ||
                status === 422 && low.indexOf('user') >= 0 && low.indexOf('exist') >= 0) {
       msg = 'このメールアドレスはすでに登録されています。';
+    } else if (low.indexOf('should be different') >= 0) {
+      msg = '新しいパスワードは、今までと違うものにしてください。';
     } else if (low.indexOf('password should be') >= 0 || low.indexOf('password') >= 0 && status === 422) {
       msg = 'パスワードは6文字以上にしてください。';
     } else if (low.indexOf('invalid email') >= 0 || low.indexOf('unable to validate email') >= 0) {
@@ -213,11 +215,35 @@
     return updateUser({ email: String(email || '').trim() }, true).then(function () { return true; });
   }
 
-  function changePassword(password) {
+  // パスワードだけを差し替える。メールの再設定リンクから来たときに使う
+  // （その場合は今のパスワードを知らないので確かめようがない）
+  function setPassword(password) {
     if (String(password || '').length < 6) {
       return Promise.reject(new Error('パスワードは6文字以上にしてください。'));
     }
     return updateUser({ password: password }, false).then(function () { return true; });
+  }
+
+  // ログイン中に自分で変える。今のパスワードを知っている人だけが変えられるよう、
+  // 先に今のパスワードで入り直して確かめる（端末を横取りされても変えられない）。
+  function changePassword(current, next) {
+    if (String(next || '').length < 6) {
+      return Promise.reject(new Error('新しいパスワードは6文字以上にしてください。'));
+    }
+    var u = session && session.user;
+    if (!u) return Promise.reject(new Error('ログインしていません'));
+    return request('/auth/v1/token?grant_type=password', {
+      method: 'POST', body: { email: u.email, password: current }
+    }).then(function (data) {
+      var s = shapeSession(data);
+      if (s) { if (!s.user.id) s.user = u; storeSession(s); }
+    }, function (e) {
+      // 合っているかどうかの話なのか、通信の失敗なのかを混ぜない
+      if (e.status === 400) throw new Error('現在のパスワードが違います。');
+      throw e;
+    }).then(function () {
+      return setPassword(next);
+    });
   }
 
   function signIn(email, password) {
@@ -330,6 +356,7 @@
     changeName: changeName,
     changeEmail: changeEmail,
     changePassword: changePassword,
+    setPassword: setPassword,
     readAuthRedirect: readAuthRedirect,
     fetchProgress: fetchProgress,
     saveProgress: saveProgress

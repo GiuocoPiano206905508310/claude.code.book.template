@@ -1138,28 +1138,40 @@
     name: {
       title: 'ユーザー名を変更',
       lede: '画面に出る名前です。すぐに変わります。',
-      label: '新しいユーザー名', type: 'text', save: '保存',
-      fill: function () { var u = currentUser(); return u ? u.username : ''; }
+      save: '保存',
+      fields: [{ label: '新しいユーザー名', type: 'text', ac: 'nickname',
+                 fill: function () { var u = currentUser(); return u ? u.username : ''; } }]
     },
     email: {
       title: 'メールアドレスを変更',
       lede: '新しいアドレスに確認のリンクをお送りします。そのリンクを開くまで、ログインは今のアドレスのままです。',
-      label: '新しいメールアドレス', type: 'email', save: '確認メールを送る',
-      fill: function () { return ''; }
+      save: '確認メールを送る',
+      fields: [{ label: '新しいメールアドレス', type: 'email', ac: 'email' }]
     },
+    // 今のパスワードを知っている人だけが変えられるようにする
     password: {
       title: 'パスワードを変更',
-      lede: '登録しているメールアドレスに、パスワード変更用のリンクをお送りします。そのリンクを開いた画面で新しいパスワードを決めます。',
-      label: '', type: null, save: 'メールを送る',
-      fill: function () { return ''; }
+      lede: '',
+      save: 'パスワードを変更する',
+      fields: [
+        { label: '現在のパスワード', type: 'password', ac: 'current-password' },
+        { label: '新しいパスワード', type: 'password', ac: 'new-password' },
+        { label: '新しいパスワード（確認）', type: 'password', ac: 'new-password' }
+      ]
     },
+    // 「パスワードを忘れた」のメールから開いた場合。今のパスワードは聞けない
     newpass: {
       title: '新しいパスワード',
       lede: 'メールのリンクから開きました。新しいパスワードを決めてください。',
-      label: '新しいパスワード', type: 'password', save: 'このパスワードにする',
-      fill: function () { return ''; }
+      save: 'このパスワードにする',
+      fields: [
+        { label: '新しいパスワード', type: 'password', ac: 'new-password' },
+        { label: '新しいパスワード（確認）', type: 'password', ac: 'new-password' }
+      ]
     }
   };
+
+  function accountInput(i) { return $('account-input-' + i); }
 
   function showAccountMenu() {
     accountMode = null;
@@ -1174,11 +1186,16 @@
     accountMode = mode;
     $('account-title').textContent = f.title;
     $('account-lede').textContent = f.lede;
-    $('account-label').textContent = f.label;
-    $('account-field').hidden = !f.type;
-    if (f.type) {
-      $('account-input').type = f.type;
-      $('account-input').value = f.fill();
+    $('account-lede').hidden = !f.lede;
+    for (var i = 1; i <= 3; i++) {
+      var spec = f.fields[i - 1];
+      $('account-field-' + i).hidden = !spec;
+      if (!spec) continue;
+      $('account-label-' + i).textContent = spec.label;
+      var input = accountInput(i);
+      input.type = spec.type;
+      input.setAttribute('autocomplete', spec.ac);
+      input.value = spec.fill ? spec.fill() : '';
     }
     $('account-save').textContent = f.save;
     setMsg('account-msg', '');
@@ -1194,10 +1211,10 @@
 
   $('account-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
-    var mode = accountMode, value = $('account-input').value;
+    var mode = accountMode;
+    var v1 = accountInput(1).value, v2 = accountInput(2).value, v3 = accountInput(3).value;
     var btn = $('account-save');
     setMsg('account-msg', '');
-    setBusy(btn, true, '送信中…');
 
     var done = function (msg) {
       setBusy(btn, false);
@@ -1207,28 +1224,39 @@
       setBusy(btn, false);
       setMsg('account-msg', e.message);
     };
+    var finished = function (msg) {
+      setBusy(btn, false);
+      closeModal('modal-account');
+      toast(msg);
+    };
 
     if (mode === 'name') {
-      cloud.changeName(value).then(function (name) {
-        setBusy(btn, false);
-        closeModal('modal-account');
+      setBusy(btn, true, '保存中…');
+      cloud.changeName(v1).then(function (name) {
         openSelect();                       // 見出しのユーザー名を出し直す
-        toast('ユーザー名を ' + name + ' に変えました');
+        finished('ユーザー名を ' + name + ' に変えました');
       }, failed);
+
     } else if (mode === 'email') {
-      cloud.changeEmail(value).then(function () {
+      setBusy(btn, true, '送信中…');
+      cloud.changeEmail(v1).then(function () {
         done('確認メールを送りました。メールのリンクを開くと、新しいアドレスに変わります。');
       }, failed);
+
     } else if (mode === 'password') {
-      var u = currentUser();
-      cloud.sendReset(u ? u.email : '').then(function () {
-        done('パスワード変更用のメールを送りました。メールのリンクを開いてください。');
+      // 打ち間違いに気づけるよう、送る前に確認欄と突き合わせる
+      if (!v1) { setMsg('account-msg', '現在のパスワードを入れてください。'); return; }
+      if (v2 !== v3) { setMsg('account-msg', '新しいパスワードが一致しません。'); return; }
+      setBusy(btn, true, '変更中…');
+      cloud.changePassword(v1, v2).then(function () {
+        finished('パスワードを変更しました');
       }, failed);
+
     } else if (mode === 'newpass') {
-      cloud.changePassword(value).then(function () {
-        setBusy(btn, false);
-        closeModal('modal-account');
-        toast('パスワードを変更しました');
+      if (v1 !== v2) { setMsg('account-msg', '新しいパスワードが一致しません。'); return; }
+      setBusy(btn, true, '変更中…');
+      cloud.setPassword(v1).then(function () {
+        finished('パスワードを変更しました');
       }, failed);
     }
   });
