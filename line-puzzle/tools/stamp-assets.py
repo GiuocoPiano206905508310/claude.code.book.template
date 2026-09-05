@@ -16,7 +16,7 @@ GitHub Pages は静的ファイルをブラウザにキャッシュさせるた�
 import hashlib, pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ASSETS = ['style.css', 'levels.js', 'ura-levels.js', 'game.js']
+ASSETS = ['style.css', 'levels.js', 'ura-levels.js', 'cloud.js', 'game.js']
 
 def digest(name):
     return hashlib.sha1((ROOT / name).read_bytes()).hexdigest()[:10]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""index.html / style.css / levels.js / game.js を1枚のHTMLにまとめる。
+"""index.html / style.css / 各JS を1枚のHTMLにまとめる。
 
 「HTMLを1ファイルだけ置ける配布先」に載せるとき用。
 既定では <!doctype>/<html>/<head>/<body> を含まない本文だけを出力する
@@ -13,21 +13,22 @@ import re, sys, pathlib
 
 root = pathlib.Path(__file__).resolve().parent.parent
 read = lambda name: (root / name).read_text(encoding='utf-8')
-html, css, levels, game = read('index.html'), read('style.css'), read('levels.js'), read('game.js')
-
-for code in (css, levels, game):
-    for token in ('</script>', '</style>'):
-        assert token not in code, '埋め込むコードに %s が含まれている' % token
+html, css = read('index.html'), read('style.css')
 
 body = re.search(r'<body>(.*)</body>', html, re.S).group(1)
 title = re.search(r'<title>(.*?)</title>', html, re.S).group(1)
 
-# 外部参照の script タグを、中身をそのまま埋め込んだ script に置き換える
-inline = '<script>\n%s</script>\n<script>\n%s</script>' % (levels, game)
-body, hit = re.subn(r'<script src="levels\.js(?:\?v=[0-9a-f]+)?"></script>\s*'
-                    r'<script src="game\.js(?:\?v=[0-9a-f]+)?"></script>',
-                    lambda m: inline, body)
-assert hit == 1, 'script タグを置換できなかった'
+# 外部参照の script タグを、中身をそのまま埋め込んだ script に置き換える。
+# どのJSを何個読んでいるかは index.html から拾うので、JSが増えてもここは直さなくてよい。
+SCRIPT = re.compile(r'<script src="([A-Za-z0-9_.-]+\.js)(?:\?v=[0-9a-f]+)?"></script>')
+names = SCRIPT.findall(body)
+assert names, 'script タグが見つからない'
+
+for code in [css] + [read(n) for n in names]:
+    for token in ('</script>', '</style>'):
+        assert token not in code, '埋め込むコードに %s が含まれている' % token
+
+body = SCRIPT.sub(lambda m: '<script>\n%s</script>' % read(m.group(1)), body)
 
 out = '<title>%s</title>\n<style>\n%s</style>\n%s\n' % (title, css, body.strip())
 

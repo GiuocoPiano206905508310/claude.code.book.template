@@ -14,7 +14,7 @@ console.log('\n== 版数(?v=) の整合 ==');
   const { createHash } = await import('node:crypto');
   const APP = new URL('../', import.meta.url).pathname;
   const html = readFileSync(APP + 'index.html', 'utf8');
-  for (const name of ['style.css', 'levels.js', 'ura-levels.js', 'game.js']) {
+  for (const name of ['style.css', 'levels.js', 'ura-levels.js', 'cloud.js', 'game.js']) {
     const want = createHash('sha1').update(readFileSync(APP + name)).digest('hex').slice(0, 10);
     const m = html.match(new RegExp(name.replace('.', '\\.') + '\\?v=([0-9a-f]+)'));
     chk(m && m[1] === want,
@@ -26,9 +26,94 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 420, height: 860 }, deviceScaleFactor: 2 });
 const errs = [];
 page.on('pageerror', e => errs.push('pageerror: ' + e.message));
-page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
+page.on('console', m => {
+  if (m.type() !== 'error') return;
+  // 偽バックエンドへわざと失敗させた通信（誤パスワード=400 / 停止中=500）は、
+  // ゲーム側で受け止めて案内を出している。ブラウザが出す通信の失敗行は数えない。
+  const from = (m.location() && m.location().url) || '';
+  if (/supabase\.co/.test(from)) return;
+  errs.push('console: ' + m.text());
+});
+
+// ---- 偽の Supabase ----
+// 本物のプロジェクトを叩かずにログイン周りを通しで試すため、認証と保存の
+// 2つのエンドポイントだけをこの場で肩代わりする。中身は素朴な連想配列。
+const fakeUsers = new Map();      // email -> { id, password, username }
+const fakeRows = new Map();       // user_id -> progress
+let fakeConfirmMail = false;      // true なら「確認メールを送りました」の経路になる
+let fakeDown = false;             // true なら保存が失敗する
+
+await page.route('**/auth/v1/**', async route => {
+  const url = route.request().url();
+  const body = route.request().postDataJSON() || {};
+  const json = (status, obj) => route.fulfill(
+    { status, contentType: 'application/json', body: JSON.stringify(obj) });
+  const session = u => ({
+    access_token: 'access-' + u.id, refresh_token: 'refresh-' + u.id, expires_in: 3600,
+    user: { id: u.id, email: u.email, user_metadata: { username: u.username } },
+  });
+  if (url.includes('/signup')) {
+    const email = (body.email || '').toLowerCase();
+    if (fakeUsers.has(email)) return json(422, { msg: 'User already registered' });
+    if ((body.password || '').length < 6) return json(422, { msg: 'Password should be at least 6 characters' });
+    const u = { id: 'uid-' + (fakeUsers.size + 1), email, password: body.password,
+                username: (body.data && body.data.username) || '' };
+    fakeUsers.set(email, u);
+    return fakeConfirmMail ? json(200, { id: u.id, email }) : json(200, session(u));
+  }
+  if (url.includes('grant_type=password')) {
+    const u = fakeUsers.get((body.email || '').toLowerCase());
+    if (!u || u.password !== body.password) return json(400, { error_description: 'Invalid login credentials' });
+    return json(200, session(u));
+  }
+  if (url.includes('/recover')) return json(200, {});
+  return json(200, {});
+});
+
+await page.route('**/rest/v1/**', async route => {
+  const req = route.request();
+  if (fakeDown) return route.fulfill({ status: 500, contentType: 'application/json',
+    body: JSON.stringify({ message: 'down' }) });
+  if (req.method() === 'GET') {
+    const id = decodeURIComponent(/user_id=eq\.([^&]+)/.exec(req.url())[1]);
+    const row = fakeRows.get(id);
+    return route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify(row ? [{ progress: row }] : []) });
+  }
+  const rows = req.postDataJSON();
+  fakeRows.set(rows[0].user_id, rows[0].progress);
+  return route.fulfill({ status: 201, contentType: 'application/json', body: '' });
+});
 
 await page.goto(BASE, { waitUntil: 'networkidle' });
+
+console.log('\n== ログイン画面 ==');
+chk(await page.isVisible('#screen-login'), '初回はログイン画面から始まる');
+chk(!(await page.isVisible('#screen-select')), 'ログイン画面ではステージ選択は出ない');
+chk(await page.isVisible('#play-guest'), '「ログインせずに遊ぶ」を選べる');
+await page.screenshot({ path: SHOTS + '/shot-login.png' });
+await page.click('#tab-signup');
+await page.waitForTimeout(150);
+chk(await page.isVisible('#signup-username') && await page.isVisible('#signup-email')
+    && await page.isVisible('#signup-password'),
+    '新規登録はユーザー名・メールアドレス・パスワードの3つ');
+await page.screenshot({ path: SHOTS + '/shot-signup.png' });
+
+// 間違ったパスワードでは入れない
+await page.click('#tab-login');
+await page.fill('#login-email', 'nobody@example.com');
+await page.fill('#login-password', 'wrongpass');
+await page.click('#do-login');
+await page.waitForTimeout(400);
+chk(await page.isVisible('#screen-login'), '間違ったログインでは先へ進まない');
+chk(/違います/.test(await page.textContent('#login-msg')),
+    `間違いを日本語で知らせる "${(await page.textContent('#login-msg')).trim()}"`);
+await page.fill('#login-email', '');
+await page.fill('#login-password', '');
+
+// 以降のテストは「ログインせずに遊ぶ」状態で進める
+await page.click('#play-guest');
+await page.waitForSelector('#screen-select.is-active');
 
 console.log('\n== レベルデータ ==');
 const meta = await page.evaluate(() => ({
@@ -45,10 +130,13 @@ chk(blocks.reduce((a, b) => a + b, 0) / blocks.length > 10,
     `ブロックが十分ある (平均${(blocks.reduce((a, b) => a + b, 0) / blocks.length).toFixed(1)}個 / 最大${Math.max(...blocks)}個)`);
 console.log('   最短手数:', meta.sols.join(','));
 
-console.log('\n== 登録不要で始められる ==');
-chk(!(await page.$('#screen-login')), 'ログイン画面が存在しない');
-chk(!(await page.$('#username-input')), 'ユーザー名の入力欄が存在しない');
-chk(await page.isVisible('#screen-select'), '開いた直後にステージ選択が表示される');
+console.log('\n== ログインしなくても遊べる ==');
+chk(await page.isVisible('#screen-select'), '「ログインせずに遊ぶ」でそのまま始められる');
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(200);
+chk(await page.isVisible('#screen-select'),
+    '一度そう選んだら、次に開いたときはログイン画面を出さない');
+chk(await page.isVisible('#select-account'), 'あとからログインできるアカウントボタンがある');
 
 console.log('\n== ステージ選択 ==');
 const st = await page.evaluate(() => ({
@@ -801,6 +889,119 @@ console.log('\n== 裏ステージ ==');
   });
   chk(both.normal === 50 && both.ura === 1,
       `本編と裏の記録が別々に保存される (本編${both.normal}件 / 裏${both.ura}件)`);
+}
+
+console.log('\n== アカウントと引き継ぎ ==');
+{
+  // ログインしていない状態で3ステージ進めておく
+  await page.evaluate(() => {
+    const cleared = { 1: { stars: 3, moves: 5, at: 1 }, 2: { stars: 2, moves: 9, at: 1 },
+                      3: { stars: 1, moves: 30, at: 1 } };
+    localStorage.setItem('linePuzzle.progress.v1',
+      JSON.stringify({ cleared, uraCleared: {}, lastStage: 4, tutorialSeen: true }));
+  });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(200);
+  chk(/クリア 3 \/ 50/.test(await page.textContent('#select-progress')),
+      'ログイン前の進行状況が3ステージぶんある');
+
+  // アカウントを作る
+  await page.click('#select-account');
+  await page.waitForTimeout(150);
+  chk(/ログインしていません/.test(await page.textContent('#account-who')),
+      '未ログインだとアカウント画面がそう伝える');
+  await page.click('#account-login');
+  await page.waitForSelector('#screen-login.is-active');
+  await page.click('#tab-signup');
+  await page.fill('#signup-username', 'ゆうと');
+  await page.fill('#signup-email', 'yuto@example.com');
+  await page.fill('#signup-password', 'pass1234');
+  await page.click('#do-signup');
+  await page.waitForSelector('#screen-select.is-active', { timeout: 5000 });
+  await page.waitForTimeout(400);
+
+  chk((await page.textContent('#select-user')) === 'ゆうと',
+      `ログインするとユーザー名が出る "${await page.textContent('#select-user')}"`);
+  chk(/クリア 3 \/ 50/.test(await page.textContent('#select-progress')),
+      'ログイン前の進行状況がアカウントへ引き継がれる');
+
+  // クラウド側にも同じ内容が届いている
+  const saved = fakeRows.get('uid-1');
+  chk(saved && Object.keys(saved.cleared).length === 3,
+      `クラウドにも保存される (${saved ? Object.keys(saved.cleared).length : 0}ステージ)`);
+
+  // 記録はアカウントごとに分かれて置かれる
+  const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.indexOf('linePuzzle.progress') === 0));
+  chk(keys.indexOf('linePuzzle.progress.v1:uid-1') >= 0,
+      `アカウントごとの保存先ができる (${keys.join(', ')})`);
+
+  // クリアするとクラウドにも書き戻される
+  await page.evaluate(() => document.querySelectorAll('#stage-grid .stage-btn')[3].click());
+  await page.waitForSelector('#screen-game.is-active');
+  await playSolution(await page.evaluate(() => window.LEVELS[3]));
+  await page.waitForFunction(() => !document.getElementById('modal-clear').hidden, null, { timeout: 4000 });
+  await page.click('#clear-select');
+  await page.waitForTimeout(900);
+  chk(Object.keys(fakeRows.get('uid-1').cleared).length === 4,
+      `クリアするとクラウドの記録も増える (${Object.keys(fakeRows.get('uid-1').cleared).length}ステージ)`);
+
+  // ログアウトすると、ログインしていない時の記録に戻る
+  await page.click('#select-account');
+  await page.waitForTimeout(150);
+  chk(/ゆうと/.test(await page.textContent('#account-who')),
+      `アカウント画面に誰か出る "${await page.textContent('#account-who')}"`);
+  await page.click('#account-logout');
+  await page.waitForSelector('#screen-login.is-active', { timeout: 4000 });
+  await page.click('#play-guest');
+  await page.waitForTimeout(200);
+  chk(/クリア 3 \/ 50/.test(await page.textContent('#select-progress')),
+      'ログアウトすると、ログイン前のこの端末の記録に戻る');
+  chk((await page.textContent('#select-user')) === 'ラインパズル',
+      'ログアウトするとユーザー名は出ない');
+
+  // 別の端末のつもりで、記録を消してからログインし直す
+  await page.evaluate(() => {
+    Object.keys(localStorage).filter(k => k.indexOf('linePuzzle.') === 0)
+      .forEach(k => localStorage.removeItem(k));
+  });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('#screen-login.is-active');
+  await page.fill('#login-email', 'yuto@example.com');
+  await page.fill('#login-password', 'pass1234');
+  await page.click('#do-login');
+  await page.waitForSelector('#screen-select.is-active', { timeout: 5000 });
+  await page.waitForTimeout(300);
+  chk(/クリア 4 \/ 50/.test(await page.textContent('#select-progress')),
+      `別の端末でもクラウドから続きが出る "${await page.textContent('#select-progress')}"`);
+  await page.screenshot({ path: SHOTS + '/shot-account.png' });
+
+  // クラウドが落ちていても遊べる（端末には保存される）
+  fakeDown = true;
+  await page.evaluate(() => document.querySelectorAll('#stage-grid .stage-btn')[4].click());
+  await page.waitForSelector('#screen-game.is-active');
+  await playSolution(await page.evaluate(() => window.LEVELS[4]));
+  await page.waitForFunction(() => !document.getElementById('modal-clear').hidden, null, { timeout: 4000 });
+  await page.click('#clear-select');
+  await page.waitForTimeout(900);
+  chk(/クリア 5 \/ 50/.test(await page.textContent('#select-progress')),
+      'クラウドに繋がらなくてもクリアは端末に残る');
+  fakeDown = false;
+
+  // 確認メールが要る設定のときは、その旨を伝えて先へ進まない
+  fakeConfirmMail = true;
+  await page.click('#select-account');
+  await page.click('#account-logout');
+  await page.waitForSelector('#screen-login.is-active', { timeout: 4000 });
+  await page.click('#tab-signup');
+  await page.fill('#signup-username', 'あおい');
+  await page.fill('#signup-email', 'aoi@example.com');
+  await page.fill('#signup-password', 'pass1234');
+  await page.click('#do-signup');
+  await page.waitForTimeout(500);
+  chk(/確認メール/.test(await page.textContent('#signup-msg')),
+      `確認メールが要るときはそう伝える "${(await page.textContent('#signup-msg')).trim()}"`);
+  chk(await page.isVisible('#screen-login'), '確認が済むまでは先へ進まない');
+  fakeConfirmMail = false;
 }
 
 await browser.close();

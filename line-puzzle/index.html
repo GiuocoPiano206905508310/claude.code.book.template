@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#6e747c">
 <title>ラインパズル</title>
-<link rel="stylesheet" href="style.css?v=a75cef5c7c">
+<link rel="stylesheet" href="style.css?v=b4b58e4790">
 </head>
 <body>
 
@@ -41,6 +41,11 @@
     <symbol id="ic-star" viewBox="0 0 24 24">
       <path d="m12 3.1 2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 17.13 6.5 20.02l1.05-6.12L3.1 9.57l6.15-.9Z"/>
     </symbol>
+    <!-- 👤 アカウント -->
+    <symbol id="ic-user" viewBox="0 0 24 24">
+      <circle cx="12" cy="8.2" r="3.9"/>
+      <path d="M4.8 20.2a7.2 7.2 0 0 1 14.4 0"/>
+    </symbol>
     <!-- ❔ 遊び方 -->
     <symbol id="ic-help" viewBox="0 0 24 24">
       <path d="M8.7 9.2a3.4 3.4 0 1 1 5.2 2.9c-1 .65-1.9 1.25-1.9 2.55v.35"/>
@@ -49,13 +54,62 @@
           </defs>
 </svg>
 
+<!-- ============ ログイン / 新規登録 ============ -->
+<section id="screen-login" class="screen screen-login">
+  <div class="login-wrap">
+    <h1 class="login-title">ラインパズル</h1>
+    <p class="login-lede">アカウントを作ると、進行状況がどの端末からでも続けられます。</p>
+
+    <div class="login-tabs" role="tablist">
+      <button class="login-tab is-on" id="tab-login" type="button" role="tab" aria-selected="true">ログイン</button>
+      <button class="login-tab" id="tab-signup" type="button" role="tab" aria-selected="false">新規登録</button>
+    </div>
+
+    <form class="login-card" id="form-login" novalidate>
+      <label class="fld">
+        <span>メールアドレス</span>
+        <input type="email" id="login-email" autocomplete="email" inputmode="email" placeholder="you@example.com">
+      </label>
+      <label class="fld">
+        <span>パスワード</span>
+        <input type="password" id="login-password" autocomplete="current-password" placeholder="6文字以上">
+      </label>
+      <p class="login-msg" id="login-msg" hidden></p>
+      <button class="btn btn-primary btn-block" id="do-login" type="submit">ログイン</button>
+      <button class="linkish" id="do-reset" type="button">パスワードを忘れた</button>
+    </form>
+
+    <form class="login-card" id="form-signup" novalidate hidden>
+      <label class="fld">
+        <span>ユーザー名</span>
+        <input type="text" id="signup-username" autocomplete="nickname" maxlength="20" placeholder="2〜20文字">
+      </label>
+      <label class="fld">
+        <span>メールアドレス</span>
+        <input type="email" id="signup-email" autocomplete="email" inputmode="email" placeholder="you@example.com">
+      </label>
+      <label class="fld">
+        <span>パスワード</span>
+        <input type="password" id="signup-password" autocomplete="new-password" placeholder="6文字以上">
+      </label>
+      <p class="login-msg" id="signup-msg" hidden></p>
+      <button class="btn btn-primary btn-block" id="do-signup" type="submit">登録して始める</button>
+    </form>
+
+    <button class="linkish linkish-guest" id="play-guest" type="button">ログインせずに遊ぶ</button>
+  </div>
+</section>
+
 <!-- ============ ステージ選択画面 ============ -->
 <section id="screen-select" class="screen">
   <header class="topbar">
     <div class="topbar-title">
-      <span class="topbar-user">ラインパズル</span>
+      <span class="topbar-user" id="select-user">ラインパズル</span>
       <span id="select-progress" class="topbar-sub"></span>
     </div>
+    <button class="icon-btn" id="select-account" type="button" aria-label="アカウント">
+      <svg class="ic"><use href="#ic-user"/></svg>
+    </button>
     <button class="icon-btn" id="select-help" type="button" aria-label="遊び方">
       <svg class="ic"><use href="#ic-help"/></svg>
     </button>
@@ -169,6 +223,18 @@
   </div>
 </div>
 
+<!-- ============ アカウント ============ -->
+<div id="modal-account" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
+    <h2 id="account-title" class="modal-title">アカウント</h2>
+    <p class="modal-text" id="account-who"></p>
+    <p class="modal-text account-sync" id="account-sync"></p>
+    <button class="btn btn-primary btn-block" id="account-close" type="button">とじる</button>
+    <button class="btn btn-ghost btn-block" id="account-login" type="button">ログイン / 新規登録</button>
+    <button class="btn btn-ghost btn-block" id="account-logout" type="button">ログアウト</button>
+  </div>
+</div>
+
 <!-- ============ 遊び方チュートリアル ============ -->
 <div id="modal-tutorial" class="modal" hidden></div>
 
@@ -176,6 +242,7 @@
 
 <script src="levels.js?v=838e9209e8"></script>
 <script src="ura-levels.js?v=6b87004dde"></script>
-<script src="game.js?v=26bfcc985b"></script>
+<script src="cloud.js?v=37d015e2c7"></script>
+<script src="game.js?v=0196364014"></script>
 </body>
 </html>

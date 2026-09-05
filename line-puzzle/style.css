@@ -114,7 +114,11 @@ body {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0,0,0,.2);
 }
-.topbar-sub { display: block; font-size: 11.5px; opacity: .85; }
+/* ボタンが増えても2行に折り返さないよう、あふれたら「…」で切る */
+.topbar-sub {
+  display: block; font-size: 11.5px; opacity: .85;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* Level のプレートは、操作ボタンの行(トップバー)の下に独立した行として置く */
 .level-row { display: flex; margin: 12px 0 8px; }
@@ -535,6 +539,92 @@ body {
      行ごと詰まってボタンまで消えてしまうため、文字だけを見えなくする） */
   .howto { visibility: hidden; }
 }
+
+/* ---------- ログイン / 新規登録 ---------- */
+/* アカウントを作ると進行状況がクラウドに残り、別の端末でも続きから遊べる。
+   ログインせずに遊ぶこともでき、その進行状況はあとでログインした時に
+   そのアカウントへ引き継がれる。 */
+.screen-login { justify-content: center; overflow-y: auto; }
+.login-wrap {
+  width: 100%; max-width: 360px;
+  margin: 0 auto;
+  padding: 12px 0 24px;
+}
+.login-title {
+  margin: 0;
+  text-align: center;
+  color: #fff; font-size: 26px; font-weight: 900;
+  letter-spacing: .04em;
+  text-shadow: 0 2px 4px rgba(0,0,0,.25);
+}
+.login-lede {
+  margin: 8px 0 20px;
+  text-align: center;
+  color: rgba(255,255,255,.88); font-size: 12.5px; line-height: 1.7;
+}
+.login-tabs {
+  display: flex; gap: 6px;
+  padding: 5px;
+  border-radius: 16px;
+  background: rgba(0,0,0,.16);
+}
+.login-tab {
+  flex: 1;
+  font: inherit; font-weight: 700; font-size: 14px;
+  padding: 10px 0;
+  border: 0; border-radius: 12px;
+  background: transparent;
+  color: rgba(255,255,255,.82);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.login-tab.is-on { background: var(--paper); color: var(--page-deep); box-shadow: 0 2px 0 rgba(0,0,0,.14); }
+
+.login-card {
+  margin-top: 14px;
+  padding: 18px 16px 16px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 8px 22px rgba(0,0,0,.18);
+}
+.fld { display: block; margin-bottom: 13px; }
+.fld > span {
+  display: block; margin-bottom: 5px;
+  font-size: 12px; font-weight: 700; color: #6a7568;
+}
+.fld input {
+  width: 100%;
+  font: inherit; font-size: 16px;   /* 16px 未満だと iOS で画面が拡大される */
+  padding: 11px 12px;
+  border: 1.5px solid #d8ddd6;
+  border-radius: 12px;
+  background: #fbfcfa;
+  color: var(--ink);
+}
+.fld input:focus { outline: none; border-color: var(--accent); background: #fff; }
+
+.login-msg {
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: #fdecec; color: #a3261c;
+  font-size: 12.5px; line-height: 1.6;
+}
+.login-msg.is-ok { background: #eaf6ec; color: #256b31; }
+
+.linkish {
+  display: block; width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  border: 0; background: transparent;
+  color: #6a7568; font: inherit; font-size: 12.5px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.linkish-guest { margin-top: 16px; color: rgba(255,255,255,.9); }
+.linkish:disabled { opacity: .6; cursor: default; }
+
+.account-sync { font-size: 12.5px; color: #6a7568; }
 
 /* ---------- 裏ステージ ---------- */
 /* 本編50ステージをすべてクリアすると、ステージ選択の下に裏ステージが現れる */

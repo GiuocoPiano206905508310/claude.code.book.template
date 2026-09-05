@@ -16,7 +16,7 @@
     { ch: 'R', dx: 1, dy: 0 }
   ];
   var DCH = 'UDLR';
-  var STORE_KEY = 'linePuzzle.progress.v1';
+  var STORE_KEY = 'linePuzzle.progress.v1';   // ログインしていない時の保存先
   var SOLVE_BUDGET = 400000;   // ソルバーが辿るノード数の上限
 
   // 触角の生えた芋虫の顔（盤面上のプレイヤー・チュートリアルの見本盤面で共用）
@@ -44,10 +44,22 @@
   function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
 
   /* ============================================================
-     1. セーブデータ（この端末のブラウザに保存。ユーザー登録は不要）
+     1. セーブデータ
+        ログインしていなければこの端末だけの記録、ログインしていれば
+        アカウントごとの記録（同じ端末で別のアカウントに切り替えても
+        混ざらないよう、保存先の名前にユーザーIDを付ける）。
+        ログイン中はクラウドにも同じ内容を書き戻す（9章）。
      ============================================================ */
+  var cloud = window.LinePuzzleCloud || null;
   var memoryStore = null;      // localStorage が使えない環境の代替
   var storageWarned = false;
+
+  function currentUser() { return cloud ? cloud.user() : null; }
+
+  function storeKey() {
+    var u = currentUser();
+    return u ? STORE_KEY + ':' + u.id : STORE_KEY;
+  }
 
   function blankProgress() {
     return { cleared: {}, uraCleared: {}, lastStage: 1, lastUra: 1, tutorialSeen: false };
@@ -56,7 +68,7 @@
   function readProgress() {
     if (memoryStore) return memoryStore;
     try {
-      var raw = window.localStorage.getItem(STORE_KEY);
+      var raw = window.localStorage.getItem(storeKey());
       var data = raw ? JSON.parse(raw) : null;
       if (!data || typeof data !== 'object') data = blankProgress();
       if (!data.cleared || typeof data.cleared !== 'object') data.cleared = {};
@@ -76,7 +88,7 @@
   function writeProgress(data) {
     if (memoryStore) { memoryStore = data; return; }
     try {
-      window.localStorage.setItem(STORE_KEY, JSON.stringify(data));
+      window.localStorage.setItem(storeKey(), JSON.stringify(data));
     } catch (e) {
       if (!storageWarned) {
         storageWarned = true;
@@ -91,6 +103,7 @@
     mutate(p);
     p.lastPlayed = Date.now();
     writeProgress(p);
+    pushToCloud();
   }
 
   // 本編と裏で別々の記録を持つ
@@ -217,7 +230,7 @@
   /* ============================================================
      5. 画面遷移
      ============================================================ */
-  var screens = { select: $('screen-select'), game: $('screen-game') };
+  var screens = { login: $('screen-login'), select: $('screen-select'), game: $('screen-game') };
 
   function show(name) {
     for (var k in screens) screens[k].classList.toggle('is-active', k === name);
@@ -276,12 +289,13 @@
 
   function openSelect() {
     closeModal('modal-stuck');
+    // 見出しは「誰の記録か」。ログインしていればユーザー名を出す
+    var u = currentUser();
+    $('select-user').textContent = u ? u.username : 'ラインパズル';
+
     var done = Object.keys(clearedMap(false)).length;
     var label = 'クリア ' + done + ' / ' + LEVELS.length;
-    // 裏が解放されたら裏の進捗も出す。2行に折り返さないよう、
-    // そのときは自動保存の注意書きは省く（本編50ステージのあいだに読めている）
     if (uraUnlocked()) label += '　裏 ' + Object.keys(clearedMap(true)).length + ' / ' + URA_LEVELS.length;
-    else label += '　（クリア時に自動保存）';
     $('select-progress').textContent = label;
 
     fillGrid($('stage-grid'), false);
@@ -673,7 +687,8 @@
 
   function anyModalOpen() {
     return !$('modal-pause').hidden || !$('modal-clear').hidden ||
-           !$('modal-tutorial').hidden || !$('modal-stuck').hidden;
+           !$('modal-tutorial').hidden || !$('modal-stuck').hidden ||
+           !$('modal-account').hidden;
   }
 
   /* ---------- 入力 ---------- */
@@ -910,7 +925,227 @@
   $('game-help').addEventListener('click', openTutorial);
 
   /* ============================================================
-     10. 起動
+     10. アカウントとクラウド保存
+     ============================================================ */
+
+  // 同じステージの記録が2つあるとき、良いほう（★が多い、同数なら手数が少ない）を採る
+  function betterRecord(a, b) {
+    if (!a) return b;
+    if (!b) return a;
+    if ((b.stars || 0) !== (a.stars || 0)) return (b.stars || 0) > (a.stars || 0) ? b : a;
+    return (b.moves || Infinity) < (a.moves || Infinity) ? b : a;
+  }
+
+  // 端末の記録とクラウドの記録を1つにまとめる。どちらの進みも失われない
+  function mergeProgress(a, b) {
+    a = a || blankProgress();
+    b = b || blankProgress();
+    var out = blankProgress();
+    ['cleared', 'uraCleared'].forEach(function (field) {
+      var src = [a[field] || {}, b[field] || {}];
+      src.forEach(function (map) {
+        for (var id in map) out[field][id] = betterRecord(out[field][id], map[id]);
+      });
+    });
+    out.lastStage = Math.max(a.lastStage || 1, b.lastStage || 1);
+    out.lastUra = Math.max(a.lastUra || 1, b.lastUra || 1);
+    out.tutorialSeen = !!(a.tutorialSeen || b.tutorialSeen);
+    out.lastPlayed = Math.max(a.lastPlayed || 0, b.lastPlayed || 0);
+    return out;
+  }
+
+  // クラウドへの書き戻し。連続クリアで何度も投げないよう少しまとめる
+  var pushTimer = null;
+  var pushFailed = false;
+  function pushToCloud() {
+    if (!cloud || !cloud.signedIn()) return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(function () {
+      pushTimer = null;
+      var snapshot = readProgress();
+      cloud.saveProgress(snapshot).then(function () {
+        pushFailed = false;
+      }, function () {
+        // 端末には保存できているので、遊びは止めない。次の保存でまた試す
+        if (!pushFailed) {
+          pushFailed = true;
+          toast('クラウドに保存できませんでした（この端末には保存済み）');
+        }
+      });
+    }, 400);
+  }
+
+  // ログイン直後: クラウドの記録と、この端末の記録を合わせて両方に書く
+  function syncAfterLogin(guestProgress) {
+    memoryStore = null;
+    var local = readProgress();          // このアカウントで前にこの端末で遊んだぶん
+    var merged = mergeProgress(local, guestProgress);
+    return cloud.fetchProgress().then(function (remote) {
+      merged = mergeProgress(merged, remote);
+      writeProgress(merged);
+      return cloud.saveProgress(merged);
+    }).catch(function (e) {
+      writeProgress(merged);
+      toast(e && e.message ? e.message : 'クラウドと同期できませんでした');
+    });
+  }
+
+  var loginTabs = { login: $('form-login'), signup: $('form-signup') };
+
+  function showLoginTab(which) {
+    loginTabs.login.hidden = which !== 'login';
+    loginTabs.signup.hidden = which !== 'signup';
+    $('tab-login').classList.toggle('is-on', which === 'login');
+    $('tab-signup').classList.toggle('is-on', which === 'signup');
+    $('tab-login').setAttribute('aria-selected', String(which === 'login'));
+    $('tab-signup').setAttribute('aria-selected', String(which === 'signup'));
+    setMsg('login-msg', '');
+    setMsg('signup-msg', '');
+  }
+
+  function setMsg(id, text, ok) {
+    var p = $(id);
+    p.textContent = text || '';
+    p.hidden = !text;
+    p.classList.toggle('is-ok', !!ok);
+  }
+
+  function setBusy(btn, on, label) {
+    btn.disabled = on;
+    if (on) { btn.dataset.label = btn.textContent; btn.textContent = label; }
+    else if (btn.dataset.label) { btn.textContent = btn.dataset.label; }
+  }
+
+  $('tab-login').addEventListener('click', function () { showLoginTab('login'); });
+  $('tab-signup').addEventListener('click', function () { showLoginTab('signup'); });
+
+  $('form-login').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var email = $('login-email').value, pw = $('login-password').value;
+    if (!email || !pw) { setMsg('login-msg', 'メールアドレスとパスワードを入れてください。'); return; }
+    var btn = $('do-login');
+    setMsg('login-msg', '');
+    setBusy(btn, true, 'ログイン中…');
+    // ログイン前にこの端末で遊んでいたぶんを、アカウントへ引き継ぐ
+    var guest = guestProgress();
+    cloud.signIn(email, pw).then(function () {
+      return syncAfterLogin(guest);
+    }).then(function () {
+      setBusy(btn, false);
+      $('login-password').value = '';
+      afterAuthChange();
+    }, function (e) {
+      setBusy(btn, false);
+      setMsg('login-msg', e.message);
+    });
+  });
+
+  $('form-signup').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var name = $('signup-username').value, email = $('signup-email').value, pw = $('signup-password').value;
+    if (!name || !email || !pw) { setMsg('signup-msg', 'すべての欄を入れてください。'); return; }
+    var btn = $('do-signup');
+    setMsg('signup-msg', '');
+    setBusy(btn, true, '登録中…');
+    var guest = guestProgress();
+    cloud.signUp(name, email, pw).then(function (r) {
+      if (r.needsConfirm) {
+        setBusy(btn, false);
+        setMsg('signup-msg', '確認メールを送りました。メールのリンクを開いてから、ログインしてください。', true);
+        return null;
+      }
+      return syncAfterLogin(guest).then(function () {
+        setBusy(btn, false);
+        $('signup-password').value = '';
+        afterAuthChange();
+      });
+    }, function (e) {
+      setBusy(btn, false);
+      setMsg('signup-msg', e.message);
+    });
+  });
+
+  $('do-reset').addEventListener('click', function () {
+    var email = $('login-email').value;
+    if (!email) { setMsg('login-msg', 'メールアドレスを入れてから押してください。'); return; }
+    var btn = $('do-reset');
+    setBusy(btn, true, '送信中…');
+    cloud.sendReset(email).then(function () {
+      setBusy(btn, false);
+      setMsg('login-msg', 'パスワード再設定のメールを送りました。', true);
+    }, function (e) {
+      setBusy(btn, false);
+      setMsg('login-msg', e.message);
+    });
+  });
+
+  // 「ログインせずに遊ぶ」を選んだら覚えておく。次からはログイン画面を出さずに始める
+  // （アカウントボタンからいつでもログインできる）
+  var GUEST_KEY = 'linePuzzle.guest.v1';
+  function guestChosen() {
+    try { return window.localStorage.getItem(GUEST_KEY) === '1'; } catch (e) { return false; }
+  }
+  function rememberGuest(on) {
+    try {
+      if (on) window.localStorage.setItem(GUEST_KEY, '1');
+      else window.localStorage.removeItem(GUEST_KEY);
+    } catch (e) { /* 覚えられなくても、その場では遊べる */ }
+  }
+
+  $('play-guest').addEventListener('click', function () {
+    rememberGuest(true);
+    openSelect();
+  });
+
+  // ログインしていない状態の記録（アカウントへ引き継ぐために読む）
+  function guestProgress() {
+    try {
+      var raw = window.localStorage.getItem(STORE_KEY);
+      var d = raw ? JSON.parse(raw) : null;
+      return (d && typeof d === 'object') ? d : null;
+    } catch (e) { return null; }
+  }
+
+  function afterAuthChange() {
+    memoryStore = null;
+    rememberGuest(false);
+    openSelect();
+    var u = currentUser();
+    if (u) toast(u.username + ' でログインしました');
+  }
+
+  function openAccount() {
+    var u = currentUser();
+    $('account-who').textContent = u
+      ? u.username + '（' + u.email + '）'
+      : 'ログインしていません。';
+    $('account-sync').textContent = u
+      ? '進行状況はこのアカウントに保存され、ほかの端末でも続きから遊べます。'
+      : 'いまの進行状況はこの端末にだけ保存されています。ログインすると引き継げます。';
+    $('account-login').hidden = !!u;
+    $('account-logout').hidden = !u;
+    openModal('modal-account');
+  }
+
+  $('select-account').addEventListener('click', openAccount);
+  $('account-close').addEventListener('click', function () { closeModal('modal-account'); });
+  $('account-login').addEventListener('click', function () {
+    closeModal('modal-account');
+    showLoginTab('login');
+    show('login');
+  });
+  $('account-logout').addEventListener('click', function () {
+    closeModal('modal-account');
+    cloud.signOut().then(function () {
+      memoryStore = null;
+      showLoginTab('login');
+      show('login');
+      toast('ログアウトしました');
+    });
+  });
+
+  /* ============================================================
+     11. 起動
      ============================================================ */
   function boot() {
     if (!LEVELS.length) {
@@ -918,7 +1153,22 @@
         + 'ステージデータ(levels.js)を読み込めませんでした。</p>';
       return;
     }
-    openSelect();
+    if (!cloud) { openSelect(); return; }   // cloud.js を読めなくても遊べる
+    if (cloud.signedIn()) {
+      // 前回のログインが残っている。まず遊べる状態にしてから、裏でクラウドと合わせる
+      openSelect();
+      cloud.fetchProgress().then(function (remote) {
+        if (!remote) return;
+        var merged = mergeProgress(readProgress(), remote);
+        writeProgress(merged);
+        openSelect();
+      }, function () { /* 取れなくても端末の記録で遊べる */ });
+    } else if (guestChosen()) {
+      openSelect();               // 前に「ログインせずに遊ぶ」を選んでいる
+    } else {
+      showLoginTab('login');
+      show('login');
+    }
   }
 
   boot();
