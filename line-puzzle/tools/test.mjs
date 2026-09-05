@@ -40,8 +40,20 @@ page.on('console', m => {
 // 2つのエンドポイントだけをこの場で肩代わりする。中身は素朴な連想配列。
 const fakeUsers = new Map();      // email -> { id, password, username }
 const fakeRows = new Map();       // user_id -> progress
+const fakeMails = [];             // 送ったメール { to, type, link }
 let fakeConfirmMail = false;      // true なら「確認メールを送りました」の経路になる
 let fakeDown = false;             // true なら保存が失敗する
+
+// メールのリンクを開いたことにする。Supabase は確認できると
+// …/line-puzzle/#access_token=…&type=… の形で戻してくる
+async function openMailLink(mail) {
+  const u = [...fakeUsers.values()].find(v => v.id === mail.uid) || fakeUsers.get(mail.to);
+  await page.goto('about:blank');   // #だけ違うURLは再読み込みされないため、一度離れる
+  await page.goto(`${BASE}#access_token=access-${u.id}&refresh_token=refresh-${u.id}`
+                  + `&expires_in=3600&token_type=bearer&type=${mail.type}`,
+                  { waitUntil: 'networkidle' });
+  await page.waitForTimeout(400);
+}
 
 await page.route('**/auth/v1/**', async route => {
   const url = route.request().url();
@@ -52,21 +64,64 @@ await page.route('**/auth/v1/**', async route => {
     access_token: 'access-' + u.id, refresh_token: 'refresh-' + u.id, expires_in: 3600,
     user: { id: u.id, email: u.email, user_metadata: { username: u.username } },
   });
+  const bearer = (route.request().headers()['authorization'] || '').replace('Bearer access-', '');
+  const byId = id => [...fakeUsers.values()].find(v => v.id === id);
+
   if (url.includes('/signup')) {
     const email = (body.email || '').toLowerCase();
-    if (fakeUsers.has(email)) return json(422, { msg: 'User already registered' });
     if ((body.password || '').length < 6) return json(422, { msg: 'Password should be at least 6 characters' });
+    if (fakeUsers.has(email)) {
+      // 確認メールを送る設定では、登録済みでも Supabase は成功の形で返し、
+      // identities を空にして「新しくは作られていない」ことだけを示す
+      if (fakeConfirmMail) return json(200, { id: fakeUsers.get(email).id, email, identities: [] });
+      return json(422, { msg: 'User already registered' });
+    }
     const u = { id: 'uid-' + (fakeUsers.size + 1), email, password: body.password,
-                username: (body.data && body.data.username) || '' };
+                username: (body.data && body.data.username) || '', confirmed: !fakeConfirmMail };
     fakeUsers.set(email, u);
-    return fakeConfirmMail ? json(200, { id: u.id, email }) : json(200, session(u));
+    if (!fakeConfirmMail) return json(200, session(u));
+    fakeMails.push({ to: email, uid: u.id, type: 'signup', link: url });
+    return json(200, { id: u.id, email, identities: [{ id: u.id }] });
   }
   if (url.includes('grant_type=password')) {
     const u = fakeUsers.get((body.email || '').toLowerCase());
     if (!u || u.password !== body.password) return json(400, { error_description: 'Invalid login credentials' });
+    if (u.confirmed === false) return json(400, { error_description: 'Email not confirmed' });
     return json(200, session(u));
   }
-  if (url.includes('/recover')) return json(200, {});
+  if (url.includes('/recover')) {
+    const email = (body.email || '').toLowerCase();
+    const u = fakeUsers.get(email);
+    if (u) fakeMails.push({ to: email, uid: u.id, type: 'recovery', link: url });
+    return json(200, {});
+  }
+  if (url.includes('/user') && route.request().method() === 'PUT') {
+    const u = byId(bearer);
+    if (!u) return json(401, { msg: 'invalid token' });
+    if (body.data && body.data.username) u.username = body.data.username;
+    if (body.password) u.password = body.password;
+    if (body.email) {
+      // メールアドレスの変更は、新しいアドレスの確認が済むまで反映されない
+      const next = body.email.toLowerCase();
+      if (fakeUsers.has(next)) return json(422, { msg: 'User already registered' });
+      u.pendingEmail = next;
+      fakeMails.push({ to: next, uid: u.id, type: 'email_change', link: url });
+    }
+    return json(200, { id: u.id, email: u.email, user_metadata: { username: u.username } });
+  }
+  if (url.includes('/user')) {
+    const u = byId(bearer);
+    if (!u) return json(401, { msg: 'invalid token' });
+    // 確認リンクを開いた時点で、登録・メール変更が確定する
+    if (u.confirmed === false) u.confirmed = true;
+    if (u.pendingEmail) {
+      fakeUsers.delete(u.email);
+      u.email = u.pendingEmail;
+      delete u.pendingEmail;
+      fakeUsers.set(u.email, u);
+    }
+    return json(200, { id: u.id, email: u.email, user_metadata: { username: u.username } });
+  }
   return json(200, {});
 });
 
@@ -987,20 +1042,141 @@ console.log('\n== アカウントと引き継ぎ ==');
       'クラウドに繋がらなくてもクリアは端末に残る');
   fakeDown = false;
 
-  // 確認メールが要る設定のときは、その旨を伝えて先へ進まない
+}
+
+console.log('\n== 確認メールで新規登録 ==');
+{
+  // Supabase 側で「確認メールを送る」設定にしている場合の流れ
   fakeConfirmMail = true;
-  await page.click('#select-account');
-  await page.click('#account-logout');
-  await page.waitForSelector('#screen-login.is-active', { timeout: 4000 });
+  await page.evaluate(() => {
+    Object.keys(localStorage).filter(k => k.indexOf('linePuzzle.') === 0)
+      .forEach(k => localStorage.removeItem(k));
+  });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('#screen-login.is-active');
   await page.click('#tab-signup');
   await page.fill('#signup-username', 'あおい');
   await page.fill('#signup-email', 'aoi@example.com');
   await page.fill('#signup-password', 'pass1234');
+  fakeMails.length = 0;
   await page.click('#do-signup');
   await page.waitForTimeout(500);
   chk(/確認メール/.test(await page.textContent('#signup-msg')),
-      `確認メールが要るときはそう伝える "${(await page.textContent('#signup-msg')).trim()}"`);
-  chk(await page.isVisible('#screen-login'), '確認が済むまでは先へ進まない');
+      `確認メールを送ったと伝える "${(await page.textContent('#signup-msg')).trim()}"`);
+  chk(await page.isVisible('#screen-login'), 'リンクを開くまでは先へ進まない');
+  chk(fakeMails.length === 1 && fakeMails[0].to === 'aoi@example.com' && fakeMails[0].type === 'signup',
+      `登録したメールアドレス宛に届く (${fakeMails.map(m => m.to + ':' + m.type).join(', ')})`);
+  chk(/redirect_to=/.test(fakeMails[0].link),
+      'メールのリンクがゲームに戻ってくるよう指定している');
+
+  // リンクを開く前はまだログインできない
+  await page.click('#tab-login');
+  await page.fill('#login-email', 'aoi@example.com');
+  await page.fill('#login-password', 'pass1234');
+  await page.click('#do-login');
+  await page.waitForTimeout(400);
+  chk(/確認がまだ/.test(await page.textContent('#login-msg')),
+      `リンクを開く前のログインはその旨を伝える "${(await page.textContent('#login-msg')).trim()}"`);
+
+  // メールのリンクを開くと登録が完了してログイン状態になる
+  await openMailLink(fakeMails[0]);
+  chk(await page.isVisible('#screen-select'), 'メールのリンクを開くと登録が完了して始められる');
+  chk((await page.textContent('#select-user')) === 'あおい',
+      `リンクを開いた本人としてログインしている "${await page.textContent('#select-user')}"`);
+  chk(!/access_token/.test(page.url()), `URLに合言葉が残らない (${page.url().split('/').pop()})`);
+
+  // 同じメールアドレスでもう一度登録はできない
+  await page.click('#select-account');
+  await page.click('#account-logout');
+  await page.waitForSelector('#screen-login.is-active', { timeout: 4000 });
+  await page.click('#tab-signup');
+  await page.fill('#signup-username', 'べつのひと');
+  await page.fill('#signup-email', 'aoi@example.com');
+  await page.fill('#signup-password', 'pass9999');
+  await page.click('#do-signup');
+  await page.waitForTimeout(500);
+  chk(/すでに登録/.test(await page.textContent('#signup-msg')),
+      `同じメールでは2つ目のアカウントを作れない "${(await page.textContent('#signup-msg')).trim()}"`);
+  chk(await page.isVisible('#screen-login'), '重複した登録では先へ進まない');
+}
+
+console.log('\n== 登録内容の変更 ==');
+{
+  await page.click('#tab-login');
+  await page.fill('#login-email', 'aoi@example.com');
+  await page.fill('#login-password', 'pass1234');
+  await page.click('#do-login');
+  await page.waitForSelector('#screen-select.is-active', { timeout: 5000 });
+  await page.waitForTimeout(300);
+
+  await page.click('#select-account');
+  await page.waitForTimeout(150);
+  const menu = await page.evaluate(() => ['account-name', 'account-email', 'account-password']
+    .map(id => document.getElementById(id).textContent.trim()));
+  chk(menu.join(' / ') === 'ユーザー名を変更 / メールアドレスを変更 / パスワードを変更',
+      `アカウント画面から3つとも変えられる (${menu.join(' / ')})`);
+  await page.screenshot({ path: SHOTS + '/shot-account-menu.png' });
+
+  // ユーザー名（すぐ変わる）
+  await page.click('#account-name');
+  await page.waitForTimeout(150);
+  await page.fill('#account-input', 'あおい2');
+  await page.click('#account-save');
+  await page.waitForTimeout(400);
+  chk((await page.textContent('#select-user')) === 'あおい2',
+      `ユーザー名がすぐ変わる "${await page.textContent('#select-user')}"`);
+
+  // メールアドレス（確認メールのリンクを開いて初めて変わる）
+  fakeMails.length = 0;
+  await page.click('#select-account');
+  await page.click('#account-email');
+  await page.waitForTimeout(150);
+  await page.fill('#account-input', 'aoi-new@example.com');
+  await page.click('#account-save');
+  await page.waitForTimeout(400);
+  chk(/確認メール/.test(await page.textContent('#account-msg')),
+      `メール変更は確認メールを送る "${(await page.textContent('#account-msg')).trim()}"`);
+  chk(fakeMails.length === 1 && fakeMails[0].to === 'aoi-new@example.com',
+      `新しいアドレス宛に届く (${fakeMails.map(m => m.to).join(', ')})`);
+  await openMailLink(fakeMails[0]);
+  await page.click('#select-account');
+  await page.waitForTimeout(200);
+  chk(/aoi-new@example\.com/.test(await page.textContent('#account-who')),
+      `リンクを開くとメールアドレスが変わる "${await page.textContent('#account-who')}"`);
+
+  // パスワード（メールのリンクを開いた画面で決める）
+  fakeMails.length = 0;
+  await page.click('#account-password');
+  await page.waitForTimeout(150);
+  chk(!(await page.isVisible('#account-input')),
+      'パスワード変更はその場では入力させず、メールを送るだけ');
+  await page.click('#account-save');
+  await page.waitForTimeout(400);
+  chk(/メールを送りました/.test(await page.textContent('#account-msg')),
+      `パスワード変更用のメールを送る "${(await page.textContent('#account-msg')).trim()}"`);
+  chk(fakeMails.length === 1 && fakeMails[0].to === 'aoi-new@example.com'
+      && fakeMails[0].type === 'recovery',
+      `登録メールアドレス宛に届く (${fakeMails.map(m => m.to + ':' + m.type).join(', ')})`);
+
+  await openMailLink(fakeMails[0]);
+  chk(await page.isVisible('#account-form'), 'リンクを開くと新しいパスワードの入力が出る');
+  chk((await page.textContent('#account-title')) === '新しいパスワード',
+      `その画面だと分かる見出し "${await page.textContent('#account-title')}"`);
+  await page.screenshot({ path: SHOTS + '/shot-newpass.png' });
+  await page.fill('#account-input', 'newpass77');
+  await page.click('#account-save');
+  await page.waitForTimeout(400);
+  chk(await page.isVisible('#screen-select'), 'パスワードを決めるとゲームに戻る');
+
+  // 新しいパスワードでログインできる
+  await page.click('#select-account');
+  await page.click('#account-logout');
+  await page.waitForSelector('#screen-login.is-active', { timeout: 4000 });
+  await page.fill('#login-email', 'aoi-new@example.com');
+  await page.fill('#login-password', 'newpass77');
+  await page.click('#do-login');
+  await page.waitForSelector('#screen-select.is-active', { timeout: 5000 });
+  chk(await page.isVisible('#screen-select'), '新しいパスワードでログインできる');
   fakeConfirmMail = false;
 }
 

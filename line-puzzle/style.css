@@ -626,6 +626,18 @@ body {
 
 .account-sync { font-size: 12.5px; color: #6a7568; }
 
+/* アカウントの変更メニュー。とじる・ログアウトとは役割が違うので区切る */
+.account-changes {
+  margin: 0 0 14px;
+  padding: 4px 0 10px;
+  border-top: 1px solid #eceee9;
+  border-bottom: 1px solid #eceee9;
+}
+/* 入力欄のある画面では、見出し以外は左揃えのほうが読みやすい */
+#account-form { text-align: left; }
+#account-form .modal-text { text-align: center; }
+#account-form .btn-block { text-align: center; }
+
 /* ---------- 裏ステージ ---------- */
 /* 本編50ステージをすべてクリアすると、ステージ選択の下に裏ステージが現れる */
 .ura-section { margin-top: 22px; }

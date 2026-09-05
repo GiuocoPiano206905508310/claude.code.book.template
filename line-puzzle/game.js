@@ -1124,8 +1124,114 @@
       : 'いまの進行状況はこの端末にだけ保存されています。ログインすると引き継げます。';
     $('account-login').hidden = !!u;
     $('account-logout').hidden = !u;
+    $('account-changes').hidden = !u;
+    showAccountMenu();
     openModal('modal-account');
   }
+
+  /* ---------- 登録内容の変更 ----------
+     ユーザー名はその場で変わる。メールアドレスとパスワードは、
+     本人のメールに届くリンクを開いて初めて変わる。 */
+  var accountMode = null;   // 'name' | 'email' | 'password' | 'newpass'
+
+  var ACCOUNT_FORMS = {
+    name: {
+      title: 'ユーザー名を変更',
+      lede: '画面に出る名前です。すぐに変わります。',
+      label: '新しいユーザー名', type: 'text', save: '保存',
+      fill: function () { var u = currentUser(); return u ? u.username : ''; }
+    },
+    email: {
+      title: 'メールアドレスを変更',
+      lede: '新しいアドレスに確認のリンクをお送りします。そのリンクを開くまで、ログインは今のアドレスのままです。',
+      label: '新しいメールアドレス', type: 'email', save: '確認メールを送る',
+      fill: function () { return ''; }
+    },
+    password: {
+      title: 'パスワードを変更',
+      lede: '登録しているメールアドレスに、パスワード変更用のリンクをお送りします。そのリンクを開いた画面で新しいパスワードを決めます。',
+      label: '', type: null, save: 'メールを送る',
+      fill: function () { return ''; }
+    },
+    newpass: {
+      title: '新しいパスワード',
+      lede: 'メールのリンクから開きました。新しいパスワードを決めてください。',
+      label: '新しいパスワード', type: 'password', save: 'このパスワードにする',
+      fill: function () { return ''; }
+    }
+  };
+
+  function showAccountMenu() {
+    accountMode = null;
+    $('account-menu').hidden = false;
+    $('account-form').hidden = true;
+    $('account-title').textContent = 'アカウント';
+    setMsg('account-msg', '');
+  }
+
+  function showAccountForm(mode) {
+    var f = ACCOUNT_FORMS[mode];
+    accountMode = mode;
+    $('account-title').textContent = f.title;
+    $('account-lede').textContent = f.lede;
+    $('account-label').textContent = f.label;
+    $('account-field').hidden = !f.type;
+    if (f.type) {
+      $('account-input').type = f.type;
+      $('account-input').value = f.fill();
+    }
+    $('account-save').textContent = f.save;
+    setMsg('account-msg', '');
+    $('account-menu').hidden = true;
+    $('account-form').hidden = false;
+    openModal('modal-account');
+  }
+
+  $('account-name').addEventListener('click', function () { showAccountForm('name'); });
+  $('account-email').addEventListener('click', function () { showAccountForm('email'); });
+  $('account-password').addEventListener('click', function () { showAccountForm('password'); });
+  $('account-back').addEventListener('click', showAccountMenu);
+
+  $('account-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var mode = accountMode, value = $('account-input').value;
+    var btn = $('account-save');
+    setMsg('account-msg', '');
+    setBusy(btn, true, '送信中…');
+
+    var done = function (msg) {
+      setBusy(btn, false);
+      setMsg('account-msg', msg, true);
+    };
+    var failed = function (e) {
+      setBusy(btn, false);
+      setMsg('account-msg', e.message);
+    };
+
+    if (mode === 'name') {
+      cloud.changeName(value).then(function (name) {
+        setBusy(btn, false);
+        closeModal('modal-account');
+        openSelect();                       // 見出しのユーザー名を出し直す
+        toast('ユーザー名を ' + name + ' に変えました');
+      }, failed);
+    } else if (mode === 'email') {
+      cloud.changeEmail(value).then(function () {
+        done('確認メールを送りました。メールのリンクを開くと、新しいアドレスに変わります。');
+      }, failed);
+    } else if (mode === 'password') {
+      var u = currentUser();
+      cloud.sendReset(u ? u.email : '').then(function () {
+        done('パスワード変更用のメールを送りました。メールのリンクを開いてください。');
+      }, failed);
+    } else if (mode === 'newpass') {
+      cloud.changePassword(value).then(function () {
+        setBusy(btn, false);
+        closeModal('modal-account');
+        toast('パスワードを変更しました');
+      }, failed);
+    }
+  });
 
   $('select-account').addEventListener('click', openAccount);
   $('account-close').addEventListener('click', function () { closeModal('modal-account'); });
@@ -1144,6 +1250,36 @@
     });
   });
 
+  // メールのリンクから戻ってきたときの行き先
+  function handleMailReturn(back) {
+    if (back.error) {
+      showLoginTab('login');
+      show('login');
+      setMsg('login-msg', back.error);
+      return;
+    }
+    var guest = guestProgress();
+    back.pending.then(function () {
+      rememberGuest(false);
+      return syncAfterLogin(guest);
+    }).then(function () {
+      openSelect();
+      if (back.type === 'recovery') {
+        // 新しいパスワードをここで決めてもらう
+        showAccountForm('newpass');
+      } else if (back.type === 'email_change') {
+        toast('メールアドレスを変更しました');
+      } else {
+        var u = currentUser();
+        toast('登録が完了しました' + (u ? '。ようこそ ' + u.username + ' さん' : ''));
+      }
+    }, function (e) {
+      showLoginTab('login');
+      show('login');
+      setMsg('login-msg', e && e.message ? e.message : 'リンクを確認できませんでした。');
+    });
+  }
+
   /* ============================================================
      11. 起動
      ============================================================ */
@@ -1154,6 +1290,12 @@
       return;
     }
     if (!cloud) { openSelect(); return; }   // cloud.js を読めなくても遊べる
+
+    // メール（新規登録の確認・パスワード変更・メールアドレス変更）の
+    // リンクから戻ってきた場合は、まずそれを処理する
+    var back = cloud.readAuthRedirect();
+    if (back) { handleMailReturn(back); return; }
+
     if (cloud.signedIn()) {
       // 前回のログインが残っている。まず遊べる状態にしてから、裏でクラウドと合わせる
       openSelect();

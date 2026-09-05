@@ -147,20 +147,77 @@
 
   /* ---------- 公開する操作 ---------- */
 
-  function signUp(username, email, password) {
-    var name = String(username || '').trim();
+  // メールのリンクから戻ってくる先。Supabase の
+  // Authentication → URL Configuration → Redirect URLs に登録しておく必要がある
+  function redirectTo() {
+    return window.location.origin + window.location.pathname;
+  }
+  function withRedirect(path) {
+    return path + (path.indexOf('?') >= 0 ? '&' : '?') +
+           'redirect_to=' + encodeURIComponent(redirectTo());
+  }
+
+  function checkName(name) {
+    name = String(name || '').trim();
     if (name.length < 2 || name.length > 20) {
-      return Promise.reject(new Error('ユーザー名は2〜20文字にしてください。'));
+      throw new Error('ユーザー名は2〜20文字にしてください。');
     }
-    return request('/auth/v1/signup', {
+    return name;
+  }
+
+  function signUp(username, email, password) {
+    var name;
+    try { name = checkName(username); } catch (e) { return Promise.reject(e); }
+    return request(withRedirect('/auth/v1/signup'), {
       method: 'POST',
       body: { email: String(email || '').trim(), password: password, data: { username: name } }
     }).then(function (data) {
+      // 確認メールを送る設定のとき、すでに登録済みのメールでも Supabase は
+      // 成功のような形で返す（他人のメールが登録済みかを外から調べられないため）。
+      // その場合は identities が空で返るので、それで見分ける。
+      if (data && data.identities && data.identities.length === 0) {
+        throw new Error('このメールアドレスはすでに登録されています。ログインしてください。');
+      }
       var s = shapeSession(data);
       if (s) { storeSession(s); return { session: s, needsConfirm: false }; }
       // 確認メールが必要な設定のときは、ここではまだログインできない
       return { session: null, needsConfirm: true };
     });
+  }
+
+  /* ---------- 登録済みのアカウントを変える ---------- */
+
+  function updateUser(body, needsRedirect) {
+    return withToken().then(function (token) {
+      var path = needsRedirect ? withRedirect('/auth/v1/user') : '/auth/v1/user';
+      return request(path, { method: 'PUT', token: token, body: body });
+    }).then(function (data) {
+      // 変更が即時に効くもの（ユーザー名・パスワード）は手元の情報も更新する
+      if (session && data && data.id) {
+        session.user.username = userName(data) || session.user.username;
+        session.user.email = data.email || session.user.email;
+        storeSession(session);
+      }
+      return data;
+    });
+  }
+
+  function changeName(username) {
+    var name;
+    try { name = checkName(username); } catch (e) { return Promise.reject(e); }
+    return updateUser({ data: { username: name } }, false).then(function () { return name; });
+  }
+
+  // メールアドレスの変更は、新しいアドレス宛の確認メールが済むまで反映されない
+  function changeEmail(email) {
+    return updateUser({ email: String(email || '').trim() }, true).then(function () { return true; });
+  }
+
+  function changePassword(password) {
+    if (String(password || '').length < 6) {
+      return Promise.reject(new Error('パスワードは6文字以上にしてください。'));
+    }
+    return updateUser({ password: password }, false).then(function () { return true; });
   }
 
   function signIn(email, password) {
@@ -175,9 +232,58 @@
   }
 
   function sendReset(email) {
-    return request('/auth/v1/recover', {
+    return request(withRedirect('/auth/v1/recover'), {
       method: 'POST', body: { email: String(email || '').trim() }
     }).then(function () { return true; });
+  }
+
+  /* ---------- メールのリンクから戻ってきたとき ----------
+     Supabase は確認できたら
+       …/line-puzzle/#access_token=…&refresh_token=…&type=signup
+     の形で戻してくる（失敗時は #error_description=… ）。
+     ここでその # を読み取ってログイン状態にし、URL からは消す。
+     type は signup（新規登録の確認）/ recovery（パスワード再設定）/
+     email_change（メールアドレス変更の確認）。 */
+  function readAuthRedirect() {
+    var hash = window.location.hash || '';
+    if (hash.length < 2 || hash.indexOf('=') < 0) return null;
+    var q = {};
+    hash.slice(1).split('&').forEach(function (pair) {
+      var i = pair.indexOf('=');
+      if (i > 0) q[decodeURIComponent(pair.slice(0, i))] = decodeURIComponent(pair.slice(i + 1).replace(/\+/g, ' '));
+    });
+    if (!q.access_token && !q.error_description && !q.error) return null;
+
+    // 同じリンクを二度処理しないよう、URL から # を落とす
+    try {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    } catch (e) { window.location.hash = ''; }
+
+    if (!q.access_token) {
+      var msg = q.error_description || q.error || '';
+      if (/expired/i.test(msg)) msg = 'このリンクは期限切れです。もう一度お試しください。';
+      else if (/invalid/i.test(msg)) msg = 'このリンクは使えません。もう一度お試しください。';
+      return { type: q.type || 'error', error: msg || 'リンクを確認できませんでした。' };
+    }
+    var s = shapeSession({
+      access_token: q.access_token, refresh_token: q.refresh_token,
+      expires_in: parseInt(q.expires_in, 10) || 3600, user: null
+    });
+    storeSession(s);
+    // リンクの # にはユーザー情報が入っていないので、改めて取りに行く
+    return { type: q.type || 'signup', session: s, pending: fetchUser() };
+  }
+
+  function fetchUser() {
+    return withToken().then(function (token) {
+      return request('/auth/v1/user', { token: token });
+    }).then(function (data) {
+      if (session && data && data.id) {
+        session.user = { id: data.id, email: data.email || '', username: userName(data) };
+        storeSession(session);
+      }
+      return session ? session.user : null;
+    });
   }
 
   function signOut() {
@@ -221,6 +327,10 @@
     signIn: signIn,
     signOut: signOut,
     sendReset: sendReset,
+    changeName: changeName,
+    changeEmail: changeEmail,
+    changePassword: changePassword,
+    readAuthRedirect: readAuthRedirect,
     fetchProgress: fetchProgress,
     saveProgress: saveProgress
   };
