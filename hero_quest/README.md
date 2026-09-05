@@ -111,7 +111,7 @@ lib/
     overlays/            # 戦闘・宝箱獲得・入れ替え・使用確認
     widgets/             # 十字キー・HUD・ステージボードのラッパー
     flame/               # Flameのゲーム本体・タイル/勇者コンポーネント
-assets/images/          # 仮ドット絵プレースホルダー（32×32 PNG）
+assets/images/          # 仮ドット絵プレースホルダー（64×64 PNG）
 test/                   # ロジック単体テスト + 画面遷移スモークテスト
 ```
 
@@ -177,10 +177,9 @@ test/                   # ロジック単体テスト + 画面遷移スモーク
 
 ## 正式素材を入れる際の画像一覧
 
-すべて `assets/images/` 配下に、同名の32×32 PNG（等倍。Retina等を考慮する
-場合は @2x/@3x 相当の解像度で32×32相当のサイズ感に合わせて差し替え）として
-配置しています。ファイル名を変えずに正式なドット絵へ差し替えれば、
-コード変更なしで反映されます。
+すべて `assets/images/` 配下に、同名の64×64 PNG（1マス32×32相当の表示に対して
+@2x で書き出したもの）として配置しています。ファイル名を変えずに正式な
+ドット絵へ差し替えれば、コード変更なしで反映されます。
 
 **タイル系**
 `tile_floor` / `tile_start` / `tile_goal` / `tile_gimmick_oneway`（右向き基準。
@@ -205,8 +204,9 @@ test/                   # ロジック単体テスト + 画面遷移スモーク
 `item_weapon_platinum_greatsword` / `item_fruit_hp` / `item_fruit_attack` /
 `item_fruit_defense`
 
-現在は色分けされた図形+文字のプレースホルダーです。`tools/gen_placeholder_assets.py`
-（Pillow使用）で再生成できます。
+現在はPillowの図形描画（矩形・楕円・多角形の組み合わせ）でシルエットと
+陰影を付けた仮ドット絵です。`tools/gen_placeholder_assets.py` で再生成・
+調整できます。
 
 ```bash
 cd hero_quest
