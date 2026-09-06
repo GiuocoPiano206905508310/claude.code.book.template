@@ -27,7 +27,7 @@
 
   var SETTINGS_KEY = 'scoreFour.settings.v1';
   var GUEST_KIFU_KEY = 'scoreFour.kifu.guest.v1';
-  var DEFAULT_SETTINGS = { mode: 'pvp', cpuLevel: 5, humanFirst: true, undoEnabled: true, undoLimit: 3 };
+  var DEFAULT_SETTINGS = { mode: 'pvp', cpuLevel: 5, humanFirst: true, undoEnabled: true, undoLimit: 3, background: 'dark' };
   var MAX_KIFU = 30;
 
   function loadSettings() {
@@ -66,7 +66,7 @@
   var pendingKifu = null;
   var cpuReqId = 0;
   var worker = null;
-  try { worker = new Worker('ai-worker.js?v=5'); } catch (e) { worker = null; }
+  try { worker = new Worker('ai-worker.js?v=6'); } catch (e) { worker = null; }
   if (worker) {
     worker.onmessage = function (e) {
       var data = e.data || {};
@@ -99,6 +99,7 @@
 
     Render.clearBoard();
     Render.setBoardRef(board);
+    Render.setBackground(settings.background);
     Render.setInteractionEnabled(true);
     UI.setTurn(currentPlayer);
     UI.renderLog(moveHistory, Game.notate);
@@ -226,6 +227,18 @@
 
   /* ---------- 設定 ---------- */
 
+  function applyBackground(bg) {
+    settings = Object.assign({}, settings, { background: bg });
+    Render.setBackground(bg);
+    saveSettingsLocal(settings);
+    if (Cloud.signedIn()) {
+      var progress = cloudProgress || { settings: settings, kifu: [] };
+      progress.settings = settings;
+      cloudProgress = progress;
+      Cloud.saveProgress(progress).catch(function () { /* 次の保存機会に任せる */ });
+    }
+  }
+
   function applySettings(newSettings) {
     settings = newSettings;
     saveSettingsLocal(settings);
@@ -263,6 +276,7 @@
     onResetConfirmed: startGame,
     onSettingsButton: function () { UI.openSettings(settings); },
     onSettingsApply: applySettings,
+    onBackgroundChange: applyBackground,
     onSaveKifu: handleSaveKifu,
     onPlayAgain: startGame,
 
