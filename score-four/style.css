@@ -166,6 +166,19 @@ button.action:active:not(:disabled){transform:scale(0.97);}
 button.action:disabled{opacity:.35;cursor:default;}
 button.action:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
 button.primary{background:linear-gradient(160deg, var(--accent-bright), var(--accent));color:#1c1409;border-color:transparent;font-weight:700;}
+
+/* 背景がホワイトの時、#controlsのボタン(glassの不透明パネルを持たない)は
+   薄い透過背景の向こうに明るい3D背景が透けるため、文字色を暗く保つ */
+body.theme-light #controls button.action:not(.primary){
+  color:#2a2318;
+  background:rgba(20,15,5,0.06);
+  border-color:rgba(90,70,30,0.35);
+}
+body.theme-light #controls button.action:not(.primary):hover:not(:disabled){
+  background:rgba(90,70,30,0.14);
+  border-color:rgba(90,70,30,0.55);
+}
+body.theme-light #controls button.action:not(.primary):disabled{color:#2a2318;}
 button.primary:hover:not(:disabled){filter:brightness(1.08);}
 
 #log-wrap{max-height:0;overflow:hidden;transition:max-height .28s ease;}

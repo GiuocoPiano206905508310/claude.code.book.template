@@ -82,6 +82,7 @@
 
   function setBackground(mode) {
     var t = BACKGROUNDS[mode] || BACKGROUNDS.dark;
+    if (document.body) document.body.classList.toggle('theme-light', mode === 'light');
     if (!scene) return;
     scene.background = new THREE.Color(t.bg);
     scene.fog = new THREE.Fog(t.bg, t.fogNear, t.fogFar);
