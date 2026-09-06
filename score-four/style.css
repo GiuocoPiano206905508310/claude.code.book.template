@@ -16,6 +16,8 @@
   --focus:#e8b94a;
 }
 *{box-sizing:border-box;}
+/* hidden 属性を確実に効かせる（.avview 等の display 指定に負けないように） */
+[hidden]{display:none!important;}
 html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;}
 body{
   font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif;
@@ -94,6 +96,20 @@ body{
 }
 .linklike:hover{text-decoration:underline;}
 .linklike.small{display:block;font-size:12.5px;margin:6px auto 0;color:var(--ink-soft);}
+.linklike.is-account{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;padding:0;
+  border-radius:50%;
+  background:var(--accent-soft);
+  border:1px solid var(--panel-border);
+  flex:none;
+}
+.linklike.is-account:hover{background:rgba(201,152,47,0.28);text-decoration:none;}
+.account-icon{
+  width:18px;height:18px;
+  fill:none;stroke:var(--accent-bright);
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+}
 
 /* ---- ステータス トースト ---- */
 
@@ -257,6 +273,7 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 .pillrow{display:flex;gap:8px;}
 .pill{
   flex:1;
+  display:flex;align-items:center;justify-content:center;gap:6px;
   font-family:inherit;
   font-size:13px;
   padding:10px 6px;
@@ -269,6 +286,11 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 }
 .pill.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-bright);font-weight:600;}
 .pill:hover{border-color:var(--accent);}
+.pill-icon{
+  width:16px;height:16px;flex:none;
+  fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;
+}
 
 .switch-row{display:flex;align-items:center;justify-content:space-between;color:var(--ink);font-size:14px;}
 .switch{position:relative;display:inline-block;width:42px;height:24px;flex:none;}

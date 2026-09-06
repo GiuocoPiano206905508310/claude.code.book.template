@@ -140,8 +140,8 @@
   /* ---- カメラ操作（ドラッグ回転・ホイール／ピンチズーム） ---- */
 
   var theta = Math.PI * 0.28;
-  var phi = 1.02;
-  var radius = 4.6;
+  var phi = 0.62;
+  var radius = 6.8;
   var MIN_PHI = 0.06, MAX_PHI = 1.5;
   var MIN_R = 2.6, MAX_R = 8;
 
