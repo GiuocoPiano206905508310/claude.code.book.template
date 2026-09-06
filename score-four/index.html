@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>立体四目並べ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=7">
+</head>
+<body>
+
+<div id="stage"></div>
+
+<div id="topbar" class="glass">
+  <div id="title">立体四目並べ</div>
+  <div id="turn">
+    <span class="dot p1" id="turn-dot"></span>
+    <span id="turn-label">手番: <strong>白</strong></span>
+    <span id="cpu-thinking" hidden>CPU思考中<span class="dots"><i></i><i></i><i></i></span></span>
+  </div>
+  <button id="btn-account" class="linklike">ログイン</button>
+</div>
+
+<div id="status" role="status"></div>
+
+<div id="controls">
+  <div class="btnrow">
+    <button class="action" id="btn-undo">待った</button>
+    <button class="action" id="btn-log">棋譜</button>
+  </div>
+  <div class="btnrow">
+    <button class="action" id="btn-settings">設定</button>
+    <button class="action primary" id="btn-reset">リセット</button>
+  </div>
+  <div id="log-wrap" class="glass">
+    <div id="log"><div id="log-empty">まだ手はありません</div></div>
+  </div>
+</div>
+
+<div id="hint" class="glass">ドラッグで視点回転・ホイールでズーム。棒の上をタップしてコマを差し込みます。</div>
+
+<!-- 対局終了ダイアログ（棋譜保存の確認込み） -->
+<div id="endcard" class="dialog-overlay">
+  <div class="box glass">
+    <p class="headline" id="end-headline">白の勝ち</p>
+    <p class="sub" id="end-sub">4個のコマが一直線に並びました</p>
+
+    <div id="save-ask">
+      <p class="ask">ただいまの対戦棋譜を保存しますか？</p>
+      <div class="btnrow">
+        <button class="action" id="btn-save-no">保存しない</button>
+        <button class="action primary" id="btn-save-yes">保存する</button>
+      </div>
+    </div>
+    <p id="save-done" class="save-done" hidden></p>
+
+    <div class="btnrow" style="margin-top:16px;">
+      <button class="action primary" id="btn-again">もう一度遊ぶ</button>
+    </div>
+  </div>
+</div>
+
+<!-- リセット確認ダイアログ -->
+<div id="confirm-reset" class="dialog-overlay">
+  <div class="box glass">
+    <p class="headline">リセットしますか？</p>
+    <p class="sub">すべてをリセットし、最初からスタートします</p>
+    <div class="btnrow">
+      <button class="action" id="btn-reset-cancel">キャンセル</button>
+      <button class="action primary" id="btn-reset-confirm">リセットする</button>
+    </div>
+  </div>
+</div>
+
+<!-- 設定ダイアログ -->
+<div id="settings" class="dialog-overlay">
+  <div class="box glass wide">
+    <p class="headline">設定</p>
+
+    <div class="field">
+      <label class="field-label">対戦モード</label>
+      <div class="pillrow" id="mode-pills">
+        <button type="button" class="pill" data-mode="pvp">
+          <svg class="pill-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.8" r="3.4"></circle><path d="M5 20c0-4.1 3.1-6.6 7-6.6s7 2.5 7 6.6"></path></svg>
+          対人戦
+        </button>
+        <button type="button" class="pill" data-mode="cpu">
+          <svg class="pill-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="9" width="14" height="10" rx="2.2"></rect><path d="M12 9V6"></path><circle cx="12" cy="4.4" r="1.4"></circle><circle cx="9" cy="14" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="15" cy="14" r="1.2" fill="currentColor" stroke="none"></circle><path d="M2.6 12v3.4M21.4 12v3.4"></path></svg>
+          CPU対戦
+        </button>
+      </div>
+    </div>
+
+    <div class="field" id="cpu-options" hidden>
+      <label class="field-label">CPUの強さ: <span id="cpu-level-label">レベル 5</span></label>
+      <input type="range" id="cpu-level" min="1" max="10" step="1" value="5">
+      <div class="scalehint"><span>やさしい</span><span>強い</span></div>
+
+      <label class="field-label" style="margin-top:14px;">手番</label>
+      <div class="pillrow">
+        <button type="button" class="pill" data-first="human">あなたが先手</button>
+        <button type="button" class="pill" data-first="cpu">CPUが先手</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label switch-row">
+        <span>待った（一手取り消し）</span>
+        <span class="switch"><input type="checkbox" id="undo-enabled"><span class="track"><span class="knob"></span></span></span>
+      </label>
+      <div id="undo-limit-row" class="field-sub">
+        <label class="field-label">1局につき何回まで</label>
+        <select id="undo-limit">
+          <option value="1">1回</option>
+          <option value="3" selected>3回</option>
+          <option value="5">5回</option>
+          <option value="10">10回</option>
+          <option value="unlimited">無制限</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">背景</label>
+      <div class="pillrow" id="background-pills">
+        <button type="button" class="pill" data-bg="dark">ダーク</button>
+        <button type="button" class="pill" data-bg="light">ホワイト</button>
+      </div>
+    </div>
+
+    <div class="btnrow" style="margin-top:8px;">
+      <button class="action" id="btn-settings-cancel">キャンセル</button>
+      <button class="action primary" id="btn-settings-apply">この設定で新しく始める</button>
+    </div>
+  </div>
+</div>
+
+<!-- アカウント ダイアログ -->
+<div id="account" class="dialog-overlay">
+  <div class="box glass wide">
+
+    <div class="avview" data-view="auth">
+      <p class="headline">立体四目並べ</p>
+      <p class="sub center">アカウントを作ると、設定と対局棋譜をどの端末からでも使えます。</p>
+
+      <div class="pillrow" id="auth-tabs" role="tablist">
+        <button type="button" class="pill active" data-tab="login" role="tab" aria-selected="true">ログイン</button>
+        <button type="button" class="pill" data-tab="signup" role="tab" aria-selected="false">新規登録</button>
+      </div>
+
+      <form class="tabpage" data-tab-page="login">
+        <label class="field-label">メールアドレス<input type="email" name="email" required autocomplete="email" placeholder="you@example.com"></label>
+        <label class="field-label">パスワード<input type="password" name="password" required autocomplete="current-password" placeholder="6文字以上"></label>
+        <p class="msg" data-msg="login"></p>
+        <button type="submit" class="action primary" style="width:100%;">ログイン</button>
+        <button type="button" class="linklike small" data-goto="forgot">パスワードを忘れた</button>
+      </form>
+
+      <form class="tabpage" data-tab-page="signup" hidden>
+        <label class="field-label">ユーザー名<input type="text" name="username" required maxlength="20" autocomplete="nickname" placeholder="2〜20文字"></label>
+        <label class="field-label">メールアドレス<input type="email" name="email" required autocomplete="email" placeholder="you@example.com"></label>
+        <label class="field-label">パスワード<input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="6文字以上"></label>
+        <p class="msg" data-msg="signup"></p>
+        <button type="submit" class="action primary" style="width:100%;">登録して始める</button>
+      </form>
+
+      <button type="button" class="linklike small guest" data-goto="close">ログインせずに遊ぶ</button>
+    </div>
+
+    <form class="avview" data-view="forgot" hidden>
+      <p class="headline">パスワード再設定</p>
+      <p class="sub">登録したメールアドレスに再設定用のリンクをお送りします。</p>
+      <label class="field-label">メールアドレス<input type="email" name="email" required autocomplete="email"></label>
+      <p class="msg" data-msg="forgot"></p>
+      <button type="submit" class="action primary" style="width:100%;">再設定メールを送る</button>
+      <button type="button" class="linklike small" data-goto="back">もどる</button>
+    </form>
+
+    <form class="avview" data-view="recovery" hidden>
+      <p class="headline">新しいパスワードを設定</p>
+      <p class="sub">パスワード再設定のリンクから来ました。新しいパスワードを設定してください。</p>
+      <label class="field-label">新しいパスワード（6文字以上）<input type="password" name="password" required minlength="6" autocomplete="new-password"></label>
+      <p class="msg" data-msg="recovery"></p>
+      <button type="submit" class="action primary" style="width:100%;">設定する</button>
+    </form>
+
+    <div class="avview" data-view="me" hidden>
+      <p class="headline">アカウント</p>
+      <p class="sub center"><strong id="me-username"></strong> さん<br><span id="me-email"></span></p>
+
+      <div class="menu-list">
+        <button type="button" class="menu-btn" data-goto="change-name">ユーザー名を変更</button>
+        <button type="button" class="menu-btn" data-goto="change-email">メールアドレスを変更</button>
+        <button type="button" class="menu-btn" data-goto="change-password">パスワードを変更</button>
+      </div>
+      <button type="button" class="linklike small" data-goto="kifu">保存した棋譜を見る</button>
+
+      <button type="button" class="action primary" style="width:100%;margin-top:10px;" data-goto="close">とじる</button>
+      <button type="button" class="menu-btn" id="btn-signout">ログアウト</button>
+    </div>
+
+    <form class="avview" data-view="change-name" hidden>
+      <p class="headline">ユーザー名を変更</p>
+      <p class="sub center">画面に出る名前です。すぐに変わります。</p>
+      <label class="field-label">新しいユーザー名<input type="text" name="username" required maxlength="20"></label>
+      <p class="msg" data-msg="change-name"></p>
+      <button type="submit" class="action primary" style="width:100%;">保存</button>
+      <button type="button" class="linklike small" data-goto="back">もどる</button>
+    </form>
+
+    <form class="avview" data-view="change-email" hidden>
+      <p class="headline">メールアドレスを変更</p>
+      <p class="sub center">新しいアドレスに確認のリンクをお送りします。そのリンクを開くまで、ログインは今のアドレスのままです。</p>
+      <label class="field-label">新しいメールアドレス<input type="email" name="email" required></label>
+      <p class="msg" data-msg="change-email"></p>
+      <button type="submit" class="action primary" style="width:100%;">確認メールを送る</button>
+      <button type="button" class="linklike small" data-goto="back">もどる</button>
+    </form>
+
+    <form class="avview" data-view="change-password" hidden>
+      <p class="headline">パスワードを変更</p>
+      <label class="field-label">現在のパスワード<input type="password" name="current" required autocomplete="current-password"></label>
+      <label class="field-label">新しいパスワード<input type="password" name="next" required minlength="6" autocomplete="new-password"></label>
+      <label class="field-label">新しいパスワード（確認）<input type="password" name="confirm" required minlength="6" autocomplete="new-password"></label>
+      <p class="msg" data-msg="change-password"></p>
+      <button type="submit" class="action primary" style="width:100%;">パスワードを変更する</button>
+      <button type="button" class="linklike small" data-goto="back">もどる</button>
+    </form>
+
+    <div class="avview" data-view="kifu" hidden>
+      <p class="headline">保存した棋譜</p>
+      <div id="kifu-list" class="kifu-list"><p class="sub">まだ保存された対局はありません。</p></div>
+      <button type="button" class="action primary" style="width:100%;" data-goto="back">閉じる</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="boot-error" class="glass">
+  <p id="boot-error-msg">3D描画ライブラリの読み込みに失敗しました。通信状態を確認し、再読み込みしてください。</p>
+  <p id="boot-error-detail" class="boot-error-detail" hidden></p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="game-logic.js?v=7"></script>
+<script src="cloud.js?v=7"></script>
+<script src="render.js?v=7"></script>
+<script src="ui.js?v=7"></script>
+<script src="main.js?v=7"></script>
+</body>
+</html>
