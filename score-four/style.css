@@ -105,6 +105,19 @@ body{
   flex:none;
 }
 .linklike.is-account:hover{background:rgba(201,152,47,0.28);text-decoration:none;}
+#btn-help{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;padding:0;flex:none;
+  border-radius:50%;
+  background:var(--accent-soft);
+  border:1px solid var(--panel-border);
+  color:var(--accent-bright);
+  font-family:"Shippori Mincho",serif;
+  font-size:15px;font-weight:700;
+  cursor:pointer;
+}
+#btn-help:hover{background:rgba(201,152,47,0.28);}
+#btn-help:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
 .account-icon{
   width:18px;height:18px;
   fill:none;stroke:var(--accent-bright);
@@ -150,6 +163,7 @@ body{
 .btnrow{display:flex;gap:8px;}
 button.action{
   flex:1;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
   font-family:inherit;
   font-size:13.5px;
   font-weight:500;
@@ -166,6 +180,7 @@ button.action:active:not(:disabled){transform:scale(0.97);}
 button.action:disabled{opacity:.35;cursor:default;}
 button.action:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
 button.primary{background:linear-gradient(160deg, var(--accent-bright), var(--accent));color:#1c1409;border-color:transparent;font-weight:700;}
+.action-icon{width:15px;height:15px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
 
 /* 背景がホワイトの時、#controlsのボタン(glassの不透明パネルを持たない)は
    薄い透過背景の向こうに明るい3D背景が透けるため、文字色を暗く保つ */
@@ -355,6 +370,91 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 .kifu-item .result{color:var(--accent-bright);font-weight:600;}
 .kifu-item .date{color:var(--ink-faint);font-family:"JetBrains Mono",monospace;font-size:11px;}
 
+/* ---- 遊び方チュートリアル ---- */
+
+.tutorial-box{position:relative;}
+.tut-skip{
+  position:absolute;top:14px;right:16px;
+  background:none;border:none;color:var(--ink-faint);
+  font-family:inherit;font-size:12px;cursor:pointer;padding:2px;
+}
+.tut-skip:hover{color:var(--ink-soft);}
+.tut-eyebrow{font-size:11px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin:0 0 4px;}
+.tut-stage{height:150px;display:flex;align-items:center;justify-content:center;margin:4px 0 16px;}
+.tut-body{font-size:13.5px;line-height:1.75;color:var(--ink);margin:0 0 20px;min-height:5.2em;}
+.tut-body b{color:var(--accent-bright);font-weight:700;}
+.tut-dots{display:flex;justify-content:center;gap:7px;margin-bottom:18px;}
+.tut-dots span{width:6px;height:6px;border-radius:50%;background:var(--panel-border);transition:background .2s, transform .2s;}
+.tut-dots span.active{background:var(--accent-bright);transform:scale(1.3);}
+.tut-nav .action.tut-prev{flex:none;width:46px;}
+
+/* スライド1: 落とす仕組み */
+.demo-peg{position:relative;width:10px;height:120px;background:linear-gradient(180deg,#c7cbce,#8d9195);border-radius:4px;}
+.demo-peg::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:11px solid #c7cbce;}
+.demo-slot{position:absolute;left:50%;width:30px;height:30px;border-radius:50%;transform:translateX(-50%);border:1px dashed rgba(201,152,47,0.3);}
+.demo-ball{
+  position:absolute;left:50%;width:28px;height:28px;border-radius:50%;transform:translateX(-50%);
+  box-shadow:0 4px 8px rgba(0,0,0,0.4);
+  background:radial-gradient(circle at 32% 26%, #fffdf8, var(--p1) 55%, var(--p1-edge));
+}
+@keyframes tutDropBall{
+  0%{top:-30px;animation-timing-function:cubic-bezier(.5,0,1,1);}
+  55%{top:var(--stop);animation-timing-function:ease-out;}
+  70%{top:calc(var(--stop) - 8px);}
+  85%{top:var(--stop);}
+  100%{top:var(--stop);}
+}
+
+/* スライド2: 視点操作 */
+.tut-orbit{position:relative;width:120px;height:120px;}
+.orbit-cube{
+  position:absolute;inset:0;margin:auto;width:64px;height:64px;
+  transform-style:preserve-3d;
+  animation:tutCubeSpin 4.5s linear infinite;
+}
+@keyframes tutCubeSpin{from{transform:rotateX(-22deg) rotateY(0);}to{transform:rotateX(-22deg) rotateY(360deg);}}
+.orbit-cube .face{position:absolute;inset:0;border:1.5px solid rgba(201,152,47,0.55);background:rgba(201,152,47,0.06);}
+.orbit-cube .f1{transform:translateZ(32px);}
+.orbit-cube .f2{transform:rotateY(90deg) translateZ(32px);}
+.orbit-cube .f3{transform:rotateY(180deg) translateZ(32px);}
+.orbit-cube .f4{transform:rotateY(-90deg) translateZ(32px);}
+.orbit-cube .f5{transform:rotateX(90deg) translateZ(32px);}
+.orbit-cube .f6{transform:rotateX(-90deg) translateZ(32px);}
+.orbit-hand{position:absolute;bottom:2px;left:50%;animation:tutHandSwipe 2.4s ease-in-out infinite;}
+@keyframes tutHandSwipe{0%,100%{transform:translateX(-38px);}50%{transform:translateX(28px);}}
+
+/* スライド3: 勝利条件（縦・横・斜め すべて） */
+.tut-winlines{display:flex;justify-content:center;align-items:flex-end;gap:22px;}
+.tut-winline-item{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.tut-winline-item svg{width:76px;height:76px;overflow:visible;}
+.tut-winline-item span{font-size:11.5px;color:var(--ink-soft);letter-spacing:.02em;}
+.mini-ball{filter:drop-shadow(0 2px 3px rgba(0,0,0,0.4));}
+.mini-line{
+  stroke:var(--accent-bright);stroke-width:3.2;stroke-linecap:round;
+  filter:drop-shadow(0 0 4px rgba(232,185,74,0.85));
+  opacity:.35;
+}
+.mini-line.len-straight{stroke-dasharray:64;stroke-dashoffset:64;animation:tutDashStraight 1.8s ease-in-out infinite;}
+.mini-line.len-diag{stroke-dasharray:91;stroke-dashoffset:91;animation:tutDashDiag 1.8s ease-in-out infinite;}
+@keyframes tutDashStraight{0%,10%{stroke-dashoffset:64;opacity:.35;}50%{stroke-dashoffset:0;opacity:1;}90%,100%{stroke-dashoffset:0;opacity:1;}}
+@keyframes tutDashDiag{0%,10%{stroke-dashoffset:91;opacity:.35;}50%{stroke-dashoffset:0;opacity:1;}90%,100%{stroke-dashoffset:0;opacity:1;}}
+
+/* スライド4: メニュー紹介 */
+.tut-menurow{display:flex;gap:14px;}
+.tut-menu-item{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11px;color:var(--ink-soft);}
+.tut-menu-icon{
+  width:52px;height:52px;border-radius:14px;
+  background:rgba(255,255,255,0.04);border:1px solid var(--panel-border);
+  display:flex;align-items:center;justify-content:center;
+  animation:tutMenuBob 2.6s ease-in-out infinite;
+}
+.tut-menu-item:nth-child(2) .tut-menu-icon{animation-delay:.25s;}
+.tut-menu-item:nth-child(3) .tut-menu-icon{animation-delay:.5s;}
+.tut-menu-item:nth-child(4) .tut-menu-icon{animation-delay:.75s;}
+@keyframes tutMenuBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+.tut-menu-icon svg{width:24px;height:24px;stroke:var(--accent-bright);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.tut-menu-icon.qmark{font-family:"Shippori Mincho",serif;font-size:20px;font-weight:700;color:var(--accent-bright);}
+
 #boot-error{
   position:fixed;inset:0;display:none;
   flex-direction:column;gap:10px;
@@ -382,4 +482,6 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 @media (prefers-reduced-motion: reduce){
   *{transition-duration:.001ms !important;}
   .dots i{animation:none;}
+  .demo-ball, .orbit-cube, .orbit-hand, .mini-line, .tut-menu-icon{animation:none;}
+  .mini-line{stroke-dashoffset:0;opacity:1;}
 }

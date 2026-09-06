@@ -15,8 +15,11 @@
     turnDot: $('turn-dot'), turnLabel: $('turn-label'), cpuThinking: $('cpu-thinking'),
     status: $('status'),
     btnUndo: $('btn-undo'), btnLog: $('btn-log'), btnSettings: $('btn-settings'), btnReset: $('btn-reset'),
-    btnAccount: $('btn-account'),
+    btnHelp: $('btn-help'), btnAccount: $('btn-account'),
     logWrap: $('log-wrap'), log: $('log'),
+
+    tutorial: $('tutorial'), tutSkip: $('tut-skip'), tutEyebrow: $('tut-eyebrow'), tutHeadline: $('tut-headline'),
+    tutStage: $('tut-stage'), tutBody: $('tut-body'), tutDots: $('tut-dots'), tutPrev: $('tut-prev'), tutNext: $('tut-next'),
 
     endcard: $('endcard'), endHeadline: $('end-headline'), endSub: $('end-sub'),
     saveAsk: $('save-ask'), saveDone: $('save-done'),
@@ -312,6 +315,105 @@
     }).join('');
   }
 
+  /* ---------- 遊び方チュートリアル ---------- */
+
+  var TUT_SLIDES = [
+    {
+      eyebrow: '1 / 4',
+      headline: '重力で落ちるコマ',
+      body: '棒の上をタップすると、コマが<b>重力に従って一番下の空いている段</b>まで落ちます。白と黒が交互に手番を進めます。',
+      stage: function () {
+        return '<div class="demo-peg">' +
+          '<div class="demo-slot" style="top:0;"></div>' +
+          '<div class="demo-slot" style="top:30px;"></div>' +
+          '<div class="demo-slot" style="top:60px;"></div>' +
+          '<div class="demo-slot" style="top:90px;"></div>' +
+          '<div class="demo-ball" style="--stop:90px;animation:tutDropBall 1.3s cubic-bezier(.3,.6,.4,1) forwards;"></div>' +
+        '</div>';
+      }
+    },
+    {
+      eyebrow: '2 / 4',
+      headline: '視点はドラッグ、ズームはホイール',
+      body: '画面をドラッグすると盤をぐるっと<b>回転</b>、ホイールやピンチで<b>ズーム</b>して好きな角度から確認できます。',
+      stage: function () {
+        return '<div class="tut-orbit">' +
+          '<div class="orbit-cube">' +
+            '<div class="face f1"></div><div class="face f2"></div><div class="face f3"></div>' +
+            '<div class="face f4"></div><div class="face f5"></div><div class="face f6"></div>' +
+          '</div>' +
+          '<svg class="orbit-hand" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#e8b94a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M9 11.5V5.2a1.6 1.6 0 0 1 3.2 0V11"></path>' +
+            '<path d="M12.2 11V4a1.6 1.6 0 0 1 3.2 0v7.4"></path>' +
+            '<path d="M15.4 11.6V6.4a1.6 1.6 0 0 1 3.2 0V14c0 4-2.6 7-6.6 7-2.6 0-4-1-5.4-2.8L4 14.6c-.6-.9-.3-1.9.5-2.3.8-.4 1.7-.1 2.3.6l1.2 1.5"></path>' +
+          '</svg>' +
+        '</div>';
+      }
+    },
+    {
+      eyebrow: '3 / 4',
+      headline: '4つ揃えたら勝ち',
+      body: '<b>縦・横・斜め</b>、方向を問わず4つ並べれば勝利です。ライン(直線)は盤全体で<b>76通り</b>あります。',
+      stage: function () {
+        function ball(cx, cy) { return '<circle class="mini-ball" cx="' + cx + '" cy="' + cy + '" r="8.5" fill="url(#tut-ballGrad)"></circle>'; }
+        var pts = [14, 35.33, 56.66, 78];
+        var horiz = '<svg viewBox="0 0 92 92"><line class="mini-line len-straight" x1="14" y1="46" x2="78" y2="46"></line>' +
+          pts.map(function (x) { return ball(x, 46); }).join('') + '</svg>';
+        var vert = '<svg viewBox="0 0 92 92"><line class="mini-line len-straight" x1="46" y1="14" x2="46" y2="78"></line>' +
+          pts.map(function (y) { return ball(46, y); }).join('') + '</svg>';
+        var diag = '<svg viewBox="0 0 92 92"><line class="mini-line len-diag" x1="14" y1="14" x2="78" y2="78"></line>' +
+          pts.map(function (p) { return ball(p, p); }).join('') + '</svg>';
+        return '<div class="tut-winlines">' +
+          '<div class="tut-winline-item">' + horiz + '<span>横</span></div>' +
+          '<div class="tut-winline-item">' + vert + '<span>縦</span></div>' +
+          '<div class="tut-winline-item">' + diag + '<span>斜め</span></div>' +
+        '</div>';
+      }
+    },
+    {
+      eyebrow: '4 / 4',
+      headline: 'メニューといつでも見返せる遊び方',
+      body: '「待った」「棋譜」「設定」から対局を調整。困ったら右上の <b>？ボタン</b> でこのデモをいつでも見返せます。',
+      stage: function () {
+        return '<div class="tut-menurow">' +
+          '<div class="tut-menu-item"><div class="tut-menu-icon"><svg viewBox="0 0 24 24"><path d="M9 8L4 12l5 4"></path><path d="M4 12h11a4.5 4.5 0 0 1 0 9h-2"></path></svg></div>待った</div>' +
+          '<div class="tut-menu-item"><div class="tut-menu-icon"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M8 9h8M8 13h8M8 17h5"></path></svg></div>棋譜</div>' +
+          '<div class="tut-menu-item"><div class="tut-menu-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4.7a7.7 7.7 0 0 0-2.6-1.5L14 2h-4l-.4 2.7a7.7 7.7 0 0 0-2.6 1.5l-2.4-.7-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-.7a7.7 7.7 0 0 0 2.6 1.5L10 22h4l.4-2.7a7.7 7.7 0 0 0 2.6-1.5l2.4.7 2-3.4-2-1.6Z"></path></svg></div>設定</div>' +
+          '<div class="tut-menu-item"><div class="tut-menu-icon qmark">？</div>遊び方</div>' +
+        '</div>';
+      }
+    }
+  ];
+
+  var tutIdx = 0;
+
+  function renderTutorialSlide() {
+    var s = TUT_SLIDES[tutIdx];
+    els.tutEyebrow.textContent = s.eyebrow;
+    els.tutHeadline.textContent = s.headline;
+    els.tutBody.innerHTML = s.body;
+    els.tutStage.innerHTML = s.stage();
+    els.tutDots.querySelectorAll('span').forEach(function (dot, i) {
+      dot.classList.toggle('active', i === tutIdx);
+    });
+    els.tutPrev.disabled = tutIdx === 0;
+    els.tutNext.textContent = tutIdx === TUT_SLIDES.length - 1 ? 'はじめる' : '次へ';
+  }
+  function openTutorial() {
+    tutIdx = 0;
+    renderTutorialSlide();
+    els.tutorial.classList.add('show');
+  }
+  function closeTutorial() { els.tutorial.classList.remove('show'); }
+
+  els.btnHelp.addEventListener('click', openTutorial);
+  els.tutSkip.addEventListener('click', closeTutorial);
+  els.tutPrev.addEventListener('click', function () { if (tutIdx > 0) { tutIdx--; renderTutorialSlide(); } });
+  els.tutNext.addEventListener('click', function () {
+    if (tutIdx < TUT_SLIDES.length - 1) { tutIdx++; renderTutorialSlide(); }
+    else { closeTutorial(); }
+  });
+
   /* ---------- ボタン基本配線 ---------- */
 
   els.btnUndo.addEventListener('click', function () { if (handlers.onUndo) handlers.onUndo(); });
@@ -356,6 +458,8 @@
     setAccountButtonLabel: setAccountButtonLabel,
     setMsg: setMsg,
     showView: showView,
-    renderKifuList: renderKifuList
+    renderKifuList: renderKifuList,
+    openTutorial: openTutorial,
+    closeTutorial: closeTutorial
   };
 })();

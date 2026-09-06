@@ -66,7 +66,7 @@
   var pendingKifu = null;
   var cpuReqId = 0;
   var worker = null;
-  try { worker = new Worker('ai-worker.js?v=9'); } catch (e) { worker = null; }
+  try { worker = new Worker('ai-worker.js?v=10'); } catch (e) { worker = null; }
   if (worker) {
     worker.onmessage = function (e) {
       var data = e.data || {};
@@ -296,6 +296,7 @@
           afterSignedIn(res.session.user);
           UI.closeAccount();
           UI.flashStatus('登録しました');
+          UI.openTutorial();
         }
       }, function (err) { UI.setMsg('signup', err.message, false); });
     },
