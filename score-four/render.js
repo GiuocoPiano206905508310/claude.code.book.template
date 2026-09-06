@@ -1,5 +1,5 @@
 /* ============================================================
-   立体四目並べ — 3D描画とカメラ操作・入力判定
+   立体4目並べ — 3D描画とカメラ操作・入力判定
    THREE.js のシーン構築、コマの落下アニメーション、勝利演出、
    ドラッグ回転・ホイール/ピンチズーム、棒のタップ判定を受け持つ。
 
@@ -11,7 +11,6 @@
   'use strict';
 
   var Game = window.ScoreFourGame;
-  var N = Game.N;
 
   var SPACING = 0.66;
   var LEVEL_H = 0.5;
@@ -19,12 +18,17 @@
   var PEG_R = 0.05;
   var PEG_TIP_R = PEG_R * 1.05;
   var PEG_TIP_H = 0.11;
-  var TOPBALL_SURFACE = (N - 1) * LEVEL_H + BALL_R * 2;
-  var PEG_H = TOPBALL_SURFACE + 0.018;
-  var BASE_SIZE = SPACING * 4 + 0.5;
+
+  // 盤のサイズ(3/4/5)。setBoardSize()でいつでも切り替えられる。
+  var curN = 4;
+  var curPegH = 0;
 
   var scene, camera, renderer, raycaster, ndc;
   var TARGET = new THREE.Vector3(0, 0.7, 0);
+  var envMap, steelMat, steelTopMat, pegMat, colliderMat, hoverMat;
+  var baseMesh, baseTopMesh;
+  var pegMeshes = [];
+  var tipMeshes = [];
   var colliders = [];
   var hoverRings = [];
   var ballMeshes;
@@ -41,8 +45,8 @@
     onColumnHover: null  // function(x, y | null)
   };
 
-  function gx(x) { return (x - 1.5) * SPACING; }
-  function gz(y) { return (y - 1.5) * SPACING; }
+  function gx(x) { return (x - (curN - 1) / 2) * SPACING; }
+  function gz(y) { return (y - (curN - 1) / 2) * SPACING; }
   function gy(z) { return z * LEVEL_H + BALL_R; }
 
   var BACKGROUNDS = {
@@ -131,22 +135,13 @@
     scene.add(rim);
     setBackground('dark');
 
-    var envMap = buildStudioEnvMap();
+    envMap = buildStudioEnvMap();
 
-    var steelMat = new THREE.MeshStandardMaterial({ color: 0x868b90, roughness: 0.42, metalness: 0.85, envMap: envMap, envMapIntensity: 1.3 });
-    var steelTopMat = new THREE.MeshStandardMaterial({ color: 0xa2a7ac, roughness: 0.38, metalness: 0.85, envMap: envMap, envMapIntensity: 1.3 });
-    var base = new THREE.Mesh(new THREE.BoxGeometry(BASE_SIZE, 0.24, BASE_SIZE), steelMat);
-    base.position.y = -0.12;
-    base.receiveShadow = true;
-    scene.add(base);
-    var baseTop = new THREE.Mesh(new THREE.BoxGeometry(BASE_SIZE - 0.16, 0.03, BASE_SIZE - 0.16), steelTopMat);
-    baseTop.position.y = 0.015;
-    baseTop.receiveShadow = true;
-    scene.add(baseTop);
-
-    var pegMat = new THREE.MeshStandardMaterial({ color: 0xaeb3b8, roughness: 0.32, metalness: 0.88, envMap: envMap, envMapIntensity: 1.4 });
-    var colliderMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
-    var hoverMat = new THREE.MeshBasicMaterial({ color: 0xe8b94a, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+    steelMat = new THREE.MeshStandardMaterial({ color: 0x868b90, roughness: 0.42, metalness: 0.85, envMap: envMap, envMapIntensity: 1.3 });
+    steelTopMat = new THREE.MeshStandardMaterial({ color: 0xa2a7ac, roughness: 0.38, metalness: 0.85, envMap: envMap, envMapIntensity: 1.3 });
+    pegMat = new THREE.MeshStandardMaterial({ color: 0xaeb3b8, roughness: 0.32, metalness: 0.88, envMap: envMap, envMapIntensity: 1.4 });
+    colliderMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+    hoverMat = new THREE.MeshBasicMaterial({ color: 0xe8b94a, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
 
     p1Mat = new THREE.MeshPhysicalMaterial({
       color: 0xffffff, roughness: 0.22, metalness: 0.05,
@@ -160,26 +155,57 @@
     });
     ballGeo = new THREE.SphereGeometry(BALL_R, 28, 20);
 
-    ballMeshes = Array.from({ length: N }, function () {
-      return Array.from({ length: N }, function () { return Array(N).fill(null); });
-    });
+    buildBoardGeometry(curN);
 
-    for (var x = 0; x < N; x++) {
-      for (var y = 0; y < N; y++) {
+    initCamera();
+    initPointer();
+    window.addEventListener('resize', onResize);
+    requestAnimationFrame(animate);
+  }
+
+  // 盤のサイズ(N)に合わせて、台座・棒・当たり判定・ホバー表示を作り直す。
+  // 対局モードの切替(3目/4目/5目)のたびに呼ばれる。
+  function buildBoardGeometry(n) {
+    for (var i = 0; i < pegMeshes.length; i++) scene.remove(pegMeshes[i]);
+    for (var i2 = 0; i2 < tipMeshes.length; i2++) scene.remove(tipMeshes[i2]);
+    for (var i3 = 0; i3 < colliders.length; i3++) scene.remove(colliders[i3]);
+    for (var i4 = 0; i4 < hoverRings.length; i4++) scene.remove(hoverRings[i4]);
+    if (baseMesh) scene.remove(baseMesh);
+    if (baseTopMesh) scene.remove(baseTopMesh);
+    pegMeshes = []; tipMeshes = []; colliders = []; hoverRings = [];
+
+    curN = n;
+    var baseSize = SPACING * n + 0.5;
+    var topballSurface = (n - 1) * LEVEL_H + BALL_R * 2;
+    curPegH = topballSurface + 0.018;
+
+    baseMesh = new THREE.Mesh(new THREE.BoxGeometry(baseSize, 0.24, baseSize), steelMat);
+    baseMesh.position.y = -0.12;
+    baseMesh.receiveShadow = true;
+    scene.add(baseMesh);
+    baseTopMesh = new THREE.Mesh(new THREE.BoxGeometry(baseSize - 0.16, 0.03, baseSize - 0.16), steelTopMat);
+    baseTopMesh.position.y = 0.015;
+    baseTopMesh.receiveShadow = true;
+    scene.add(baseTopMesh);
+
+    for (var x = 0; x < n; x++) {
+      for (var y = 0; y < n; y++) {
         var px = gx(x), pz = gz(y);
 
-        var peg = new THREE.Mesh(new THREE.CylinderGeometry(PEG_R, PEG_R * 1.15, PEG_H, 14), pegMat);
-        peg.position.set(px, PEG_H / 2, pz);
+        var peg = new THREE.Mesh(new THREE.CylinderGeometry(PEG_R, PEG_R * 1.15, curPegH, 14), pegMat);
+        peg.position.set(px, curPegH / 2, pz);
         peg.castShadow = true;
         scene.add(peg);
+        pegMeshes.push(peg);
 
         var tip = new THREE.Mesh(new THREE.ConeGeometry(PEG_TIP_R, PEG_TIP_H, 12), pegMat);
-        tip.position.set(px, PEG_H + PEG_TIP_H / 2, pz);
+        tip.position.set(px, curPegH + PEG_TIP_H / 2, pz);
         tip.castShadow = true;
         scene.add(tip);
+        tipMeshes.push(tip);
 
-        var collider = new THREE.Mesh(new THREE.CylinderGeometry(SPACING * 0.42, SPACING * 0.42, PEG_H + 0.4, 10), colliderMat);
-        collider.position.set(px, (PEG_H + 0.4) / 2, pz);
+        var collider = new THREE.Mesh(new THREE.CylinderGeometry(SPACING * 0.42, SPACING * 0.42, curPegH + 0.4, 10), colliderMat);
+        collider.position.set(px, (curPegH + 0.4) / 2, pz);
         collider.userData = { x: x, y: y };
         scene.add(collider);
         colliders.push(collider);
@@ -193,10 +219,21 @@
       }
     }
 
-    initCamera();
-    initPointer();
-    window.addEventListener('resize', onResize);
-    requestAnimationFrame(animate);
+    ballMeshes = Array.from({ length: n }, function () {
+      return Array.from({ length: n }, function () { return Array(n).fill(null); });
+    });
+
+    // 盤が大きくなるほどカメラも比例して引いて、全体が収まるようにする
+    var scale = baseSize / (SPACING * 4 + 0.5);
+    MIN_R = 2.6 * scale;
+    MAX_R = 8 * scale;
+    radius = MAX_R;
+    if (camera) updateCamera();
+  }
+
+  function setBoardSize(n) {
+    if (n === curN) return;
+    buildBoardGeometry(n);
   }
 
   /* ---- カメラ操作（ドラッグ回転・ホイール／ピンチズーム） ---- */
@@ -309,7 +346,7 @@
     hoveredKey = key;
     for (var i = 0; i < hoverRings.length; i++) hoverRings[i].visible = false;
     if (col) {
-      var idx = col.x * N + col.y;
+      var idx = col.x * curN + col.y;
       var full = Game.getDropZ(currentBoardRef(), col.x, col.y) === -1;
       hoverRings[idx].visible = !full;
     }
@@ -325,7 +362,7 @@
 
   // ホバー時に「その柱が満杯か」を見るための、現在の盤面参照
   var boardRef = null;
-  function currentBoardRef() { return boardRef || Game.createBoard(); }
+  function currentBoardRef() { return boardRef || Game.createBoard(curN); }
   function setBoardRef(board) { boardRef = board; }
 
   function onResize() {
@@ -348,7 +385,7 @@
     var mat = player === 1 ? p1Mat : p2Mat;
     var mesh = new THREE.Mesh(ballGeo, mat);
     var px = gx(x), pz = gz(y);
-    var startY = PEG_H + BALL_R + 0.15;
+    var startY = curPegH + BALL_R + 0.15;
     var endY = gy(z);
     mesh.position.set(px, startY, pz);
     mesh.castShadow = true;
@@ -404,7 +441,7 @@
   }
 
   function clearBoard() {
-    for (var x = 0; x < N; x++) for (var y = 0; y < N; y++) for (var z = 0; z < N; z++) removeBall(x, y, z);
+    for (var x = 0; x < curN; x++) for (var y = 0; y < curN; y++) for (var z = 0; z < curN; z++) removeBall(x, y, z);
     tweens.length = 0;
     clearWinHighlight();
     setHoverRing(null);
@@ -438,6 +475,7 @@
     clearWinHighlight: clearWinHighlight,
     setInteractionEnabled: setInteractionEnabled,
     setBoardRef: setBoardRef,
-    setBackground: setBackground
+    setBackground: setBackground,
+    setBoardSize: setBoardSize
   });
 })();

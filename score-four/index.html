@@ -2,19 +2,19 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>立体四目並べ</title>
+<title>立体4目並べ</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 
 <div id="stage"></div>
 
 <div id="topbar" class="glass">
-  <div id="title">立体四目並べ</div>
+  <div id="title">立体4目並べ</div>
   <div id="turn">
     <span class="dot p1" id="turn-dot"></span>
     <span id="turn-label">手番: <strong>白</strong></span>
@@ -79,6 +79,15 @@
 <div id="settings" class="dialog-overlay">
   <div class="box glass wide">
     <p class="headline">設定</p>
+
+    <div class="field">
+      <label class="field-label">ゲームの種類</label>
+      <div class="pillrow" id="variant-pills">
+        <button type="button" class="pill" data-variant="3">立体3目並べ</button>
+        <button type="button" class="pill" data-variant="4">立体4目並べ</button>
+        <button type="button" class="pill" data-variant="5">立体5目並べ</button>
+      </div>
+    </div>
 
     <div class="field">
       <label class="field-label">対戦モード</label>
@@ -175,7 +184,7 @@
   <div class="box glass wide">
 
     <div class="avview" data-view="auth">
-      <p class="headline">立体四目並べ</p>
+      <p class="headline">立体4目並べ</p>
       <p class="sub center">アカウントを作ると、設定と対局棋譜をどの端末からでも使えます。</p>
 
       <div class="pillrow" id="auth-tabs" role="tablist">
@@ -277,10 +286,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="game-logic.js?v=11"></script>
-<script src="cloud.js?v=11"></script>
-<script src="render.js?v=11"></script>
-<script src="ui.js?v=11"></script>
-<script src="main.js?v=11"></script>
+<script src="game-logic.js?v=12"></script>
+<script src="cloud.js?v=12"></script>
+<script src="render.js?v=12"></script>
+<script src="ui.js?v=12"></script>
+<script src="main.js?v=12"></script>
 </body>
 </html>
