@@ -44,10 +44,26 @@
   function gz(y) { return (y - 1.5) * SPACING; }
   function gy(z) { return z * LEVEL_H + BALL_R; }
 
+  var BACKGROUNDS = {
+    dark: { bg: 0x17130f, fogNear: 7, fogFar: 15, hemiSky: 0x6b5a3e, hemiGround: 0x0c0906, hemiI: 0.65, ambI: 0.3, keyI: 1.15 },
+    light: { bg: 0xf1efe9, fogNear: 8, fogFar: 17, hemiSky: 0xffffff, hemiGround: 0xcfc8b8, hemiI: 0.95, ambI: 0.55, keyI: 1.05 }
+  };
+  var hemiLight, ambientLight, keyLight;
+
+  function setBackground(mode) {
+    var t = BACKGROUNDS[mode] || BACKGROUNDS.dark;
+    if (!scene) return;
+    scene.background = new THREE.Color(t.bg);
+    scene.fog = new THREE.Fog(t.bg, t.fogNear, t.fogFar);
+    hemiLight.color = new THREE.Color(t.hemiSky);
+    hemiLight.groundColor = new THREE.Color(t.hemiGround);
+    hemiLight.intensity = t.hemiI;
+    ambientLight.intensity = t.ambI;
+    keyLight.intensity = t.keyI;
+  }
+
   function init(container) {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x17130f);
-    scene.fog = new THREE.Fog(0x17130f, 7, 15);
 
     camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
 
@@ -66,22 +82,26 @@
       if (box && msg) { msg.textContent = '3D描画が途中で止まりました。再読み込みしてください。'; box.style.display = 'flex'; }
     });
 
-    scene.add(new THREE.HemisphereLight(0x6b5a3e, 0x0c0906, 0.65));
-    var key = new THREE.DirectionalLight(0xffe9c2, 1.15);
-    key.position.set(3.2, 6, 2.4);
-    key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
-    key.shadow.camera.left = -3; key.shadow.camera.right = 3;
-    key.shadow.camera.top = 3; key.shadow.camera.bottom = -3;
-    key.shadow.camera.far = 14;
-    key.shadow.bias = -0.002;
-    scene.add(key);
+    hemiLight = new THREE.HemisphereLight(0x6b5a3e, 0x0c0906, 0.65);
+    scene.add(hemiLight);
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    scene.add(ambientLight);
+    keyLight = new THREE.DirectionalLight(0xffe9c2, 1.15);
+    keyLight.position.set(3.2, 6, 2.4);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.camera.left = -3; keyLight.shadow.camera.right = 3;
+    keyLight.shadow.camera.top = 3; keyLight.shadow.camera.bottom = -3;
+    keyLight.shadow.camera.far = 14;
+    keyLight.shadow.bias = -0.002;
+    scene.add(keyLight);
     var rim = new THREE.DirectionalLight(0xc9982f, 0.35);
     rim.position.set(-3, 2, -3);
     scene.add(rim);
+    setBackground('dark');
 
-    var steelMat = new THREE.MeshStandardMaterial({ color: 0x8b9096, roughness: 0.42, metalness: 0.85 });
-    var steelTopMat = new THREE.MeshStandardMaterial({ color: 0xb7bcc1, roughness: 0.38, metalness: 0.82 });
+    var steelMat = new THREE.MeshStandardMaterial({ color: 0x9299a1, roughness: 0.4, metalness: 0.35 });
+    var steelTopMat = new THREE.MeshStandardMaterial({ color: 0xc7cbd0, roughness: 0.35, metalness: 0.4 });
     var base = new THREE.Mesh(new THREE.BoxGeometry(BASE_SIZE, 0.24, BASE_SIZE), steelMat);
     base.position.y = -0.12;
     base.receiveShadow = true;
@@ -91,7 +111,7 @@
     baseTop.receiveShadow = true;
     scene.add(baseTop);
 
-    var pegMat = new THREE.MeshStandardMaterial({ color: 0xc7ccd1, roughness: 0.28, metalness: 0.9 });
+    var pegMat = new THREE.MeshStandardMaterial({ color: 0xd6dade, roughness: 0.3, metalness: 0.4 });
     var colliderMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
     var hoverMat = new THREE.MeshBasicMaterial({ color: 0xe8b94a, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
 
@@ -375,6 +395,7 @@
     highlightWin: highlightWin,
     clearWinHighlight: clearWinHighlight,
     setInteractionEnabled: setInteractionEnabled,
-    setBoardRef: setBoardRef
+    setBoardRef: setBoardRef,
+    setBackground: setBackground
   });
 })();

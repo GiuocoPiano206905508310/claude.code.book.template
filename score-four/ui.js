@@ -27,6 +27,7 @@
     settings: $('settings'), modePills: $('mode-pills'), cpuOptions: $('cpu-options'),
     cpuLevel: $('cpu-level'), cpuLevelLabel: $('cpu-level-label'),
     undoEnabled: $('undo-enabled'), undoLimitRow: $('undo-limit-row'), undoLimit: $('undo-limit'),
+    bgPills: $('background-pills'),
     btnSettingsCancel: $('btn-settings-cancel'), btnSettingsApply: $('btn-settings-apply'),
 
     account: $('account'), authTabs: $('auth-tabs'), meUsername: $('me-username'), meEmail: $('me-email'),
@@ -36,6 +37,7 @@
   var handlers = {};
   var pendingFirst = 'human';
   var pendingMode = 'pvp';
+  var pendingBackground = 'dark';
   var currentAccountView = 'auth';
   var accountBackView = 'auth';
 
@@ -114,15 +116,20 @@
   function paintUndoRow() {
     els.undoLimitRow.classList.toggle('disabled', !els.undoEnabled.checked);
   }
+  function paintBgPills() {
+    var btns = els.bgPills.querySelectorAll('.pill');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', btns[i].dataset.bg === pendingBackground);
+  }
 
   function openSettings(current) {
     pendingMode = current.mode;
     pendingFirst = current.humanFirst ? 'human' : 'cpu';
+    pendingBackground = current.background || 'dark';
     els.cpuLevel.value = current.cpuLevel;
     els.cpuLevelLabel.textContent = 'レベル ' + current.cpuLevel;
     els.undoEnabled.checked = current.undoEnabled;
     els.undoLimit.value = current.undoLimit == null ? 'unlimited' : String(current.undoLimit);
-    paintModePills(); paintFirstPills(); paintUndoRow();
+    paintModePills(); paintFirstPills(); paintUndoRow(); paintBgPills();
     els.settings.classList.add('show');
   }
   function closeSettings() { els.settings.classList.remove('show'); }
@@ -140,6 +147,13 @@
     els.cpuLevelLabel.textContent = 'レベル ' + els.cpuLevel.value;
   });
   els.undoEnabled.addEventListener('change', paintUndoRow);
+  els.bgPills.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-bg]');
+    if (!btn) return;
+    pendingBackground = btn.dataset.bg;
+    paintBgPills();
+    if (handlers.onBackgroundChange) handlers.onBackgroundChange(pendingBackground);
+  });
 
   els.btnSettingsCancel.addEventListener('click', function () { closeSettings(); });
   els.btnSettingsApply.addEventListener('click', function () {
@@ -149,7 +163,8 @@
       cpuLevel: parseInt(els.cpuLevel.value, 10),
       humanFirst: pendingFirst === 'human',
       undoEnabled: els.undoEnabled.checked,
-      undoLimit: limitVal === 'unlimited' ? null : parseInt(limitVal, 10)
+      undoLimit: limitVal === 'unlimited' ? null : parseInt(limitVal, 10),
+      background: pendingBackground
     };
     closeSettings();
     if (handlers.onSettingsApply) handlers.onSettingsApply(settings);
