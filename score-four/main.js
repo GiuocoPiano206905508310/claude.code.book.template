@@ -66,7 +66,7 @@
   var pendingKifu = null;
   var cpuReqId = 0;
   var worker = null;
-  try { worker = new Worker('ai-worker.js?v=8'); } catch (e) { worker = null; }
+  try { worker = new Worker('ai-worker.js?v=9'); } catch (e) { worker = null; }
   if (worker) {
     worker.onmessage = function (e) {
       var data = e.data || {};
@@ -284,7 +284,7 @@
     onSignIn: function (email, password) {
       Cloud.signIn(email, password).then(function (s) {
         afterSignedIn(s.user);
-        UI.openAccount(s.user);
+        UI.closeAccount();
         UI.flashStatus(s.user.username + ' でログインしました');
       }, function (err) { UI.setMsg('login', err.message, false); });
     },
@@ -294,7 +294,7 @@
           UI.setMsg('signup', '確認メールを送りました。メールのリンクを開いてから、ログインしてください。', true);
         } else {
           afterSignedIn(res.session.user);
-          UI.openAccount(res.session.user);
+          UI.closeAccount();
           UI.flashStatus('登録しました');
         }
       }, function (err) { UI.setMsg('signup', err.message, false); });
