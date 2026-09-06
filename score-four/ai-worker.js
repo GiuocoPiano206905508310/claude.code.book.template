@@ -13,7 +13,7 @@
    盤のサイズ(3/4/5)は受け取ったboardデータ自身(board.length)から
    わかるので、このファイルではNを意識せず動く。
    ============================================================ */
-importScripts('game-logic.js?v=13');
+importScripts('game-logic.js?v=14');
 
 var Game = self.ScoreFourGame;
 
