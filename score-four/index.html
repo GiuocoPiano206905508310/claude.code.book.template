@@ -127,51 +127,41 @@
 <div id="account" class="dialog-overlay">
   <div class="box glass wide">
 
-    <div class="avview" data-view="guest">
-      <p class="headline">アカウント</p>
-      <p class="sub">ログインすると、設定と対局棋譜をどの端末からでも使えます。</p>
-      <div class="btnrow">
-        <button class="action" data-goto="login">ログイン</button>
-        <button class="action primary" data-goto="signup">新規登録</button>
+    <div class="avview" data-view="auth">
+      <p class="headline">立体四目並べ</p>
+      <p class="sub center">アカウントを作ると、設定と対局棋譜をどの端末からでも使えます。</p>
+
+      <div class="pillrow" id="auth-tabs" role="tablist">
+        <button type="button" class="pill active" data-tab="login" role="tab" aria-selected="true">ログイン</button>
+        <button type="button" class="pill" data-tab="signup" role="tab" aria-selected="false">新規登録</button>
       </div>
-      <button type="button" class="linklike small" data-goto="kifu">保存した棋譜を見る</button>
+
+      <form class="tabpage" data-tab-page="login">
+        <label class="field-label">メールアドレス<input type="email" name="email" required autocomplete="email" placeholder="you@example.com"></label>
+        <label class="field-label">パスワード<input type="password" name="password" required autocomplete="current-password" placeholder="6文字以上"></label>
+        <p class="msg" data-msg="login"></p>
+        <button type="submit" class="action primary" style="width:100%;">ログイン</button>
+        <button type="button" class="linklike small" data-goto="forgot">パスワードを忘れた</button>
+      </form>
+
+      <form class="tabpage" data-tab-page="signup" hidden>
+        <label class="field-label">ユーザー名<input type="text" name="username" required maxlength="20" autocomplete="nickname" placeholder="2〜20文字"></label>
+        <label class="field-label">メールアドレス<input type="email" name="email" required autocomplete="email" placeholder="you@example.com"></label>
+        <label class="field-label">パスワード<input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="6文字以上"></label>
+        <p class="msg" data-msg="signup"></p>
+        <button type="submit" class="action primary" style="width:100%;">登録して始める</button>
+      </form>
+
+      <button type="button" class="linklike small guest" data-goto="close">ログインせずに遊ぶ</button>
     </div>
-
-    <form class="avview" data-view="login" hidden>
-      <p class="headline">ログイン</p>
-      <label class="field-label">メールアドレス<input type="email" name="email" required autocomplete="email"></label>
-      <label class="field-label">パスワード<input type="password" name="password" required autocomplete="current-password"></label>
-      <p class="msg" data-msg="login"></p>
-      <div class="btnrow">
-        <button type="button" class="action" data-goto="guest">戻る</button>
-        <button type="submit" class="action primary">ログイン</button>
-      </div>
-      <button type="button" class="linklike small" data-goto="forgot">パスワードをお忘れですか？</button>
-      <button type="button" class="linklike small" data-goto="signup">新規登録はこちら</button>
-    </form>
-
-    <form class="avview" data-view="signup" hidden>
-      <p class="headline">新規登録</p>
-      <label class="field-label">ユーザー名<input type="text" name="username" required maxlength="20" autocomplete="nickname"></label>
-      <label class="field-label">メールアドレス<input type="email" name="email" required autocomplete="email"></label>
-      <label class="field-label">パスワード（6文字以上）<input type="password" name="password" required minlength="6" autocomplete="new-password"></label>
-      <p class="msg" data-msg="signup"></p>
-      <div class="btnrow">
-        <button type="button" class="action" data-goto="guest">戻る</button>
-        <button type="submit" class="action primary">登録する</button>
-      </div>
-      <button type="button" class="linklike small" data-goto="login">ログインはこちら</button>
-    </form>
 
     <form class="avview" data-view="forgot" hidden>
       <p class="headline">パスワード再設定</p>
       <p class="sub">登録したメールアドレスに再設定用のリンクをお送りします。</p>
       <label class="field-label">メールアドレス<input type="email" name="email" required autocomplete="email"></label>
       <p class="msg" data-msg="forgot"></p>
-      <div class="btnrow">
-        <button type="button" class="action" data-goto="login">戻る</button>
-        <button type="submit" class="action primary">再設定メールを送る</button>
-      </div>
+      <button type="submit" class="action primary" style="width:100%;">再設定メールを送る</button>
+      <button type="button" class="linklike small" data-goto="back">もどる</button>
     </form>
 
     <form class="avview" data-view="recovery" hidden>
@@ -184,49 +174,51 @@
 
     <div class="avview" data-view="me" hidden>
       <p class="headline">アカウント</p>
-      <p class="sub"><strong id="me-username"></strong> さん<br><span id="me-email"></span></p>
+      <p class="sub center"><strong id="me-username"></strong> さん<br><span id="me-email"></span></p>
 
-      <details class="editbox">
-        <summary>ユーザー名を変更</summary>
-        <form data-action="change-name">
-          <label class="field-label">新しいユーザー名<input type="text" name="username" required maxlength="20"></label>
-          <p class="msg" data-msg="change-name"></p>
-          <button type="submit" class="action primary" style="width:100%;">変更する</button>
-        </form>
-      </details>
-
-      <details class="editbox">
-        <summary>メールアドレスを変更</summary>
-        <form data-action="change-email">
-          <label class="field-label">新しいメールアドレス<input type="email" name="email" required></label>
-          <p class="msg" data-msg="change-email"></p>
-          <button type="submit" class="action primary" style="width:100%;">確認メールを送る</button>
-        </form>
-      </details>
-
-      <details class="editbox">
-        <summary>パスワードを変更</summary>
-        <form data-action="change-password">
-          <label class="field-label">現在のパスワード<input type="password" name="current" required autocomplete="current-password"></label>
-          <label class="field-label">新しいパスワード（6文字以上）<input type="password" name="next" required minlength="6" autocomplete="new-password"></label>
-          <p class="msg" data-msg="change-password"></p>
-          <button type="submit" class="action primary" style="width:100%;">変更する</button>
-        </form>
-      </details>
-
-      <button type="button" class="linklike small" data-goto="kifu">保存した棋譜を見る</button>
-      <div class="btnrow">
-        <button type="button" class="action" id="btn-signout">ログアウト</button>
-        <button type="button" class="action primary" data-goto="guest">閉じる</button>
+      <div class="menu-list">
+        <button type="button" class="menu-btn" data-goto="change-name">ユーザー名を変更</button>
+        <button type="button" class="menu-btn" data-goto="change-email">メールアドレスを変更</button>
+        <button type="button" class="menu-btn" data-goto="change-password">パスワードを変更</button>
       </div>
+      <button type="button" class="linklike small" data-goto="kifu">保存した棋譜を見る</button>
+
+      <button type="button" class="action primary" style="width:100%;margin-top:10px;" data-goto="close">とじる</button>
+      <button type="button" class="menu-btn" id="btn-signout">ログアウト</button>
     </div>
+
+    <form class="avview" data-view="change-name" hidden>
+      <p class="headline">ユーザー名を変更</p>
+      <p class="sub center">画面に出る名前です。すぐに変わります。</p>
+      <label class="field-label">新しいユーザー名<input type="text" name="username" required maxlength="20"></label>
+      <p class="msg" data-msg="change-name"></p>
+      <button type="submit" class="action primary" style="width:100%;">保存</button>
+      <button type="button" class="linklike small" data-goto="back">もどる</button>
+    </form>
+
+    <form class="avview" data-view="change-email" hidden>
+      <p class="headline">メールアドレスを変更</p>
+      <p class="sub center">新しいアドレスに確認のリンクをお送りします。そのリンクを開くまで、ログインは今のアドレスのままです。</p>
+      <label class="field-label">新しいメールアドレス<input type="email" name="email" required></label>
+      <p class="msg" data-msg="change-email"></p>
+      <button type="submit" class="action primary" style="width:100%;">確認メールを送る</button>
+      <button type="button" class="linklike small" data-goto="back">もどる</button>
+    </form>
+
+    <form class="avview" data-view="change-password" hidden>
+      <p class="headline">パスワードを変更</p>
+      <label class="field-label">現在のパスワード<input type="password" name="current" required autocomplete="current-password"></label>
+      <label class="field-label">新しいパスワード<input type="password" name="next" required minlength="6" autocomplete="new-password"></label>
+      <label class="field-label">新しいパスワード（確認）<input type="password" name="confirm" required minlength="6" autocomplete="new-password"></label>
+      <p class="msg" data-msg="change-password"></p>
+      <button type="submit" class="action primary" style="width:100%;">パスワードを変更する</button>
+      <button type="button" class="linklike small" data-goto="back">もどる</button>
+    </form>
 
     <div class="avview" data-view="kifu" hidden>
       <p class="headline">保存した棋譜</p>
       <div id="kifu-list" class="kifu-list"><p class="sub">まだ保存された対局はありません。</p></div>
-      <div class="btnrow">
-        <button type="button" class="action primary" data-goto="back">閉じる</button>
-      </div>
+      <button type="button" class="action primary" style="width:100%;" data-goto="back">閉じる</button>
     </div>
 
   </div>
