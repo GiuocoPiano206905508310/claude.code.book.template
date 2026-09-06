@@ -1,5 +1,5 @@
 /* ============================================================
-   立体四目並べ — CPU思考ルーチン（Web Worker）
+   立体4目並べ — CPU思考ルーチン（Web Worker）
    メインスレッドを止めないよう、別スレッドで探索する。
 
    強さは 1〜10 の10段階。数字が大きいほど深く読み、
@@ -9,12 +9,13 @@
    探索は反復深化 + アルファベータ法。レベルごとに
    「目標の深さ」と「持ち時間」の両方に上限を設け、
    持ち時間を超えたら探索中でもその時点の最善手で打ち切る。
+
+   盤のサイズ(3/4/5)は受け取ったboardデータ自身(board.length)から
+   わかるので、このファイルではNを意識せず動く。
    ============================================================ */
-importScripts('game-logic.js?v=11');
+importScripts('game-logic.js?v=12');
 
 var Game = self.ScoreFourGame;
-var N = Game.N;
-var ALL_LINES = Game.ALL_LINES;
 
 // レベル → { 目標の最大深さ, 持ち時間(ms), 最善手を外してランダムに打つ確率 }
 var LEVELS = {
@@ -30,45 +31,51 @@ var LEVELS = {
   10: { depth: 6, time: 950, randomness: 0 }
 };
 
-// 各ラインの「自分だけ／相手だけ」の並び具合を点数化する、定番の評価関数
-var LINE_SCORE = [0, 1, 12, 130, 100000];
-
+// 各ラインの「自分だけ／相手だけ」の並び具合を点数化する、定番の評価関数。
+// 盤のNに関わらず使えるよう、揃った個数に対して指数的に重みをつける
+// （揃えた個数が1つ増えるごとに約12倍、有利/不利を強く反映する）。
 function evaluate(board, me, opp) {
+  var n = board.length;
+  var lines = Game.getLines(n);
   var score = 0;
-  for (var i = 0; i < ALL_LINES.length; i++) {
-    var line = ALL_LINES[i];
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
     var mine = 0, theirs = 0;
-    for (var k = 0; k < 4; k++) {
+    for (var k = 0; k < n; k++) {
       var c = line[k];
       var v = board[c[0]][c[1]][c[2]];
       if (v === me) mine++;
       else if (v === opp) theirs++;
     }
     if (mine > 0 && theirs > 0) continue; // 両者混在なら、もう勝敗に絡まないライン
-    if (mine > 0) score += LINE_SCORE[mine];
-    else if (theirs > 0) score -= LINE_SCORE[theirs];
+    if (mine > 0) score += Math.pow(12, mine);
+    else if (theirs > 0) score -= Math.pow(12, theirs);
   }
   return score;
 }
 
 // 盤の中央に近い柱ほど有利になりやすいので、探索順の先頭に置いて
-// アルファベータの枝刈りを効きやすくする
-var CENTER_ORDER = (function () {
+// アルファベータの枝刈りを効きやすくする（Nごとにキャッシュ）
+var centerOrderCache = {};
+function centerOrder(n) {
+  if (centerOrderCache[n]) return centerOrderCache[n];
   var cols = [];
-  for (var x = 0; x < N; x++) for (var y = 0; y < N; y++) cols.push([x, y]);
-  var c = (N - 1) / 2;
+  for (var x = 0; x < n; x++) for (var y = 0; y < n; y++) cols.push([x, y]);
+  var c = (n - 1) / 2;
   cols.sort(function (a, b) {
     var da = Math.abs(a[0] - c) + Math.abs(a[1] - c);
     var db = Math.abs(b[0] - c) + Math.abs(b[1] - c);
     return da - db;
   });
+  centerOrderCache[n] = cols;
   return cols;
-})();
+}
 
 function legalColumnsOrdered(board) {
+  var order = centerOrder(board.length);
   var cols = [];
-  for (var i = 0; i < CENTER_ORDER.length; i++) {
-    var x = CENTER_ORDER[i][0], y = CENTER_ORDER[i][1];
+  for (var i = 0; i < order.length; i++) {
+    var x = order[i][0], y = order[i][1];
     if (Game.getDropZ(board, x, y) !== -1) cols.push([x, y]);
   }
   return cols;

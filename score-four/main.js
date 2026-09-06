@@ -1,5 +1,5 @@
 /* ============================================================
-   立体四目並べ — 進行管理
+   立体4目並べ — 進行管理
    盤面・手番・設定・CPU思考・棋譜保存・アカウント連携をまとめる。
    3D描画は Render、画面部品は UI、盤面ロジックは Game、
    クラウド保存は Cloud に任せ、ここでは「つなぐ」ことに専念する。
@@ -27,8 +27,9 @@
 
   var SETTINGS_KEY = 'scoreFour.settings.v1';
   var GUEST_KIFU_KEY = 'scoreFour.kifu.guest.v1';
-  var DEFAULT_SETTINGS = { mode: 'pvp', cpuLevel: 5, humanFirst: true, undoEnabled: true, undoLimit: 3, background: 'dark' };
+  var DEFAULT_SETTINGS = { variant: 4, mode: 'pvp', cpuLevel: 5, humanFirst: true, undoEnabled: true, undoLimit: 3, background: 'dark' };
   var MAX_KIFU = 30;
+  var VARIANT_NAMES = { 3: '立体3目並べ', 4: '立体4目並べ', 5: '立体5目並べ' };
 
   function loadSettings() {
     try {
@@ -56,7 +57,7 @@
   var settings = loadSettings();
   var cloudProgress = null; // ログイン中: { settings, kifu }
 
-  var board = Game.createBoard();
+  var board = Game.createBoard(settings.variant || 4);
   var currentPlayer = 1;
   var moveHistory = [];
   var gameOver = false;
@@ -66,7 +67,7 @@
   var pendingKifu = null;
   var cpuReqId = 0;
   var worker = null;
-  try { worker = new Worker('ai-worker.js?v=11'); } catch (e) { worker = null; }
+  try { worker = new Worker('ai-worker.js?v=12'); } catch (e) { worker = null; }
   if (worker) {
     worker.onmessage = function (e) {
       var data = e.data || {};
@@ -87,7 +88,8 @@
   /* ---------- 対局開始 ---------- */
 
   function startGame() {
-    board = Game.createBoard();
+    var n = settings.variant || 4;
+    board = Game.createBoard(n);
     currentPlayer = 1;
     moveHistory = [];
     gameOver = false;
@@ -97,10 +99,12 @@
     cpuReqId++; // 進行中だったCPU思考の応答を無効化
     pendingKifu = null;
 
+    Render.setBoardSize(n);
     Render.clearBoard();
     Render.setBoardRef(board);
     Render.setBackground(settings.background);
     Render.setInteractionEnabled(true);
+    UI.setGameTitle(VARIANT_NAMES[n] || VARIANT_NAMES[4]);
     UI.setTurn(currentPlayer);
     UI.renderLog(moveHistory, Game.notate);
     UI.setUndoAvailable(false);
@@ -192,8 +196,9 @@
   function openEnd(winner, x, y, z) {
     UI.setBusy(false);
     Render.setInteractionEnabled(false);
+    var n = board.length;
     var headline = winner ? (winner === 1 ? '白' : '黒') + 'の勝ち' : '引き分け';
-    var sub = winner ? (Game.notate(x, y, z) + ' で四目が揃いました') : '64マスすべてが埋まりました';
+    var sub = winner ? (Game.notate(x, y, z) + ' で' + n + '個が揃いました') : (n * n * n + 'マスすべてが埋まりました');
     UI.showEnd(headline, sub);
     pendingKifu = {
       id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),

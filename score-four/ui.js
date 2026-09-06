@@ -1,5 +1,5 @@
 /* ============================================================
-   立体四目並べ — 画面まわり（DOM操作）
+   立体4目並べ — 画面まわり（DOM操作）
    3D描画やゲームロジックには触れず、ボタン・ダイアログ・フォームの
    見た目と入力だけを担当する。main.js から UI.init(handlers) で
    コールバックを渡して使う。
@@ -12,6 +12,7 @@
   var $ = function (id) { return document.getElementById(id); };
 
   var els = {
+    title: $('title'),
     turnDot: $('turn-dot'), turnLabel: $('turn-label'), cpuThinking: $('cpu-thinking'),
     status: $('status'),
     btnUndo: $('btn-undo'), btnLog: $('btn-log'), btnSettings: $('btn-settings'), btnReset: $('btn-reset'),
@@ -27,7 +28,8 @@
 
     confirmReset: $('confirm-reset'), btnResetCancel: $('btn-reset-cancel'), btnResetConfirm: $('btn-reset-confirm'),
 
-    settings: $('settings'), modePills: $('mode-pills'), cpuOptions: $('cpu-options'),
+    settings: $('settings'), variantPills: $('variant-pills'),
+    modePills: $('mode-pills'), cpuOptions: $('cpu-options'),
     cpuLevel: $('cpu-level'), cpuLevelLabel: $('cpu-level-label'),
     undoEnabled: $('undo-enabled'), undoLimitRow: $('undo-limit-row'), undoLimit: $('undo-limit'),
     bgPills: $('background-pills'),
@@ -41,10 +43,13 @@
   var pendingFirst = 'human';
   var pendingMode = 'pvp';
   var pendingBackground = 'dark';
+  var pendingVariant = 4;
   var currentAccountView = 'auth';
   var accountBackView = 'auth';
 
   function playerName(p) { return p === 1 ? '白' : '黒'; }
+
+  function setGameTitle(text) { els.title.textContent = text; }
 
   /* ---------- 手番・トースト・棋譜ログ ---------- */
 
@@ -107,6 +112,10 @@
 
   /* ---------- 設定ダイアログ ---------- */
 
+  function paintVariantPills() {
+    var btns = els.variantPills.querySelectorAll('.pill');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', btns[i].dataset.variant === String(pendingVariant));
+  }
   function paintModePills() {
     var btns = els.modePills.querySelectorAll('.pill');
     for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', btns[i].dataset.mode === pendingMode);
@@ -125,6 +134,7 @@
   }
 
   function openSettings(current) {
+    pendingVariant = current.variant || 4;
     pendingMode = current.mode;
     pendingFirst = current.humanFirst ? 'human' : 'cpu';
     pendingBackground = current.background || 'dark';
@@ -132,11 +142,17 @@
     els.cpuLevelLabel.textContent = 'レベル ' + current.cpuLevel;
     els.undoEnabled.checked = current.undoEnabled;
     els.undoLimit.value = current.undoLimit == null ? 'unlimited' : String(current.undoLimit);
-    paintModePills(); paintFirstPills(); paintUndoRow(); paintBgPills();
+    paintVariantPills(); paintModePills(); paintFirstPills(); paintUndoRow(); paintBgPills();
     els.settings.classList.add('show');
   }
   function closeSettings() { els.settings.classList.remove('show'); }
 
+  els.variantPills.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-variant]');
+    if (!btn) return;
+    pendingVariant = parseInt(btn.dataset.variant, 10);
+    paintVariantPills();
+  });
   els.modePills.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-mode]');
     if (!btn) return;
@@ -162,6 +178,7 @@
   els.btnSettingsApply.addEventListener('click', function () {
     var limitVal = els.undoLimit.value;
     var settings = {
+      variant: pendingVariant,
       mode: pendingMode,
       cpuLevel: parseInt(els.cpuLevel.value, 10),
       humanFirst: pendingFirst === 'human',
@@ -460,6 +477,7 @@
     showView: showView,
     renderKifuList: renderKifuList,
     openTutorial: openTutorial,
-    closeTutorial: closeTutorial
+    closeTutorial: closeTutorial,
+    setGameTitle: setGameTitle
   };
 })();
