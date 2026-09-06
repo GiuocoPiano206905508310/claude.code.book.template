@@ -66,7 +66,7 @@
   var pendingKifu = null;
   var cpuReqId = 0;
   var worker = null;
-  try { worker = new Worker('ai-worker.js?v=4'); } catch (e) { worker = null; }
+  try { worker = new Worker('ai-worker.js?v=5'); } catch (e) { worker = null; }
   if (worker) {
     worker.onmessage = function (e) {
       var data = e.data || {};
