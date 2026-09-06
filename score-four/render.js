@@ -80,18 +80,18 @@
     rim.position.set(-3, 2, -3);
     scene.add(rim);
 
-    var woodMat = new THREE.MeshStandardMaterial({ color: 0x241a10, roughness: 0.75, metalness: 0.05 });
-    var woodTopMat = new THREE.MeshStandardMaterial({ color: 0x2e2114, roughness: 0.6, metalness: 0.05 });
-    var base = new THREE.Mesh(new THREE.BoxGeometry(BASE_SIZE, 0.24, BASE_SIZE), woodMat);
+    var steelMat = new THREE.MeshStandardMaterial({ color: 0x8b9096, roughness: 0.42, metalness: 0.85 });
+    var steelTopMat = new THREE.MeshStandardMaterial({ color: 0xb7bcc1, roughness: 0.38, metalness: 0.82 });
+    var base = new THREE.Mesh(new THREE.BoxGeometry(BASE_SIZE, 0.24, BASE_SIZE), steelMat);
     base.position.y = -0.12;
     base.receiveShadow = true;
     scene.add(base);
-    var baseTop = new THREE.Mesh(new THREE.BoxGeometry(BASE_SIZE - 0.16, 0.03, BASE_SIZE - 0.16), woodTopMat);
+    var baseTop = new THREE.Mesh(new THREE.BoxGeometry(BASE_SIZE - 0.16, 0.03, BASE_SIZE - 0.16), steelTopMat);
     baseTop.position.y = 0.015;
     baseTop.receiveShadow = true;
     scene.add(baseTop);
 
-    var pegMat = new THREE.MeshStandardMaterial({ color: 0xc9982f, roughness: 0.35, metalness: 0.7 });
+    var pegMat = new THREE.MeshStandardMaterial({ color: 0xc7ccd1, roughness: 0.28, metalness: 0.9 });
     var colliderMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
     var hoverMat = new THREE.MeshBasicMaterial({ color: 0xe8b94a, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
 
