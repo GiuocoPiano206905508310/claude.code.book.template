@@ -29,15 +29,15 @@
     undoEnabled: $('undo-enabled'), undoLimitRow: $('undo-limit-row'), undoLimit: $('undo-limit'),
     btnSettingsCancel: $('btn-settings-cancel'), btnSettingsApply: $('btn-settings-apply'),
 
-    account: $('account'), meUsername: $('me-username'), meEmail: $('me-email'),
+    account: $('account'), authTabs: $('auth-tabs'), meUsername: $('me-username'), meEmail: $('me-email'),
     btnSignout: $('btn-signout'), kifuList: $('kifu-list')
   };
 
   var handlers = {};
   var pendingFirst = 'human';
   var pendingMode = 'pvp';
-  var currentAccountView = 'guest';
-  var accountBackView = 'guest';
+  var currentAccountView = 'auth';
+  var accountBackView = 'auth';
 
   function playerName(p) { return p === 1 ? '白' : '黒'; }
 
@@ -158,7 +158,7 @@
   /* ---------- アカウント ダイアログ ---------- */
 
   function showView(view) {
-    if (view === 'kifu') accountBackView = currentAccountView;
+    accountBackView = currentAccountView;
     currentAccountView = view;
     els.account.querySelectorAll('.avview').forEach(function (el) {
       el.hidden = el.dataset.view !== view;
@@ -172,6 +172,21 @@
     el.classList.toggle('ok', !!ok);
   }
 
+  function showAuthTab(tab) {
+    els.authTabs.querySelectorAll('.pill').forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.tab === tab);
+      btn.setAttribute('aria-selected', btn.dataset.tab === tab ? 'true' : 'false');
+    });
+    els.account.querySelectorAll('.tabpage').forEach(function (el) {
+      el.hidden = el.dataset.tabPage !== tab;
+    });
+  }
+  els.authTabs.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-tab]');
+    if (!btn) return;
+    showAuthTab(btn.dataset.tab);
+  });
+
   function openAccount(signedInUser, forceView) {
     els.account.querySelectorAll('.msg').forEach(function (m) { m.textContent = ''; });
     if (forceView) {
@@ -181,7 +196,8 @@
       els.meEmail.textContent = signedInUser.email || '';
       showView('me');
     } else {
-      showView('guest');
+      showAuthTab('login');
+      showView('auth');
     }
     els.account.classList.add('show');
   }
@@ -203,17 +219,19 @@
   els.account.addEventListener('click', function (e) {
     var goto = e.target.closest('[data-goto]');
     if (!goto) return;
-    var target = goto.dataset.goto === 'back' ? accountBackView : goto.dataset.goto;
+    var raw = goto.dataset.goto;
+    if (raw === 'close') { closeAccount(); return; }
+    var target = raw === 'back' ? accountBackView : raw;
     showView(target);
     if (target === 'kifu' && handlers.onKifuListOpen) handlers.onKifuListOpen();
   });
 
-  els.account.querySelector('form[data-view="login"]').addEventListener('submit', function (e) {
+  els.account.querySelector('form[data-tab-page="login"]').addEventListener('submit', function (e) {
     e.preventDefault();
     var f = e.target;
     if (handlers.onSignIn) handlers.onSignIn(f.email.value, f.password.value);
   });
-  els.account.querySelector('form[data-view="signup"]').addEventListener('submit', function (e) {
+  els.account.querySelector('form[data-tab-page="signup"]').addEventListener('submit', function (e) {
     e.preventDefault();
     var f = e.target;
     if (handlers.onSignUp) handlers.onSignUp(f.username.value, f.email.value, f.password.value);
@@ -228,19 +246,23 @@
     var f = e.target;
     if (handlers.onSetRecoveryPassword) handlers.onSetRecoveryPassword(f.password.value);
   });
-  els.account.querySelector('form[data-action="change-name"]').addEventListener('submit', function (e) {
+  els.account.querySelector('form[data-view="change-name"]').addEventListener('submit', function (e) {
     e.preventDefault();
     var f = e.target;
     if (handlers.onChangeName) handlers.onChangeName(f.username.value);
   });
-  els.account.querySelector('form[data-action="change-email"]').addEventListener('submit', function (e) {
+  els.account.querySelector('form[data-view="change-email"]').addEventListener('submit', function (e) {
     e.preventDefault();
     var f = e.target;
     if (handlers.onChangeEmail) handlers.onChangeEmail(f.email.value);
   });
-  els.account.querySelector('form[data-action="change-password"]').addEventListener('submit', function (e) {
+  els.account.querySelector('form[data-view="change-password"]').addEventListener('submit', function (e) {
     e.preventDefault();
     var f = e.target;
+    if (f.next.value !== f.confirm.value) {
+      setMsg('change-password', '新しいパスワード（確認）が一致しません。', false);
+      return;
+    }
     if (handlers.onChangePassword) handlers.onChangePassword(f.current.value, f.next.value);
   });
   els.btnSignout.addEventListener('click', function () { if (handlers.onSignOut) handlers.onSignOut(); });
