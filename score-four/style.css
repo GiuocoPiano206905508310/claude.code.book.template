@@ -322,8 +322,16 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 
 #boot-error{
   position:fixed;inset:0;display:none;
+  flex-direction:column;gap:10px;
   align-items:center;justify-content:center;
   color:var(--ink-soft);font-size:14px;text-align:center;padding:40px;
+  z-index:30;
+}
+#boot-error p{margin:0;max-width:340px;}
+.boot-error-detail{
+  font-family:"JetBrains Mono",monospace;
+  font-size:11px;color:var(--ink-faint);
+  word-break:break-word;
 }
 
 @media (max-width:640px){

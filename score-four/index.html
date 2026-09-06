@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
@@ -224,13 +224,16 @@
   </div>
 </div>
 
-<div id="boot-error" class="glass">3D描画ライブラリの読み込みに失敗しました。通信状態を確認し、再読み込みしてください。</div>
+<div id="boot-error" class="glass">
+  <p id="boot-error-msg">3D描画ライブラリの読み込みに失敗しました。通信状態を確認し、再読み込みしてください。</p>
+  <p id="boot-error-detail" class="boot-error-detail" hidden></p>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="game-logic.js"></script>
-<script src="cloud.js"></script>
-<script src="render.js"></script>
-<script src="ui.js"></script>
-<script src="main.js"></script>
+<script src="game-logic.js?v=2"></script>
+<script src="cloud.js?v=2"></script>
+<script src="render.js?v=2"></script>
+<script src="ui.js?v=2"></script>
+<script src="main.js?v=2"></script>
 </body>
 </html>

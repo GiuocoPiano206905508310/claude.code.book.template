@@ -58,6 +58,14 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
+    // 描画開始後にWebGLが落ちた場合、無反応な黒画面のまま気づけないのを避ける
+    renderer.domElement.addEventListener('webglcontextlost', function (e) {
+      e.preventDefault();
+      var box = document.getElementById('boot-error');
+      var msg = document.getElementById('boot-error-msg');
+      if (box && msg) { msg.textContent = '3D描画が途中で止まりました。再読み込みしてください。'; box.style.display = 'flex'; }
+    });
+
     scene.add(new THREE.HemisphereLight(0x6b5a3e, 0x0c0906, 0.65));
     var key = new THREE.DirectionalLight(0xffe9c2, 1.15);
     key.position.set(3.2, 6, 2.4);
