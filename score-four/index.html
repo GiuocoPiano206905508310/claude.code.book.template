@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -40,7 +40,14 @@
   </div>
 </div>
 
-<div id="hint" class="glass">ドラッグで視点回転・ホイールでズーム。棒の上をタップしてコマを差し込みます。</div>
+<!-- 左下の固定パネル。画面を拡大・縮小しても左下に留まる（#controls と対になる位置） -->
+<div id="leftstack">
+  <div id="clock" class="glass" hidden>
+    <div class="clock-face" data-player="1"></div>
+    <div class="clock-face" data-player="2"></div>
+  </div>
+  <div id="hint" class="glass">ドラッグで視点回転・ホイールでズーム。棒の上をタップしてコマを差し込みます。</div>
+</div>
 
 <!-- 対局終了ダイアログ（棋譜保存の確認込み） -->
 <div id="endcard" class="dialog-overlay">
@@ -133,6 +140,32 @@
     </div>
 
     <div class="field">
+      <label class="field-label switch-row">
+        <span>対局クロック</span>
+        <span class="switch"><input type="checkbox" id="clock-enabled"><span class="track"><span class="knob"></span></span></span>
+      </label>
+      <div id="clock-options" class="field-sub">
+        <label class="field-label">1手あたりの持ち時間</label>
+        <select id="clock-seconds">
+          <option value="10">10秒</option>
+          <option value="20">20秒</option>
+          <option value="30" selected>30秒</option>
+          <option value="45">45秒</option>
+          <option value="60">1分（60秒）</option>
+          <option value="90">1分半（90秒）</option>
+          <option value="120">2分（120秒）</option>
+          <option value="180">3分（180秒）</option>
+        </select>
+
+        <label class="field-label" style="margin-top:14px;">対局クロック表示方法</label>
+        <div class="pillrow" id="clock-display-pills">
+          <button type="button" class="pill" data-clockdisp="analog">アナログ</button>
+          <button type="button" class="pill" data-clockdisp="digital">デジタル</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
       <label class="field-label">背景</label>
       <div class="pillrow" id="background-pills">
         <button type="button" class="pill" data-bg="dark">ダーク</button>
@@ -151,7 +184,7 @@
 <div id="tutorial" class="dialog-overlay">
   <div class="box glass wide tutorial-box">
     <button type="button" class="tut-skip" id="tut-skip">スキップ</button>
-    <p class="tut-eyebrow" id="tut-eyebrow">1 / 4</p>
+    <p class="tut-eyebrow" id="tut-eyebrow">1 / 6</p>
     <p class="headline" id="tut-headline"></p>
 
     <div class="tut-stage" id="tut-stage"></div>
@@ -159,7 +192,7 @@
     <p class="tut-body" id="tut-body"></p>
 
     <div class="tut-dots" id="tut-dots">
-      <span class="active"></span><span></span><span></span><span></span>
+      <span class="active"></span><span></span><span></span><span></span><span></span><span></span>
     </div>
 
     <div class="btnrow tut-nav">
@@ -286,10 +319,10 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="game-logic.js?v=12"></script>
-<script src="cloud.js?v=12"></script>
-<script src="render.js?v=12"></script>
-<script src="ui.js?v=12"></script>
-<script src="main.js?v=12"></script>
+<script src="game-logic.js?v=13"></script>
+<script src="cloud.js?v=13"></script>
+<script src="render.js?v=13"></script>
+<script src="ui.js?v=13"></script>
+<script src="main.js?v=13"></script>
 </body>
 </html>

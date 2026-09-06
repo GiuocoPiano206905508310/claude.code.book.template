@@ -216,11 +216,22 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 #log .row.p2 .who{color:#c9b190;}
 #log-empty{color:var(--ink-faint);font-style:normal;}
 
-#hint{
+/* ---- 左下の固定パネル（対局クロック・操作ヒント） ----
+   #controls と同じく position:fixed で画面に貼り付けるので、
+   盤を拡大・縮小しても左下から動かない。 */
+
+#leftstack{
   position:fixed;
   left:max(14px,env(safe-area-inset-left));
   bottom:max(14px,env(safe-area-inset-bottom));
   z-index:10;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-start;
+  pointer-events:none;   /* 盤のドラッグを邪魔しない（中身は表示専用） */
+}
+#hint{
   padding:9px 14px;
   font-size:11.5px;
   color:var(--ink-faint);
@@ -228,6 +239,49 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
   max-width:230px;
   line-height:1.5;
 }
+
+/* ---- 対局クロック ---- */
+
+#clock{display:flex;gap:10px;padding:10px 12px;}
+.clock-face{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  opacity:.45;
+  transition:opacity .2s;
+}
+.clock-face.active{opacity:1;}
+.clock-face .cf-label{
+  font-size:10.5px;color:var(--ink-soft);letter-spacing:.04em;white-space:nowrap;
+}
+.clock-face.active .cf-label{color:var(--accent-bright);font-weight:700;}
+
+/* アナログ表示: 残り時間ぶんの円弧が12時から時計回りに縮み、針がその先端に乗る */
+.clock-face svg{width:54px;height:54px;display:block;}
+.cf-plate{fill:rgba(255,255,255,0.05);stroke:var(--panel-border);stroke-width:1.4;}
+.cf-track{fill:none;stroke:rgba(255,255,255,0.08);stroke-width:4;}
+.cf-gauge{
+  fill:none;stroke:var(--accent-bright);stroke-width:4;stroke-linecap:round;
+  transform:rotate(-90deg);transform-origin:28px 28px;
+}
+.cf-tick{stroke:var(--ink-faint);stroke-width:1.3;stroke-linecap:round;}
+.cf-hand{stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;transform-origin:28px 28px;}
+.cf-hub{fill:var(--accent-bright);}
+
+/* デジタル表示 */
+.clock-face .cf-digits{
+  font-family:"JetBrains Mono",monospace;
+  font-size:22px;font-weight:600;letter-spacing:.02em;
+  color:var(--ink);
+  font-variant-numeric:tabular-nums;
+  padding:4px 2px;
+  /* 「0:30」と「7.4」で幅が変わってレイアウトが跳ねないように固定する */
+  min-width:4ch;text-align:center;
+}
+
+/* 残りわずか: 数字と円弧を警告色にし、脈打たせる */
+.clock-face.low .cf-gauge{stroke:var(--danger);}
+.clock-face.low .cf-digits{color:var(--danger);}
+.clock-face.low.active{animation:clockLow .9s ease-in-out infinite;}
+@keyframes clockLow{0%,100%{opacity:1;}50%{opacity:.55;}}
 
 /* ---- ダイアログ共通 ---- */
 
@@ -336,8 +390,8 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 }
 .switch input:checked + .track{background:var(--accent-soft);border-color:var(--accent);}
 .switch input:checked + .track .knob{transform:translateX(18px);background:var(--accent-bright);}
-#undo-limit-row{opacity:1;transition:opacity .15s;}
-#undo-limit-row.disabled{opacity:.4;pointer-events:none;}
+#undo-limit-row, #clock-options{opacity:1;transition:opacity .15s;}
+#undo-limit-row.disabled, #clock-options.disabled{opacity:.4;pointer-events:none;}
 
 /* ---- アカウント / 棋譜一覧 ---- */
 
@@ -424,23 +478,64 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 .orbit-hand{position:absolute;bottom:2px;left:50%;animation:tutHandSwipe 2.4s ease-in-out infinite;}
 @keyframes tutHandSwipe{0%,100%{transform:translateX(-38px);}50%{transform:translateX(28px);}}
 
-/* スライド3: 勝利条件（縦・横・斜め すべて） */
-.tut-winlines{display:flex;justify-content:center;align-items:flex-end;gap:22px;}
-.tut-winline-item{display:flex;flex-direction:column;align-items:center;gap:8px;}
-.tut-winline-item svg{width:76px;height:76px;overflow:visible;}
-.tut-winline-item span{font-size:11.5px;color:var(--ink-soft);letter-spacing:.02em;}
-.mini-ball{filter:drop-shadow(0 2px 3px rgba(0,0,0,0.4));}
-.mini-line{
-  stroke:var(--accent-bright);stroke-width:3.2;stroke-linecap:round;
-  filter:drop-shadow(0 0 4px rgba(232,185,74,0.85));
-  opacity:.35;
+/* スライド2: 遊べる盤の種類（玉を詰めた立方体 27/64/125個） */
+.tut-variants{display:flex;justify-content:center;align-items:flex-end;gap:10px;}
+.tut-variant-item{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.tut-variant-item span{font-size:9.5px;color:var(--ink-soft);text-align:center;line-height:1.5;white-space:nowrap;}
+.tut-variant-item span b{display:block;color:var(--accent-bright);font-size:11.5px;}
+/* 回転は --spin ひとつだけを毎フレーム書き換えて全要素を駆動する。
+   立方体と玉を別々のCSSアニメーションにすると、影付きの玉がGPU合成から外れて
+   立方体とは別経路で更新され、わずかなズレが「チカチカ」として見えてしまうため。 */
+.cube-scene{
+  position:relative;width:100%;height:100%;
+  transform-style:preserve-3d;
+  transform:rotateX(58deg) rotateZ(var(--spin, 0deg));
 }
-.mini-line.len-straight{stroke-dasharray:64;stroke-dashoffset:64;animation:tutDashStraight 1.8s ease-in-out infinite;}
-.mini-line.len-diag{stroke-dasharray:91;stroke-dashoffset:91;animation:tutDashDiag 1.8s ease-in-out infinite;}
-@keyframes tutDashStraight{0%,10%{stroke-dashoffset:64;opacity:.35;}50%{stroke-dashoffset:0;opacity:1;}90%,100%{stroke-dashoffset:0;opacity:1;}}
-@keyframes tutDashDiag{0%,10%{stroke-dashoffset:91;opacity:.35;}50%{stroke-dashoffset:0;opacity:1;}90%,100%{stroke-dashoffset:0;opacity:1;}}
+.cube-pos{position:absolute;top:50%;left:50%;transform-style:preserve-3d;}
+/* 玉は立方体の回転を打ち消して常にカメラ正面を向く（＝いつ見ても真円の球） */
+.cube-face{transform:rotateZ(calc(-1 * var(--spin, 0deg))) rotateX(-58deg);}
+/* 実機と同じ白玉・黒玉。黒玉は暗い背景に溶けて穴に見えるので、縁に弱い光を入れる */
+.cbball{border-radius:50%;}
+.cbball.w{
+  background:radial-gradient(circle at 30% 24%, #fffdf8 0%, #f3ead9 52%, #b6ab92 100%);
+  box-shadow:inset -2px -2px 4px rgba(70,58,36,0.4), 0 1px 2px rgba(0,0,0,0.55);
+}
+.cbball.b{
+  background:radial-gradient(circle at 30% 24%, #8d6a44 0%, #46301c 48%, #241708 100%);
+  box-shadow:
+    inset -2px -2px 4px rgba(0,0,0,0.5),
+    inset 1.5px 1.5px 3px rgba(255,226,170,0.3),
+    0 1px 2px rgba(0,0,0,0.6);
+}
 
-/* スライド4: メニュー紹介 */
+/* スライド4: 勝利条件（実機と同じ Three.js で描く立体図）
+   CSS 3D は「要素ごとに1つの深さ」でしか前後を決められないので、棒と玉が
+   回転で交差するたび前後が入れ替わってチラつく。WebGLは画素単位の深度判定なので起きない。 */
+.wincand{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.wintabs{display:flex;gap:6px;}
+.wintab{
+  font-family:inherit;font-size:11.5px;padding:4px 12px;border-radius:7px;cursor:pointer;
+  border:1px solid var(--panel-border);background:rgba(255,255,255,0.03);color:var(--ink-soft);
+}
+.wintab.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-bright);font-weight:700;}
+.wb3d{width:150px;height:150px;}
+.wb3d canvas{display:block;width:100%;height:100%;}
+
+/* スライド5: 対局クロック */
+.tut-clockrow{display:flex;gap:20px;align-items:center;}
+.tut-clockface{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.tut-clockface svg{width:64px;height:64px;}
+.tut-clockface .face{fill:rgba(255,255,255,0.05);stroke:var(--panel-border);stroke-width:1.5;}
+.tut-clockface .tick{stroke:var(--ink-faint);stroke-width:1.4;stroke-linecap:round;}
+.tut-clockface .wedge{fill:var(--accent-bright);}
+.tut-clockface .hand{stroke:var(--accent-bright);stroke-width:2.4;stroke-linecap:round;}
+.tut-clockface .hub{fill:var(--accent-bright);}
+.tut-clockface span{font-size:11px;color:var(--ink-soft);}
+.tut-clockface.active span{color:var(--accent-bright);font-weight:700;}
+.tut-clockface.active .wedge{animation:tutWedgeGrow 1.8s ease-in-out infinite alternate;}
+@keyframes tutWedgeGrow{from{opacity:.2;}to{opacity:.55;}}
+
+/* スライド6: メニュー紹介 */
 .tut-menurow{display:flex;gap:14px;}
 .tut-menu-item{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11px;color:var(--ink-soft);}
 .tut-menu-icon{
@@ -483,6 +578,6 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 @media (prefers-reduced-motion: reduce){
   *{transition-duration:.001ms !important;}
   .dots i{animation:none;}
-  .demo-ball, .orbit-cube, .orbit-hand, .mini-line, .tut-menu-icon{animation:none;}
-  .mini-line{stroke-dashoffset:0;opacity:1;}
+  .demo-ball, .orbit-cube, .orbit-hand, .tut-menu-icon{animation:none;}
+  .tut-clockface.active .wedge, .clock-face.low.active{animation:none;}
 }
