@@ -94,7 +94,7 @@ body{
   padding:6px 4px;
   white-space:nowrap;
 }
-.linklike:hover{text-decoration:underline;}
+@media (hover: hover) and (pointer: fine){ .linklike:hover{text-decoration:underline;} }
 .linklike.small{display:block;font-size:12.5px;margin:6px auto 0;color:var(--ink-soft);}
 .linklike.is-account{
   display:inline-flex;align-items:center;justify-content:center;
@@ -104,7 +104,7 @@ body{
   border:1px solid var(--panel-border);
   flex:none;
 }
-.linklike.is-account:hover{background:rgba(201,152,47,0.28);text-decoration:none;}
+@media (hover: hover) and (pointer: fine){ .linklike.is-account:hover{background:rgba(201,152,47,0.28);text-decoration:none;} }
 #btn-help{
   display:inline-flex;align-items:center;justify-content:center;
   width:32px;height:32px;padding:0;flex:none;
@@ -116,7 +116,7 @@ body{
   font-size:15px;font-weight:700;
   cursor:pointer;
 }
-#btn-help:hover{background:rgba(201,152,47,0.28);}
+@media (hover: hover) and (pointer: fine){ #btn-help:hover{background:rgba(201,152,47,0.28);} }
 #btn-help:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
 .account-icon{
   width:18px;height:18px;
@@ -176,8 +176,16 @@ button.action{
   white-space:nowrap;
   transition:background .15s, border-color .15s, opacity .15s, transform .1s;
 }
-button.action:hover:not(:disabled){background:var(--accent-soft);border-color:var(--accent);}
+/* hover は「マウスなど、実際にポインタを乗せられる環境」だけに限る。
+   タッチ端末では一度タップした要素に :hover が貼り付いたままになり、
+   次のスライドへ進んでもボタンが押されっぱなしの見た目で残ってしまうため。 */
+@media (hover: hover) and (pointer: fine){
+  /* .primary を外しているのは、この指定のほうが詳細度が高く、
+     金色のグラデーション(button.primary)を打ち消してしまうため */
+  button.action:not(.primary):hover:not(:disabled){background:var(--accent-soft);border-color:var(--accent);}
+}
 button.action:active:not(:disabled){transform:scale(0.97);}
+button.action:not(.primary):active:not(:disabled){background:var(--accent-soft);border-color:var(--accent);}
 button.action:disabled{opacity:.35;cursor:default;}
 button.action:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
 button.primary{background:linear-gradient(160deg, var(--accent-bright), var(--accent));color:#1c1409;border-color:transparent;font-weight:700;}
@@ -190,12 +198,21 @@ body.theme-light #controls button.action:not(.primary){
   background:rgba(20,15,5,0.06);
   border-color:rgba(90,70,30,0.35);
 }
-body.theme-light #controls button.action:not(.primary):hover:not(:disabled){
+body.theme-light #controls button.action:not(.primary):active:not(:disabled){
   background:rgba(90,70,30,0.14);
   border-color:rgba(90,70,30,0.55);
 }
+@media (hover: hover) and (pointer: fine){
+  body.theme-light #controls button.action:not(.primary):hover:not(:disabled){
+    background:rgba(90,70,30,0.14);
+    border-color:rgba(90,70,30,0.55);
+  }
+}
 body.theme-light #controls button.action:not(.primary):disabled{color:#2a2318;}
-button.primary:hover:not(:disabled){filter:brightness(1.08);}
+@media (hover: hover) and (pointer: fine){
+  button.primary:hover:not(:disabled){filter:brightness(1.08);}
+}
+button.primary:active:not(:disabled){filter:brightness(0.88);}
 
 #log-wrap{max-height:0;overflow:hidden;transition:max-height .28s ease;}
 #log-wrap.open{max-height:220px;}
@@ -368,7 +385,7 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
   transition:all .15s;
 }
 .pill.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-bright);font-weight:600;}
-.pill:hover{border-color:var(--accent);}
+@media (hover: hover) and (pointer: fine){ .pill:hover{border-color:var(--accent);} }
 .pill-icon{
   width:16px;height:16px;flex:none;
   fill:none;stroke:currentColor;
@@ -414,7 +431,7 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
   text-align:center;cursor:pointer;border-radius:8px;
   transition:background .15s,color .15s;
 }
-.menu-btn:hover{background:rgba(255,255,255,0.05);color:var(--ink);}
+@media (hover: hover) and (pointer: fine){ .menu-btn:hover{background:rgba(255,255,255,0.05);color:var(--ink);} }
 .linklike.guest{margin-top:16px;color:var(--ink-soft);text-decoration:underline;}
 .kifu-list{max-height:280px;overflow-y:auto;margin-bottom:12px;}
 .kifu-item{
@@ -433,7 +450,7 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
   background:none;border:none;color:var(--ink-faint);
   font-family:inherit;font-size:12px;cursor:pointer;padding:2px;
 }
-.tut-skip:hover{color:var(--ink-soft);}
+@media (hover: hover) and (pointer: fine){ .tut-skip:hover{color:var(--ink-soft);} }
 .tut-eyebrow{font-size:11px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin:0 0 4px;}
 .tut-stage{height:150px;display:flex;align-items:center;justify-content:center;margin:4px 0 16px;}
 .tut-body{font-size:13.5px;line-height:1.75;color:var(--ink);margin:0 0 20px;min-height:5.2em;}
