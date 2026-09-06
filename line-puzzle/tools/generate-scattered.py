@@ -288,10 +288,14 @@ def minimise(n, ray, start, sol, node_cap):
 if __name__ == '__main__':
     out_path = sys.argv[1]
     rng = random.Random(int(sys.argv[2]) if len(sys.argv) > 2 else 20260830)
-    sizes = [(9, 9), (10, 9), (10, 10), (11, 10), (11, 11), (12, 11)]
+    # 裏の後半（裏21〜30）用に、本編より大きい盤面まで用意する。
+    # マスは画面に合わせて縮むので、13x12 でも横320pxの端末で20px角に収まる。
+    sizes = [(9, 9), (10, 9), (10, 10), (11, 10), (11, 11), (12, 11),
+             (12, 12), (13, 11), (13, 12)]
     scale = float(os.environ.get('BUDGET_SCALE', '1'))
     budget = {(9, 9): 60, (10, 9): 70, (10, 10): 90, (11, 10): 110,
-              (11, 11): 130, (12, 11): 150}
+              (11, 11): 130, (12, 11): 150, (12, 12): 170, (13, 11): 180,
+              (13, 12): 200}
     per_size = int(os.environ.get('PER_SIZE', '60'))
     max_clump = int(os.environ.get('MAX_CLUMP', '2'))
     node_cap = int(os.environ.get('NODE_CAP', '20000'))
