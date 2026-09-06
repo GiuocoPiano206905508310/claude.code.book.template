@@ -208,8 +208,23 @@
     els.meEmail.textContent = user.email || '';
   }
 
+  var ACCOUNT_ICON_SVG = '<svg class="account-icon" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<circle cx="12" cy="8.2" r="3.6"></circle>' +
+    '<path d="M4.5 20c0-4.4 3.4-7 7.5-7s7.5 2.6 7.5 7"></path>' +
+    '</svg>';
+
   function setAccountButtonLabel(user) {
-    els.btnAccount.textContent = user ? (user.username || 'アカウント') : 'ログイン';
+    if (user) {
+      els.btnAccount.classList.add('is-account');
+      els.btnAccount.innerHTML = ACCOUNT_ICON_SVG;
+      els.btnAccount.title = user.username || 'アカウント';
+      els.btnAccount.setAttribute('aria-label', (user.username || 'アカウント') + '（ログイン中）');
+    } else {
+      els.btnAccount.classList.remove('is-account');
+      els.btnAccount.textContent = 'ログイン';
+      els.btnAccount.removeAttribute('title');
+      els.btnAccount.setAttribute('aria-label', 'ログイン');
+    }
   }
 
   els.btnAccount.addEventListener('click', function () {

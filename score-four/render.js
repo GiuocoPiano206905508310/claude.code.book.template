@@ -58,6 +58,14 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
+    // 描画開始後にWebGLが落ちた場合、無反応な黒画面のまま気づけないのを避ける
+    renderer.domElement.addEventListener('webglcontextlost', function (e) {
+      e.preventDefault();
+      var box = document.getElementById('boot-error');
+      var msg = document.getElementById('boot-error-msg');
+      if (box && msg) { msg.textContent = '3D描画が途中で止まりました。再読み込みしてください。'; box.style.display = 'flex'; }
+    });
+
     scene.add(new THREE.HemisphereLight(0x6b5a3e, 0x0c0906, 0.65));
     var key = new THREE.DirectionalLight(0xffe9c2, 1.15);
     key.position.set(3.2, 6, 2.4);
@@ -132,8 +140,8 @@
   /* ---- カメラ操作（ドラッグ回転・ホイール／ピンチズーム） ---- */
 
   var theta = Math.PI * 0.28;
-  var phi = 1.02;
-  var radius = 4.6;
+  var phi = 0.62;
+  var radius = 6.8;
   var MIN_PHI = 0.06, MAX_PHI = 1.5;
   var MIN_R = 2.6, MAX_R = 8;
 

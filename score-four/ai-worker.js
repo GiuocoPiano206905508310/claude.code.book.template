@@ -10,7 +10,7 @@
    「目標の深さ」と「持ち時間」の両方に上限を設け、
    持ち時間を超えたら探索中でもその時点の最善手で打ち切る。
    ============================================================ */
-importScripts('game-logic.js');
+importScripts('game-logic.js?v=3');
 
 var Game = self.ScoreFourGame;
 var N = Game.N;

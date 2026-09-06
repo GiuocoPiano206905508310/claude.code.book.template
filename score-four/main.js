@@ -7,11 +7,19 @@
 (function () {
   'use strict';
 
-  if (typeof THREE === 'undefined') {
+  function showBootError(message, detail) {
+    document.getElementById('boot-error-msg').textContent = message;
+    var detailEl = document.getElementById('boot-error-detail');
+    if (detail) { detailEl.textContent = detail; detailEl.hidden = false; }
     document.getElementById('boot-error').style.display = 'flex';
+  }
+
+  if (typeof THREE === 'undefined') {
+    showBootError('3D描画ライブラリの読み込みに失敗しました。通信状態を確認し、再読み込みしてください。');
     return;
   }
 
+  try {
   var Game = window.ScoreFourGame;
   var Render = window.ScoreFourRender;
   var UI = window.ScoreFourUI;
@@ -58,7 +66,7 @@
   var pendingKifu = null;
   var cpuReqId = 0;
   var worker = null;
-  try { worker = new Worker('ai-worker.js'); } catch (e) { worker = null; }
+  try { worker = new Worker('ai-worker.js?v=3'); } catch (e) { worker = null; }
   if (worker) {
     worker.onmessage = function (e) {
       var data = e.data || {};
@@ -138,12 +146,6 @@
       }
     });
   }
-
-  Render.onColumnTap = function (x, y) {
-    if (gameOver || animating || cpuThinking) return;
-    if (isCpuTurn()) return;
-    attemptMove(x, y, false);
-  };
 
   function triggerCpuMove() {
     if (!worker) return;
@@ -333,6 +335,11 @@
 
   var stage = document.getElementById('stage');
   Render.init(stage);
+  Render.onColumnTap = function (x, y) {
+    if (gameOver || animating || cpuThinking) return;
+    if (isCpuTurn()) return;
+    attemptMove(x, y, false);
+  };
   UI.setAccountButtonLabel(Cloud.signedIn() ? Cloud.user() : null);
   startGame();
 
@@ -351,5 +358,8 @@
     }
   } else if (Cloud.signedIn()) {
     afterSignedIn(Cloud.user());
+  }
+  } catch (err) {
+    showBootError('画面の初期化に失敗しました。再読み込みしてください。', String(err && err.message || err));
   }
 })();
