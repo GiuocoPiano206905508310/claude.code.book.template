@@ -17,7 +17,8 @@
   var LEVEL_H = 0.5;
   var BALL_R = 0.225;
   var PEG_R = 0.05;
-  var PEG_CAP_R = 0.042;
+  var PEG_TIP_R = PEG_R * 1.05;
+  var PEG_TIP_H = 0.11;
   var TOPBALL_SURFACE = (N - 1) * LEVEL_H + BALL_R * 2;
   var PEG_H = TOPBALL_SURFACE + 0.018;
   var BASE_SIZE = SPACING * 4 + 0.5;
@@ -45,10 +46,39 @@
   function gy(z) { return z * LEVEL_H + BALL_R; }
 
   var BACKGROUNDS = {
-    dark: { bg: 0x17130f, fogNear: 7, fogFar: 15, hemiSky: 0x6b5a3e, hemiGround: 0x0c0906, hemiI: 0.65, ambI: 0.3, keyI: 1.15 },
-    light: { bg: 0xf1efe9, fogNear: 8, fogFar: 17, hemiSky: 0xffffff, hemiGround: 0xcfc8b8, hemiI: 0.95, ambI: 0.55, keyI: 1.05 }
+    dark: { bg: 0x17130f, fogNear: 7, fogFar: 15, hemiSky: 0x6b5a3e, hemiGround: 0x0c0906, hemiI: 0.65, ambI: 0.22, keyI: 1.15 },
+    // 環境光を強くすると、白玉のような明るい色は陰影がほぼ消えて平坦に見えるため、
+    // ホワイト背景では環境光を弱め、方向のあるキーライトで立体感を出す
+    light: { bg: 0xf2e9d5, fogNear: 8, fogFar: 17, hemiSky: 0xffffff, hemiGround: 0xcabf9e, hemiI: 0.45, ambI: 0.08, keyI: 1.5 }
   };
   var hemiLight, ambientLight, keyLight;
+
+  // 金属の映り込み用の簡易スタジオ環境マップ（HDRI無しでも金属らしい陰影を出す）
+  function buildStudioEnvMap() {
+    var size = 128;
+    function grad(c1, c2, vertical) {
+      var canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      var g = vertical ? ctx.createLinearGradient(0, 0, 0, size) : ctx.createLinearGradient(0, 0, size, 0);
+      g.addColorStop(0, c1);
+      g.addColorStop(1, c2);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, size, size);
+      return canvas;
+    }
+    var images = [
+      grad('#d7dade', '#9aa0a6', false),
+      grad('#9aa0a6', '#d7dade', false),
+      grad('#fbfcfc', '#e6e8ea', true),
+      grad('#5b5f63', '#3c3f42', true),
+      grad('#c9ccd0', '#a7abb0', false),
+      grad('#a7abb0', '#c9ccd0', false)
+    ];
+    var tex = new THREE.CubeTexture(images);
+    tex.needsUpdate = true;
+    return tex;
+  }
 
   function setBackground(mode) {
     var t = BACKGROUNDS[mode] || BACKGROUNDS.dark;
@@ -100,8 +130,10 @@
     scene.add(rim);
     setBackground('dark');
 
-    var steelMat = new THREE.MeshStandardMaterial({ color: 0x9299a1, roughness: 0.4, metalness: 0.35 });
-    var steelTopMat = new THREE.MeshStandardMaterial({ color: 0xc7cbd0, roughness: 0.35, metalness: 0.4 });
+    var envMap = buildStudioEnvMap();
+
+    var steelMat = new THREE.MeshStandardMaterial({ color: 0x868b90, roughness: 0.42, metalness: 0.85, envMap: envMap, envMapIntensity: 1.3 });
+    var steelTopMat = new THREE.MeshStandardMaterial({ color: 0xa2a7ac, roughness: 0.38, metalness: 0.85, envMap: envMap, envMapIntensity: 1.3 });
     var base = new THREE.Mesh(new THREE.BoxGeometry(BASE_SIZE, 0.24, BASE_SIZE), steelMat);
     base.position.y = -0.12;
     base.receiveShadow = true;
@@ -111,12 +143,20 @@
     baseTop.receiveShadow = true;
     scene.add(baseTop);
 
-    var pegMat = new THREE.MeshStandardMaterial({ color: 0xd6dade, roughness: 0.3, metalness: 0.4 });
+    var pegMat = new THREE.MeshStandardMaterial({ color: 0xaeb3b8, roughness: 0.32, metalness: 0.88, envMap: envMap, envMapIntensity: 1.4 });
     var colliderMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
     var hoverMat = new THREE.MeshBasicMaterial({ color: 0xe8b94a, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
 
-    p1Mat = new THREE.MeshStandardMaterial({ color: 0xf3ead9, roughness: 0.45, metalness: 0.06 });
-    p2Mat = new THREE.MeshStandardMaterial({ color: 0x2a1d12, roughness: 0.5, metalness: 0.06 });
+    p1Mat = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff, roughness: 0.22, metalness: 0.05,
+      clearcoat: 0.6, clearcoatRoughness: 0.12,
+      envMap: envMap, envMapIntensity: 0.5
+    });
+    p2Mat = new THREE.MeshPhysicalMaterial({
+      color: 0x2a1d12, roughness: 0.28, metalness: 0.05,
+      clearcoat: 0.6, clearcoatRoughness: 0.12,
+      envMap: envMap, envMapIntensity: 0.5
+    });
     ballGeo = new THREE.SphereGeometry(BALL_R, 28, 20);
 
     ballMeshes = Array.from({ length: N }, function () {
@@ -132,9 +172,10 @@
         peg.castShadow = true;
         scene.add(peg);
 
-        var cap = new THREE.Mesh(new THREE.SphereGeometry(PEG_CAP_R, 10, 8), pegMat);
-        cap.position.set(px, PEG_H, pz);
-        scene.add(cap);
+        var tip = new THREE.Mesh(new THREE.ConeGeometry(PEG_TIP_R, PEG_TIP_H, 12), pegMat);
+        tip.position.set(px, PEG_H + PEG_TIP_H / 2, pz);
+        tip.castShadow = true;
+        scene.add(tip);
 
         var collider = new THREE.Mesh(new THREE.CylinderGeometry(SPACING * 0.42, SPACING * 0.42, PEG_H + 0.4, 10), colliderMat);
         collider.position.set(px, (PEG_H + 0.4) / 2, pz);
