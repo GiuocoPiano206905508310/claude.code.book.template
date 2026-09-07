@@ -54,16 +54,30 @@ class PuzzleBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     final boardCellSet = stage.boardCells.toSet();
 
+    // The frame's padding must be reserved *before* dividing up the
+    // available space for cells — otherwise the grid box asks for
+    // cellSize*stage.width/height, the padding then eats into that same
+    // budget, and the outer Container (which isn't given an explicit size)
+    // clamps down to fit, silently shrinking the rendered grid below what
+    // the cell math assumes. Cells positioned via the original, larger
+    // cellSize then spill out past the padded/bordered frame on the right
+    // and bottom edges.
+    const framePadding = 10.0;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellSize = [
-          constraints.maxWidth / stage.width,
-          constraints.maxHeight / stage.height,
+          (constraints.maxWidth - framePadding * 2) / stage.width,
+          (constraints.maxHeight - framePadding * 2) / stage.height,
         ].reduce((a, b) => a < b ? a : b);
+        final gridWidth = cellSize * stage.width;
+        final gridHeight = cellSize * stage.height;
 
         return Center(
           child: Container(
-            padding: const EdgeInsets.all(6),
+            width: gridWidth + framePadding * 2,
+            height: gridHeight + framePadding * 2,
+            padding: const EdgeInsets.all(framePadding),
             decoration: BoxDecoration(
               color: theme.boardBackground,
               borderRadius: BorderRadius.circular(16),
@@ -78,8 +92,8 @@ class PuzzleBoard extends StatelessWidget {
             ),
             child: SizedBox(
               key: gridKey,
-              width: cellSize * stage.width,
-              height: cellSize * stage.height,
+              width: gridWidth,
+              height: gridHeight,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
