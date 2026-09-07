@@ -854,19 +854,19 @@ console.log('\n== 裏ステージ ==');
                moves: lv.sol.length };
     });
   });
-  chk(ura.length === 30, `裏ステージ30面 (実際: ${ura.length})`);
+  chk(ura.length === 50, `裏ステージ50面 (実際: ${ura.length})`);
   const bad = ura.filter(u => !u.ok);
   chk(bad.length === 0,
-      `裏の解答データ検証 ${bad.length ? bad.map(u => '裏' + u.id).join(',') : '全30面OK'}`);
+      `裏の解答データ検証 ${bad.length ? bad.map(u => '裏' + u.id).join(',') : '全50面OK'}`);
   const clumped = ura.filter(u => u.clump > 2);
   chk(clumped.length === 0,
-      `裏は石が3マス以上つながっていない ${clumped.length ? clumped.map(u => `裏${u.id}:${u.clump}`).join(',') : '全30面OK'}`);
+      `裏は石が3マス以上つながっていない ${clumped.length ? clumped.map(u => `裏${u.id}:${u.clump}`).join(',') : '全50面OK'}`);
   const dense = ura.filter(u => u.iso < 0.45);
   chk(dense.length === 0,
-      `裏は石の孤立率45%以上＝まばら ${dense.length ? dense.map(u => `裏${u.id}:${Math.round(u.iso * 100)}%`).join(',') : '全30面OK'}`);
+      `裏は石の孤立率45%以上＝まばら ${dense.length ? dense.map(u => `裏${u.id}:${Math.round(u.iso * 100)}%`).join(',') : '全50面OK'}`);
   const short = ura.filter(u => u.moves < 30);
   chk(short.length === 0,
-      `裏の最短手数が30手以上 ${short.length ? short.map(u => `裏${u.id}:${u.moves}手`).join(',') : `全30面OK (最小${Math.min(...ura.map(u => u.moves))}手)`}`);
+      `裏の最短手数が30手以上 ${short.length ? short.map(u => `裏${u.id}:${u.moves}手`).join(',') : `全50面OK (最小${Math.min(...ura.map(u => u.moves))}手)`}`);
   const normalMoves = await page.evaluate(() => window.LEVELS.map(l => l.sol.length));
   const avgN = normalMoves.reduce((a, b) => a + b, 0) / normalMoves.length;
   const avgU = ura.reduce((a, u) => a + u.moves, 0) / ura.length;
@@ -907,9 +907,9 @@ console.log('\n== 裏ステージ ==');
     total: document.querySelectorAll('#ura-grid .stage-btn').length,
     locked: document.querySelectorAll('#ura-grid .stage-btn.is-locked').length,
   }));
-  chk(uc.total === 30, `裏ステージボタン30個 (${uc.total})`);
-  chk(uc.locked === 29, `裏も1面ずつ開く (未開放${uc.locked}個)`);
-  chk(/裏 0 \/ 30/.test(await page.textContent('#select-progress')),
+  chk(uc.total === 50, `裏ステージボタン50個 (${uc.total})`);
+  chk(uc.locked === 49, `裏も1面ずつ開く (未開放${uc.locked}個)`);
+  chk(/裏 0 \/ 50/.test(await page.textContent('#select-progress')),
       `進捗に裏の件数が出る "${await page.textContent('#select-progress')}"`);
   await page.screenshot({ path: SHOTS + '/shot-ura-select.png' });
 
@@ -932,10 +932,10 @@ console.log('\n== 裏ステージ ==');
       `クリア画面も裏の見出し "${await page.textContent('#clear-title')}"`);
   await page.click('#clear-select');
   await page.waitForTimeout(200);
-  chk(/裏 1 \/ 30/.test(await page.textContent('#select-progress')),
+  chk(/裏 1 \/ 50/.test(await page.textContent('#select-progress')),
       `裏の進捗が保存される "${await page.textContent('#select-progress')}"`);
   const uc2 = await page.evaluate(() => document.querySelectorAll('#ura-grid .stage-btn.is-locked').length);
-  chk(uc2 === 28, `裏2面目が解放される (未開放${uc2}個)`);
+  chk(uc2 === 48, `裏2面目が解放される (未開放${uc2}個)`);
 
   // 本編の記録は裏と混ざらない
   const both = await page.evaluate(() => {
@@ -944,6 +944,67 @@ console.log('\n== 裏ステージ ==');
   });
   chk(both.normal === 50 && both.ura === 1,
       `本編と裏の記録が別々に保存される (本編${both.normal}件 / 裏${both.ura}件)`);
+
+  // ---- 裏31以降: もみじの帯とヒント1回制限 ----
+  {
+    // 裏を全部あけて、帯ごとの色とヒントの回数を見る
+    await page.evaluate(() => {
+      const cleared = {}, uraCleared = {};
+      for (let i = 1; i <= window.LEVELS.length; i++) cleared[i] = { stars: 3, moves: 1, at: 1 };
+      for (let i = 1; i <= window.URA_LEVELS.length; i++) uraCleared[i] = { stars: 3, moves: 1, at: 1 };
+      localStorage.setItem('linePuzzle.progress.v1',
+        JSON.stringify({ cleared, uraCleared, lastStage: 50, lastUra: 50, tutorialSeen: true }));
+    });
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(250);
+
+    // ステージ選択のボタンは10面ずつ5色
+    const bands = await page.evaluate(() => [1, 11, 21, 31, 41].map(i => {
+      const b = document.querySelectorAll('#ura-grid .stage-btn')[i - 1];
+      return b.className.replace('stage-btn is-cleared ', '');
+    }));
+    chk(bands.join(',') === 'ura-band-1,ura-band-2,ura-band-3,ura-band-4,ura-band-5',
+        `裏のボタンが10面ずつ5色 (${bands.join(' / ')})`);
+
+    for (const [id, band] of [[35, 4], [45, 5]]) {
+      await page.evaluate(i => document.querySelectorAll('#ura-grid .stage-btn')[i - 1].click(), id);
+      await page.waitForSelector('#screen-game.is-active');
+      await page.waitForTimeout(250);
+      const cls = await page.getAttribute('#board', 'class');
+      chk(cls === 'board ura-band-' + band,
+          `裏${id} の盤面が帯${band}のもみじ (class="${cls}")`);
+      await page.screenshot({ path: SHOTS + `/shot-ura-${id}.png` });
+
+      // ヒントは1回だけ
+      chk((await page.textContent('#hint-badge')) === '0 / 1',
+          `裏${id} はヒントの残りが分かる "${await page.textContent('#hint-badge')}"`);
+      await page.click('#btn-hint');
+      await page.waitForTimeout(300);
+      chk((await page.textContent('#hint-badge')) === '1 / 1',
+          `裏${id} で1回目のヒントは出る "${await page.textContent('#hint-badge')}"`);
+      const spent = await page.getAttribute('#btn-hint', 'class');
+      chk(/is-spent/.test(spent), `使い切ったヒントボタンはそれと分かる (class="${spent}")`);
+      await page.click('#btn-hint');
+      await page.waitForTimeout(300);
+      chk((await page.textContent('#hint-badge')) === '1 / 1',
+          `裏${id} で2回目のヒントは断られる "${await page.textContent('#hint-badge')}"`);
+      chk(/1回だけ/.test(await page.textContent('#toast')),
+          `断る理由を伝える "${(await page.textContent('#toast')).trim()}"`);
+      await page.click('#game-back');
+      await page.waitForTimeout(200);
+    }
+
+    // 裏30以前と本編はこれまでどおり何度でも使える
+    await page.evaluate(() => document.querySelectorAll('#ura-grid .stage-btn')[24].click());
+    await page.waitForSelector('#screen-game.is-active');
+    await page.waitForTimeout(250);
+    await page.click('#btn-hint'); await page.waitForTimeout(250);
+    await page.click('#btn-hint'); await page.waitForTimeout(250);
+    chk((await page.textContent('#hint-badge')) === '2',
+        `裏25 はヒントを何度でも使える "${await page.textContent('#hint-badge')}"`);
+    await page.click('#game-back');
+    await page.waitForTimeout(200);
+  }
 }
 
 console.log('\n== アカウントと引き継ぎ ==');

@@ -2,8 +2,9 @@
    ラインパズル — まっすぐ進んで全マスを塗りつぶすパズル
    ・壁・盤面の端・すでに通ったマス に当たるまで直進する
    ・すべてのマスを塗ればクリア（同じマスは二度通れない）
-   ・全50ステージ + 裏30ステージ / クリア時オートセーブ
+   ・全50ステージ + 裏50ステージ / クリア時オートセーブ
    ・裏ステージ(もみじの盤面)は、本編50ステージをすべてクリアすると解放される
+   ・裏31以降はいちばん難しい帯。ヒントは1ステージにつき1回だけ使える
    ============================================================ */
 (function () {
   'use strict';
@@ -136,11 +137,17 @@
            Object.keys(clearedMap(false)).length >= LEVELS.length;
   }
 
-  /* ステージ帯を求める。
-     本編は 1-10若葉/11-20深緑/21-30黄葉/31-40紅葉/41-50枯葉 の5帯、
-     裏は 裏1-10緑/裏11-20黄/裏21-30赤 のもみじ3帯。 */
-  function bandOf(id, ura) {
-    return ura ? Math.min(3, Math.ceil(id / 10)) : Math.min(5, Math.ceil(id / 10));
+  /* ステージ帯を求める。本編・裏とも10面ずつの5帯。
+     本編は 若葉/深緑/黄葉/紅葉/枯葉、裏のもみじは 緑/黄/赤/茶/黒。 */
+  function bandOf(id) {
+    return Math.min(5, Math.ceil(id / 10));
+  }
+
+  /* 裏31以降はヒントを1回だけ使える。ここがいちばん難しい帯なので、
+     何度でも聞ける状態だと歯ごたえが無くなる。 */
+  var HINT_LIMITED_FROM = 31;
+  function hintLimit(id, ura) {
+    return (ura && id >= HINT_LIMITED_FROM) ? 1 : Infinity;
   }
 
   /* ============================================================
@@ -265,7 +272,7 @@
       btn.textContent = id;
       btn.setAttribute('aria-label', name);
       if (rec) {
-        btn.classList.add('is-cleared', (ura ? 'ura-band-' : 'band-') + bandOf(id, ura));
+        btn.classList.add('is-cleared', (ura ? 'ura-band-' : 'band-') + bandOf(id));
         var stars = el('span', 'stage-stars');
         for (var s = 1; s <= 3; s++) {
           stars.innerHTML += '<svg class="ic star' + (s <= rec.stars ? '' : ' off') + '"><use href="#ic-star"/></svg>';
@@ -362,8 +369,7 @@
     $('level-label').textContent = (ura ? '裏 Level ' : 'Level ') + id;
     $('level-label').parentNode.classList.toggle('is-ura', ura);
     $('stat-best').textContent = lv.sol.length;
-    $('hint-badge').textContent = '0';
-    $('hint-badge').classList.add('is-zero');
+    updateHintBadge();
     hideHint();
     buildBoard();
     updateStats();
@@ -391,7 +397,7 @@
       boardEl.classList.remove('leaf-band-' + bi);
       boardEl.classList.remove('ura-band-' + bi);
     }
-    boardEl.classList.add((state.ura ? 'ura-band-' : 'leaf-band-') + bandOf(lv.id, state.ura));
+    boardEl.classList.add((state.ura ? 'ura-band-' : 'leaf-band-') + bandOf(lv.id));
     cellEls = new Array(lv.n);
 
     for (var y = 0; y < lv.h; y++) {
@@ -610,6 +616,10 @@
   function requestHint() {
     if (!state || busy) return;
     var lv = state.lv;
+    if (state.hints >= hintLimit(lv.id, state.ura)) {
+      toast('このステージでヒントを使えるのは1回だけです');
+      return;
+    }
     var hist = state.moves.join('');
     var d = -1;
 
@@ -634,9 +644,18 @@
     if (d < 0) return;
 
     state.hints++;
-    $('hint-badge').textContent = state.hints;
-    $('hint-badge').classList.remove('is-zero');
+    updateHintBadge();
     showHint(d);
+  }
+
+  // ヒントの回数表示。1回だけの帯では、使い切ったことが分かるようにする
+  function updateHintBadge() {
+    var badge = $('hint-badge');
+    var limit = state ? hintLimit(state.lv.id, state.ura) : Infinity;
+    var used = state ? state.hints : 0;
+    badge.textContent = limit === Infinity ? used : (used + ' / ' + limit);
+    badge.classList.toggle('is-zero', limit === Infinity && used === 0);
+    $('btn-hint').classList.toggle('is-spent', used >= limit);
   }
 
   function showHint(d) {

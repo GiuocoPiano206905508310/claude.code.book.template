@@ -288,18 +288,32 @@ def minimise(n, ray, start, sol, node_cap):
 if __name__ == '__main__':
     out_path = sys.argv[1]
     rng = random.Random(int(sys.argv[2]) if len(sys.argv) > 2 else 20260830)
-    # 裏の後半（裏21〜30）用に、本編より大きい盤面まで用意する。
-    # マスは画面に合わせて縮むので、13x12 でも横320pxの端末で20px角に収まる。
-    sizes = [(9, 9), (10, 9), (10, 10), (11, 10), (11, 11), (12, 11),
-             (12, 12), (13, 11), (13, 12)]
-    scale = float(os.environ.get('BUDGET_SCALE', '1'))
+    # 裏の後半用に、本編より大きい盤面まで用意する。
+    # マスは画面に合わせて縮むので、14x12 でも横320pxの端末で19px角に収まる。
+    ALL = [(9, 9), (10, 9), (10, 10), (11, 10), (11, 11), (12, 11),
+           (12, 12), (13, 11), (13, 12), (13, 13), (14, 12)]
     budget = {(9, 9): 60, (10, 9): 70, (10, 10): 90, (11, 10): 110,
               (11, 11): 130, (12, 11): 150, (12, 12): 170, (13, 11): 180,
-              (13, 12): 200}
+              (13, 12): 200, (13, 13): 220, (14, 12): 230}
+    # SIZES='13x12,14x12' のように、作る盤面サイズだけを選べる
+    want = os.environ.get('SIZES', '')
+    if want:
+        pick = {tuple(int(n) for n in t.split('x')) for t in want.split(',')}
+        sizes = [s for s in ALL if s in pick]
+        assert sizes, '知らない盤面サイズ: %s' % want
+    else:
+        sizes = ALL
+    scale = float(os.environ.get('BUDGET_SCALE', '1'))
     per_size = int(os.environ.get('PER_SIZE', '60'))
     max_clump = int(os.environ.get('MAX_CLUMP', '2'))
     node_cap = int(os.environ.get('NODE_CAP', '20000'))
     min_node_cap = int(os.environ.get('MIN_NODE_CAP', '300000'))
+    # 石の割合と早期停止の確率。石を減らすと歩ける範囲が広がり、
+    # 各手で選べる方向が増える（＝迷いどころの多い盤面になる）
+    hole_lo = float(os.environ.get('HOLE_LO', '0.07'))
+    hole_hi = float(os.environ.get('HOLE_HI', '0.24'))
+    p_lo = float(os.environ.get('P_LO', '0.35'))
+    p_hi = float(os.environ.get('P_HI', '0.80'))
 
     pool = {}
     t0 = time.time()
@@ -310,9 +324,9 @@ if __name__ == '__main__':
         while time.time() < tend and got < per_size:
             att += 1
             r = generate(w, h, rng, node_cap, max_clump,
-                         min_blocks=max(8, int(area * 0.07)),
-                         max_blocks=int(area * 0.24),
-                         p_stop=rng.uniform(0.35, 0.8))
+                         min_blocks=max(8, int(area * hole_lo)),
+                         max_blocks=int(area * hole_hi),
+                         p_stop=rng.uniform(p_lo, p_hi))
             if not r:
                 continue
             grid, start, walls, sol = r

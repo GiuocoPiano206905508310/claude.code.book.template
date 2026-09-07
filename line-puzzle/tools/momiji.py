@@ -206,12 +206,16 @@ def svg_cell(base, leaf, stemcol, vein, **kw):
             "preserveAspectRatio='none'>%s</svg>") % body
 
 
-# 裏1-10 緑 / 裏11-20 黄 / 裏21-30 赤
+# 裏1-10 緑 / 裏11-20 黄 / 裏21-30 赤 / 裏31-40 茶 / 裏41-50 黒
 # 地の色は帯ごとに、葉と同系の濃い色にする。
+# 葉脈は葉より少し濃い色。ただし黒だけは、同じやり方だと葉に埋もれて
+# 形が分からなくなるので、明るい銀で引く。
 BANDS = {
     'green':  dict(base='#2a5c2c', leaf='#4e9c33', stemcol='#3f7d2a', vein='#2f6b1e'),
     'yellow': dict(base='#8a5f0f', leaf='#f0c020', stemcol='#c79a15', vein='#c2930d'),
     'red':    dict(base='#6f1c18', leaf='#e02718', stemcol='#b81f12', vein='#a5150a'),
+    'brown':  dict(base='#4a2c12', leaf='#a06029', stemcol='#854e20', vein='#79471c'),
+    'black':  dict(base='#16171b', leaf='#3b3f47', stemcol='#31353c', vein='#767d8a'),
 }
 
 VARIANTS = {

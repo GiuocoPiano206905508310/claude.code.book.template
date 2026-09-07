@@ -10,6 +10,8 @@ BASE = {
     1: dict(name='緑', base='#4e9c33'),
     2: dict(name='黄', base='#f0c020'),
     3: dict(name='赤', base='#e02718'),
+    4: dict(name='茶', base='#a06029'),
+    5: dict(name='黒', base='#3b3f47'),
 }
 
 

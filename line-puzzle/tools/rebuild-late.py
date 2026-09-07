@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 KEEP_MAIN = 10      # 本編1〜10はそのまま
 N_MAIN = 50
 KEEP_URA = 10       # 裏1〜10はそのまま
-N_URA = 30
+N_URA = 50          # 裏は50面（31〜50は「進める方向が多い」盤面で作る）
 
 
 # ---------------------------------------------------------------- 既存の読み書き
@@ -155,6 +155,25 @@ def ura_score(v):
     return 1.0 * v['n'] + 3.0 * v['L'] + 6.0 * v['choices'] + 1.2 * v['holes']
 
 
+def branch(v):
+    """1手あたり平均で何方向に進めたか。1.0 なら一本道。
+
+    「迷いどころの合計」は手数が長いほど自然に増えるので、手数で割った
+    こちらのほうが「進める方向が多いか」を素直に表す。
+    """
+    return 1.0 + v['choices'] / max(1, len(v['sol']))
+
+
+def ura_late_score(v):
+    """裏31〜50 の難易度。分かれ道の多さを主役にする。
+
+    盤面を広げるだけだと歩く手間が増えるだけなので、1手あたりに選べる
+    方向の多さ（branch）を強く効かせ、そのうえで手数と広さを見る。
+    """
+    return (300.0 * (branch(v) - 1.0) + 8.0 * v['choices']
+            + 2.0 * len(v['sol']) + 0.6 * v['n'])
+
+
 def report(title, levels, extra=None):
     print('\n' + title)
     for lv in levels:
@@ -210,6 +229,7 @@ def rebuild_main(pool_path):
 # ---------------------------------------------------------------- 裏 11〜30
 
 def rebuild_ura(scat_path):
+    """裏11〜30 を選び直す（裏1〜10 は残す）。"""
     pool = json.load(open(scat_path))
     for v in pool:
         v['score'] = ura_score(v)
@@ -243,11 +263,88 @@ def rebuild_ura(scat_path):
         lv = {'id': i, 'w': v['w'], 'h': v['h'], 'g': v['g'], 's': v['s'], 'sol': v['sol']}
         verify(lv)
         out.append(lv)
+    assert len(out) == 30
+    return out, new
+
+
+# ---------------------------------------------------------------- 裏 31〜50
+
+def build_ura_late(big_path):
+    """裏31〜50 を足す（裏1〜30 はそのまま残す）。
+
+    ここは「進める方向が非常に多い」ことを難しさの主役にする帯。
+    1手あたりに選べる方向の数（branch）で並べ、下から上へ詰めていく。
+    """
+    pool = json.load(open(big_path))
+    for v in pool:
+        v['score'] = ura_late_score(v)
+
+    keep = read_levels(ROOT / 'ura-levels.js')[:30]
+    assert len(keep) == 30, '裏の1〜30が読めない'
+    keep_grids = {tuple(lv['g']) for lv in keep}
+    keep_max = max(len(lv['sol']) for lv in keep)
+
+    def usable(v):
+        return (v['clump'] <= 2 and v['iso'] >= 0.45 and v['minproven']
+                and len(v['sol']) >= keep_max - 4
+                and v['holes'] >= 8 and tuple(v['g']) not in keep_grids)
+
+    cand = [v for v in pool if usable(v)]
+    print('裏31〜50の候補: %d/%d件（裏1〜30は最長 %d手）'
+          % (len(cand), len(pool), keep_max))
+    assert len(cand) >= 20, '候補が足りない (%d < 20)' % len(cand)
+
+    # しきい値で切ると候補数が読めないので、分岐の多い上位20面をそのまま採る。
+    # 並べ替えて番号順に難しくする。
+    cand.sort(key=lambda v: v['score'], reverse=True)
+    new = sorted(cand[:20], key=lambda v: v['score'])
+    print('  採った20面: 1手あたり %.2f〜%.2f 方向 / %d〜%d手'
+          % (min(branch(v) for v in new), max(branch(v) for v in new),
+             min(len(v['sol']) for v in new), max(len(v['sol']) for v in new)))
+
+    out = list(keep)
+    for i, v in enumerate(new, 31):
+        lv = {'id': i, 'w': v['w'], 'h': v['h'], 'g': v['g'], 's': v['s'], 'sol': v['sol']}
+        verify(lv)
+        out.append(lv)
     assert len(out) == N_URA
     return out, new
 
 
+URA_HEADER = ('/* 自動生成: 裏ステージ 全50面（新ルールで解答可能であることを検証済み）\n'
+              '   本編50ステージをすべてクリアすると解放される、石が点在する難しい盤面。\n'
+              '   裏31〜50 は「進める方向が多い」盤面で、ヒントは1回しか使えない。\n'
+              '   w,h: 盤面サイズ / g: \'.\'=通れるマス \'#\'=石 / s:[x,y]=スタート'
+              ' / sol: 最短手順(U D L R) */\n')
+
+
+def band_line(levels, a, b):
+    seg = levels[a - 1:b]
+    return '%d〜%d: %d〜%d手 (中央値%.0f) / %d〜%dマス' % (
+        a, b, min(len(l['sol']) for l in seg), max(len(l['sol']) for l in seg),
+        statistics.median(len(l['sol']) for l in seg),
+        min(sum(r.count('.') for r in l['g']) for l in seg),
+        max(sum(r.count('.') for r in l['g']) for l in seg))
+
+
+def run_ura_late(big_path):
+    levels, new = build_ura_late(big_path)
+    extra = {}
+    for lv, v in zip(levels[30:], new):
+        extra[lv['id']] = ' 迷い%2d 1手あたり%4.2f方向 難度%6.1f' % (
+            v['choices'], branch(v), v['score'])
+    report('== 裏 ==', levels, extra)
+    for a, b in [(1, 10), (11, 20), (21, 30), (31, 40), (41, 50)]:
+        print('裏    ' + band_line(levels, a, b))
+    n = write_levels(ROOT / 'ura-levels.js', URA_HEADER, 'URA_LEVELS', levels)
+    print('\nwrote ura-levels.js (%d bytes)' % n)
+
+
 if __name__ == '__main__':
+    if sys.argv[1] == 'ura-late':
+        run_ura_late(sys.argv[2])
+        sys.exit(0)
+
     pool_path, scat_path = sys.argv[1], sys.argv[2]
 
     main_levels, main_new = rebuild_main(pool_path)
