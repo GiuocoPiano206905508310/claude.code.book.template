@@ -80,13 +80,13 @@ class _PieceCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(1.5),
-      child: BrickSurface(
-        color: color,
-        borderRadius: cellSize * 0.24,
-        borderWidth: (cellSize * (selected ? 0.15 : 0.13)).clamp(1.6, 5.0),
-      ),
+    // No padding between cells: adjacent cells of the same piece sit flush,
+    // matching the board's grid pitch exactly (cellSize-to-cellSize, no
+    // gap) instead of reading as separate disconnected squares.
+    return BrickSurface(
+      color: color,
+      borderRadius: cellSize * 0.12,
+      borderWidth: (cellSize * (selected ? 0.15 : 0.13)).clamp(1.6, 5.0),
     );
   }
 }

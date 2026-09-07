@@ -148,7 +148,7 @@ class _StageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor = unlocked ? theme.onAccentColor : const Color(0xFF7A7A7A);
+    final foregroundColor = unlocked ? Colors.black : const Color(0xFF7A7A7A);
 
     return Stack(
       fit: StackFit.expand,
@@ -157,18 +157,18 @@ class _StageTile extends StatelessWidget {
         // locked stages stay flat monochrome gray so the two states read
         // instantly apart at a glance.
         if (unlocked)
-          BrickSurface(color: theme.accentColor, borderRadius: 14, borderWidth: 3.5)
+          BrickSurface(color: theme.accentColor, borderRadius: 8, borderWidth: 3.5)
         else
           DecoratedBox(
             decoration: BoxDecoration(
               color: const Color(0xFFB9B9B9).withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
         Material(
           type: MaterialType.transparency,
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(8),
             onTap: onTap,
             child: Stack(
               alignment: Alignment.center,

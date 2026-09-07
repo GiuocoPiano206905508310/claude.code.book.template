@@ -60,7 +60,7 @@ class PuzzleBoard extends StatelessWidget {
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               color: theme.cellEmpty,
-                              borderRadius: BorderRadius.circular(5),
+                              borderRadius: BorderRadius.circular(cellSize * 0.12),
                             ),
                           ),
                         ),
