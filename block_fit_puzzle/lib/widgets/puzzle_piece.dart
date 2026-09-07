@@ -85,7 +85,7 @@ class _PieceCell extends StatelessWidget {
       child: BrickSurface(
         color: color,
         borderRadius: cellSize * 0.24,
-        borderWidth: (cellSize * (selected ? 0.11 : 0.09)).clamp(1.2, 4.0),
+        borderWidth: (cellSize * (selected ? 0.15 : 0.13)).clamp(1.6, 5.0),
       ),
     );
   }

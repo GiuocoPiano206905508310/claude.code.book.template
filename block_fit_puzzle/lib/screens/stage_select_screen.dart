@@ -157,7 +157,7 @@ class _StageTile extends StatelessWidget {
         // locked stages stay flat monochrome gray so the two states read
         // instantly apart at a glance.
         if (unlocked)
-          BrickSurface(color: theme.accentColor, borderRadius: 14, borderWidth: 2.5)
+          BrickSurface(color: theme.accentColor, borderRadius: 14, borderWidth: 3.5)
         else
           DecoratedBox(
             decoration: BoxDecoration(

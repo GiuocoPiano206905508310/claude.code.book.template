@@ -105,13 +105,15 @@ class _BrickWallPainter extends CustomPainter {
 
     // 3 staggered rows (2 bricks / 3 bricks / 2 bricks) on regular-sized
     // cells; a simpler 2-row split on tiny tray-sized cells so the seams
-    // stay legible instead of turning into mud.
+    // stay legible instead of turning into mud. The middle row's dividers
+    // sit well clear of dead-center so content drawn on top (e.g. a stage
+    // number) never crosses a seam.
     final rows = size.shortestSide >= 22 ? 3 : 2;
     final rowHeight = size.height / rows;
     final List<List<double>> dividersByRow = rows == 3
         ? const [
             [0.5],
-            [1 / 3, 2 / 3],
+            [0.28, 0.72],
             [0.5],
           ]
         : const [
