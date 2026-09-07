@@ -113,7 +113,12 @@
   });
 
   /* ---------- ゲーム画面 ---------- */
-  var game = null; // { stageId, stage, selectedId, rotations, cellSize }
+  // game = { stageId, stage, boardCellSet, placements, selectedId, rotations,
+  //          cellSize, draggingId, draggingRotation, hoverOrigin, hoverValid }
+  // placements: { pieceId: { origin: {x,y}, rotation } } — 盤面に置いたブロック。
+  // rotations: { pieceId: 0-3 } — まだ置き場にあるブロックの回転（置いたら
+  //   placements 側の rotation に一本化される）。
+  var game = null;
 
   function setTheme(stageId) {
     // body にも同じ帯クラスを付ける。中断/遊び方/設定モーダルは画面の
@@ -126,8 +131,53 @@
     });
   }
 
+  function pieceById(pieceId) {
+    return game.stage.pieces.filter(function (p) { return p.id === pieceId; })[0];
+  }
+
+  function rotationOf(pieceId) {
+    var placed = game.placements[pieceId];
+    return placed ? placed.rotation : (game.rotations[pieceId] || 0);
+  }
+
+  /* ---------- 配置ルール（枠外判定・重複判定） ---------- */
+  function cellsFor(pieceId, origin, rotation) {
+    var piece = pieceById(pieceId);
+    return rotateCells(piece.cells, rotation).map(function (c) {
+      return { x: c.x + origin.x, y: c.y + origin.y };
+    });
+  }
+
+  function fits(pieceId, origin, rotation) {
+    var cells = cellsFor(pieceId, origin, rotation);
+    for (var i = 0; i < cells.length; i++) {
+      if (!game.boardCellSet[cells[i].x + ',' + cells[i].y]) return false;
+    }
+    var otherIds = Object.keys(game.placements).filter(function (id) { return id !== pieceId; });
+    for (var j = 0; j < otherIds.length; j++) {
+      var other = game.placements[otherIds[j]];
+      var otherSet = {};
+      cellsFor(otherIds[j], other.origin, other.rotation).forEach(function (c) {
+        otherSet[c.x + ',' + c.y] = true;
+      });
+      for (var k = 0; k < cells.length; k++) {
+        if (otherSet[cells[k].x + ',' + cells[k].y]) return false;
+      }
+    }
+    return true;
+  }
+
+  function canPlace(pieceId, origin, rotation) { return fits(pieceId, origin, rotation); }
+
   function openGame(stageId) {
-    game = { stageId: stageId, stage: previewStage(), selectedId: null, rotations: {}, cellSize: 48 };
+    var stage = previewStage();
+    var boardCellSet = {};
+    stage.boardCells.forEach(function (c) { boardCellSet[c.x + ',' + c.y] = true; });
+    game = {
+      stageId: stageId, stage: stage, boardCellSet: boardCellSet,
+      placements: {}, selectedId: null, rotations: {}, cellSize: 48,
+      draggingId: null, draggingRotation: 0, hoverOrigin: null, hoverValid: false
+    };
     setTheme(stageId);
     $('bf-stage-label').textContent = 'Stage ' + stageId;
     renderTray();
@@ -158,11 +208,9 @@
     boardEl.style.width = (size * stage.width) + 'px';
     boardEl.style.height = (size * stage.height) + 'px';
     boardEl.innerHTML = '';
-    var set = {};
-    stage.boardCells.forEach(function (c) { set[c.x + ',' + c.y] = true; });
     for (var y = 0; y < stage.height; y++) {
       for (var x = 0; x < stage.width; x++) {
-        if (!set[x + ',' + y]) continue;
+        if (!game.boardCellSet[x + ',' + y]) continue;
         var c = el('div', 'bf-cell');
         c.style.left = (x * size + 1.5) + 'px';
         c.style.top = (y * size + 1.5) + 'px';
@@ -171,9 +219,50 @@
         boardEl.appendChild(c);
       }
     }
+    Object.keys(game.placements).forEach(function (pieceId) {
+      var placement = game.placements[pieceId];
+      var piece = pieceById(pieceId);
+      var selected = game.selectedId === pieceId;
+      rotateCells(piece.cells, placement.rotation).forEach(function (c) {
+        var b = el('div', 'bf-brick' + (selected ? ' is-selected' : ''));
+        b.style.setProperty('--bf-piece', piece.color);
+        b.style.left = ((placement.origin.x + c.x) * size + 1.5) + 'px';
+        b.style.top = ((placement.origin.y + c.y) * size + 1.5) + 'px';
+        b.style.width = (size - 3) + 'px';
+        b.style.height = (size - 3) + 'px';
+        attachDragHandlers(b, pieceId);
+        if (pieceId === game.draggingId) b.classList.add('is-dragging-source');
+        boardEl.appendChild(b);
+      });
+    });
+    var overlay = el('div');
+    overlay.id = 'bf-hover-preview';
+    overlay.style.position = 'absolute';
+    overlay.style.inset = '0';
+    overlay.style.pointerEvents = 'none';
+    boardEl.appendChild(overlay);
+    renderHoverPreview();
   }
 
-  function renderPieceInto(container, piece, rotationSteps, cellSize, selected) {
+  function renderHoverPreview() {
+    if (!game) return;
+    var overlay = $('bf-hover-preview');
+    if (!overlay) return;
+    overlay.innerHTML = '';
+    if (!game.draggingId || !game.hoverOrigin) return;
+    var piece = pieceById(game.draggingId);
+    var size = game.cellSize;
+    rotateCells(piece.cells, game.draggingRotation).forEach(function (c) {
+      var cell = el('div', 'bf-brick ' + (game.hoverValid ? 'is-preview-ok' : 'is-preview-bad'));
+      cell.style.left = ((game.hoverOrigin.x + c.x) * size + 1.5) + 'px';
+      cell.style.top = ((game.hoverOrigin.y + c.y) * size + 1.5) + 'px';
+      cell.style.width = (size - 3) + 'px';
+      cell.style.height = (size - 3) + 'px';
+      overlay.appendChild(cell);
+    });
+  }
+
+  function buildPieceElement(piece, rotationSteps, cellSize, selected) {
     var cells = rotateCells(piece.cells, rotationSteps);
     var w = boundsW(cells) * cellSize, h = boundsH(cells) * cellSize;
     var wrap = el('div', 'bf-tray-piece');
@@ -188,8 +277,7 @@
       b.style.height = cellSize + 'px';
       wrap.appendChild(b);
     });
-    wrap.addEventListener('click', function () { onPieceTap(piece.id); });
-    container.appendChild(wrap);
+    return wrap;
   }
 
   function renderTray() {
@@ -197,14 +285,19 @@
     var tray = $('bf-tray');
     tray.innerHTML = '';
     game.stage.pieces.forEach(function (piece) {
+      if (game.placements[piece.id]) return; // 置いたブロックは置き場から消える
       var selected = game.selectedId === piece.id;
       var rotation = game.rotations[piece.id] || 0;
-      renderPieceInto(tray, piece, rotation, selected ? 26 : 15, selected);
+      var wrap = buildPieceElement(piece, rotation, selected ? 26 : 15, selected);
+      attachDragHandlers(wrap, piece.id);
+      if (piece.id === game.draggingId) wrap.classList.add('is-dragging-source');
+      tray.appendChild(wrap);
     });
   }
 
   function onPieceTap(pieceId) {
     game.selectedId = (game.selectedId === pieceId) ? null : pieceId;
+    renderBoard();
     renderTray();
     updateRotateButton();
   }
@@ -216,9 +309,142 @@
   $('bf-rotate').addEventListener('click', function () {
     if (!game || !game.selectedId) return;
     var id = game.selectedId;
-    game.rotations[id] = ((game.rotations[id] || 0) + 1) % 4;
-    renderTray();
+    var placement = game.placements[id];
+    if (placement) {
+      var newRotation = (placement.rotation + 1) % 4;
+      if (fits(id, placement.origin, newRotation)) {
+        placement.rotation = newRotation;
+        renderBoard();
+      }
+    } else {
+      game.rotations[id] = ((game.rotations[id] || 0) + 1) % 4;
+      renderTray();
+    }
   });
+
+  /* ---------- ドラッグ操作 ----------
+     タップとドラッグは同じ pointerdown から始まる。指が閾値以上動いたら
+     初めてドラッグとみなし、ブロックを指より少し上に浮かせて追従させる。
+     動かなければ従来どおりタップ（選択/解除）として扱う。 */
+  var DRAG_THRESHOLD = 6;
+
+  function attachDragHandlers(elx, pieceId) {
+    elx.dataset.pieceId = pieceId;
+    elx.addEventListener('pointerdown', function (ev) {
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      ev.preventDefault();
+      startTracking(pieceId, ev, elx);
+    });
+  }
+
+  function startTracking(pieceId, downEv, sourceEl) {
+    var x0 = downEv.clientX, y0 = downEv.clientY, moved = false;
+    try { sourceEl.setPointerCapture(downEv.pointerId); } catch (e) { /* 対応外環境は通常のイベントで続行 */ }
+
+    function onMove(ev) {
+      var dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+        moved = true;
+        beginDrag(pieceId);
+      }
+      if (moved) updateGhost(pieceId, ev.clientX, ev.clientY);
+    }
+    function onUp() {
+      sourceEl.removeEventListener('pointermove', onMove);
+      sourceEl.removeEventListener('pointerup', onUp);
+      sourceEl.removeEventListener('pointercancel', onUp);
+      if (moved) endDrag(pieceId); else onPieceTap(pieceId);
+    }
+    sourceEl.addEventListener('pointermove', onMove);
+    sourceEl.addEventListener('pointerup', onUp);
+    sourceEl.addEventListener('pointercancel', onUp);
+  }
+
+  function beginDrag(pieceId) {
+    game.selectedId = pieceId;
+    game.draggingId = pieceId;
+    game.draggingRotation = rotationOf(pieceId);
+    // その場でDOMを作り直さず、既存の要素をクラスで隠すだけにする
+    // （作り直すと、いま pointer capture を持っている要素ごと消えてしまう）。
+    document.querySelectorAll('[data-piece-id="' + pieceId + '"]').forEach(function (elx) {
+      elx.classList.add('is-dragging-source');
+    });
+    updateRotateButton();
+    showGhost(pieceId);
+  }
+
+  function showGhost(pieceId) {
+    var piece = pieceById(pieceId);
+    var cells = rotateCells(piece.cells, game.draggingRotation);
+    var size = game.cellSize;
+    var ghost = $('bf-drag-ghost');
+    ghost.innerHTML = '';
+    ghost.style.width = (boundsW(cells) * size) + 'px';
+    ghost.style.height = (boundsH(cells) * size) + 'px';
+    cells.forEach(function (c) {
+      var b = el('div', 'bf-brick is-selected is-ghost');
+      b.style.setProperty('--bf-piece', piece.color);
+      b.style.left = (c.x * size) + 'px';
+      b.style.top = (c.y * size) + 'px';
+      b.style.width = size + 'px';
+      b.style.height = size + 'px';
+      ghost.appendChild(b);
+    });
+    ghost.hidden = false;
+  }
+
+  function updateGhost(pieceId, clientX, clientY) {
+    var piece = pieceById(pieceId);
+    var size = game.cellSize;
+    var cells = rotateCells(piece.cells, game.draggingRotation);
+    var w = boundsW(cells) * size, h = boundsH(cells) * size;
+    // 指の真上あたりにブロックの中心が来るよう左右は中央合わせ、
+    // 指で隠れないよう縦方向はさらに上へ持ち上げる。
+    var ghostLeft = clientX - w / 2;
+    var ghostTop = clientY - h / 2 - size * 1.4;
+    var ghost = $('bf-drag-ghost');
+    ghost.style.left = ghostLeft + 'px';
+    ghost.style.top = ghostTop + 'px';
+
+    var frameRect = $('bf-board-frame').getBoundingClientRect();
+    var margin = size;
+    var nearBoard = clientX > frameRect.left - margin && clientX < frameRect.right + margin &&
+                    clientY > frameRect.top - margin && clientY < frameRect.bottom + margin;
+    if (nearBoard) {
+      var boardRect = $('bf-board').getBoundingClientRect();
+      var origin = {
+        x: Math.round((ghostLeft - boardRect.left) / size),
+        y: Math.round((ghostTop - boardRect.top) / size)
+      };
+      game.hoverOrigin = origin;
+      game.hoverValid = canPlace(pieceId, origin, game.draggingRotation);
+    } else {
+      game.hoverOrigin = null;
+      game.hoverValid = false;
+    }
+    renderHoverPreview();
+  }
+
+  function hideGhost() {
+    var ghost = $('bf-drag-ghost');
+    ghost.hidden = true;
+    ghost.innerHTML = '';
+  }
+
+  function endDrag(pieceId) {
+    var origin = game.hoverOrigin, valid = game.hoverValid, rotation = game.draggingRotation;
+    if (origin && valid) {
+      game.placements[pieceId] = { origin: origin, rotation: rotation };
+      delete game.rotations[pieceId];
+    }
+    game.draggingId = null;
+    game.hoverOrigin = null;
+    game.hoverValid = false;
+    hideGhost();
+    renderBoard();
+    renderTray();
+    updateRotateButton();
+  }
 
   $('bf-home').addEventListener('click', function () { window.openGameSelect(); });
 
@@ -235,6 +461,8 @@
     if (!game) return;
     game.selectedId = null;
     game.rotations = {};
+    game.placements = {};
+    renderBoard();
     renderTray();
     updateRotateButton();
   });

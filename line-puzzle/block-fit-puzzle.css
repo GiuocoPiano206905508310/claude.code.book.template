@@ -146,6 +146,8 @@ body.bf-dark {
 .bf-brick {
   position: absolute;
   border-radius: 6px;
+  touch-action: none;
+  cursor: grab;
   border: 2px solid color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #000);
   background-image:
     linear-gradient(to bottom, transparent calc(50% - 1px), color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #000) calc(50% - 1px), color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #000) calc(50% + 1px), transparent calc(50% + 1px)),
@@ -155,8 +157,19 @@ body.bf-dark {
 }
 .bf-brick.is-selected { box-shadow: 0 0 0 3px #fff, 0 0 12px 3px var(--bf-piece, #4c9b7c); }
 .bf-brick.is-ghost { opacity: .9; pointer-events: none; transition: none; }
-.bf-brick.is-preview-ok { background: rgba(76,175,80,.35); border-color: rgba(56,142,60,.6); background-image: none; }
-.bf-brick.is-preview-bad { background: rgba(244,67,54,.35); border-color: rgba(198,40,40,.6); background-image: none; }
+.bf-brick.is-preview-ok { background: rgba(76,175,80,.35); border-color: rgba(56,142,60,.6); background-image: none; box-shadow: none; }
+.bf-brick.is-preview-bad { background: rgba(244,67,54,.35); border-color: rgba(198,40,40,.6); background-image: none; box-shadow: none; }
+/* ドラッグ中は元の場所（置き場 or 盤面）の見た目を隠す。指の下に浮かぶ
+   ゴースト側だけを見せるため、視覚的な二重表示を避ける。 */
+.is-dragging-source { visibility: hidden; }
+
+/* 指の少し上に浮かせて表示するドラッグ中のブロック */
+.bf-drag-ghost {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 60;
+  pointer-events: none;
+}
 
 .bf-tray-label {
   text-align: center; margin: 0 0 4px;
@@ -174,7 +187,6 @@ body.bf-dark {
   gap: 14px;
 }
 .bf-tray-piece { position: relative; cursor: grab; touch-action: none; }
-.bf-tray-piece.is-dragging-source { visibility: hidden; }
 
 .bf-rotate-row { display: flex; justify-content: center; padding: 8px 0 4px; }
 .bf-rotate-btn {
