@@ -1,5 +1,5 @@
 /* ============================================================
-   立体四目並べ — 進行管理
+   立体4目並べ — 進行管理
    盤面・手番・設定・CPU思考・棋譜保存・アカウント連携をまとめる。
    3D描画は Render、画面部品は UI、盤面ロジックは Game、
    クラウド保存は Cloud に任せ、ここでは「つなぐ」ことに専念する。
@@ -27,8 +27,14 @@
 
   var SETTINGS_KEY = 'scoreFour.settings.v1';
   var GUEST_KIFU_KEY = 'scoreFour.kifu.guest.v1';
-  var DEFAULT_SETTINGS = { mode: 'pvp', cpuLevel: 5, humanFirst: true, undoEnabled: true, undoLimit: 3, background: 'dark' };
+  var DEFAULT_SETTINGS = {
+    variant: 4, mode: 'pvp', cpuLevel: 5, humanFirst: true,
+    undoEnabled: true, undoLimit: 3,
+    clockEnabled: false, clockSeconds: 30, clockDisplay: 'analog',
+    background: 'dark'
+  };
   var MAX_KIFU = 30;
+  var VARIANT_NAMES = { 3: '立体3目並べ', 4: '立体4目並べ', 5: '立体5目並べ' };
 
   function loadSettings() {
     try {
@@ -56,7 +62,7 @@
   var settings = loadSettings();
   var cloudProgress = null; // ログイン中: { settings, kifu }
 
-  var board = Game.createBoard();
+  var board = Game.createBoard(settings.variant || 4);
   var currentPlayer = 1;
   var moveHistory = [];
   var gameOver = false;
@@ -66,7 +72,7 @@
   var pendingKifu = null;
   var cpuReqId = 0;
   var worker = null;
-  try { worker = new Worker('ai-worker.js?v=7'); } catch (e) { worker = null; }
+  try { worker = new Worker('ai-worker.js?v=14'); } catch (e) { worker = null; }
   if (worker) {
     worker.onmessage = function (e) {
       var data = e.data || {};
@@ -79,15 +85,82 @@
     };
   }
 
+  function formatDuration(sec) {
+    if (sec < 60) return sec + '秒';
+    if (sec === 90) return '1分半';
+    return (sec / 60) + '分';
+  }
+
   function cpuPlayerNumber() { return settings.humanFirst ? 2 : 1; }
   function isCpuTurn() { return settings.mode === 'cpu' && !!worker && currentPlayer === cpuPlayerNumber(); }
 
   function finishGuard() { UI.setBusy(false); Render.setInteractionEnabled(!gameOver); }
 
+  /* ---------- 対局クロック ----------
+     1手ごとの持ち時間。指し終えると相手側に切り替わって満タンに戻り、
+     0になった側がその場で負けになる。
+
+     時間の進みは requestAnimationFrame の差分で測る。タブを裏に回すと
+     rAFが止まるので、見ていない間に時間だけ減って負ける、ということが起きない。 */
+
+  var clockRemainMs = 0;
+  var clockTotalMs = 0;
+  var clockRaf = null;
+  var clockLastAt = 0;
+
+  function clockEnabled() { return !!settings.clockEnabled && settings.clockSeconds > 0; }
+
+  function stopClock() {
+    if (clockRaf) { cancelAnimationFrame(clockRaf); clockRaf = null; }
+  }
+
+  function paintClock() { UI.updateClock(currentPlayer, clockRemainMs, clockTotalMs); }
+
+  // ダイアログを開いている間は考慮時間に数えない（設定・棋譜・遊び方など）
+  function clockPaused() { return !!document.querySelector('.dialog-overlay.show'); }
+
+  function clockStep(now) {
+    var dt = now - clockLastAt;
+    clockLastAt = now;
+    if (!clockPaused()) clockRemainMs -= dt;
+    if (clockRemainMs <= 0) {
+      clockRemainMs = 0;
+      paintClock();
+      stopClock();
+      handleTimeout();
+      return;
+    }
+    paintClock();
+    clockRaf = requestAnimationFrame(clockStep);
+  }
+
+  // 手番が回ってきた側の持ち時間を満タンにして計測を始める
+  function restartClockForTurn() {
+    stopClock();
+    if (!clockEnabled()) return;
+    clockTotalMs = settings.clockSeconds * 1000;
+    clockRemainMs = clockTotalMs;
+    paintClock();
+    if (gameOver) return;
+    clockLastAt = performance.now();
+    clockRaf = requestAnimationFrame(clockStep);
+  }
+
+  function handleTimeout() {
+    if (gameOver) return;
+    gameOver = true;
+    cpuReqId++;              // 進行中だったCPU思考の応答を無効にする
+    cpuThinking = false;
+    UI.showCpuThinking(false);
+    Render.setInteractionEnabled(false);
+    openEnd(currentPlayer === 1 ? 2 : 1, null, null, null, 'timeout');
+  }
+
   /* ---------- 対局開始 ---------- */
 
   function startGame() {
-    board = Game.createBoard();
+    var n = settings.variant || 4;
+    board = Game.createBoard(n);
     currentPlayer = 1;
     moveHistory = [];
     gameOver = false;
@@ -97,16 +170,20 @@
     cpuReqId++; // 進行中だったCPU思考の応答を無効化
     pendingKifu = null;
 
+    Render.setBoardSize(n);
     Render.clearBoard();
     Render.setBoardRef(board);
     Render.setBackground(settings.background);
     Render.setInteractionEnabled(true);
+    UI.setGameTitle(VARIANT_NAMES[n] || VARIANT_NAMES[4]);
     UI.setTurn(currentPlayer);
     UI.renderLog(moveHistory, Game.notate);
     UI.setUndoAvailable(false);
     UI.setBusy(false);
     UI.showCpuThinking(false);
     UI.hideEnd();
+    UI.setupClock({ enabled: clockEnabled(), display: settings.clockDisplay });
+    restartClockForTurn();
 
     if (isCpuTurn()) triggerCpuMove();
   }
@@ -119,6 +196,7 @@
     if (z === -1) { UI.flashStatus('その棒はいっぱいです'); return; }
 
     animating = true;
+    stopClock();   // 指した瞬間に計測を止める（玉が落ちる間は誰の持ち時間でもない）
     Render.setInteractionEnabled(false);
     UI.setBusy(true);
 
@@ -132,14 +210,17 @@
       var winLine = Game.findWinLine(board, mover);
       if (winLine) {
         gameOver = true;
+        stopClock();
         Render.highlightWin(winLine);
         openEnd(mover, x, y, z);
       } else if (Game.isBoardFull(board)) {
         gameOver = true;
+        stopClock();
         openEnd(null, x, y, z);
       } else {
         currentPlayer = mover === 1 ? 2 : 1;
         UI.setTurn(currentPlayer);
+        restartClockForTurn();
         Render.setInteractionEnabled(true);
         UI.setBusy(false);
         updateUndoButton();
@@ -181,6 +262,7 @@
     }
     undoUsedCount++;
     UI.setTurn(currentPlayer);
+    restartClockForTurn();
     UI.renderLog(moveHistory, Game.notate);
     updateUndoButton();
     var remain = settings.undoLimit == null ? '' : '（残り' + Math.max(0, settings.undoLimit - undoUsedCount) + '回）';
@@ -189,11 +271,19 @@
 
   /* ---------- 対局終了・棋譜保存 ---------- */
 
-  function openEnd(winner, x, y, z) {
+  function openEnd(winner, x, y, z, reason) {
     UI.setBusy(false);
     Render.setInteractionEnabled(false);
+    var n = board.length;
     var headline = winner ? (winner === 1 ? '白' : '黒') + 'の勝ち' : '引き分け';
-    var sub = winner ? (Game.notate(x, y, z) + ' で四目が揃いました') : '64マスすべてが埋まりました';
+    var sub;
+    if (reason === 'timeout') {
+      sub = (winner === 1 ? '黒' : '白') + 'の持ち時間（' + formatDuration(settings.clockSeconds) + '）がなくなりました';
+    } else if (winner) {
+      sub = Game.notate(x, y, z) + ' で' + n + '個が揃いました';
+    } else {
+      sub = n * n * n + 'マスすべてが埋まりました';
+    }
     UI.showEnd(headline, sub);
     pendingKifu = {
       id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
@@ -201,6 +291,7 @@
       mode: settings.mode,
       cpuLevel: settings.mode === 'cpu' ? settings.cpuLevel : undefined,
       result: winner || 'draw',
+      endReason: reason || 'line',
       moveCount: moveHistory.length,
       moves: moveHistory.map(function (m) { return { x: m.x, y: m.y, z: m.z, player: m.player }; })
     };
@@ -284,7 +375,7 @@
     onSignIn: function (email, password) {
       Cloud.signIn(email, password).then(function (s) {
         afterSignedIn(s.user);
-        UI.openAccount(s.user);
+        UI.closeAccount();
         UI.flashStatus(s.user.username + ' でログインしました');
       }, function (err) { UI.setMsg('login', err.message, false); });
     },
@@ -294,8 +385,9 @@
           UI.setMsg('signup', '確認メールを送りました。メールのリンクを開いてから、ログインしてください。', true);
         } else {
           afterSignedIn(res.session.user);
-          UI.openAccount(res.session.user);
+          UI.closeAccount();
           UI.flashStatus('登録しました');
+          UI.openTutorial();
         }
       }, function (err) { UI.setMsg('signup', err.message, false); });
     },

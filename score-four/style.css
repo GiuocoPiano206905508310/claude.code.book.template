@@ -94,7 +94,7 @@ body{
   padding:6px 4px;
   white-space:nowrap;
 }
-.linklike:hover{text-decoration:underline;}
+@media (hover: hover) and (pointer: fine){ .linklike:hover{text-decoration:underline;} }
 .linklike.small{display:block;font-size:12.5px;margin:6px auto 0;color:var(--ink-soft);}
 .linklike.is-account{
   display:inline-flex;align-items:center;justify-content:center;
@@ -104,7 +104,20 @@ body{
   border:1px solid var(--panel-border);
   flex:none;
 }
-.linklike.is-account:hover{background:rgba(201,152,47,0.28);text-decoration:none;}
+@media (hover: hover) and (pointer: fine){ .linklike.is-account:hover{background:rgba(201,152,47,0.28);text-decoration:none;} }
+#btn-help{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;padding:0;flex:none;
+  border-radius:50%;
+  background:var(--accent-soft);
+  border:1px solid var(--panel-border);
+  color:var(--accent-bright);
+  font-family:"Shippori Mincho",serif;
+  font-size:15px;font-weight:700;
+  cursor:pointer;
+}
+@media (hover: hover) and (pointer: fine){ #btn-help:hover{background:rgba(201,152,47,0.28);} }
+#btn-help:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
 .account-icon{
   width:18px;height:18px;
   fill:none;stroke:var(--accent-bright);
@@ -150,6 +163,7 @@ body{
 .btnrow{display:flex;gap:8px;}
 button.action{
   flex:1;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
   font-family:inherit;
   font-size:13.5px;
   font-weight:500;
@@ -157,16 +171,48 @@ button.action{
   background:rgba(255,255,255,0.04);
   border:1px solid var(--panel-border);
   border-radius:10px;
-  padding:10px 8px;
+  padding:10px 4px;
   cursor:pointer;
+  white-space:nowrap;
   transition:background .15s, border-color .15s, opacity .15s, transform .1s;
 }
-button.action:hover:not(:disabled){background:var(--accent-soft);border-color:var(--accent);}
+/* hover は「マウスなど、実際にポインタを乗せられる環境」だけに限る。
+   タッチ端末では一度タップした要素に :hover が貼り付いたままになり、
+   次のスライドへ進んでもボタンが押されっぱなしの見た目で残ってしまうため。 */
+@media (hover: hover) and (pointer: fine){
+  /* .primary を外しているのは、この指定のほうが詳細度が高く、
+     金色のグラデーション(button.primary)を打ち消してしまうため */
+  button.action:not(.primary):hover:not(:disabled){background:var(--accent-soft);border-color:var(--accent);}
+}
 button.action:active:not(:disabled){transform:scale(0.97);}
+button.action:not(.primary):active:not(:disabled){background:var(--accent-soft);border-color:var(--accent);}
 button.action:disabled{opacity:.35;cursor:default;}
 button.action:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
 button.primary{background:linear-gradient(160deg, var(--accent-bright), var(--accent));color:#1c1409;border-color:transparent;font-weight:700;}
-button.primary:hover:not(:disabled){filter:brightness(1.08);}
+.action-icon{width:13px;height:13px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+
+/* 背景がホワイトの時、#controlsのボタン(glassの不透明パネルを持たない)は
+   薄い透過背景の向こうに明るい3D背景が透けるため、文字色を暗く保つ */
+body.theme-light #controls button.action:not(.primary){
+  color:#2a2318;
+  background:rgba(20,15,5,0.06);
+  border-color:rgba(90,70,30,0.35);
+}
+body.theme-light #controls button.action:not(.primary):active:not(:disabled){
+  background:rgba(90,70,30,0.14);
+  border-color:rgba(90,70,30,0.55);
+}
+@media (hover: hover) and (pointer: fine){
+  body.theme-light #controls button.action:not(.primary):hover:not(:disabled){
+    background:rgba(90,70,30,0.14);
+    border-color:rgba(90,70,30,0.55);
+  }
+}
+body.theme-light #controls button.action:not(.primary):disabled{color:#2a2318;}
+@media (hover: hover) and (pointer: fine){
+  button.primary:hover:not(:disabled){filter:brightness(1.08);}
+}
+button.primary:active:not(:disabled){filter:brightness(0.88);}
 
 #log-wrap{max-height:0;overflow:hidden;transition:max-height .28s ease;}
 #log-wrap.open{max-height:220px;}
@@ -187,11 +233,22 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 #log .row.p2 .who{color:#c9b190;}
 #log-empty{color:var(--ink-faint);font-style:normal;}
 
-#hint{
+/* ---- 左下の固定パネル（対局クロック・操作ヒント） ----
+   #controls と同じく position:fixed で画面に貼り付けるので、
+   盤を拡大・縮小しても左下から動かない。 */
+
+#leftstack{
   position:fixed;
   left:max(14px,env(safe-area-inset-left));
   bottom:max(14px,env(safe-area-inset-bottom));
   z-index:10;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-start;
+  pointer-events:none;   /* 盤のドラッグを邪魔しない（中身は表示専用） */
+}
+#hint{
   padding:9px 14px;
   font-size:11.5px;
   color:var(--ink-faint);
@@ -199,6 +256,49 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
   max-width:230px;
   line-height:1.5;
 }
+
+/* ---- 対局クロック ---- */
+
+#clock{display:flex;gap:10px;padding:10px 12px;}
+.clock-face{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  opacity:.45;
+  transition:opacity .2s;
+}
+.clock-face.active{opacity:1;}
+.clock-face .cf-label{
+  font-size:10.5px;color:var(--ink-soft);letter-spacing:.04em;white-space:nowrap;
+}
+.clock-face.active .cf-label{color:var(--accent-bright);font-weight:700;}
+
+/* アナログ表示: 残り時間ぶんの円弧が12時から時計回りに縮み、針がその先端に乗る */
+.clock-face svg{width:54px;height:54px;display:block;}
+.cf-plate{fill:rgba(255,255,255,0.05);stroke:var(--panel-border);stroke-width:1.4;}
+.cf-track{fill:none;stroke:rgba(255,255,255,0.08);stroke-width:4;}
+.cf-gauge{
+  fill:none;stroke:var(--accent-bright);stroke-width:4;stroke-linecap:round;
+  transform:rotate(-90deg);transform-origin:28px 28px;
+}
+.cf-tick{stroke:var(--ink-faint);stroke-width:1.3;stroke-linecap:round;}
+.cf-hand{stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;transform-origin:28px 28px;}
+.cf-hub{fill:var(--accent-bright);}
+
+/* デジタル表示 */
+.clock-face .cf-digits{
+  font-family:"JetBrains Mono",monospace;
+  font-size:22px;font-weight:600;letter-spacing:.02em;
+  color:var(--ink);
+  font-variant-numeric:tabular-nums;
+  padding:4px 2px;
+  /* 「0:30」と「7.4」で幅が変わってレイアウトが跳ねないように固定する */
+  min-width:4ch;text-align:center;
+}
+
+/* 残りわずか: 数字と円弧を警告色にし、脈打たせる */
+.clock-face.low .cf-gauge{stroke:var(--danger);}
+.clock-face.low .cf-digits{color:var(--danger);}
+.clock-face.low.active{animation:clockLow .9s ease-in-out infinite;}
+@keyframes clockLow{0%,100%{opacity:1;}50%{opacity:.55;}}
 
 /* ---- ダイアログ共通 ---- */
 
@@ -285,7 +385,7 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
   transition:all .15s;
 }
 .pill.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-bright);font-weight:600;}
-.pill:hover{border-color:var(--accent);}
+@media (hover: hover) and (pointer: fine){ .pill:hover{border-color:var(--accent);} }
 .pill-icon{
   width:16px;height:16px;flex:none;
   fill:none;stroke:currentColor;
@@ -307,8 +407,8 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 }
 .switch input:checked + .track{background:var(--accent-soft);border-color:var(--accent);}
 .switch input:checked + .track .knob{transform:translateX(18px);background:var(--accent-bright);}
-#undo-limit-row{opacity:1;transition:opacity .15s;}
-#undo-limit-row.disabled{opacity:.4;pointer-events:none;}
+#undo-limit-row, #clock-options{opacity:1;transition:opacity .15s;}
+#undo-limit-row.disabled, #clock-options.disabled{opacity:.4;pointer-events:none;}
 
 /* ---- アカウント / 棋譜一覧 ---- */
 
@@ -331,7 +431,7 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
   text-align:center;cursor:pointer;border-radius:8px;
   transition:background .15s,color .15s;
 }
-.menu-btn:hover{background:rgba(255,255,255,0.05);color:var(--ink);}
+@media (hover: hover) and (pointer: fine){ .menu-btn:hover{background:rgba(255,255,255,0.05);color:var(--ink);} }
 .linklike.guest{margin-top:16px;color:var(--ink-soft);text-decoration:underline;}
 .kifu-list{max-height:280px;overflow-y:auto;margin-bottom:12px;}
 .kifu-item{
@@ -341,6 +441,132 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 }
 .kifu-item .result{color:var(--accent-bright);font-weight:600;}
 .kifu-item .date{color:var(--ink-faint);font-family:"JetBrains Mono",monospace;font-size:11px;}
+
+/* ---- 遊び方チュートリアル ---- */
+
+.tutorial-box{position:relative;}
+.tut-skip{
+  position:absolute;top:14px;right:16px;
+  background:none;border:none;color:var(--ink-faint);
+  font-family:inherit;font-size:12px;cursor:pointer;padding:2px;
+}
+@media (hover: hover) and (pointer: fine){ .tut-skip:hover{color:var(--ink-soft);} }
+.tut-eyebrow{font-size:11px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin:0 0 4px;}
+.tut-stage{height:150px;display:flex;align-items:center;justify-content:center;margin:4px 0 16px;}
+.tut-body{font-size:13.5px;line-height:1.75;color:var(--ink);margin:0 0 20px;min-height:5.2em;}
+.tut-body b{color:var(--accent-bright);font-weight:700;}
+.tut-dots{display:flex;justify-content:center;gap:7px;margin-bottom:18px;}
+.tut-dots span{width:6px;height:6px;border-radius:50%;background:var(--panel-border);transition:background .2s, transform .2s;}
+.tut-dots span.active{background:var(--accent-bright);transform:scale(1.3);}
+.tut-nav .action.tut-prev{flex:none;width:46px;}
+
+/* スライド1: 落とす仕組み */
+.demo-peg{position:relative;width:10px;height:120px;background:linear-gradient(180deg,#c7cbce,#8d9195);border-radius:4px;}
+.demo-peg::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:11px solid #c7cbce;}
+.demo-slot{position:absolute;left:50%;width:30px;height:30px;border-radius:50%;transform:translateX(-50%);border:1px dashed rgba(201,152,47,0.3);}
+.demo-ball{
+  position:absolute;left:50%;width:28px;height:28px;border-radius:50%;transform:translateX(-50%);
+  box-shadow:0 4px 8px rgba(0,0,0,0.4);
+  background:radial-gradient(circle at 32% 26%, #fffdf8, var(--p1) 55%, var(--p1-edge));
+}
+@keyframes tutDropBall{
+  0%{top:-30px;animation-timing-function:cubic-bezier(.5,0,1,1);}
+  55%{top:var(--stop);animation-timing-function:ease-out;}
+  70%{top:calc(var(--stop) - 8px);}
+  85%{top:var(--stop);}
+  100%{top:var(--stop);}
+}
+
+/* スライド2: 視点操作 */
+.tut-orbit{position:relative;width:120px;height:120px;}
+.orbit-cube{
+  position:absolute;inset:0;margin:auto;width:64px;height:64px;
+  transform-style:preserve-3d;
+  animation:tutCubeSpin 4.5s linear infinite;
+}
+@keyframes tutCubeSpin{from{transform:rotateX(-22deg) rotateY(0);}to{transform:rotateX(-22deg) rotateY(360deg);}}
+.orbit-cube .face{position:absolute;inset:0;border:1.5px solid rgba(201,152,47,0.55);background:rgba(201,152,47,0.06);}
+.orbit-cube .f1{transform:translateZ(32px);}
+.orbit-cube .f2{transform:rotateY(90deg) translateZ(32px);}
+.orbit-cube .f3{transform:rotateY(180deg) translateZ(32px);}
+.orbit-cube .f4{transform:rotateY(-90deg) translateZ(32px);}
+.orbit-cube .f5{transform:rotateX(90deg) translateZ(32px);}
+.orbit-cube .f6{transform:rotateX(-90deg) translateZ(32px);}
+.orbit-hand{position:absolute;bottom:2px;left:50%;animation:tutHandSwipe 2.4s ease-in-out infinite;}
+@keyframes tutHandSwipe{0%,100%{transform:translateX(-38px);}50%{transform:translateX(28px);}}
+
+/* スライド2: 遊べる盤の種類（玉を詰めた立方体 27/64/125個） */
+.tut-variants{display:flex;justify-content:center;align-items:flex-end;gap:10px;}
+.tut-variant-item{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.tut-variant-item span{font-size:9.5px;color:var(--ink-soft);text-align:center;line-height:1.5;white-space:nowrap;}
+.tut-variant-item span b{display:block;color:var(--accent-bright);font-size:11.5px;}
+/* 回転は --spin ひとつだけを毎フレーム書き換えて全要素を駆動する。
+   立方体と玉を別々のCSSアニメーションにすると、影付きの玉がGPU合成から外れて
+   立方体とは別経路で更新され、わずかなズレが「チカチカ」として見えてしまうため。 */
+.cube-scene{
+  position:relative;width:100%;height:100%;
+  transform-style:preserve-3d;
+  transform:rotateX(58deg) rotateZ(var(--spin, 0deg));
+}
+.cube-pos{position:absolute;top:50%;left:50%;transform-style:preserve-3d;}
+/* 玉は立方体の回転を打ち消して常にカメラ正面を向く（＝いつ見ても真円の球） */
+.cube-face{transform:rotateZ(calc(-1 * var(--spin, 0deg))) rotateX(-58deg);}
+/* 実機と同じ白玉・黒玉。黒玉は暗い背景に溶けて穴に見えるので、縁に弱い光を入れる */
+.cbball{border-radius:50%;}
+.cbball.w{
+  background:radial-gradient(circle at 30% 24%, #fffdf8 0%, #f3ead9 52%, #b6ab92 100%);
+  box-shadow:inset -2px -2px 4px rgba(70,58,36,0.4), 0 1px 2px rgba(0,0,0,0.55);
+}
+.cbball.b{
+  background:radial-gradient(circle at 30% 24%, #8d6a44 0%, #46301c 48%, #241708 100%);
+  box-shadow:
+    inset -2px -2px 4px rgba(0,0,0,0.5),
+    inset 1.5px 1.5px 3px rgba(255,226,170,0.3),
+    0 1px 2px rgba(0,0,0,0.6);
+}
+
+/* スライド4: 勝利条件（実機と同じ Three.js で描く立体図）
+   CSS 3D は「要素ごとに1つの深さ」でしか前後を決められないので、棒と玉が
+   回転で交差するたび前後が入れ替わってチラつく。WebGLは画素単位の深度判定なので起きない。 */
+.wincand{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.wintabs{display:flex;gap:6px;}
+.wintab{
+  font-family:inherit;font-size:11.5px;padding:4px 12px;border-radius:7px;cursor:pointer;
+  border:1px solid var(--panel-border);background:rgba(255,255,255,0.03);color:var(--ink-soft);
+}
+.wintab.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-bright);font-weight:700;}
+.wb3d{width:150px;height:150px;}
+.wb3d canvas{display:block;width:100%;height:100%;}
+
+/* スライド5: 対局クロック */
+.tut-clockrow{display:flex;gap:20px;align-items:center;}
+.tut-clockface{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.tut-clockface svg{width:64px;height:64px;}
+.tut-clockface .face{fill:rgba(255,255,255,0.05);stroke:var(--panel-border);stroke-width:1.5;}
+.tut-clockface .tick{stroke:var(--ink-faint);stroke-width:1.4;stroke-linecap:round;}
+.tut-clockface .wedge{fill:var(--accent-bright);}
+.tut-clockface .hand{stroke:var(--accent-bright);stroke-width:2.4;stroke-linecap:round;}
+.tut-clockface .hub{fill:var(--accent-bright);}
+.tut-clockface span{font-size:11px;color:var(--ink-soft);}
+.tut-clockface.active span{color:var(--accent-bright);font-weight:700;}
+.tut-clockface.active .wedge{animation:tutWedgeGrow 1.8s ease-in-out infinite alternate;}
+@keyframes tutWedgeGrow{from{opacity:.2;}to{opacity:.55;}}
+
+/* スライド6: メニュー紹介 */
+.tut-menurow{display:flex;gap:14px;}
+.tut-menu-item{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11px;color:var(--ink-soft);}
+.tut-menu-icon{
+  width:52px;height:52px;border-radius:14px;
+  background:rgba(255,255,255,0.04);border:1px solid var(--panel-border);
+  display:flex;align-items:center;justify-content:center;
+  animation:tutMenuBob 2.6s ease-in-out infinite;
+}
+.tut-menu-item:nth-child(2) .tut-menu-icon{animation-delay:.25s;}
+.tut-menu-item:nth-child(3) .tut-menu-icon{animation-delay:.5s;}
+.tut-menu-item:nth-child(4) .tut-menu-icon{animation-delay:.75s;}
+@keyframes tutMenuBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+.tut-menu-icon svg{width:24px;height:24px;stroke:var(--accent-bright);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.tut-menu-icon.qmark{font-family:"Shippori Mincho",serif;font-size:20px;font-weight:700;color:var(--accent-bright);}
 
 #boot-error{
   position:fixed;inset:0;display:none;
@@ -369,4 +595,6 @@ button.primary:hover:not(:disabled){filter:brightness(1.08);}
 @media (prefers-reduced-motion: reduce){
   *{transition-duration:.001ms !important;}
   .dots i{animation:none;}
+  .demo-ball, .orbit-cube, .orbit-hand, .tut-menu-icon{animation:none;}
+  .tut-clockface.active .wedge, .clock-face.low.active{animation:none;}
 }
