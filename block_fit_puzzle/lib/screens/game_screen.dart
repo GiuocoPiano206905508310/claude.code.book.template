@@ -115,34 +115,68 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  void _showResetConfirm(GameTheme theme) {
+  void _restartStage() {
+    setState(() {
+      _selectedPieceId = null;
+      _rotations.clear();
+    });
+  }
+
+  void _showPauseMenu(GameTheme theme) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: theme.boardBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('最初の状態に戻しますか？',
-            style: TextStyle(color: theme.primaryText)),
-        content: Text(
-          '配置したブロックはすべて置き場へ戻ります。',
-          style: TextStyle(color: theme.secondaryText),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          '中断中',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: theme.accentColor, fontWeight: FontWeight.bold),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('キャンセル', style: TextStyle(color: theme.secondaryText)),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _selectedPieceId = null;
-                _rotations.clear();
-              });
-              Navigator.of(context).pop();
-            },
-            child: Text('戻す', style: TextStyle(color: theme.accentColor)),
-          ),
-        ],
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '進行状況はクリア時に自動保存されます。',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: theme.secondaryText),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.accentColor,
+                  foregroundColor: theme.onAccentColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('つづける', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _restartStage();
+              },
+              child: Text(
+                'このステージをやり直す',
+                style: TextStyle(color: theme.primaryText),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.of(context).pop();
+              },
+              child: Text('ステージ選択へ', style: TextStyle(color: theme.secondaryText)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -200,11 +234,11 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                             const SizedBox(width: 22),
                             GameButton(
-                              icon: Icons.undo_rounded,
+                              icon: Icons.pause_rounded,
                               backgroundColor: theme.accentColor,
                               iconColor: theme.onAccentColor,
-                              semanticLabel: '元に戻す',
-                              onTap: () => _showResetConfirm(theme),
+                              semanticLabel: '中断',
+                              onTap: () => _showPauseMenu(theme),
                             ),
                             const SizedBox(width: 22),
                             GameButton(
@@ -252,6 +286,7 @@ class _GameScreenState extends State<GameScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         child: GameButton(
                           icon: Icons.rotate_right_rounded,
+                          label: '90°',
                           backgroundColor: theme.accentColor,
                           iconColor: theme.onAccentColor,
                           size: 56,
@@ -290,7 +325,8 @@ class _TopBar extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            icon: Icon(Icons.arrow_back_rounded, color: theme.primaryText),
+            tooltip: 'ステージ選択へ',
+            icon: Icon(Icons.grid_view_rounded, color: theme.primaryText),
           ),
           Icon(theme.decorationIcon, size: 18, color: theme.accentColor),
           const SizedBox(width: 6),
