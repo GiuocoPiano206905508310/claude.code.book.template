@@ -206,17 +206,20 @@ class _GameScreenState extends State<GameScreen> {
                 builder: (context, constraints) {
                   return Column(
                     children: [
-                      _TopBar(
-                        stageNumber: widget.stageNumber,
-                        theme: theme,
-                        onPickTheme: _pickPreviewTheme,
-                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                            horizontal: 12, vertical: 6),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
+                            GameButton(
+                              icon: Icons.grid_view_rounded,
+                              backgroundColor: theme.accentColor,
+                              iconColor: theme.onAccentColor,
+                              semanticLabel: 'ホームへ',
+                              onTap: () => Navigator.of(context)
+                                  .popUntil((route) => route.isFirst),
+                            ),
                             GameButton(
                               icon: Icons.help_outline_rounded,
                               backgroundColor: theme.accentColor,
@@ -224,7 +227,6 @@ class _GameScreenState extends State<GameScreen> {
                               semanticLabel: '遊び方',
                               onTap: () => _showHowToPlay(theme),
                             ),
-                            const SizedBox(width: 22),
                             GameButton(
                               icon: Icons.priority_high_rounded,
                               backgroundColor: theme.accentColor,
@@ -232,7 +234,6 @@ class _GameScreenState extends State<GameScreen> {
                               semanticLabel: 'ヒント',
                               onTap: () => _showHint(theme),
                             ),
-                            const SizedBox(width: 22),
                             GameButton(
                               icon: Icons.pause_rounded,
                               backgroundColor: theme.accentColor,
@@ -240,7 +241,6 @@ class _GameScreenState extends State<GameScreen> {
                               semanticLabel: '中断',
                               onTap: () => _showPauseMenu(theme),
                             ),
-                            const SizedBox(width: 22),
                             GameButton(
                               icon: Icons.settings_rounded,
                               backgroundColor: theme.accentColor,
@@ -251,6 +251,11 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                           ],
                         ),
+                      ),
+                      _StageHeader(
+                        stageNumber: widget.stageNumber,
+                        theme: theme,
+                        onPickTheme: _pickPreviewTheme,
                       ),
                       Expanded(
                         flex: 5,
@@ -306,12 +311,15 @@ class _GameScreenState extends State<GameScreen> {
   }
 }
 
-class _TopBar extends StatelessWidget {
+/// The stage label line below the 5 main utility buttons: a band decoration
+/// icon, "Stage N", and a small secondary palette button for the Phase 1
+/// theme-band preview switcher (not one of the 5 evenly-spaced buttons).
+class _StageHeader extends StatelessWidget {
   final int stageNumber;
   final GameTheme theme;
   final ValueChanged<GameTheme?> onPickTheme;
 
-  const _TopBar({
+  const _StageHeader({
     required this.stageNumber,
     required this.theme,
     required this.onPickTheme,
@@ -319,38 +327,30 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            tooltip: 'ステージ選択へ',
-            icon: Icon(Icons.grid_view_rounded, color: theme.primaryText),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(theme.decorationIcon, size: 18, color: theme.accentColor),
+        const SizedBox(width: 6),
+        Text(
+          'Stage $stageNumber',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            color: theme.primaryText,
           ),
-          Icon(theme.decorationIcon, size: 18, color: theme.accentColor),
-          const SizedBox(width: 6),
-          Text(
-            'Stage $stageNumber',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: theme.primaryText,
-            ),
-          ),
-          const Spacer(),
-          PopupMenuButton<GameTheme?>(
-            icon: Icon(Icons.palette_outlined, color: theme.primaryText),
-            tooltip: 'テーマプレビュー切替',
-            onSelected: onPickTheme,
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: null, child: Text('ステージ通り')),
-              for (final t in GameThemes.all)
-                PopupMenuItem(value: t, child: Text(t.displayName)),
-            ],
-          ),
-        ],
-      ),
+        ),
+        PopupMenuButton<GameTheme?>(
+          icon: Icon(Icons.palette_outlined, size: 18, color: theme.secondaryText),
+          tooltip: 'テーマプレビュー切替',
+          onSelected: onPickTheme,
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: null, child: Text('ステージ通り')),
+            for (final t in GameThemes.all)
+              PopupMenuItem(value: t, child: Text(t.displayName)),
+          ],
+        ),
+      ],
     );
   }
 }

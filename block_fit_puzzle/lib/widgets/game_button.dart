@@ -55,13 +55,13 @@ class GameButton extends StatelessWidget {
                       Icon(
                         icon,
                         color: effectiveIconColor.withValues(alpha: 0.45),
-                        size: size * 0.75,
+                        size: size * 0.95,
                       ),
                       Text(
                         label!,
                         style: TextStyle(
                           color: effectiveIconColor,
-                          fontSize: size * 0.24,
+                          fontSize: size * 0.17,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
