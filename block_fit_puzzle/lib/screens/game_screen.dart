@@ -175,13 +175,13 @@ class _GameScreenState extends State<GameScreen> {
                       _TopBar(
                         stageNumber: widget.stageNumber,
                         theme: theme,
-                        appState: widget.appState,
                         onPickTheme: _pickPreviewTheme,
                       ),
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             GameButton(
                               icon: Icons.help_outline_rounded,
@@ -205,6 +205,15 @@ class _GameScreenState extends State<GameScreen> {
                               iconColor: theme.onAccentColor,
                               semanticLabel: '元に戻す',
                               onTap: () => _showResetConfirm(theme),
+                            ),
+                            const SizedBox(width: 22),
+                            GameButton(
+                              icon: Icons.settings_rounded,
+                              backgroundColor: theme.accentColor,
+                              iconColor: theme.onAccentColor,
+                              semanticLabel: '設定',
+                              onTap: () =>
+                                  showSettingsSheet(context, widget.appState, theme),
                             ),
                           ],
                         ),
@@ -265,13 +274,11 @@ class _GameScreenState extends State<GameScreen> {
 class _TopBar extends StatelessWidget {
   final int stageNumber;
   final GameTheme theme;
-  final AppState appState;
   final ValueChanged<GameTheme?> onPickTheme;
 
   const _TopBar({
     required this.stageNumber,
     required this.theme,
-    required this.appState,
     required this.onPickTheme,
   });
 
@@ -305,10 +312,6 @@ class _TopBar extends StatelessWidget {
               for (final t in GameThemes.all)
                 PopupMenuItem(value: t, child: Text(t.displayName)),
             ],
-          ),
-          IconButton(
-            onPressed: () => showSettingsSheet(context, appState, theme),
-            icon: Icon(Icons.settings_rounded, color: theme.primaryText),
           ),
         ],
       ),
