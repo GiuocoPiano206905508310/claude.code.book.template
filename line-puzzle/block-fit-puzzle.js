@@ -29,6 +29,16 @@
   function boundsW(cells) { return Math.max.apply(null, cells.map(function (p) { return p.x; })) + 1; }
   function boundsH(cells) { return Math.max.apply(null, cells.map(function (p) { return p.y; })) + 1; }
 
+  // セルが小さいと3段の千鳥格子は潰れて見えるため、簡略な2段柄に切り替える
+  // しきい値。盤面のセルはこれより常に大きいので通常は3段のまま。
+  var COMPACT_BRICK_THRESHOLD = 22;
+  function brickClass(size, extraClasses) {
+    var cls = 'bf-brick';
+    if (size < COMPACT_BRICK_THRESHOLD) cls += ' is-compact';
+    if (extraClasses) cls += ' ' + extraClasses;
+    return cls;
+  }
+
   /* ---------- ダミーステージ（Stage 1 のプレビュー用データ） ---------- */
   function previewStage() {
     function row(y, fromX, toX) {
@@ -224,7 +234,7 @@
       var piece = pieceById(pieceId);
       var selected = game.selectedId === pieceId;
       rotateCells(piece.cells, placement.rotation).forEach(function (c) {
-        var b = el('div', 'bf-brick' + (selected ? ' is-selected' : ''));
+        var b = el('div', brickClass(size, selected ? 'is-selected' : ''));
         b.style.setProperty('--bf-piece', piece.color);
         b.style.left = ((placement.origin.x + c.x) * size + 1.5) + 'px';
         b.style.top = ((placement.origin.y + c.y) * size + 1.5) + 'px';
@@ -253,7 +263,7 @@
     var piece = pieceById(game.draggingId);
     var size = game.cellSize;
     rotateCells(piece.cells, game.draggingRotation).forEach(function (c) {
-      var cell = el('div', 'bf-brick ' + (game.hoverValid ? 'is-preview-ok' : 'is-preview-bad'));
+      var cell = el('div', brickClass(size, game.hoverValid ? 'is-preview-ok' : 'is-preview-bad'));
       cell.style.left = ((game.hoverOrigin.x + c.x) * size + 1.5) + 'px';
       cell.style.top = ((game.hoverOrigin.y + c.y) * size + 1.5) + 'px';
       cell.style.width = (size - 3) + 'px';
@@ -269,7 +279,7 @@
     wrap.style.width = w + 'px';
     wrap.style.height = h + 'px';
     cells.forEach(function (c) {
-      var b = el('div', 'bf-brick' + (selected ? ' is-selected' : ''));
+      var b = el('div', brickClass(cellSize, selected ? 'is-selected' : ''));
       b.style.setProperty('--bf-piece', piece.color);
       b.style.left = (c.x * cellSize) + 'px';
       b.style.top = (c.y * cellSize) + 'px';
@@ -382,7 +392,7 @@
     ghost.style.width = (boundsW(cells) * size) + 'px';
     ghost.style.height = (boundsH(cells) * size) + 'px';
     cells.forEach(function (c) {
-      var b = el('div', 'bf-brick is-selected is-ghost');
+      var b = el('div', brickClass(size, 'is-selected is-ghost'));
       b.style.setProperty('--bf-piece', piece.color);
       b.style.left = (c.x * size) + 'px';
       b.style.top = (c.y * size) + 'px';

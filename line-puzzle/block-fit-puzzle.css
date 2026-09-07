@@ -141,19 +141,34 @@ body.bf-dark {
   border-radius: 6px;
 }
 
-/* レンガ風ブロック。斜めのハイライト〜シャドウのグラデーションに、
-   ブロックの色そのままの目地(グラウト)を1本通す。 */
+/* レンガ風ブロック。土台は斜めのハイライト〜シャドウのグラデーション、
+   その上に「2個/3個/2個」の千鳥格子で縦横の目地（ひび割れ）を通した
+   SVGを重ねる。目地は色ごとに作り分けず、半透明の黒線1種類を全色の上に
+   重ねることでどのピース色でも「暗いモルタル」に見えるようにしている。
+   border-radius は % 指定にして、盤面/置き場のどのセルサイズでも
+   角の丸みの比率がそろうようにする（固定pxだと小さいセルで丸すぎて
+   ブロック同士が円のように重なって見えてしまうため）。 */
 .bf-brick {
   position: absolute;
-  border-radius: 6px;
+  border-radius: 12%;
   touch-action: none;
   cursor: grab;
-  border: 2px solid color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #000);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   background-image:
-    linear-gradient(to bottom, transparent calc(50% - 1px), color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #000) calc(50% - 1px), color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #000) calc(50% + 1px), transparent calc(50% + 1px)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect x='2' y='2' width='96' height='96' rx='12' ry='12' fill='none' stroke='rgba(0,0,0,.4)' stroke-width='4'/%3E%3Cg stroke='rgba(0,0,0,.4)' stroke-width='4' stroke-linecap='round'%3E%3Cline x1='4' y1='33.3' x2='96' y2='33.3'/%3E%3Cline x1='4' y1='66.6' x2='96' y2='66.6'/%3E%3Cline x1='50' y1='4' x2='50' y2='33.3'/%3E%3Cline x1='28' y1='33.3' x2='28' y2='66.6'/%3E%3Cline x1='72' y1='33.3' x2='72' y2='66.6'/%3E%3Cline x1='50' y1='66.6' x2='50' y2='96'/%3E%3C/g%3E%3Cellipse cx='30' cy='18' rx='16' ry='7' fill='rgba(255,255,255,.35)'/%3E%3C/svg%3E"),
     linear-gradient(135deg, color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #fff) 0%, var(--bf-piece, #4c9b7c) 50%, color-mix(in srgb, var(--bf-piece, #4c9b7c) 72%, #000) 100%);
   box-shadow: 0 2px 3px rgba(0,0,0,.16);
   transition: left .12s ease-out, top .12s ease-out, width .18s ease-out, height .18s ease-out;
+}
+/* 置き場の小さい未選択アイコン用。1本の千鳥格子だと潰れて見えるので、
+   上下2分割+上段だけ縦の目地、というシンプルな柄にする
+   （Flutter版で小さいセルにだけ簡略パターンを使ったのと同じ考え方）。 */
+.bf-brick.is-compact {
+  border-radius: 16%;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect x='2' y='2' width='96' height='96' rx='16' ry='16' fill='none' stroke='rgba(0,0,0,.4)' stroke-width='5'/%3E%3Cg stroke='rgba(0,0,0,.4)' stroke-width='5' stroke-linecap='round'%3E%3Cline x1='4' y1='50' x2='96' y2='50'/%3E%3Cline x1='50' y1='4' x2='50' y2='50'/%3E%3C/g%3E%3Cellipse cx='30' cy='20' rx='18' ry='8' fill='rgba(255,255,255,.35)'/%3E%3C/svg%3E"),
+    linear-gradient(135deg, color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #fff) 0%, var(--bf-piece, #4c9b7c) 50%, color-mix(in srgb, var(--bf-piece, #4c9b7c) 72%, #000) 100%);
 }
 .bf-brick.is-selected { box-shadow: 0 0 0 3px #fff, 0 0 12px 3px var(--bf-piece, #4c9b7c); }
 .bf-brick.is-ghost { opacity: .9; pointer-events: none; transition: none; }
