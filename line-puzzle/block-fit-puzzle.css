@@ -1,0 +1,271 @@
+/* ============================================================
+   ゲーム選択画面 + ブロックフィットパズル
+   ラインパズルの画面切り替え・ボタン・モーダルの仕組み（.screen /
+   .icon-btn / .round-btn / .modal / .btn）をそのまま使い、ここでは
+   ブロックフィットパズル固有の見た目（レンガ調ブロック・5つのステージ
+   帯カラー・盤面/置き場のレイアウト）だけを追加する。
+   ============================================================ */
+
+/* ---------- ゲーム選択画面 ---------- */
+#screen-gameselect { justify-content: center; }
+.gameselect-wrap { width: min(420px, 100%); margin: 0 auto; }
+.gameselect-title {
+  margin: 0 0 22px; text-align: center;
+  font-size: 20px; font-weight: 800; color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.2);
+}
+.game-choice-list { display: flex; flex-direction: column; gap: 14px; }
+.game-choice-card {
+  display: flex; align-items: center; gap: 14px;
+  border: 0; border-radius: 18px;
+  padding: 18px 18px;
+  text-align: left;
+  cursor: pointer;
+  background: #fff;
+  box-shadow: 0 4px 0 rgba(0,0,0,.18);
+  transition: transform .08s;
+}
+.game-choice-card:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+.game-choice-icon {
+  flex: none;
+  width: 52px; height: 52px;
+  display: grid; place-items: center;
+  border-radius: 14px;
+  color: #fff;
+}
+.game-choice-icon .ic { width: 28px; height: 28px; }
+.game-choice-line .game-choice-icon { background: var(--accent, #7c3aed); }
+.game-choice-block .game-choice-icon { background: #d9985a; }
+.game-choice-text { display: flex; flex-direction: column; min-width: 0; }
+.game-choice-name { display: block; font-weight: 800; font-size: 15.5px; color: var(--ink, #23272b); }
+.game-choice-desc { display: block; font-size: 12px; color: #8a8f88; margin-top: 2px; }
+
+/* ---------- ブロックフィットパズル: 共通カラー(5帯) ----------
+   1-10 クリーム / 11-20 イエロー / 21-30 オレンジ / 31-40 ブラウン / 41-50 パープル。
+   帯のアクセント色はダーク/ホワイト設定に関わらず変わらない。
+   周りの背景・盤面・文字色（"chrome"）だけを .bf-dark で切り替える。 */
+.bf-theme-1 { --bf-accent: #d9b98d; --bf-on-accent: #5b4530; }
+.bf-theme-2 { --bf-accent: #e3ac3d; --bf-on-accent: #5c4610; }
+.bf-theme-3 { --bf-accent: #e0803c; --bf-on-accent: #ffffff; }
+.bf-theme-4 { --bf-accent: #9c6b42; --bf-on-accent: #ffffff; }
+.bf-theme-5 { --bf-accent: #8b5fc4; --bf-on-accent: #ffffff; }
+
+:root, body {
+  --bf-bg-1: #ffffff; --bf-bg-2: #f2f2f2;
+  --bf-board-bg: #ffffff; --bf-board-border: #e0e0e0; --bf-cell-empty: #f0f0f0;
+  --bf-tray-bg: #f7f7f7;
+  --bf-text: #222222; --bf-text-sub: #757575;
+  --bf-number: #000000;
+}
+body.bf-dark {
+  --bf-bg-1: #15151a; --bf-bg-2: #1f1f26;
+  --bf-board-bg: #23232b; --bf-board-border: #3a3a45; --bf-cell-empty: #2c2c36;
+  --bf-tray-bg: #1b1b22;
+  --bf-text: #f2f2f2; --bf-text-sub: #b0b0b8;
+  --bf-number: #ffffff;
+}
+
+#screen-bf-select, #screen-bf-game {
+  background: linear-gradient(180deg, var(--bf-bg-1) 0%, var(--bf-bg-2) 100%);
+}
+#screen-bf-select .topbar-title, #screen-bf-select .topbar-user { color: var(--bf-text); text-shadow: none; }
+#screen-bf-select .topbar-sub { color: var(--bf-text-sub); opacity: 1; }
+#screen-bf-select .icon-btn { color: var(--bf-text); }
+
+.bf-debug-toggle {
+  flex: none; display: flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 700; color: var(--bf-text-sub);
+}
+
+/* ---------- ブロックフィットパズル: ステージ選択タイル ----------
+   .stage-grid / .stage-btn の土台はそのまま流用し、クリア済みの見た目
+   だけをレンガ風グラデーション+目地線に差し替える。 */
+.bf-stage-grid .stage-btn {
+  background: var(--bf-cell-empty);
+  color: var(--bf-text);
+  box-shadow: 0 3px 0 rgba(0,0,0,.10);
+}
+.bf-stage-grid .stage-btn.is-locked {
+  background: rgba(120,120,120,.18);
+  color: rgba(120,120,120,.7);
+  box-shadow: none;
+}
+.bf-stage-grid .stage-btn.is-cleared {
+  color: var(--bf-number);
+  text-shadow: none;
+  font-size: 18px;
+  padding-bottom: 0;
+  background-image:
+    linear-gradient(to bottom, transparent calc(50% - 1px), rgba(0,0,0,.35) calc(50% - 1px), rgba(0,0,0,.35) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(135deg, color-mix(in srgb, var(--bf-band, #d9b98d) 60%, #fff) 0%, var(--bf-band, #d9b98d) 50%, color-mix(in srgb, var(--bf-band, #d9b98d) 75%, #000) 100%);
+  border: 2px solid color-mix(in srgb, var(--bf-band, #d9b98d) 60%, #000);
+  box-shadow: 0 3px 0 rgba(0,0,0,.16);
+}
+.bf-stage-grid .stage-btn.bf-band-1 { --bf-band: #d9b98d; }
+.bf-stage-grid .stage-btn.bf-band-2 { --bf-band: #e3ac3d; }
+.bf-stage-grid .stage-btn.bf-band-3 { --bf-band: #e0803c; }
+.bf-stage-grid .stage-btn.bf-band-4 { --bf-band: #9c6b42; }
+.bf-stage-grid .stage-btn.bf-band-5 { --bf-band: #8b5fc4; }
+.bf-stage-grid .stage-btn.is-next { box-shadow: 0 3px 0 rgba(0,0,0,.16), 0 0 0 3px var(--bf-accent, #d9b98d); }
+
+/* ---------- ブロックフィットパズル: ゲーム画面 ---------- */
+.bf-top-row { display: flex; justify-content: space-evenly; align-items: center; margin-bottom: 6px; }
+.bf-round-btn {
+  background: var(--bf-accent, #d9b98d);
+  color: var(--bf-on-accent, #5b4530);
+  box-shadow: 0 3px 0 rgba(0,0,0,.2);
+}
+.bf-round-btn .ic use { stroke: currentColor; }
+#bf-exclaim-dot { fill: currentColor; }
+
+.bf-stage-header {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin: 4px 0 10px;
+  font-weight: 800; font-size: 16px; color: var(--bf-text);
+}
+.bf-stage-icon { width: 18px; height: 18px; color: var(--bf-accent, #d9b98d); stroke: var(--bf-accent, #d9b98d); }
+
+.bf-board-area { flex: 1; display: grid; place-items: center; min-height: 0; padding: 4px 0; }
+.bf-board-frame {
+  position: relative;
+  padding: 10px;
+  background: var(--bf-board-bg);
+  border: 2px solid var(--bf-board-border);
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.15);
+}
+.bf-board { position: relative; }
+.bf-cell {
+  position: absolute;
+  background: var(--bf-cell-empty);
+  border-radius: 6px;
+}
+
+/* レンガ風ブロック。土台は斜めのハイライト〜シャドウのグラデーション、
+   その上に「2個/3個/2個」の千鳥格子で縦横の目地（ひび割れ）を通した
+   SVGを重ねる。目地は色ごとに作り分けず、半透明の黒線1種類を全色の上に
+   重ねることでどのピース色でも「暗いモルタル」に見えるようにしている。
+   border-radius は % 指定にして、盤面/置き場のどのセルサイズでも
+   角の丸みの比率がそろうようにする（固定pxだと小さいセルで丸すぎて
+   ブロック同士が円のように重なって見えてしまうため）。 */
+.bf-brick {
+  position: absolute;
+  border-radius: 12%;
+  touch-action: none;
+  cursor: grab;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect x='2' y='2' width='96' height='96' rx='12' ry='12' fill='none' stroke='rgba(0,0,0,.4)' stroke-width='4'/%3E%3Cg stroke='rgba(0,0,0,.4)' stroke-width='4' stroke-linecap='round'%3E%3Cline x1='4' y1='33.3' x2='96' y2='33.3'/%3E%3Cline x1='4' y1='66.6' x2='96' y2='66.6'/%3E%3Cline x1='50' y1='4' x2='50' y2='33.3'/%3E%3Cline x1='28' y1='33.3' x2='28' y2='66.6'/%3E%3Cline x1='72' y1='33.3' x2='72' y2='66.6'/%3E%3Cline x1='50' y1='66.6' x2='50' y2='96'/%3E%3C/g%3E%3Cellipse cx='30' cy='18' rx='16' ry='7' fill='rgba(255,255,255,.35)'/%3E%3C/svg%3E"),
+    linear-gradient(135deg, color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #fff) 0%, var(--bf-piece, #4c9b7c) 50%, color-mix(in srgb, var(--bf-piece, #4c9b7c) 72%, #000) 100%);
+  box-shadow: 0 2px 3px rgba(0,0,0,.16);
+  transition: left .12s ease-out, top .12s ease-out, width .18s ease-out, height .18s ease-out;
+}
+/* 置き場の小さい未選択アイコン用。1本の千鳥格子だと潰れて見えるので、
+   上下2分割+上段だけ縦の目地、というシンプルな柄にする
+   （Flutter版で小さいセルにだけ簡略パターンを使ったのと同じ考え方）。 */
+.bf-brick.is-compact {
+  border-radius: 16%;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect x='2' y='2' width='96' height='96' rx='16' ry='16' fill='none' stroke='rgba(0,0,0,.4)' stroke-width='5'/%3E%3Cg stroke='rgba(0,0,0,.4)' stroke-width='5' stroke-linecap='round'%3E%3Cline x1='4' y1='50' x2='96' y2='50'/%3E%3Cline x1='50' y1='4' x2='50' y2='50'/%3E%3C/g%3E%3Cellipse cx='30' cy='20' rx='18' ry='8' fill='rgba(255,255,255,.35)'/%3E%3C/svg%3E"),
+    linear-gradient(135deg, color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #fff) 0%, var(--bf-piece, #4c9b7c) 50%, color-mix(in srgb, var(--bf-piece, #4c9b7c) 72%, #000) 100%);
+}
+.bf-brick.is-selected { box-shadow: 0 0 0 3px #fff, 0 0 12px 3px var(--bf-piece, #4c9b7c); }
+.bf-brick.is-ghost { opacity: .9; pointer-events: none; transition: none; }
+.bf-brick.is-preview-ok { background: rgba(76,175,80,.35); border-color: rgba(56,142,60,.6); background-image: none; box-shadow: none; }
+.bf-brick.is-preview-bad { background: rgba(244,67,54,.35); border-color: rgba(198,40,40,.6); background-image: none; box-shadow: none; }
+
+/* ヒントで示す「ここに置ける」マスの点滅ハイライト */
+.bf-hint-cell {
+  position: absolute;
+  border-radius: 12%;
+  background: rgba(255, 224, 64, .55);
+  box-shadow: 0 0 0 2px rgba(255, 224, 64, .9), 0 0 14px 4px rgba(255, 224, 64, .55);
+  pointer-events: none;
+  animation: bf-hint-pulse .9s ease-in-out infinite alternate;
+}
+@keyframes bf-hint-pulse {
+  from { opacity: .45; }
+  to { opacity: .9; }
+}
+
+/* ドラッグ中は元の場所（置き場 or 盤面）の見た目を隠す。指の下に浮かぶ
+   ゴースト側だけを見せるため、視覚的な二重表示を避ける。 */
+.is-dragging-source { visibility: hidden; }
+
+/* 指の少し上に浮かせて表示するドラッグ中のブロック */
+.bf-drag-ghost {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.bf-tray-label {
+  text-align: center; margin: 0 0 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: .06em;
+  color: var(--bf-text-sub);
+}
+.bf-tray {
+  position: relative;
+  min-height: 70px;
+  margin: 0 4px 6px;
+  padding: 12px 8px;
+  border-radius: 16px;
+  background: var(--bf-tray-bg);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 14px;
+}
+.bf-tray-piece { position: relative; cursor: grab; touch-action: none; }
+
+.bf-rotate-row { display: flex; justify-content: center; padding: 8px 0 4px; }
+.bf-rotate-btn {
+  position: relative;
+  width: 56px; height: 56px;
+  border: 0; border-radius: 50%;
+  background: var(--bf-accent, #d9b98d);
+  color: var(--bf-on-accent, #5b4530);
+  display: grid; place-items: center;
+  box-shadow: 0 3px 0 rgba(0,0,0,.2);
+  cursor: pointer;
+}
+.bf-rotate-btn .ic { width: 40px; height: 40px; opacity: .45; }
+.bf-rotate-btn:disabled { opacity: .4; cursor: default; }
+.bf-rotate-label {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 12px;
+}
+
+/* ---------- ブロックフィットパズル: モーダルはステージの帯色を使う ----------
+   （ラインパズルの共通 .btn-primary は var(--accent) = 紫固定のため、
+   BFP のモーダルだけ現在のステージの帯色に差し替える） */
+#modal-bf-pause .btn-primary,
+#modal-bf-help .btn-primary,
+#modal-bf-clear .btn-primary {
+  background: var(--bf-accent, #d9b98d);
+  color: var(--bf-on-accent, #5b4530);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--bf-accent, #d9b98d) 70%, #000);
+}
+#modal-bf-pause .modal-title,
+#modal-bf-help .modal-title,
+#modal-bf-clear .modal-title,
+#modal-bf-settings .modal-title {
+  color: color-mix(in srgb, var(--bf-accent, #d9b98d) 70%, #000);
+}
+#modal-bf-clear .saved-note {
+  color: color-mix(in srgb, var(--bf-accent, #d9b98d) 70%, #000);
+}
+#modal-bf-clear .saved-note .dot {
+  background: var(--bf-accent, #d9b98d);
+}
+
+/* ---------- ブロックフィットパズル: 遊び方/設定モーダルの中身 ---------- */
+.bf-howto-list { text-align: left; margin: 0 0 14px; }
+.bf-howto-list p { margin: 6px 0; font-size: 13.5px; color: var(--ink, #23272b); }
+.bf-bg-choice { display: flex; gap: 10px; margin-bottom: 16px; }
+.bf-bg-btn {
+  flex: 1; padding: 14px 6px; border: 2px solid transparent; border-radius: 14px;
+  background: #f1f1f1; font-weight: 700; cursor: pointer;
+}
+.bf-bg-btn.is-on { background: #d9b98d; border-color: #b9945f; }

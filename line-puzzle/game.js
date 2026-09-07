@@ -239,8 +239,12 @@
      ============================================================ */
   var screens = { login: $('screen-login'), select: $('screen-select'), game: $('screen-game') };
 
+  // ブロックフィットパズル側にも同じ .screen / .is-active の仕組みで
+  // 独自の画面があるため、自分の3画面だけでなく画面全体を対象に切り替える。
   function show(name) {
-    for (var k in screens) screens[k].classList.toggle('is-active', k === name);
+    var all = document.querySelectorAll('.screen');
+    for (var i = 0; i < all.length; i++) all[i].classList.remove('is-active');
+    screens[name].classList.add('is-active');
   }
 
   var toastTimer = null;
@@ -294,7 +298,7 @@
     }
   }
 
-  function openSelect() {
+  function openSelect(switchScreen) {
     closeModal('modal-stuck');
     // 見出しは「誰の記録か」。ログインしていればユーザー名を出す
     var u = currentUser();
@@ -319,7 +323,10 @@
     } else {
       sec.hidden = true;
     }
-    show('select');
+    // switchScreen=false: 見出し/グリッドの再描画だけ行い、画面は切り替えない。
+    // クラウドの進行状況が遅れて届いたときなど、ユーザーがすでに別の画面
+    // （ゲーム選択やブロックフィットパズル）に移っていても割り込まないため。
+    if (switchScreen !== false) show('select');
   }
 
   // つづきから: 本編が残っていれば本編、全部クリア済みなら裏のつづきへ
@@ -1113,7 +1120,7 @@
 
   $('play-guest').addEventListener('click', function () {
     rememberGuest(true);
-    openSelect();
+    window.openGameSelect();
   });
 
   // ログインしていない状態の記録（アカウントへ引き継ぐために読む）
@@ -1128,7 +1135,7 @@
   function afterAuthChange() {
     memoryStore = null;
     rememberGuest(false);
-    openSelect();
+    window.openGameSelect();
     var u = currentUser();
     if (u) toast(u.username + ' でログインしました');
   }
@@ -1310,7 +1317,7 @@
       rememberGuest(false);
       return syncAfterLogin(guest);
     }).then(function () {
-      openSelect();
+      window.openGameSelect();
       if (back.type === 'recovery') {
         // 新しいパスワードをここで決めてもらう
         showAccountForm('newpass');
@@ -1336,7 +1343,7 @@
         + 'ステージデータ(levels.js)を読み込めませんでした。</p>';
       return;
     }
-    if (!cloud) { openSelect(); return; }   // cloud.js を読めなくても遊べる
+    if (!cloud) { window.openGameSelect(); return; }   // cloud.js を読めなくても遊べる
 
     // メール（新規登録の確認・パスワード変更・メールアドレス変更）の
     // リンクから戻ってきた場合は、まずそれを処理する
@@ -1345,20 +1352,23 @@
 
     if (cloud.signedIn()) {
       // 前回のログインが残っている。まず遊べる状態にしてから、裏でクラウドと合わせる
-      openSelect();
+      window.openGameSelect();
       cloud.fetchProgress().then(function (remote) {
         if (!remote) return;
         var merged = mergeProgress(readProgress(), remote);
         writeProgress(merged);
-        openSelect();
+        openSelect(false);   // 見出しだけ更新。画面はいまどこにいても割り込まない
       }, function () { /* 取れなくても端末の記録で遊べる */ });
     } else if (guestChosen()) {
-      openSelect();               // 前に「ログインせずに遊ぶ」を選んでいる
+      window.openGameSelect();   // 前に「ログインせずに遊ぶ」を選んでいる
     } else {
       showLoginTab('login');
       show('login');
     }
   }
+
+  // ゲーム選択画面（game-select.js）から呼べるようにする
+  window.LinePuzzleGame = { openSelect: openSelect };
 
   boot();
 })();

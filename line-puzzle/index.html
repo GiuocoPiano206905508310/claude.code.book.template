@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#6e747c">
 <title>ラインパズル</title>
 <link rel="stylesheet" href="style.css?v=56b61f3bc1">
+<link rel="stylesheet" href="block-fit-puzzle.css?v=1">
 </head>
 <body>
 
@@ -50,6 +51,25 @@
     <symbol id="ic-help" viewBox="0 0 24 24">
       <path d="M8.7 9.2a3.4 3.4 0 1 1 5.2 2.9c-1 .65-1.9 1.25-1.9 2.55v.35"/>
       <circle cx="12" cy="18.3" r="1.05" fill="currentColor" stroke="none"/>
+    </symbol>
+    <!-- ゲーム選択カード: ラインパズル -->
+    <symbol id="ic-line-path" viewBox="0 0 24 24">
+      <polyline points="3,19 3,10 10,10 10,17 17,17 17,7 21,7"/>
+    </symbol>
+    <!-- ブロックフィットパズル: ヒント(！) -->
+    <symbol id="ic-exclaim" viewBox="0 0 24 24">
+      <line x1="12" y1="6" x2="12" y2="14"/>
+      <circle cx="12" cy="18.2" r="1.1" fill="currentColor" stroke="none"/>
+    </symbol>
+    <!-- ブロックフィットパズル: 設定(歯車) -->
+    <symbol id="ic-settings" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3.1"/>
+      <path d="M12 3.2v2.6M12 18.2v2.6M20.8 12h-2.6M5.8 12H3.2M17.9 6.1l-1.85 1.85M7.95 16.05 6.1 17.9M17.9 17.9l-1.85-1.85M7.95 7.95 6.1 6.1"/>
+    </symbol>
+    <!-- ブロックフィットパズル: 90度回転 -->
+    <symbol id="ic-rotate90" viewBox="0 0 24 24">
+      <path d="M18.5 12a6.5 6.5 0 1 1-2.2-4.9"/>
+      <polyline points="19.6,4.3 19.6,8.3 15.6,8.3"/>
     </symbol>
           </defs>
 </svg>
@@ -97,6 +117,29 @@
     </form>
 
     <button class="linkish linkish-guest" id="play-guest" type="button">ログインせずに遊ぶ</button>
+  </div>
+</section>
+
+<!-- ============ ゲーム選択画面 ============ -->
+<section id="screen-gameselect" class="screen">
+  <div class="gameselect-wrap">
+    <h1 class="gameselect-title">あそぶゲームをえらぶ</h1>
+    <div class="game-choice-list">
+      <button class="game-choice-card game-choice-line" id="choose-line-puzzle" type="button">
+        <span class="game-choice-icon"><svg class="ic"><use href="#ic-line-path"/></svg></span>
+        <span class="game-choice-text">
+          <span class="game-choice-name">ラインパズル</span>
+          <span class="game-choice-desc">まっすぐ進んで全マスをぬろう</span>
+        </span>
+      </button>
+      <button class="game-choice-card game-choice-block" id="choose-block-fit" type="button">
+        <span class="game-choice-icon"><svg class="ic"><use href="#ic-grid"/></svg></span>
+        <span class="game-choice-text">
+          <span class="game-choice-name">ブロックフィットパズル</span>
+          <span class="game-choice-desc">ブロックを枠にぴったり収めよう</span>
+        </span>
+      </button>
+    </div>
   </div>
 </section>
 
@@ -184,6 +227,68 @@
   </div>
 </section>
 
+<!-- ============ ブロックフィットパズル: ステージ選択 ============ -->
+<section id="screen-bf-select" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="bf-select-back" type="button" aria-label="ゲーム選択へ">
+      <svg class="ic"><use href="#ic-back"/></svg>
+    </button>
+    <div class="topbar-title">
+      <span class="topbar-user">ブロックフィットパズル</span>
+      <span id="bf-select-progress" class="topbar-sub"></span>
+    </div>
+    <label class="bf-debug-toggle">
+      <input type="checkbox" id="bf-debug-toggle">
+      <span>DEBUG</span>
+    </label>
+  </header>
+  <div class="stage-scroll">
+    <ul id="bf-stage-grid" class="stage-grid bf-stage-grid"></ul>
+  </div>
+</section>
+
+<!-- ============ ブロックフィットパズル: ゲーム画面 ============ -->
+<section id="screen-bf-game" class="screen bf-game-screen">
+  <div class="bf-top-row">
+    <button class="round-btn bf-round-btn" id="bf-home" type="button" aria-label="ホームへ">
+      <svg class="ic"><use href="#ic-grid"/></svg>
+    </button>
+    <button class="round-btn bf-round-btn" id="bf-help" type="button" aria-label="遊び方">
+      <svg class="ic"><use href="#ic-help"/></svg>
+    </button>
+    <button class="round-btn bf-round-btn" id="bf-hint" type="button" aria-label="ヒント">
+      <svg class="ic"><use href="#ic-exclaim"/></svg>
+    </button>
+    <button class="round-btn bf-round-btn" id="bf-pause" type="button" aria-label="中断する">
+      <svg class="ic"><use href="#ic-pause"/></svg>
+    </button>
+    <button class="round-btn bf-round-btn" id="bf-settings" type="button" aria-label="設定">
+      <svg class="ic"><use href="#ic-settings"/></svg>
+    </button>
+  </div>
+
+  <div class="bf-stage-header">
+    <svg class="ic bf-stage-icon"><use href="#ic-grid"/></svg>
+    <span id="bf-stage-label">Stage 1</span>
+  </div>
+
+  <div class="bf-board-area">
+    <div id="bf-board-frame" class="bf-board-frame">
+      <div id="bf-board" class="bf-board"></div>
+    </div>
+  </div>
+
+  <p class="bf-tray-label">使用するブロック</p>
+  <div id="bf-tray" class="bf-tray"></div>
+
+  <div class="bf-rotate-row">
+    <button class="bf-rotate-btn" id="bf-rotate" type="button" aria-label="90度回転" disabled>
+      <svg class="ic"><use href="#ic-rotate90"/></svg>
+      <span class="bf-rotate-label">90°</span>
+    </button>
+  </div>
+</section>
+
 <!-- ============ 中断モーダル ============ -->
 <div id="modal-pause" class="modal" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
@@ -192,6 +297,56 @@
     <button class="btn btn-primary btn-block" id="pause-resume" type="button">つづける</button>
     <button class="btn btn-ghost btn-block" id="pause-restart" type="button">このステージをやり直す</button>
     <button class="btn btn-ghost btn-block" id="pause-select" type="button">ステージ選択へ</button>
+  </div>
+</div>
+
+<!-- ============ ブロックフィットパズル 中断モーダル ============ -->
+<div id="modal-bf-pause" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bf-pause-title">
+    <h2 id="bf-pause-title" class="modal-title">中断中</h2>
+    <p class="modal-text">進行状況はクリア時に自動保存されます。</p>
+    <button class="btn btn-primary btn-block" id="bf-pause-resume" type="button">つづける</button>
+    <button class="btn btn-ghost btn-block" id="bf-pause-restart" type="button">このステージをやり直す</button>
+    <button class="btn btn-ghost btn-block" id="bf-pause-select" type="button">ステージ選択へ</button>
+  </div>
+</div>
+
+<!-- ============ ブロックフィットパズル 遊び方 ============ -->
+<div id="modal-bf-help" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bf-help-title">
+    <h2 id="bf-help-title" class="modal-title">遊び方</h2>
+    <div class="bf-howto-list">
+      <p>① ブロックをタップして選択</p>
+      <p>② 指で好きな位置へドラッグ</p>
+      <p>③ 回転ボタンで90°回転</p>
+      <p>④ すべてのマスを隙間なく埋めればクリア</p>
+    </div>
+    <button class="btn btn-primary btn-block" id="bf-help-close" type="button">とじる</button>
+  </div>
+</div>
+
+<!-- ============ ブロックフィットパズル 設定 ============ -->
+<div id="modal-bf-settings" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bf-settings-title">
+    <h2 id="bf-settings-title" class="modal-title">設定</h2>
+    <p class="modal-text" style="margin-bottom:8px">背景</p>
+    <div class="bf-bg-choice">
+      <button class="bf-bg-btn" id="bf-bg-white" type="button">☀ ホワイト</button>
+      <button class="bf-bg-btn" id="bf-bg-dark" type="button">🌙 ダーク</button>
+    </div>
+    <button class="btn btn-ghost btn-block" id="bf-settings-close" type="button">とじる</button>
+  </div>
+</div>
+
+<!-- ============ ブロックフィットパズル クリア演出 ============ -->
+<div id="modal-bf-clear" class="modal" hidden>
+  <div class="modal-card clear-card" role="dialog" aria-modal="true" aria-labelledby="bf-clear-title">
+    <p class="clear-eyebrow">STAGE CLEAR</p>
+    <h2 id="bf-clear-title" class="modal-title">Stage 1</h2>
+    <p class="saved-note"><span class="dot"></span>自動保存しました</p>
+    <button class="btn btn-primary btn-block" id="bf-clear-next" type="button">次のステージへ</button>
+    <button class="btn btn-ghost btn-block" id="bf-clear-retry" type="button">再チャレンジ</button>
+    <button class="btn btn-ghost btn-block" id="bf-clear-select" type="button">ステージ選択へ</button>
   </div>
 </div>
 
@@ -267,9 +422,15 @@
 
 <div id="toast" class="toast" hidden></div>
 
+<!-- ドラッグ中のブロックの見た目（指より少し上に浮かせて表示）。
+     body 直下に置き、.screen 等の祖先の影響を受けない position:fixed にする。 -->
+<div id="bf-drag-ghost" class="bf-drag-ghost" hidden></div>
+
 <script src="levels.js?v=2e1a4edec1"></script>
 <script src="ura-levels.js?v=34de64f1ca"></script>
 <script src="cloud.js?v=f016a1df5c"></script>
+<script src="block-fit-puzzle.js?v=1"></script>
+<script src="game-select.js?v=1"></script>
 <script src="game.js?v=f694c17240"></script>
 </body>
 </html>
