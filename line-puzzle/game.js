@@ -329,14 +329,7 @@
     if (switchScreen !== false) show('select');
   }
 
-  // つづきから: 本編が残っていれば本編、全部クリア済みなら裏のつづきへ
-  $('select-continue').addEventListener('click', function () {
-    if (uraUnlocked() && Object.keys(clearedMap(true)).length < URA_LEVELS.length) {
-      startStage(nextStage(true), true);
-    } else {
-      startStage(nextStage(false), false);
-    }
-  });
+  $('select-gameselect').addEventListener('click', function () { window.openGameSelect(); });
 
   /* ============================================================
      8. ゲーム本体
@@ -1259,7 +1252,9 @@
     if (mode === 'name') {
       setBusy(btn, true, '保存中…');
       cloud.changeName(v1).then(function (name) {
-        openSelect();                       // 見出しのユーザー名を出し直す
+        // switchScreen=false: ブロックフィットパズル側からアカウントメニューを
+        // 開いていた場合に、ラインパズルのステージ選択へ割り込んで移動しない。
+        openSelect(false);                  // 見出しのユーザー名を出し直す
         finished('ユーザー名を ' + name + ' に変えました');
       }, failed);
 
@@ -1288,6 +1283,7 @@
   });
 
   $('select-account').addEventListener('click', openAccount);
+  $('bf-select-account').addEventListener('click', openAccount);
   $('account-close').addEventListener('click', function () { closeModal('modal-account'); });
   $('account-login').addEventListener('click', function () {
     closeModal('modal-account');

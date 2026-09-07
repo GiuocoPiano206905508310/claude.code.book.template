@@ -289,9 +289,9 @@ const after = await page.evaluate(() => ({
 }));
 chk(/3 \/ 50/.test(after.prog), `3ステージ分が保存されている "${after.prog}"`);
 chk(after.locked === 46, `4番目まで解放 (locked=${after.locked}, 期待46)`);
-await page.click('#select-continue');
+await page.evaluate(() => document.querySelectorAll('#stage-grid .stage-btn')[3].click());
 await page.waitForSelector('#screen-game.is-active');
-chk((await page.textContent('#level-label')) === 'Level 4', 'つづきからで Level 4 が開く');
+chk((await page.textContent('#level-label')) === 'Level 4', '解放済みの4番目からLevel 4が開く');
 
 console.log('\n== ボタン (やり直す/中断/ヒント) ==');
 {
@@ -724,8 +724,8 @@ console.log('\n== 遊び方（？）ボタンとチュートリアルの見返�
     const ids = Array.from(bar.querySelectorAll('button')).map(b => b.id);
     return ids;
   });
-  chk(order.indexOf('select-help') === order.indexOf('select-continue') - 1,
-      `？ボタンが▶ボタンの左にある (順序: ${order.join(',')})`);
+  chk(order.join(',') === 'select-gameselect,select-account,select-help',
+      `トップバーのアイコン順序が正しい (順序: ${order.join(',')})`);
 
   await page.click('#select-help');
   await page.waitForTimeout(200);
