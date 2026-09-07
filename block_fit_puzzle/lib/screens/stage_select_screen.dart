@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/game_controller.dart';
 import '../theme/game_theme.dart';
+import '../widgets/brick_surface.dart';
 import 'game_screen.dart';
 
 /// Stage 1-50 grid. Scrollable, grouped visually into the 5 theme bands,
@@ -147,48 +148,60 @@ class _StageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = unlocked
-        ? theme.accentColor
-        : const Color(0xFFB9B9B9).withValues(alpha: 0.35);
     final foregroundColor = unlocked ? theme.onAccentColor : const Color(0xFF7A7A7A);
 
-    return Material(
-      color: backgroundColor,
-      borderRadius: BorderRadius.circular(14),
-      elevation: unlocked ? 2 : 0,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Text(
-              stageNumber.toString().padLeft(2, '0'),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: foregroundColor,
-              ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Unlocked stages render as a glossy brick icon in the band's color;
+        // locked stages stay flat monochrome gray so the two states read
+        // instantly apart at a glance.
+        if (unlocked)
+          BrickSurface(color: theme.accentColor, borderRadius: 14, borderWidth: 2.5)
+        else
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: const Color(0xFFB9B9B9).withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(14),
             ),
-            if (cleared)
-              const Positioned(
-                right: 6,
-                top: 6,
-                child: Icon(Icons.star_rounded, size: 14, color: Colors.white),
-              ),
-            if (!unlocked)
-              Positioned(
-                right: 6,
-                top: 6,
-                child: Icon(
-                  Icons.lock_rounded,
-                  size: 13,
-                  color: foregroundColor.withValues(alpha: 0.8),
+          ),
+        Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  stageNumber.toString().padLeft(2, '0'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: foregroundColor,
+                  ),
                 ),
-              ),
-          ],
+                if (cleared)
+                  const Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Icon(Icons.star_rounded, size: 14, color: Colors.white),
+                  ),
+                if (!unlocked)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Icon(
+                      Icons.lock_rounded,
+                      size: 13,
+                      color: foregroundColor.withValues(alpha: 0.8),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }

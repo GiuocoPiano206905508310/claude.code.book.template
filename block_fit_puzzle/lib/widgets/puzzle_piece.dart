@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/piece_data.dart';
 import '../utils/rotation_utils.dart';
+import 'brick_surface.dart';
 
 /// Renders a piece's shape from its coordinate cells — never from a
 /// per-rotation image. Rotation is applied to the cell coordinates
@@ -54,7 +55,11 @@ class PuzzlePiece extends StatelessWidget {
               top: cell.y * cellSize,
               width: cellSize,
               height: cellSize,
-              child: _PieceCell(color: piece.color, selected: selected),
+              child: _PieceCell(
+                color: piece.color,
+                selected: selected,
+                cellSize: cellSize,
+              ),
             ),
         ],
       ),
@@ -65,36 +70,22 @@ class PuzzlePiece extends StatelessWidget {
 class _PieceCell extends StatelessWidget {
   final Color color;
   final bool selected;
+  final double cellSize;
 
-  const _PieceCell({required this.color, required this.selected});
+  const _PieceCell({
+    required this.color,
+    required this.selected,
+    required this.cellSize,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(1.5),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color.lerp(color, Colors.white, 0.18)!,
-              color,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.45),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: selected ? 0.22 : 0.12),
-              blurRadius: selected ? 6 : 2,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+      child: BrickSurface(
+        color: color,
+        borderRadius: cellSize * 0.24,
+        borderWidth: (cellSize * (selected ? 0.11 : 0.09)).clamp(1.2, 4.0),
       ),
     );
   }

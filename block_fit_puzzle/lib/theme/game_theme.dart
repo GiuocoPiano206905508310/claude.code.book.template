@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 /// Visual theme applied to a range of 10 stages.
 ///
 /// Everything a screen needs to re-skin itself for a stage band lives here:
-/// background gradient, board/tray surfaces, accent (button) color, and the
-/// muted color palette used to paint puzzle pieces. Piece colors are kept
+/// background gradient, board/tray surfaces, accent (button/brick) color, and
+/// the muted color palette used to paint puzzle pieces. Piece colors are kept
 /// deliberately higher-contrast than the background so blocks never blend
 /// into the theme.
 class GameTheme {
@@ -40,22 +40,26 @@ class GameTheme {
 }
 
 /// The 5 stage-band themes, plus lookup helpers.
+///
+/// Band accent colors follow the requested progression: cream -> yellow ->
+/// orange -> brown -> purple, brightest/lightest early and richer/darker as
+/// stages advance.
 class GameThemes {
   GameThemes._();
 
-  static const forest = GameTheme(
-    id: 'forest',
-    displayName: 'Forest',
-    backgroundGradient: [Color(0xFFEAF7EE), Color(0xFFCFEEDA)],
+  static const cream = GameTheme(
+    id: 'cream',
+    displayName: 'Cream',
+    backgroundGradient: [Color(0xFFFBF4E8), Color(0xFFF3E5CB)],
     boardBackground: Color(0xFFFFFFFF),
-    boardBorder: Color(0xFFBEE3C8),
-    cellEmpty: Color(0xFFE4F5E9),
-    trayBackground: Color(0xFFF3FBF5),
-    accentColor: Color(0xFF2E9E6B),
-    onAccentColor: Colors.white,
-    primaryText: Color(0xFF1E4632),
-    secondaryText: Color(0xFF5C8C74),
-    decorationIcon: Icons.eco_rounded,
+    boardBorder: Color(0xFFE7D2AC),
+    cellEmpty: Color(0xFFF6ECDA),
+    trayBackground: Color(0xFFFAF3E5),
+    accentColor: Color(0xFFD9B98D),
+    onAccentColor: Color(0xFF5B4530),
+    primaryText: Color(0xFF4A3A28),
+    secondaryText: Color(0xFF9C8768),
+    decorationIcon: Icons.extension_rounded,
     pieceColors: [
       Color(0xFF4C9B7C),
       Color(0xFF5FA8D3),
@@ -66,19 +70,19 @@ class GameThemes {
     ],
   );
 
-  static const ocean = GameTheme(
-    id: 'ocean',
-    displayName: 'Ocean',
-    backgroundGradient: [Color(0xFFE4F1FB), Color(0xFFBFDDF3)],
+  static const yellow = GameTheme(
+    id: 'yellow',
+    displayName: 'Yellow',
+    backgroundGradient: [Color(0xFFFFF8E1), Color(0xFFFFEBAF)],
     boardBackground: Color(0xFFFFFFFF),
-    boardBorder: Color(0xFFAFCFEA),
-    cellEmpty: Color(0xFFE4EFFA),
-    trayBackground: Color(0xFFF0F7FC),
-    accentColor: Color(0xFF276FBF),
-    onAccentColor: Colors.white,
-    primaryText: Color(0xFF163A5C),
-    secondaryText: Color(0xFF5A82A6),
-    decorationIcon: Icons.water_rounded,
+    boardBorder: Color(0xFFF0D585),
+    cellEmpty: Color(0xFFFBF0D2),
+    trayBackground: Color(0xFFFFF6DE),
+    accentColor: Color(0xFFE3AC3D),
+    onAccentColor: Color(0xFF5C4610),
+    primaryText: Color(0xFF5C4610),
+    secondaryText: Color(0xFFA68A4A),
+    decorationIcon: Icons.extension_rounded,
     pieceColors: [
       Color(0xFF3D8FC4),
       Color(0xFF2E6E8E),
@@ -89,19 +93,19 @@ class GameThemes {
     ],
   );
 
-  static const sunset = GameTheme(
-    id: 'sunset',
-    displayName: 'Sunset',
-    backgroundGradient: [Color(0xFFFFF0E1), Color(0xFFFFD6C2)],
+  static const orange = GameTheme(
+    id: 'orange',
+    displayName: 'Orange',
+    backgroundGradient: [Color(0xFFFFEEDF), Color(0xFFFFD3AC)],
     boardBackground: Color(0xFFFFFBF7),
-    boardBorder: Color(0xFFF3BE9C),
-    cellEmpty: Color(0xFFFBE7DA),
-    trayBackground: Color(0xFFFFF5EC),
-    accentColor: Color(0xFFE0703C),
+    boardBorder: Color(0xFFF0B784),
+    cellEmpty: Color(0xFFFCE3CC),
+    trayBackground: Color(0xFFFFF3E7),
+    accentColor: Color(0xFFE0803C),
     onAccentColor: Colors.white,
-    primaryText: Color(0xFF5C2B1E),
-    secondaryText: Color(0xFF9C6B54),
-    decorationIcon: Icons.wb_twilight_rounded,
+    primaryText: Color(0xFF5C3319),
+    secondaryText: Color(0xFFAD7A54),
+    decorationIcon: Icons.extension_rounded,
     pieceColors: [
       Color(0xFFE0703C),
       Color(0xFFD94F6B),
@@ -112,45 +116,45 @@ class GameThemes {
     ],
   );
 
-  static const cosmic = GameTheme(
-    id: 'cosmic',
-    displayName: 'Cosmic',
-    backgroundGradient: [Color(0xFF1B1E3D), Color(0xFF2C2559)],
-    boardBackground: Color(0xFF262A4E),
-    boardBorder: Color(0xFF454A82),
-    cellEmpty: Color(0xFF303462),
-    trayBackground: Color(0xFF20233F),
-    accentColor: Color(0xFF7C6FE0),
+  static const brown = GameTheme(
+    id: 'brown',
+    displayName: 'Brown',
+    backgroundGradient: [Color(0xFF2E2018), Color(0xFF4A3323)],
+    boardBackground: Color(0xFF3A281C),
+    boardBorder: Color(0xFF6B4A2F),
+    cellEmpty: Color(0xFF4A3323),
+    trayBackground: Color(0xFF2A1D14),
+    accentColor: Color(0xFF9C6B42),
     onAccentColor: Colors.white,
-    primaryText: Color(0xFFEDECFB),
-    secondaryText: Color(0xFFA6A6D6),
-    decorationIcon: Icons.auto_awesome_rounded,
+    primaryText: Color(0xFFF0E3D2),
+    secondaryText: Color(0xFFC9AE8C),
+    decorationIcon: Icons.extension_rounded,
     pieceColors: [
-      Color(0xFF7C6FE0),
-      Color(0xFF4FA8D8),
       Color(0xFFE0B24A),
-      Color(0xFFE0708C),
-      Color(0xFF57C2A6),
-      Color(0xFFD98CE0),
+      Color(0xFF5FA8D3),
+      Color(0xFF8C6FB0),
+      Color(0xFFD97A97),
+      Color(0xFF6FB6A6),
+      Color(0xFFE08A5B),
     ],
   );
 
-  static const royal = GameTheme(
-    id: 'royal',
-    displayName: 'Royal',
-    backgroundGradient: [Color(0xFF15111C), Color(0xFF2A1F3D)],
-    boardBackground: Color(0xFF1F1A2C),
-    boardBorder: Color(0xFFC9A24B),
-    cellEmpty: Color(0xFF2A2438),
-    trayBackground: Color(0xFF1A1624),
-    accentColor: Color(0xFFC9A24B),
-    onAccentColor: Color(0xFF1A1624),
-    primaryText: Color(0xFFF2E9D8),
-    secondaryText: Color(0xFFB9A8C9),
-    decorationIcon: Icons.diamond_rounded,
+  static const purple = GameTheme(
+    id: 'purple',
+    displayName: 'Purple',
+    backgroundGradient: [Color(0xFF17111F), Color(0xFF2B1E40)],
+    boardBackground: Color(0xFF241A33),
+    boardBorder: Color(0xFF6A4FA0),
+    cellEmpty: Color(0xFF2E2242),
+    trayBackground: Color(0xFF1C1428),
+    accentColor: Color(0xFF8B5FC4),
+    onAccentColor: Colors.white,
+    primaryText: Color(0xFFF1E9FB),
+    secondaryText: Color(0xFFB9A8D6),
+    decorationIcon: Icons.extension_rounded,
     pieceColors: [
-      Color(0xFFC9A24B),
-      Color(0xFF8C6FB0),
+      Color(0xFF8B5FC4),
+      Color(0xFFE0B24A),
       Color(0xFF5FA8D3),
       Color(0xFFD97A97),
       Color(0xFF4C9B7C),
@@ -158,7 +162,7 @@ class GameThemes {
     ],
   );
 
-  static const List<GameTheme> all = [forest, ocean, sunset, cosmic, royal];
+  static const List<GameTheme> all = [cream, yellow, orange, brown, purple];
 
   /// Stage numbers are 1-based; every 10 stages form one theme band.
   static GameTheme forStage(int stageNumber) {

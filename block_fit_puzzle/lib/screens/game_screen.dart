@@ -298,12 +298,8 @@ class _TopBar extends StatelessWidget {
             onSelected: onPickTheme,
             itemBuilder: (context) => [
               const PopupMenuItem(value: null, child: Text('ステージ通り')),
-              PopupMenuItem(
-                  value: GameThemes.forest, child: Text(GameThemes.forest.displayName)),
-              PopupMenuItem(
-                  value: GameThemes.ocean, child: Text(GameThemes.ocean.displayName)),
-              PopupMenuItem(
-                  value: GameThemes.royal, child: Text(GameThemes.royal.displayName)),
+              for (final t in GameThemes.all)
+                PopupMenuItem(value: t, child: Text(t.displayName)),
             ],
           ),
         ],

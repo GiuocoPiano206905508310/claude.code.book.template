@@ -14,7 +14,7 @@ class Stages {
   /// A 6-wide x 6-tall irregular board (28 cells) with 5 pieces, used only
   /// to preview board/piece rendering. Not a solved, validated stage yet.
   static StageData previewStage() {
-    final palette = GameThemes.forest.pieceColors;
+    final palette = GameThemes.cream.pieceColors;
 
     List<GridPoint> row(int y, int fromX, int toX) =>
         [for (var x = fromX; x <= toX; x++) GridPoint(x, y)];
