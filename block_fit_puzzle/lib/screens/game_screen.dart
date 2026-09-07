@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../controllers/game_controller.dart';
+import '../controllers/puzzle_controller.dart';
 import '../data/stages.dart';
+import '../models/grid_point.dart';
+import '../models/piece_data.dart';
 import '../models/stage_data.dart';
 import '../theme/game_theme.dart';
+import '../utils/rotation_utils.dart';
 import '../widgets/game_button.dart';
 import '../widgets/piece_tray.dart';
 import '../widgets/puzzle_board.dart';
+import '../widgets/puzzle_piece.dart';
 import '../widgets/settings_sheet.dart';
 
-/// Phase 1 preview of the in-game screen: layout, board, tray, and button
-/// placement only. Tapping a tray piece selects/enlarges it and the rotate
-/// button spins the *selected* piece's preview — there is no drag, snap,
-/// collision, or clear detection yet (that's Phase 2/3).
+/// Stage 1's live play screen: drag pieces from the tray (or pick a placed
+/// one back up) and drop them onto the board. Placement snaps to the
+/// nearest grid cell and is only accepted when every cell of the piece
+/// lands inside the board's shape and doesn't overlap another piece —
+/// otherwise the piece simply stays where it was. Clear detection, hints,
+/// and save/restore are Phase 3.
 class GameScreen extends StatefulWidget {
   final AppState appState;
   final int stageNumber;
@@ -29,20 +36,92 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late final StageData _stage = Stages.previewStage();
-  String? _selectedPieceId;
-  final Map<String, int> _rotations = {};
+  late final PuzzleController _controller = PuzzleController(_stage);
 
-  void _onPieceTap(String pieceId) {
+  final GlobalKey _stackKey = GlobalKey();
+  final GlobalKey _boardGridKey = GlobalKey();
+
+  String? _draggingPieceId;
+  int _draggingRotation = 0;
+  double _draggingCellSize = 32;
+  Offset? _dragGhostLocalPosition;
+  GridPoint? _hoverOrigin;
+  bool _hoverValid = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  PieceData _pieceById(String pieceId) =>
+      _stage.pieces.firstWhere((p) => p.id == pieceId);
+
+  void _handleDragStart(String pieceId, DragStartDetails details) {
+    final boardBox = _boardGridKey.currentContext?.findRenderObject() as RenderBox?;
+    final cellSize = (boardBox != null && boardBox.hasSize)
+        ? boardBox.size.width / _stage.width
+        : _draggingCellSize;
+
+    _controller.setSelected(pieceId);
+    _draggingPieceId = pieceId;
+    _draggingRotation = _controller.rotationOf(pieceId);
+    _draggingCellSize = cellSize;
+    _updateGhost(pieceId, details.globalPosition);
+  }
+
+  void _handleDragUpdate(String pieceId, DragUpdateDetails details) {
+    if (_draggingPieceId != pieceId) return;
+    _updateGhost(pieceId, details.globalPosition);
+  }
+
+  void _updateGhost(String pieceId, Offset globalPointer) {
+    final piece = _pieceById(pieceId);
+    final rotatedCells = RotationUtils.rotateCells(piece.cells, _draggingRotation);
+    final w = RotationUtils.boundsWidth(rotatedCells) * _draggingCellSize;
+    final h = RotationUtils.boundsHeight(rotatedCells) * _draggingCellSize;
+    // The ghost floats above and centered on the finger so the piece being
+    // placed is never hidden under the hand holding it.
+    final liftOffset = Offset(w / 2, h / 2 + _draggingCellSize * 1.4);
+    final ghostGlobalTopLeft = globalPointer - liftOffset;
+
+    Offset? stackLocal;
+    final stackBox = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    if (stackBox != null && stackBox.hasSize) {
+      stackLocal = stackBox.globalToLocal(ghostGlobalTopLeft);
+    }
+
+    GridPoint? hoverOrigin;
+    var hoverValid = false;
+    final boardBox = _boardGridKey.currentContext?.findRenderObject() as RenderBox?;
+    if (boardBox != null && boardBox.hasSize) {
+      final boardLocal = boardBox.globalToLocal(ghostGlobalTopLeft);
+      final origin = GridPoint(
+        (boardLocal.dx / _draggingCellSize).round(),
+        (boardLocal.dy / _draggingCellSize).round(),
+      );
+      hoverOrigin = origin;
+      hoverValid = _controller.canPlace(pieceId, origin, _draggingRotation);
+    }
+
     setState(() {
-      _selectedPieceId = _selectedPieceId == pieceId ? null : pieceId;
+      _dragGhostLocalPosition = stackLocal;
+      _hoverOrigin = hoverOrigin;
+      _hoverValid = hoverValid;
     });
   }
 
-  void _onRotateTap() {
-    if (_selectedPieceId == null) return;
+  void _handleDragEnd(String pieceId, DragEndDetails details) {
+    if (_draggingPieceId != pieceId) return;
+    final origin = _hoverOrigin;
+    if (origin != null && _hoverValid) {
+      _controller.tryPlace(pieceId, origin, _draggingRotation);
+    }
     setState(() {
-      final current = _rotations[_selectedPieceId!] ?? 0;
-      _rotations[_selectedPieceId!] = (current + 1) % 4;
+      _draggingPieceId = null;
+      _dragGhostLocalPosition = null;
+      _hoverOrigin = null;
+      _hoverValid = false;
     });
   }
 
@@ -115,13 +194,6 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  void _restartStage() {
-    setState(() {
-      _selectedPieceId = null;
-      _rotations.clear();
-    });
-  }
-
   void _showPauseMenu(GameTheme theme) {
     showDialog(
       context: context,
@@ -161,7 +233,7 @@ class _GameScreenState extends State<GameScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                _restartStage();
+                _controller.resetAll();
               },
               child: Text(
                 'このステージをやり直す',
@@ -188,7 +260,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: widget.appState,
+      animation: Listenable.merge([widget.appState, _controller]),
       builder: (context, _) {
         final theme = widget.appState.effectiveTheme(widget.stageNumber);
 
@@ -202,9 +274,10 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
             child: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Column(
+              child: Stack(
+                key: _stackKey,
+                children: [
+                  Column(
                     children: [
                       Padding(
                         padding: const EdgeInsets.symmetric(
@@ -262,7 +335,20 @@ class _GameScreenState extends State<GameScreen> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 8),
-                          child: PuzzleBoard(stage: _stage, theme: theme),
+                          child: PuzzleBoard(
+                            stage: _stage,
+                            theme: theme,
+                            controller: _controller,
+                            gridKey: _boardGridKey,
+                            draggingPieceId: _draggingPieceId,
+                            hoverOrigin: _hoverOrigin,
+                            hoverRotation: _draggingRotation,
+                            hoverValid: _hoverValid,
+                            onPieceTap: _controller.toggleSelect,
+                            onPieceDragStart: _handleDragStart,
+                            onPieceDragUpdate: _handleDragUpdate,
+                            onPieceDragEnd: _handleDragEnd,
+                          ),
                         ),
                       ),
                       Padding(
@@ -280,11 +366,18 @@ class _GameScreenState extends State<GameScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: PieceTray(
-                          pieces: _stage.pieces,
-                          selectedPieceId: _selectedPieceId,
-                          rotations: _rotations,
+                          pieces: _controller.trayPieces,
+                          selectedPieceId: _controller.selectedPieceId,
+                          draggingPieceId: _draggingPieceId,
+                          rotations: {
+                            for (final p in _controller.trayPieces)
+                              p.id: _controller.rotationOf(p.id),
+                          },
                           theme: theme,
-                          onPieceTap: _onPieceTap,
+                          onPieceTap: _controller.toggleSelect,
+                          onPieceDragStart: _handleDragStart,
+                          onPieceDragUpdate: _handleDragUpdate,
+                          onPieceDragEnd: _handleDragEnd,
                         ),
                       ),
                       Padding(
@@ -296,12 +389,30 @@ class _GameScreenState extends State<GameScreen> {
                           iconColor: theme.onAccentColor,
                           size: 56,
                           semanticLabel: '90度回転',
-                          onTap: _selectedPieceId == null ? null : _onRotateTap,
+                          onTap: _controller.selectedPieceId == null
+                              ? null
+                              : _controller.rotateSelected,
                         ),
                       ),
                     ],
-                  );
-                },
+                  ),
+                  if (_draggingPieceId != null && _dragGhostLocalPosition != null)
+                    Positioned(
+                      left: _dragGhostLocalPosition!.dx,
+                      top: _dragGhostLocalPosition!.dy,
+                      child: IgnorePointer(
+                        child: Opacity(
+                          opacity: 0.9,
+                          child: PuzzlePiece(
+                            piece: _pieceById(_draggingPieceId!),
+                            rotationSteps: _draggingRotation,
+                            cellSize: _draggingCellSize,
+                            selected: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
