@@ -174,6 +174,21 @@ body.bf-dark {
 .bf-brick.is-ghost { opacity: .9; pointer-events: none; transition: none; }
 .bf-brick.is-preview-ok { background: rgba(76,175,80,.35); border-color: rgba(56,142,60,.6); background-image: none; box-shadow: none; }
 .bf-brick.is-preview-bad { background: rgba(244,67,54,.35); border-color: rgba(198,40,40,.6); background-image: none; box-shadow: none; }
+
+/* ヒントで示す「ここに置ける」マスの点滅ハイライト */
+.bf-hint-cell {
+  position: absolute;
+  border-radius: 12%;
+  background: rgba(255, 224, 64, .55);
+  box-shadow: 0 0 0 2px rgba(255, 224, 64, .9), 0 0 14px 4px rgba(255, 224, 64, .55);
+  pointer-events: none;
+  animation: bf-hint-pulse .9s ease-in-out infinite alternate;
+}
+@keyframes bf-hint-pulse {
+  from { opacity: .45; }
+  to { opacity: .9; }
+}
+
 /* ドラッグ中は元の場所（置き場 or 盤面）の見た目を隠す。指の下に浮かぶ
    ゴースト側だけを見せるため、視覚的な二重表示を避ける。 */
 .is-dragging-source { visibility: hidden; }
@@ -227,16 +242,22 @@ body.bf-dark {
    BFP のモーダルだけ現在のステージの帯色に差し替える） */
 #modal-bf-pause .btn-primary,
 #modal-bf-help .btn-primary,
-#modal-bf-hint .btn-primary {
+#modal-bf-clear .btn-primary {
   background: var(--bf-accent, #d9b98d);
   color: var(--bf-on-accent, #5b4530);
   box-shadow: 0 4px 0 color-mix(in srgb, var(--bf-accent, #d9b98d) 70%, #000);
 }
 #modal-bf-pause .modal-title,
 #modal-bf-help .modal-title,
-#modal-bf-hint .modal-title,
+#modal-bf-clear .modal-title,
 #modal-bf-settings .modal-title {
   color: color-mix(in srgb, var(--bf-accent, #d9b98d) 70%, #000);
+}
+#modal-bf-clear .saved-note {
+  color: color-mix(in srgb, var(--bf-accent, #d9b98d) 70%, #000);
+}
+#modal-bf-clear .saved-note .dot {
+  background: var(--bf-accent, #d9b98d);
 }
 
 /* ---------- ブロックフィットパズル: 遊び方/設定モーダルの中身 ---------- */

@@ -13,7 +13,7 @@
   var TOTAL_STAGES = 50;
   function bandOf(stageId) { return Math.min(5, Math.floor((stageId - 1) / 10) + 1); }
 
-  var PIECE_COLORS = ['#4c9b7c', '#5fa8d3', '#e0b24a', '#e08a5b', '#8c6fb0', '#d97a97'];
+  var PIECE_COLORS = ['#4c9b7c', '#5fa8d3', '#e0b24a', '#e08a5b', '#8c6fb0', '#d97a97', '#7fa650'];
 
   /* ---------- 回転（座標変換。回転ごとの別画像は使わない） ---------- */
   function rotateCells(cells, times) {
@@ -39,7 +39,10 @@
     return cls;
   }
 
-  /* ---------- ダミーステージ（Stage 1 のプレビュー用データ） ---------- */
+  /* ---------- ダミーステージ（Stage 1 のプレビュー用データ） ----------
+     盤面28マスに対してピースの合計もちょうど28マス（7ピース×4マス）になる
+     よう手作業で設計してあり、すべて置けば必ずクリアできる（隙間なく埋まる）。
+     solution は自動生成ヒント表示に使う「正解の置き方」。 */
   function previewStage() {
     function row(y, fromX, toX) {
       var out = [];
@@ -50,17 +53,53 @@
       row(0, 0, 3), row(1, 0, 4), row(2, 1, 5), row(3, 1, 5), row(4, 0, 4), row(5, 0, 3)
     );
     var pieces = [
-      { id: 'A', color: PIECE_COLORS[0], cells: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }, { x: 1, y: 2 }] },
-      { id: 'B', color: PIECE_COLORS[1], cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }] },
-      { id: 'C', color: PIECE_COLORS[2], cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 1 }] },
-      { id: 'D', color: PIECE_COLORS[3], cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }] },
-      { id: 'E', color: PIECE_COLORS[4], cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 1, y: 1 }] }
+      { id: 'A', color: PIECE_COLORS[0], cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }] },
+      { id: 'B', color: PIECE_COLORS[1], cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }] },
+      { id: 'C', color: PIECE_COLORS[2], cells: [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 1, y: 2 }] },
+      { id: 'D', color: PIECE_COLORS[3], cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 0, y: 1 }] },
+      { id: 'E', color: PIECE_COLORS[4], cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 1 }] },
+      { id: 'F', color: PIECE_COLORS[5], cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }] },
+      { id: 'G', color: PIECE_COLORS[6], cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }] }
     ];
-    return { width: 6, height: 6, boardCells: boardCells, pieces: pieces };
+    var solution = {
+      A: { origin: { x: 0, y: 0 }, rotation: 0 },
+      B: { origin: { x: 2, y: 0 }, rotation: 0 },
+      C: { origin: { x: 4, y: 1 }, rotation: 0 },
+      D: { origin: { x: 1, y: 2 }, rotation: 0 },
+      E: { origin: { x: 2, y: 3 }, rotation: 0 },
+      F: { origin: { x: 0, y: 4 }, rotation: 0 },
+      G: { origin: { x: 2, y: 4 }, rotation: 0 }
+    };
+    return { width: 6, height: 6, boardCells: boardCells, pieces: pieces, solution: solution };
   }
 
-  /* ---------- 進行状況（仮。セーブは次のフェーズ） ---------- */
-  var cleared = { 1: true, 2: true, 3: true };
+  /* ---------- 進行状況（クリア済みステージ。ログイン中はユーザーIDごとに
+     保存先を分ける。ラインパズル本編の storeKey() と同じ考え方）---------- */
+  var PROGRESS_KEY = 'blockFitPuzzle.progress.v1';
+  function currentUser() {
+    var cloud = window.LinePuzzleCloud || null;
+    return cloud ? cloud.user() : null;
+  }
+  function progressStoreKey() {
+    var u = currentUser();
+    return u ? PROGRESS_KEY + ':' + u.id : PROGRESS_KEY;
+  }
+  function loadProgress() {
+    try {
+      var raw = window.localStorage.getItem(progressStoreKey());
+      var data = raw ? JSON.parse(raw) : null;
+      return (data && typeof data === 'object') ? data : {};
+    } catch (e) {
+      return {};
+    }
+  }
+  function saveProgress() {
+    try {
+      window.localStorage.setItem(progressStoreKey(), JSON.stringify(cleared));
+    } catch (e) { /* 保存できなくても遊べる */ }
+  }
+
+  var cleared = loadProgress();
   var debugMode = false;
   function highestUnlocked() {
     if (debugMode) return TOTAL_STAGES;
@@ -109,6 +148,7 @@
   }
 
   function openSelect() {
+    cleared = loadProgress();
     var done = Object.keys(cleared).length;
     $('bf-select-progress').textContent = 'クリア ' + done + ' / ' + TOTAL_STAGES;
     $('bf-debug-toggle').checked = debugMode;
@@ -179,14 +219,58 @@
 
   function canPlace(pieceId, origin, rotation) { return fits(pieceId, origin, rotation); }
 
+  /* ---------- クリア判定 ----------
+     ピースはすべて盤面のマス数とぴったり同じ合計マス数になるよう作って
+     あるので、全ピースを重なりなく盤内に置ければ、それだけで隙間なく
+     埋まったことが保証される。念のため被覆マス数も数えて二重に確認する。 */
+  function checkClear() {
+    if (!game) return false;
+    var stage = game.stage;
+    if (Object.keys(game.placements).length !== stage.pieces.length) return false;
+    var covered = {};
+    var total = 0;
+    Object.keys(game.placements).forEach(function (pieceId) {
+      var p = game.placements[pieceId];
+      cellsFor(pieceId, p.origin, p.rotation).forEach(function (c) {
+        covered[c.x + ',' + c.y] = true;
+        total++;
+      });
+    });
+    var boardSize = Object.keys(game.boardCellSet).length;
+    return total === boardSize && Object.keys(covered).length === boardSize;
+  }
+
+  function onStageCleared() {
+    clearHint();
+    if (!cleared[game.stageId]) {
+      cleared[game.stageId] = true;
+      saveProgress();
+    }
+    $('bf-clear-title').textContent = 'Stage ' + game.stageId;
+    $('modal-bf-clear').hidden = false;
+  }
+
+  function resetCurrentStage() {
+    if (!game) return;
+    game.selectedId = null;
+    game.rotations = {};
+    game.placements = {};
+    clearHint();
+    renderBoard();
+    renderTray();
+    updateRotateButton();
+  }
+
   function openGame(stageId) {
+    clearHint();
     var stage = previewStage();
     var boardCellSet = {};
     stage.boardCells.forEach(function (c) { boardCellSet[c.x + ',' + c.y] = true; });
     game = {
       stageId: stageId, stage: stage, boardCellSet: boardCellSet,
       placements: {}, selectedId: null, rotations: {}, cellSize: 48,
-      draggingId: null, draggingRotation: 0, hoverOrigin: null, hoverValid: false
+      draggingId: null, draggingRotation: 0, hoverOrigin: null, hoverValid: false,
+      hintPieceId: null
     };
     setTheme(stageId);
     $('bf-stage-label').textContent = 'Stage ' + stageId;
@@ -245,6 +329,18 @@
         boardEl.appendChild(b);
       });
     });
+    if (game.hintPieceId && stage.solution && stage.solution[game.hintPieceId]) {
+      var sol = stage.solution[game.hintPieceId];
+      var hintPiece = pieceById(game.hintPieceId);
+      rotateCells(hintPiece.cells, sol.rotation).forEach(function (c) {
+        var hc = el('div', 'bf-hint-cell');
+        hc.style.left = ((sol.origin.x + c.x) * size + 1.5) + 'px';
+        hc.style.top = ((sol.origin.y + c.y) * size + 1.5) + 'px';
+        hc.style.width = (size - 3) + 'px';
+        hc.style.height = (size - 3) + 'px';
+        boardEl.appendChild(hc);
+      });
+    }
     var overlay = el('div');
     overlay.id = 'bf-hover-preview';
     overlay.style.position = 'absolute';
@@ -325,6 +421,7 @@
       if (fits(id, placement.origin, newRotation)) {
         placement.rotation = newRotation;
         renderBoard();
+        if (checkClear()) onStageCleared();
       }
     } else {
       game.rotations[id] = ((game.rotations[id] || 0) + 1) % 4;
@@ -443,9 +540,12 @@
 
   function endDrag(pieceId) {
     var origin = game.hoverOrigin, valid = game.hoverValid, rotation = game.draggingRotation;
+    var placed = false;
     if (origin && valid) {
       game.placements[pieceId] = { origin: origin, rotation: rotation };
       delete game.rotations[pieceId];
+      placed = true;
+      if (game.hintPieceId === pieceId) clearHint();
     }
     game.draggingId = null;
     game.hoverOrigin = null;
@@ -454,6 +554,7 @@
     renderBoard();
     renderTray();
     updateRotateButton();
+    if (placed && checkClear()) onStageCleared();
   }
 
   $('bf-home').addEventListener('click', function () { window.openGameSelect(); });
@@ -461,23 +562,67 @@
   $('bf-help').addEventListener('click', function () { $('modal-bf-help').hidden = false; });
   $('bf-help-close').addEventListener('click', function () { $('modal-bf-help').hidden = true; });
 
-  $('bf-hint').addEventListener('click', function () { $('modal-bf-hint').hidden = false; });
-  $('bf-hint-close').addEventListener('click', function () { $('modal-bf-hint').hidden = true; });
+  /* ---------- ヒント ----------
+     置いていないピースを1つずつ順番に選び、正解の位置を盤面上で
+     一定時間ハイライトする。 */
+  var bfToastTimer = null;
+  function bfToast(msg) {
+    var t = $('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(bfToastTimer);
+    bfToastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+
+  var hintTimer = null;
+  function clearHint() {
+    if (game) game.hintPieceId = null;
+    clearTimeout(hintTimer);
+    hintTimer = null;
+  }
+  function showHint() {
+    if (!game) return;
+    var unplacedIds = game.stage.pieces
+      .map(function (p) { return p.id; })
+      .filter(function (id) { return !game.placements[id]; });
+    if (!unplacedIds.length) { bfToast('すべてのピースを置き終わっています'); return; }
+    var idx = unplacedIds.indexOf(game.hintPieceId);
+    game.hintPieceId = unplacedIds[(idx + 1) % unplacedIds.length];
+    clearTimeout(hintTimer);
+    renderBoard();
+    bfToast('黄色くハイライトした場所に置いてみましょう');
+    hintTimer = setTimeout(function () {
+      if (game) game.hintPieceId = null;
+      renderBoard();
+    }, 3000);
+  }
+  $('bf-hint').addEventListener('click', showHint);
 
   $('bf-pause').addEventListener('click', function () { $('modal-bf-pause').hidden = false; });
   $('bf-pause-resume').addEventListener('click', function () { $('modal-bf-pause').hidden = true; });
   $('bf-pause-restart').addEventListener('click', function () {
     $('modal-bf-pause').hidden = true;
-    if (!game) return;
-    game.selectedId = null;
-    game.rotations = {};
-    game.placements = {};
-    renderBoard();
-    renderTray();
-    updateRotateButton();
+    resetCurrentStage();
   });
   $('bf-pause-select').addEventListener('click', function () {
     $('modal-bf-pause').hidden = true;
+    openSelect();
+  });
+
+  /* ---------- クリア演出モーダル ---------- */
+  $('bf-clear-next').addEventListener('click', function () {
+    $('modal-bf-clear').hidden = true;
+    if (!game) return;
+    var next = game.stageId + 1;
+    if (next <= TOTAL_STAGES) openGame(next); else openSelect();
+  });
+  $('bf-clear-retry').addEventListener('click', function () {
+    $('modal-bf-clear').hidden = true;
+    resetCurrentStage();
+  });
+  $('bf-clear-select').addEventListener('click', function () {
+    $('modal-bf-clear').hidden = true;
     openSelect();
   });
 

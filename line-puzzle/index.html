@@ -325,15 +325,6 @@
   </div>
 </div>
 
-<!-- ============ ブロックフィットパズル ヒント ============ -->
-<div id="modal-bf-hint" class="modal" hidden>
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bf-hint-title">
-    <h2 id="bf-hint-title" class="modal-title">ヒント</h2>
-    <p class="modal-text">このブロックはここに置けます。<br>（ヒント表示は今後のアップデートで実装予定です）</p>
-    <button class="btn btn-primary btn-block" id="bf-hint-close" type="button">OK</button>
-  </div>
-</div>
-
 <!-- ============ ブロックフィットパズル 設定 ============ -->
 <div id="modal-bf-settings" class="modal" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bf-settings-title">
@@ -344,6 +335,18 @@
       <button class="bf-bg-btn" id="bf-bg-dark" type="button">🌙 ダーク</button>
     </div>
     <button class="btn btn-ghost btn-block" id="bf-settings-close" type="button">とじる</button>
+  </div>
+</div>
+
+<!-- ============ ブロックフィットパズル クリア演出 ============ -->
+<div id="modal-bf-clear" class="modal" hidden>
+  <div class="modal-card clear-card" role="dialog" aria-modal="true" aria-labelledby="bf-clear-title">
+    <p class="clear-eyebrow">STAGE CLEAR</p>
+    <h2 id="bf-clear-title" class="modal-title">Stage 1</h2>
+    <p class="saved-note"><span class="dot"></span>自動保存しました</p>
+    <button class="btn btn-primary btn-block" id="bf-clear-next" type="button">次のステージへ</button>
+    <button class="btn btn-ghost btn-block" id="bf-clear-retry" type="button">再チャレンジ</button>
+    <button class="btn btn-ghost btn-block" id="bf-clear-select" type="button">ステージ選択へ</button>
   </div>
 </div>
 
