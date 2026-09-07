@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../controllers/game_controller.dart';
 import '../theme/game_theme.dart';
 import '../widgets/brick_surface.dart';
+import '../widgets/settings_sheet.dart';
 import 'game_screen.dart';
 
 /// Stage 1-50 grid. Scrollable, grouped visually into the 5 theme bands,
@@ -21,7 +22,7 @@ class StageSelectScreen extends StatelessWidget {
       animation: appState,
       builder: (context, _) {
         final overallTheme =
-            appState.themeForStage(appState.highestUnlockedStage);
+            appState.effectiveTheme(appState.highestUnlockedStage);
 
         return Scaffold(
           body: Container(
@@ -54,6 +55,7 @@ class StageSelectScreen extends StatelessWidget {
                           unlocked: appState.isStageUnlocked(stageNumber),
                           cleared: appState.isStageCleared(stageNumber),
                           theme: GameThemes.forStage(stageNumber),
+                          isDarkMode: appState.isDarkMode,
                           onTap: appState.isStageUnlocked(stageNumber)
                               ? () {
                                   Navigator.of(context).push(
@@ -125,6 +127,10 @@ class _Header extends StatelessWidget {
               ),
             ],
           ),
+          IconButton(
+            onPressed: () => showSettingsSheet(context, appState, theme),
+            icon: Icon(Icons.settings_rounded, color: theme.primaryText),
+          ),
         ],
       ),
     );
@@ -136,6 +142,7 @@ class _StageTile extends StatelessWidget {
   final bool unlocked;
   final bool cleared;
   final GameTheme theme;
+  final bool isDarkMode;
   final VoidCallback? onTap;
 
   const _StageTile({
@@ -143,12 +150,18 @@ class _StageTile extends StatelessWidget {
     required this.unlocked,
     required this.cleared,
     required this.theme,
+    required this.isDarkMode,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor = unlocked ? Colors.black : const Color(0xFF7A7A7A);
+    // The background setting flips number/lock color for legibility: white
+    // digits read poorly on a white background and black ones disappear on
+    // a dark one.
+    final foregroundColor = unlocked
+        ? (isDarkMode ? Colors.white : Colors.black)
+        : (isDarkMode ? Colors.white54 : const Color(0xFF7A7A7A));
 
     return Stack(
       fit: StackFit.expand,

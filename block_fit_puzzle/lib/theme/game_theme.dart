@@ -37,6 +37,35 @@ class GameTheme {
     required this.decorationIcon,
     required this.pieceColors,
   });
+
+  /// Used by the dark/white background setting to swap out the neutral
+  /// "chrome" colors (page background, board/tray surfaces, text) while
+  /// keeping the band's own accent and piece colors untouched.
+  GameTheme copyWith({
+    List<Color>? backgroundGradient,
+    Color? boardBackground,
+    Color? boardBorder,
+    Color? cellEmpty,
+    Color? trayBackground,
+    Color? primaryText,
+    Color? secondaryText,
+  }) {
+    return GameTheme(
+      id: id,
+      displayName: displayName,
+      backgroundGradient: backgroundGradient ?? this.backgroundGradient,
+      boardBackground: boardBackground ?? this.boardBackground,
+      boardBorder: boardBorder ?? this.boardBorder,
+      cellEmpty: cellEmpty ?? this.cellEmpty,
+      trayBackground: trayBackground ?? this.trayBackground,
+      accentColor: accentColor,
+      onAccentColor: onAccentColor,
+      primaryText: primaryText ?? this.primaryText,
+      secondaryText: secondaryText ?? this.secondaryText,
+      decorationIcon: decorationIcon,
+      pieceColors: pieceColors,
+    );
+  }
 }
 
 /// The 5 stage-band themes, plus lookup helpers.

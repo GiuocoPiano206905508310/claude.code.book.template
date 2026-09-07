@@ -7,6 +7,7 @@ import '../theme/game_theme.dart';
 import '../widgets/game_button.dart';
 import '../widgets/piece_tray.dart';
 import '../widgets/puzzle_board.dart';
+import '../widgets/settings_sheet.dart';
 
 /// Phase 1 preview of the in-game screen: layout, board, tray, and button
 /// placement only. Tapping a tray piece selects/enlarges it and the rotate
@@ -155,7 +156,7 @@ class _GameScreenState extends State<GameScreen> {
     return AnimatedBuilder(
       animation: widget.appState,
       builder: (context, _) {
-        final theme = widget.appState.themeForStage(widget.stageNumber);
+        final theme = widget.appState.effectiveTheme(widget.stageNumber);
 
         return Scaffold(
           body: Container(
@@ -174,6 +175,7 @@ class _GameScreenState extends State<GameScreen> {
                       _TopBar(
                         stageNumber: widget.stageNumber,
                         theme: theme,
+                        appState: widget.appState,
                         onPickTheme: _pickPreviewTheme,
                       ),
                       Padding(
@@ -263,11 +265,13 @@ class _GameScreenState extends State<GameScreen> {
 class _TopBar extends StatelessWidget {
   final int stageNumber;
   final GameTheme theme;
+  final AppState appState;
   final ValueChanged<GameTheme?> onPickTheme;
 
   const _TopBar({
     required this.stageNumber,
     required this.theme,
+    required this.appState,
     required this.onPickTheme,
   });
 
@@ -301,6 +305,10 @@ class _TopBar extends StatelessWidget {
               for (final t in GameThemes.all)
                 PopupMenuItem(value: t, child: Text(t.displayName)),
             ],
+          ),
+          IconButton(
+            onPressed: () => showSettingsSheet(context, appState, theme),
+            icon: Icon(Icons.settings_rounded, color: theme.primaryText),
           ),
         ],
       ),
