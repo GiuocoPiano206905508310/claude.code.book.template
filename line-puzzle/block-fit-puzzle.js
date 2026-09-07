@@ -157,6 +157,7 @@
   }
 
   $('bf-select-back').addEventListener('click', function () { window.openGameSelect(); });
+  $('bf-select-help').addEventListener('click', function () { $('modal-bf-help').hidden = false; });
   $('bf-debug-toggle').addEventListener('change', function (ev) {
     debugMode = ev.target.checked;
     fillGrid();

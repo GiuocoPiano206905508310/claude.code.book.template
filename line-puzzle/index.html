@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#6e747c">
 <title>ラインパズル</title>
 <link rel="stylesheet" href="style.css?v=56b61f3bc1">
-<link rel="stylesheet" href="block-fit-puzzle.css?v=1">
+<link rel="stylesheet" href="block-fit-puzzle.css?v=2">
 </head>
 <body>
 
@@ -29,8 +29,6 @@
       <path d="M10 20.5h4"/>
       <path d="M12 2.8a6.2 6.2 0 0 0-3.6 11.25c.5.36.8.93.8 1.55v.4h5.6v-.4c0-.62.3-1.19.8-1.55A6.2 6.2 0 0 0 12 2.8Z"/>
     </symbol>
-    <symbol id="ic-back" viewBox="0 0 24 24"><polyline points="14.5,5 7.5,12 14.5,19"/></symbol>
-    <symbol id="ic-play" viewBox="0 0 24 24"><path d="M8 5.2 18 12 8 18.8Z"/></symbol>
     <symbol id="ic-grid" viewBox="0 0 24 24">
       <rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/>
       <rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>
@@ -146,6 +144,9 @@
 <!-- ============ ステージ選択画面 ============ -->
 <section id="screen-select" class="screen">
   <header class="topbar">
+    <button class="icon-btn" id="select-gameselect" type="button" aria-label="ゲーム選択へ">
+      <svg class="ic"><use href="#ic-grid"/></svg>
+    </button>
     <div class="topbar-title">
       <span class="topbar-user" id="select-user">ラインパズル</span>
       <span id="select-progress" class="topbar-sub"></span>
@@ -155,9 +156,6 @@
     </button>
     <button class="icon-btn" id="select-help" type="button" aria-label="遊び方">
       <svg class="ic"><use href="#ic-help"/></svg>
-    </button>
-    <button class="icon-btn" id="select-continue" type="button" aria-label="つづきのステージへ">
-      <svg class="ic"><use href="#ic-play"/></svg>
     </button>
   </header>
   <div class="stage-scroll">
@@ -231,12 +229,18 @@
 <section id="screen-bf-select" class="screen">
   <header class="topbar">
     <button class="icon-btn" id="bf-select-back" type="button" aria-label="ゲーム選択へ">
-      <svg class="ic"><use href="#ic-back"/></svg>
+      <svg class="ic"><use href="#ic-grid"/></svg>
     </button>
     <div class="topbar-title">
       <span class="topbar-user">ブロックフィットパズル</span>
       <span id="bf-select-progress" class="topbar-sub"></span>
     </div>
+    <button class="icon-btn" id="bf-select-account" type="button" aria-label="アカウント">
+      <svg class="ic"><use href="#ic-user"/></svg>
+    </button>
+    <button class="icon-btn" id="bf-select-help" type="button" aria-label="遊び方">
+      <svg class="ic"><use href="#ic-help"/></svg>
+    </button>
     <label class="bf-debug-toggle">
       <input type="checkbox" id="bf-debug-toggle">
       <span>DEBUG</span>
@@ -429,8 +433,8 @@
 <script src="levels.js?v=2e1a4edec1"></script>
 <script src="ura-levels.js?v=34de64f1ca"></script>
 <script src="cloud.js?v=f016a1df5c"></script>
-<script src="block-fit-puzzle.js?v=1"></script>
+<script src="block-fit-puzzle.js?v=2"></script>
 <script src="game-select.js?v=1"></script>
-<script src="game.js?v=f694c17240"></script>
+<script src="game.js?v=daee4aeafb"></script>
 </body>
 </html>
