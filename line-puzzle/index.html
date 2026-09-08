@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#6e747c">
 <title>ラインパズル</title>
 <link rel="stylesheet" href="style.css?v=56b61f3bc1">
-<link rel="stylesheet" href="block-fit-puzzle.css?v=12">
+<link rel="stylesheet" href="block-fit-puzzle.css?v=13">
 </head>
 <body>
 
@@ -59,10 +59,16 @@
       <line x1="12" y1="6" x2="12" y2="14"/>
       <circle cx="12" cy="18.2" r="1.1" fill="currentColor" stroke="none"/>
     </symbol>
-    <!-- ブロックフィットパズル: 設定(歯車) -->
-    <symbol id="ic-settings" viewBox="0 0 24 24">
+    <!-- ブロックフィットパズル: 明るさ(背景の切り替え) -->
+    <symbol id="ic-brightness" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="3.1"/>
       <path d="M12 3.2v2.6M12 18.2v2.6M20.8 12h-2.6M5.8 12H3.2M17.9 6.1l-1.85 1.85M7.95 16.05 6.1 17.9M17.9 17.9l-1.85-1.85M7.95 7.95 6.1 6.1"/>
+    </symbol>
+    <!-- ブロックフィットパズル: 設定(歯車)。歯は6枚で、角度・半径から
+         算出した座標なのですべて等間隔・等幅。 -->
+    <symbol id="ic-gear" viewBox="0 0 24 24">
+      <path d="M 17.97 9.99 L 21.39 10.00 A 9.6 9.6 0 0 1 21.39 14.00 L 17.97 14.01 A 6.3 6.3 0 0 1 16.73 16.17 L 18.42 19.13 A 9.6 9.6 0 0 1 14.97 21.13 L 13.25 18.18 A 6.3 6.3 0 0 1 10.75 18.18 L 9.03 21.13 A 9.6 9.6 0 0 1 5.58 19.13 L 7.27 16.17 A 6.3 6.3 0 0 1 6.03 14.01 L 2.61 14.00 A 9.6 9.6 0 0 1 2.61 10.00 L 6.03 9.99 A 6.3 6.3 0 0 1 7.27 7.83 L 5.58 4.87 A 9.6 9.6 0 0 1 9.03 2.87 L 10.75 5.82 A 6.3 6.3 0 0 1 13.25 5.82 L 14.97 2.87 A 9.6 9.6 0 0 1 18.42 4.87 L 16.73 7.83 A 6.3 6.3 0 0 1 17.97 9.99 Z"/>
+      <circle cx="12" cy="12" r="3.6"/>
     </symbol>
           </defs>
 </svg>
@@ -272,7 +278,7 @@
 
   <div class="bf-rotate-row">
     <button class="round-btn bf-round-btn bf-corner-btn bf-corner-left" id="bf-settings" type="button" aria-label="設定">
-      <svg class="ic"><use href="#ic-settings"/></svg>
+      <svg class="ic bf-gear-ic"><use href="#ic-gear"/></svg>
     </button>
     <button class="bf-rotate-btn" id="bf-rotate" type="button" aria-label="90度回転" disabled>
       <!-- 90度回転: 90°ぶんを実線+矢印、残り270°を点線で描く。viewBoxはCSSピクセル
@@ -318,14 +324,18 @@
 <div id="modal-bf-settings" class="modal" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bf-settings-title">
     <h2 id="bf-settings-title" class="modal-title">設定</h2>
-    <p class="modal-text" style="margin-bottom:8px; font-weight:700;">遊び方</p>
+    <p class="modal-text bf-settings-heading">
+      <svg class="ic bf-settings-heading-ic"><use href="#ic-help"/></svg>遊び方
+    </p>
     <div class="bf-howto-list">
       <p>① ブロックをタップして選択</p>
       <p>② 指で好きな位置へドラッグ</p>
       <p>③ 回転ボタンで90°回転</p>
       <p>④ すべてのマスを隙間なく埋めればクリア</p>
     </div>
-    <p class="modal-text" style="margin-bottom:8px">背景</p>
+    <p class="modal-text bf-settings-heading">
+      <svg class="ic bf-settings-heading-ic"><use href="#ic-brightness"/></svg>背景
+    </p>
     <div class="bf-bg-choice">
       <button class="bf-bg-btn" id="bf-bg-white" type="button">☀ ホワイト</button>
       <button class="bf-bg-btn" id="bf-bg-dark" type="button">🌙 ダーク</button>

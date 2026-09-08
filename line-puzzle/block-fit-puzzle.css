@@ -120,13 +120,21 @@ body.bf-dark {
 .bf-stage-grid .stage-btn.is-next { box-shadow: 0 3px 0 rgba(0,0,0,.16), 0 0 0 3px var(--bf-accent, #d9b98d); }
 
 /* ---------- ブロックフィットパズル: ゲーム画面 ---------- */
-.bf-top-row { display: flex; justify-content: space-evenly; align-items: center; margin-bottom: 6px; }
+/* 上段の3つのボタンは、下段(設定・回転・リセット)と左右の余白を揃える。
+   下段の左右ボタンが端から20pxなので、こちらも padding で20pxを確保し、
+   space-between で並べる(3つとも同じ幅なので中央のボタンは真ん中に来る)。 */
+.bf-top-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 20px; margin-bottom: 6px;
+}
 .bf-round-btn {
   background: var(--bf-accent, #d9b98d);
   color: var(--bf-on-accent, #5b4530);
   box-shadow: 0 3px 0 rgba(0,0,0,.2);
 }
 .bf-round-btn .ic use { stroke: currentColor; }
+/* 歯車は線が入り組んでいるので、他のアイコンより少し細い線で描く。 */
+.bf-gear-ic { stroke-width: 1.7; }
 #bf-exclaim-dot { fill: currentColor; }
 
 .bf-stage-header {
@@ -222,7 +230,9 @@ body.bf-dark {
   min-height: 70px;
   margin: 0 4px 6px;
   padding: 12px 8px;
-  border-radius: 16px;
+  /* ブロックの置き場が分かるよう四角い枠で囲う。盤面の枠と同じ線色にする。 */
+  border: 2px solid var(--bf-board-border);
+  border-radius: 10px;
   background: var(--bf-tray-bg);
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
   gap: 14px;
@@ -307,6 +317,12 @@ body.bf-dark {
 }
 
 /* ---------- ブロックフィットパズル: 遊び方/設定モーダルの中身 ---------- */
+/* 設定モーダルの見出し。「遊び方」には?、「背景」には明るさのアイコンを添える。 */
+.bf-settings-heading {
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 8px; font-weight: 700;
+}
+.bf-settings-heading-ic { width: 17px; height: 17px; flex: none; }
 .bf-howto-list { text-align: left; margin: 0 0 14px; }
 .bf-howto-list p { margin: 6px 0; font-size: 13.5px; color: var(--ink, #23272b); }
 .bf-bg-choice { display: flex; gap: 10px; margin-bottom: 16px; }
