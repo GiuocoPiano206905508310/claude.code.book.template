@@ -100,14 +100,12 @@
   }
 
   var cleared = loadProgress();
-  var debugMode = false;
   function highestUnlocked() {
-    if (debugMode) return TOTAL_STAGES;
     var maxCleared = 0;
     Object.keys(cleared).forEach(function (k) { maxCleared = Math.max(maxCleared, +k); });
     return Math.min(TOTAL_STAGES, maxCleared + 1);
   }
-  function isUnlocked(id) { return debugMode || id <= highestUnlocked(); }
+  function isUnlocked(id) { return id <= highestUnlocked(); }
 
   /* ---------- ステージ選択画面 ---------- */
   function stageButton(id) {
@@ -151,17 +149,12 @@
     cleared = loadProgress();
     var done = Object.keys(cleared).length;
     $('bf-select-progress').textContent = 'クリア ' + done + ' / ' + TOTAL_STAGES;
-    $('bf-debug-toggle').checked = debugMode;
     fillGrid();
     showScreen('screen-bf-select');
   }
 
   $('bf-select-back').addEventListener('click', function () { window.openGameSelect(); });
   $('bf-select-help').addEventListener('click', function () { $('modal-bf-help').hidden = false; });
-  $('bf-debug-toggle').addEventListener('change', function (ev) {
-    debugMode = ev.target.checked;
-    fillGrid();
-  });
 
   /* ---------- ゲーム画面 ---------- */
   // game = { stageId, stage, boardCellSet, placements, selectedId, rotations,
