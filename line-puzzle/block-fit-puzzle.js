@@ -119,12 +119,11 @@
       btn.setAttribute('aria-label', 'Stage ' + id + '（未開放）');
     } else {
       btn.textContent = String(id).length < 2 ? '0' + id : String(id);
-      btn.classList.add('is-cleared', 'bf-band-' + bandOf(id));
       btn.setAttribute('aria-label', 'Stage ' + id);
+      // クリア済みだけレンガ色で塗る。未クリア(次に遊べるステージ含む)は
+      // 素の灰色のままにして、クリア済みと一目で区別できるようにする。
       if (cleared[id]) {
-        var star = el('span', 'stage-stars');
-        star.innerHTML = '<svg class="ic star"><use href="#ic-star"/></svg>';
-        btn.appendChild(star);
+        btn.classList.add('is-cleared', 'bf-band-' + bandOf(id));
       } else if (id === highestUnlocked()) {
         btn.classList.add('is-next');
       }
@@ -551,7 +550,7 @@
     if (placed && checkClear()) onStageCleared();
   }
 
-  $('bf-home').addEventListener('click', function () { window.openGameSelect(); });
+  $('bf-home').addEventListener('click', openSelect);
 
   $('bf-help').addEventListener('click', function () { $('modal-bf-help').hidden = false; });
   $('bf-help-close').addEventListener('click', function () { $('modal-bf-help').hidden = true; });
