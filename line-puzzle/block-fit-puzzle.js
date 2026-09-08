@@ -193,6 +193,9 @@
     { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 },
     { x: -2, y: 0 }, { x: 2, y: 0 }, { x: 0, y: -2 }, { x: 0, y: 2 }
   ];
+  // まわりの隙間の広さに関わらず「回らない」ことが無いようにする。
+  // その場に収まる場所が見つかればそこへ、見つからなければ無理に
+  // 押し込めず、新しい向きのまま置き場へいったん戻す。
   function rotatePlacedPiece(pieceId) {
     var placement = game.placements[pieceId];
     var newRotation = (placement.rotation + 1) % 4;
@@ -208,10 +211,11 @@
       if (fits(pieceId, candidate, newRotation)) {
         placement.origin = candidate;
         placement.rotation = newRotation;
-        return true;
+        return;
       }
     }
-    return false;
+    delete game.placements[pieceId];
+    game.rotations[pieceId] = newRotation;
   }
 
   /* ---------- クリア判定 ----------
@@ -412,10 +416,11 @@
     var id = game.selectedId;
     var placement = game.placements[id];
     if (placement) {
-      if (rotatePlacedPiece(id)) {
-        renderBoard();
-        if (checkClear()) onStageCleared();
-      }
+      rotatePlacedPiece(id);
+      renderBoard();
+      renderTray();
+      updateRotateButton();
+      if (checkClear()) onStageCleared();
     } else {
       game.rotations[id] = ((game.rotations[id] || 0) + 1) % 4;
       renderTray();
@@ -524,10 +529,9 @@
     }
 
     // 盤面に置いたピースを置き場(トレイ)へドラッグして戻せるようにする。
-    var trayRect = $('bf-tray').getBoundingClientRect();
-    game.hoverOverTray = !!game.placements[pieceId] &&
-      clientX > trayRect.left && clientX < trayRect.right &&
-      clientY > trayRect.top && clientY < trayRect.bottom;
+    // トレイの枠に正確に重ねなくても、盤面の外まで持ち出せば戻る
+    // （毎回トレイの位置を狙って正確に離さないといけないと使いづらいため）。
+    game.hoverOverTray = !!game.placements[pieceId] && !nearBoard;
     $('bf-tray').classList.toggle('is-drop-target', game.hoverOverTray);
 
     renderHoverPreview();

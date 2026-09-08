@@ -246,6 +246,9 @@ body.bf-dark {
   display: grid; place-items: center;
   box-shadow: 0 3px 0 rgba(0,0,0,.2);
   cursor: pointer;
+  /* 連打すると端末のダブルタップ拡大ジェスチャーと誤認され、画面ごと
+     ズームしてしまうことがあるため、タップ操作専用にして無効化する。 */
+  touch-action: manipulation;
 }
 /* 半径を大きくした分、線が太いままだと窮屈に見えるため細くする */
 .bf-rotate-btn .ic { width: 48px; height: 48px; opacity: .45; stroke-width: 1.4; }
