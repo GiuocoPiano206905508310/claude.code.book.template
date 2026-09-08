@@ -118,7 +118,7 @@
   }
 
   $('bf-select-back').addEventListener('click', function () { window.openGameSelect(); });
-  $('bf-select-help').addEventListener('click', function () { $('modal-bf-help').hidden = false; });
+  $('bf-select-help').addEventListener('click', function () { $('modal-bf-settings').hidden = false; });
 
   /* ---------- ゲーム画面 ---------- */
   // game = { stageId, stage, boardCellSet, placements, selectedId, rotations,
@@ -571,8 +571,7 @@
 
   $('bf-home').addEventListener('click', openSelect);
 
-  $('bf-help').addEventListener('click', function () { $('modal-bf-help').hidden = false; });
-  $('bf-help-close').addEventListener('click', function () { $('modal-bf-help').hidden = true; });
+  $('bf-reset-all').addEventListener('click', resetCurrentStage);
 
   /* ---------- ヒント ----------
      置いていないピースを1つずつ順番に選び、正解の位置を盤面上で

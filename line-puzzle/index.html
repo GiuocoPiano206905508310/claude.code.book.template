@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#6e747c">
 <title>ラインパズル</title>
 <link rel="stylesheet" href="style.css?v=56b61f3bc1">
-<link rel="stylesheet" href="block-fit-puzzle.css?v=10">
+<link rel="stylesheet" href="block-fit-puzzle.css?v=11">
 </head>
 <body>
 
@@ -253,17 +253,11 @@
     <button class="round-btn bf-round-btn" id="bf-home" type="button" aria-label="ステージ選択へ">
       <svg class="ic"><use href="#ic-grid"/></svg>
     </button>
-    <button class="round-btn bf-round-btn" id="bf-help" type="button" aria-label="遊び方">
-      <svg class="ic"><use href="#ic-help"/></svg>
-    </button>
     <button class="round-btn bf-round-btn" id="bf-hint" type="button" aria-label="ヒント">
       <svg class="ic"><use href="#ic-exclaim"/></svg>
     </button>
     <button class="round-btn bf-round-btn" id="bf-pause" type="button" aria-label="中断する">
       <svg class="ic"><use href="#ic-pause"/></svg>
-    </button>
-    <button class="round-btn bf-round-btn" id="bf-settings" type="button" aria-label="設定">
-      <svg class="ic"><use href="#ic-settings"/></svg>
     </button>
   </div>
 
@@ -282,9 +276,15 @@
   <div id="bf-tray" class="bf-tray"></div>
 
   <div class="bf-rotate-row">
+    <button class="round-btn bf-round-btn bf-corner-btn bf-corner-left" id="bf-settings" type="button" aria-label="設定">
+      <svg class="ic"><use href="#ic-settings"/></svg>
+    </button>
     <button class="bf-rotate-btn" id="bf-rotate" type="button" aria-label="90度回転" disabled>
       <svg class="ic"><use href="#ic-rotate90"/></svg>
       <span class="bf-rotate-label"><span class="deg-num">90<span class="deg-mark">°</span></span></span>
+    </button>
+    <button class="round-btn bf-round-btn bf-corner-btn bf-corner-right" id="bf-reset-all" type="button" aria-label="配置をリセット">
+      <svg class="ic"><use href="#ic-retry"/></svg>
     </button>
   </div>
 </section>
@@ -312,23 +312,17 @@
 </div>
 
 <!-- ============ ブロックフィットパズル 遊び方 ============ -->
-<div id="modal-bf-help" class="modal" hidden>
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bf-help-title">
-    <h2 id="bf-help-title" class="modal-title">遊び方</h2>
+<!-- ============ ブロックフィットパズル 設定（遊び方をここに統合） ============ -->
+<div id="modal-bf-settings" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bf-settings-title">
+    <h2 id="bf-settings-title" class="modal-title">設定</h2>
+    <p class="modal-text" style="margin-bottom:8px; font-weight:700;">遊び方</p>
     <div class="bf-howto-list">
       <p>① ブロックをタップして選択</p>
       <p>② 指で好きな位置へドラッグ</p>
       <p>③ 回転ボタンで90°回転</p>
       <p>④ すべてのマスを隙間なく埋めればクリア</p>
     </div>
-    <button class="btn btn-primary btn-block" id="bf-help-close" type="button">とじる</button>
-  </div>
-</div>
-
-<!-- ============ ブロックフィットパズル 設定 ============ -->
-<div id="modal-bf-settings" class="modal" hidden>
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bf-settings-title">
-    <h2 id="bf-settings-title" class="modal-title">設定</h2>
     <p class="modal-text" style="margin-bottom:8px">背景</p>
     <div class="bf-bg-choice">
       <button class="bf-bg-btn" id="bf-bg-white" type="button">☀ ホワイト</button>
@@ -430,7 +424,7 @@
 <script src="ura-levels.js?v=34de64f1ca"></script>
 <script src="cloud.js?v=f016a1df5c"></script>
 <script src="bf-levels.js?v=1"></script>
-<script src="block-fit-puzzle.js?v=8"></script>
+<script src="block-fit-puzzle.js?v=9"></script>
 <script src="game-select.js?v=1"></script>
 <script src="game.js?v=daee4aeafb"></script>
 </body>
