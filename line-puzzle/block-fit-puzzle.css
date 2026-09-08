@@ -236,7 +236,12 @@ body.bf-dark {
 }
 .bf-tray-piece { position: relative; cursor: grab; touch-action: none; }
 
-.bf-rotate-row { display: flex; justify-content: center; padding: 8px 0 4px; }
+.bf-rotate-row { position: relative; display: flex; justify-content: center; align-items: center; padding: 8px 0 4px; }
+/* 回転ボタンを挟む左右の丸ボタン(設定・リセット)。回転ボタンは常に
+   中央、左右のボタンの有無や大きさに影響されない位置に固定する。 */
+.bf-corner-btn { position: absolute; top: 50%; transform: translateY(-50%); }
+.bf-corner-left { left: 20px; }
+.bf-corner-right { right: 20px; }
 .bf-rotate-btn {
   position: relative;
   width: 56px; height: 56px;
@@ -250,8 +255,10 @@ body.bf-dark {
      ズームしてしまうことがあるため、タップ操作専用にして無効化する。 */
   touch-action: manipulation;
 }
-/* 半径を大きくした分、線が太いままだと窮屈に見えるため細くする */
-.bf-rotate-btn .ic { width: 48px; height: 48px; opacity: .45; stroke-width: 1.4; }
+/* 半径を大きくした分、線が太いままだと窮屈に見えるため細くする。
+   （プレビューで確認・承認してもらった見た目は stroke-width 未指定
+   ＝SVGの既定値1で描かれていたため、ここも1に合わせる） */
+.bf-rotate-btn .ic { width: 48px; height: 48px; opacity: .45; stroke-width: 1; }
 .bf-rotate-btn:disabled { opacity: .4; cursor: default; }
 .bf-rotate-label {
   position: absolute; inset: 0;
@@ -272,14 +279,12 @@ body.bf-dark {
    （ラインパズルの共通 .btn-primary は var(--accent) = 紫固定のため、
    BFP のモーダルだけ現在のステージの帯色に差し替える） */
 #modal-bf-pause .btn-primary,
-#modal-bf-help .btn-primary,
 #modal-bf-clear .btn-primary {
   background: var(--bf-accent, #d9b98d);
   color: var(--bf-on-accent, #5b4530);
   box-shadow: 0 4px 0 color-mix(in srgb, var(--bf-accent, #d9b98d) 70%, #000);
 }
 #modal-bf-pause .modal-title,
-#modal-bf-help .modal-title,
 #modal-bf-clear .modal-title,
 #modal-bf-settings .modal-title {
   color: color-mix(in srgb, var(--bf-accent, #d9b98d) 70%, #000);
