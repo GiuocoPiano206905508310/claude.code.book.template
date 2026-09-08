@@ -100,6 +100,16 @@ body.bf-dark {
     linear-gradient(135deg, color-mix(in srgb, var(--bf-band, #d9b98d) 55%, #fff) 0%, var(--bf-band, #d9b98d) 50%, color-mix(in srgb, var(--bf-band, #d9b98d) 72%, #000) 100%);
   box-shadow: 0 3px 0 rgba(0,0,0,.16);
 }
+/* クリア済みの目印は、共通スタイル(下部中央の小さな星)より右上に大きく
+   置いて、レンガ柄の上でも一目でクリア済みと分かるようにする。 */
+.bf-stage-grid .stage-stars {
+  top: 4px; right: 4px; bottom: auto; left: auto;
+  justify-content: flex-end;
+}
+.bf-stage-grid .stage-stars .ic.star {
+  width: 18px; height: 18px;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.5));
+}
 .bf-stage-grid .stage-btn.bf-band-1 { --bf-band: #d9b98d; }
 .bf-stage-grid .stage-btn.bf-band-2 { --bf-band: #e3ac3d; }
 .bf-stage-grid .stage-btn.bf-band-3 { --bf-band: #e0803c; }
