@@ -177,6 +177,43 @@
 
   function canPlace(pieceId, origin, rotation) { return fits(pieceId, origin, rotation); }
 
+  function cellsCentroid(cells) {
+    var sx = 0, sy = 0;
+    cells.forEach(function (c) { sx += c.x; sy += c.y; });
+    return { x: sx / cells.length, y: sy / cells.length };
+  }
+
+  // 盤面に置いたピースをその場で回転させる。同じ角(origin)のまま回転すると
+  // 形の縦横が入れ替わって盤外や他のピースにぶつかりやすいので、回転前後で
+  // 重心がなるべく同じ位置に来るような置き場所を探し、それでも当たる場合は
+  // 周囲のマスへ少しずらす（テトリスの「壁蹴り」と同じ考え方）。
+  var ROTATE_KICKS = [
+    { x: 0, y: 0 },
+    { x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 },
+    { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 },
+    { x: -2, y: 0 }, { x: 2, y: 0 }, { x: 0, y: -2 }, { x: 0, y: 2 }
+  ];
+  function rotatePlacedPiece(pieceId) {
+    var placement = game.placements[pieceId];
+    var newRotation = (placement.rotation + 1) % 4;
+    var oldCenter = cellsCentroid(cellsFor(pieceId, placement.origin, placement.rotation));
+    var newLocalCells = rotateCells(pieceById(pieceId).cells, newRotation);
+    var newLocalCenter = cellsCentroid(newLocalCells);
+    var baseOrigin = {
+      x: Math.round(oldCenter.x - newLocalCenter.x),
+      y: Math.round(oldCenter.y - newLocalCenter.y)
+    };
+    for (var i = 0; i < ROTATE_KICKS.length; i++) {
+      var candidate = { x: baseOrigin.x + ROTATE_KICKS[i].x, y: baseOrigin.y + ROTATE_KICKS[i].y };
+      if (fits(pieceId, candidate, newRotation)) {
+        placement.origin = candidate;
+        placement.rotation = newRotation;
+        return true;
+      }
+    }
+    return false;
+  }
+
   /* ---------- クリア判定 ----------
      ピースはすべて盤面のマス数とぴったり同じ合計マス数になるよう作って
      あるので、全ピースを重なりなく盤内に置ければ、それだけで隙間なく
@@ -228,7 +265,7 @@
       stageId: stageId, stage: stage, boardCellSet: boardCellSet,
       placements: {}, selectedId: null, rotations: {}, cellSize: 48,
       draggingId: null, draggingRotation: 0, hoverOrigin: null, hoverValid: false,
-      hintPieceId: null
+      hoverOverTray: false, hintPieceId: null
     };
     setTheme(stageId);
     $('bf-stage-label').textContent = 'Stage ' + stageId;
@@ -375,9 +412,7 @@
     var id = game.selectedId;
     var placement = game.placements[id];
     if (placement) {
-      var newRotation = (placement.rotation + 1) % 4;
-      if (fits(id, placement.origin, newRotation)) {
-        placement.rotation = newRotation;
+      if (rotatePlacedPiece(id)) {
         renderBoard();
         if (checkClear()) onStageCleared();
       }
@@ -487,6 +522,14 @@
       game.hoverOrigin = null;
       game.hoverValid = false;
     }
+
+    // 盤面に置いたピースを置き場(トレイ)へドラッグして戻せるようにする。
+    var trayRect = $('bf-tray').getBoundingClientRect();
+    game.hoverOverTray = !!game.placements[pieceId] &&
+      clientX > trayRect.left && clientX < trayRect.right &&
+      clientY > trayRect.top && clientY < trayRect.bottom;
+    $('bf-tray').classList.toggle('is-drop-target', game.hoverOverTray);
+
     renderHoverPreview();
   }
 
@@ -498,16 +541,23 @@
 
   function endDrag(pieceId) {
     var origin = game.hoverOrigin, valid = game.hoverValid, rotation = game.draggingRotation;
+    var returnedToTray = game.hoverOverTray && !!game.placements[pieceId];
     var placed = false;
     if (origin && valid) {
       game.placements[pieceId] = { origin: origin, rotation: rotation };
       delete game.rotations[pieceId];
       placed = true;
       if (game.hintPieceId === pieceId) clearHint();
+    } else if (returnedToTray) {
+      // 盤面から置き場へ戻す。回転させていた向きはそのまま引き継ぐ。
+      delete game.placements[pieceId];
+      game.rotations[pieceId] = rotation;
     }
     game.draggingId = null;
     game.hoverOrigin = null;
     game.hoverValid = false;
+    game.hoverOverTray = false;
+    $('bf-tray').classList.remove('is-drop-target');
     hideGhost();
     renderBoard();
     renderTray();

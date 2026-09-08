@@ -226,6 +226,13 @@ body.bf-dark {
   background: var(--bf-tray-bg);
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
   gap: 14px;
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow .1s ease-out;
+}
+/* 盤面のピースをここへドラッグすると置き場に戻せる。戻せる状態を
+   ドラッグ中に分かるよう、置き場の枠を光らせる。 */
+.bf-tray.is-drop-target {
+  box-shadow: 0 0 0 3px var(--bf-accent, #d9b98d);
 }
 .bf-tray-piece { position: relative; cursor: grab; touch-action: none; }
 
