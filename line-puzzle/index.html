@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#6e747c">
 <title>ラインパズル</title>
 <link rel="stylesheet" href="style.css?v=56b61f3bc1">
-<link rel="stylesheet" href="block-fit-puzzle.css?v=11">
+<link rel="stylesheet" href="block-fit-puzzle.css?v=12">
 </head>
 <body>
 
@@ -275,9 +275,13 @@
       <svg class="ic"><use href="#ic-settings"/></svg>
     </button>
     <button class="bf-rotate-btn" id="bf-rotate" type="button" aria-label="90度回転" disabled>
-      <svg class="ic" viewBox="0 0 24 24">
-        <path d="M 17.17 4.03 A 9.5 9.5 0 1 1 6.83 4.03"/>
-        <polyline points="4.35,4.38 6.83,4.03 5.50,6.15"/>
+      <!-- 90度回転: 90°ぶんを実線+矢印、残り270°を点線で描く。viewBoxはCSSピクセル
+           と1:1(56px)。円の中心(28,28)・半径20.7pxはボタンと同心。 -->
+      <svg class="ic" viewBox="0 0 56 56">
+        <path class="bf-rot-line" d="M 28.00 7.30 A 20.7 20.7 0 1 1 7.30 28.00"
+              pathLength="100" stroke-dasharray="2.42 7.34"/>
+        <path class="bf-rot-line" d="M 7.30 28.00 A 20.7 20.7 0 0 1 23.70 7.75"/>
+        <polygon class="bf-rot-arrow" points="27.80,6.88 22.32,10.91 21.16,5.43"/>
       </svg>
       <span class="bf-rotate-label"><span class="deg-num">90<span class="deg-mark">°</span></span></span>
     </button>

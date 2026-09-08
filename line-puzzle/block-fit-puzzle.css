@@ -246,6 +246,10 @@ body.bf-dark {
   position: relative;
   width: 56px; height: 56px;
   border: 0; border-radius: 50%;
+  /* button 要素はブラウザ標準で左右6px・上下1pxの余白を持つ。この余白があると
+     アイコンの置ける幅が56pxより狭くなり、はみ出した分だけアイコンが右へ2px
+     ずれて描画される(実機のスクリーンショット実測値2.018pxと一致)。 */
+  padding: 0;
   background: var(--bf-accent, #d9b98d);
   color: var(--bf-on-accent, #5b4530);
   display: grid; place-items: center;
@@ -255,10 +259,16 @@ body.bf-dark {
      ズームしてしまうことがあるため、タップ操作専用にして無効化する。 */
   touch-action: manipulation;
 }
-/* 半径を大きくした分、線が太いままだと窮屈に見えるため細くする。
-   （プレビューで確認・承認してもらった見た目は stroke-width 未指定
-   ＝SVGの既定値1で描かれていたため、ここも1に合わせる） */
-.bf-rotate-btn .ic { width: 48px; height: 48px; opacity: .45; stroke-width: 1; }
+/* アイコンをボタンと同じ56pxにして、SVGの座標をCSSピクセルと1:1で対応させる
+   (viewBox="0 0 56 56")。円の中心(28,28)はボタンの中心と完全に一致する。 */
+.bf-rotate-btn .ic { width: 56px; height: 56px; }
+/* 90°ぶんの実線と270°ぶんの点線。点線は pathLength で円周を100に正規化して
+   いるため、半径が変わってもダッシュは270°全体で等間隔になる。 */
+.bf-rotate-btn .bf-rot-line {
+  fill: none; stroke: currentColor;
+  stroke-width: 2.4; stroke-linecap: round;
+}
+.bf-rotate-btn .bf-rot-arrow { fill: currentColor; stroke: none; }
 .bf-rotate-btn:disabled { opacity: .4; cursor: default; }
 .bf-rotate-label {
   position: absolute; inset: 0;
