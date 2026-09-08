@@ -93,22 +93,16 @@ body.bf-dark {
   text-shadow: none;
   font-size: 18px;
   padding-bottom: 0;
+  /* ボタン自体の角丸を、ブロック(.bf-brick)のSVG柄が持つ角丸(12%)と
+     揃える。ここを揃えないと、外枠は大きく丸まっているのに柄の角は
+     それより小さい半径で描かれ、角が欠けたように見えてしまう。 */
+  border-radius: 12%;
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-image:
     var(--bf-brick-svg),
     linear-gradient(135deg, color-mix(in srgb, var(--bf-band, #d9b98d) 55%, #fff) 0%, var(--bf-band, #d9b98d) 50%, color-mix(in srgb, var(--bf-band, #d9b98d) 72%, #000) 100%);
   box-shadow: 0 3px 0 rgba(0,0,0,.16);
-}
-/* クリア済みの目印は、共通スタイル(下部中央の小さな星)より右上に大きく
-   置いて、レンガ柄の上でも一目でクリア済みと分かるようにする。 */
-.bf-stage-grid .stage-stars {
-  top: 4px; right: 4px; bottom: auto; left: auto;
-  justify-content: flex-end;
-}
-.bf-stage-grid .stage-stars .ic.star {
-  width: 18px; height: 18px;
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,.5));
 }
 .bf-stage-grid .stage-btn.bf-band-1 { --bf-band: #d9b98d; }
 .bf-stage-grid .stage-btn.bf-band-2 { --bf-band: #e3ac3d; }
