@@ -62,7 +62,9 @@
 }
 body.bf-dark {
   --bf-bg-1: #15151a; --bf-bg-2: #1f1f26;
-  --bf-board-bg: #23232b; --bf-board-border: #3a3a45; --bf-cell-empty: #2c2c36;
+  /* 空きマスは盤面の背景よりはっきり明るくして、暗い場所でも
+     どこに置けるか見分けやすくする。 */
+  --bf-board-bg: #23232b; --bf-board-border: #3a3a45; --bf-cell-empty: #4a4a5a;
   --bf-tray-bg: #1b1b22;
   --bf-text: #f2f2f2; --bf-text-sub: #b0b0b8;
   --bf-number: #ffffff;
@@ -73,7 +75,13 @@ body.bf-dark {
 }
 #screen-bf-select .topbar-title, #screen-bf-select .topbar-user { color: var(--bf-text); text-shadow: none; }
 #screen-bf-select .topbar-sub { color: var(--bf-text-sub); opacity: 1; }
-#screen-bf-select .icon-btn { color: var(--bf-text); }
+/* 共通の.icon-btn(白背景)のままだとダーク時に白いアイコンが白い丸に
+   埋もれて見えなくなるため、ゲーム画面の丸ボタン(.bf-round-btn)と同じ
+   帯色の配色にする。 */
+#screen-bf-select .icon-btn {
+  background: var(--bf-accent, #d9b98d);
+  color: var(--bf-on-accent, #5b4530);
+}
 
 /* ---------- ブロックフィットパズル: ステージ選択タイル ----------
    .stage-grid / .stage-btn の土台はそのまま流用し、クリア済みの見た目
@@ -232,12 +240,12 @@ body.bf-dark {
   box-shadow: 0 3px 0 rgba(0,0,0,.2);
   cursor: pointer;
 }
-.bf-rotate-btn .ic { width: 40px; height: 40px; opacity: .45; }
+.bf-rotate-btn .ic { width: 48px; height: 48px; opacity: .45; }
 .bf-rotate-btn:disabled { opacity: .4; cursor: default; }
 .bf-rotate-label {
   position: absolute; inset: 0;
   display: grid; place-items: center;
-  font-weight: 800; font-size: 12px;
+  font-weight: 800; font-size: 10px;
 }
 
 /* ---------- ブロックフィットパズル: モーダルはステージの帯色を使う ----------
