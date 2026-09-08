@@ -240,12 +240,22 @@ body.bf-dark {
   box-shadow: 0 3px 0 rgba(0,0,0,.2);
   cursor: pointer;
 }
-.bf-rotate-btn .ic { width: 48px; height: 48px; opacity: .45; }
+/* 半径を大きくした分、線が太いままだと窮屈に見えるため細くする */
+.bf-rotate-btn .ic { width: 48px; height: 48px; opacity: .45; stroke-width: 1.4; }
 .bf-rotate-btn:disabled { opacity: .4; cursor: default; }
 .bf-rotate-label {
   position: absolute; inset: 0;
   display: grid; place-items: center;
   font-weight: 800; font-size: 10px;
+}
+/* 「90°」を1つの文字列として中央寄せすると、右側にしか無い「°」の分だけ
+   見た目の重心が右へ寄る。矢印の輪の中心には「90」だけを合わせ、
+   「°」はその外側に後付けする(中央寄せの計算に含めない)。 */
+.deg-num { position: relative; display: inline-block; }
+.deg-mark {
+  position: absolute; top: -0.05em; left: 100%;
+  margin-left: 0.06em;
+  font-size: 0.6em; font-weight: 700;
 }
 
 /* ---------- ブロックフィットパズル: モーダルはステージの帯色を使う ----------
