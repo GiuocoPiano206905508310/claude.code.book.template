@@ -228,7 +228,7 @@
       stageId: stageId, stage: stage, boardCellSet: boardCellSet,
       placements: {}, selectedId: null, rotations: {}, cellSize: 48,
       draggingId: null, draggingRotation: 0, hoverOrigin: null, hoverValid: false,
-      hintPieceId: null
+      hoverOverTray: false, hintPieceId: null
     };
     setTheme(stageId);
     $('bf-stage-label').textContent = 'Stage ' + stageId;
@@ -487,6 +487,14 @@
       game.hoverOrigin = null;
       game.hoverValid = false;
     }
+
+    // 盤面に置いたピースを置き場(トレイ)へドラッグして戻せるようにする。
+    var trayRect = $('bf-tray').getBoundingClientRect();
+    game.hoverOverTray = !!game.placements[pieceId] &&
+      clientX > trayRect.left && clientX < trayRect.right &&
+      clientY > trayRect.top && clientY < trayRect.bottom;
+    $('bf-tray').classList.toggle('is-drop-target', game.hoverOverTray);
+
     renderHoverPreview();
   }
 
@@ -498,16 +506,23 @@
 
   function endDrag(pieceId) {
     var origin = game.hoverOrigin, valid = game.hoverValid, rotation = game.draggingRotation;
+    var returnedToTray = game.hoverOverTray && !!game.placements[pieceId];
     var placed = false;
     if (origin && valid) {
       game.placements[pieceId] = { origin: origin, rotation: rotation };
       delete game.rotations[pieceId];
       placed = true;
       if (game.hintPieceId === pieceId) clearHint();
+    } else if (returnedToTray) {
+      // 盤面から置き場へ戻す。回転させていた向きはそのまま引き継ぐ。
+      delete game.placements[pieceId];
+      game.rotations[pieceId] = rotation;
     }
     game.draggingId = null;
     game.hoverOrigin = null;
     game.hoverValid = false;
+    game.hoverOverTray = false;
+    $('bf-tray').classList.remove('is-drop-target');
     hideGhost();
     renderBoard();
     renderTray();
