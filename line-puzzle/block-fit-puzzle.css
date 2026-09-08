@@ -56,6 +56,9 @@
   --bf-tray-bg: #f7f7f7;
   --bf-text: #222222; --bf-text-sub: #757575;
   --bf-number: #000000;
+  /* レンガの目地(ひび割れ)のSVG。ブロック(.bf-brick)とステージ選択タイルの
+     両方で同じ柄を使うので、ここに1回だけ定義して使い回す。 */
+  --bf-brick-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect x='2' y='2' width='96' height='96' rx='12' ry='12' fill='none' stroke='rgba(0,0,0,.4)' stroke-width='4'/%3E%3Cg stroke='rgba(0,0,0,.4)' stroke-width='4' stroke-linecap='round'%3E%3Cline x1='4' y1='33.3' x2='96' y2='33.3'/%3E%3Cline x1='4' y1='66.6' x2='96' y2='66.6'/%3E%3Cline x1='50' y1='4' x2='50' y2='33.3'/%3E%3Cline x1='28' y1='33.3' x2='28' y2='66.6'/%3E%3Cline x1='72' y1='33.3' x2='72' y2='66.6'/%3E%3Cline x1='50' y1='66.6' x2='50' y2='96'/%3E%3C/g%3E%3Cellipse cx='30' cy='18' rx='16' ry='7' fill='rgba(255,255,255,.35)'/%3E%3C/svg%3E");
 }
 body.bf-dark {
   --bf-bg-1: #15151a; --bf-bg-2: #1f1f26;
@@ -90,10 +93,11 @@ body.bf-dark {
   text-shadow: none;
   font-size: 18px;
   padding-bottom: 0;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   background-image:
-    linear-gradient(to bottom, transparent calc(50% - 1px), rgba(0,0,0,.35) calc(50% - 1px), rgba(0,0,0,.35) calc(50% + 1px), transparent calc(50% + 1px)),
-    linear-gradient(135deg, color-mix(in srgb, var(--bf-band, #d9b98d) 60%, #fff) 0%, var(--bf-band, #d9b98d) 50%, color-mix(in srgb, var(--bf-band, #d9b98d) 75%, #000) 100%);
-  border: 2px solid color-mix(in srgb, var(--bf-band, #d9b98d) 60%, #000);
+    var(--bf-brick-svg),
+    linear-gradient(135deg, color-mix(in srgb, var(--bf-band, #d9b98d) 55%, #fff) 0%, var(--bf-band, #d9b98d) 50%, color-mix(in srgb, var(--bf-band, #d9b98d) 72%, #000) 100%);
   box-shadow: 0 3px 0 rgba(0,0,0,.16);
 }
 .bf-stage-grid .stage-btn.bf-band-1 { --bf-band: #d9b98d; }
@@ -151,7 +155,7 @@ body.bf-dark {
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect x='2' y='2' width='96' height='96' rx='12' ry='12' fill='none' stroke='rgba(0,0,0,.4)' stroke-width='4'/%3E%3Cg stroke='rgba(0,0,0,.4)' stroke-width='4' stroke-linecap='round'%3E%3Cline x1='4' y1='33.3' x2='96' y2='33.3'/%3E%3Cline x1='4' y1='66.6' x2='96' y2='66.6'/%3E%3Cline x1='50' y1='4' x2='50' y2='33.3'/%3E%3Cline x1='28' y1='33.3' x2='28' y2='66.6'/%3E%3Cline x1='72' y1='33.3' x2='72' y2='66.6'/%3E%3Cline x1='50' y1='66.6' x2='50' y2='96'/%3E%3C/g%3E%3Cellipse cx='30' cy='18' rx='16' ry='7' fill='rgba(255,255,255,.35)'/%3E%3C/svg%3E"),
+    var(--bf-brick-svg),
     linear-gradient(135deg, color-mix(in srgb, var(--bf-piece, #4c9b7c) 55%, #fff) 0%, var(--bf-piece, #4c9b7c) 50%, color-mix(in srgb, var(--bf-piece, #4c9b7c) 72%, #000) 100%);
   box-shadow: 0 2px 3px rgba(0,0,0,.16);
   transition: left .12s ease-out, top .12s ease-out, width .18s ease-out, height .18s ease-out;
