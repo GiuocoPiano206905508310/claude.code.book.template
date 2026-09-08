@@ -72,11 +72,6 @@ body.bf-dark {
 #screen-bf-select .topbar-sub { color: var(--bf-text-sub); opacity: 1; }
 #screen-bf-select .icon-btn { color: var(--bf-text); }
 
-.bf-debug-toggle {
-  flex: none; display: flex; align-items: center; gap: 4px;
-  font-size: 10.5px; font-weight: 700; color: var(--bf-text-sub);
-}
-
 /* ---------- ブロックフィットパズル: ステージ選択タイル ----------
    .stage-grid / .stage-btn の土台はそのまま流用し、クリア済みの見た目
    だけをレンガ風グラデーション+目地線に差し替える。 */
