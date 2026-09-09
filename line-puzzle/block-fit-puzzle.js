@@ -38,9 +38,18 @@
     return cls;
   }
 
-  /* ---------- 進行状況（クリア済みステージ。ログイン中はユーザーIDごとに
-     保存先を分ける。ラインパズル本編の storeKey() と同じ考え方）---------- */
+  /* ---------- 進行状況（クリア済みステージ）
+
+     保存はラインパズル本編（game.js）の進行状況と同じ入れ物に入れる。
+     あちらはログイン中のアカウントに紐づけてクラウドへも書き戻すので、
+     ここを通せばブロックフィットパズルの記録も一緒にアカウントへ残り、
+     別の端末やログインし直したあとでも引き継がれる。
+
+     旧版はこの端末の localStorage にだけ保存していたので、その記録は
+     一度だけ新しい保存先へ取り込む（下の migrateLegacy）。
+     ---------- */
   var PROGRESS_KEY = 'blockFitPuzzle.progress.v1';
+  var MIGRATED_KEY = 'blockFitPuzzle.movedToAccount.v1';
   function currentUser() {
     var cloud = window.LinePuzzleCloud || null;
     return cloud ? cloud.user() : null;
@@ -49,16 +58,51 @@
     var u = currentUser();
     return u ? PROGRESS_KEY + ':' + u.id : PROGRESS_KEY;
   }
-  function loadProgress() {
+  // game.js は block-fit-puzzle.js より後に読み込まれるので、使うときに探す
+  function progressHub() {
+    var g = window.LinePuzzleGame;
+    return (g && g.readBlockFit && g.saveBlockFit) ? g : null;
+  }
+  function readLocal(key) {
     try {
-      var raw = window.localStorage.getItem(progressStoreKey());
+      var raw = window.localStorage.getItem(key);
       var data = raw ? JSON.parse(raw) : null;
       return (data && typeof data === 'object') ? data : {};
     } catch (e) {
       return {};
     }
   }
+  // 旧版が端末に残した記録を、新しい保存先へ一度だけ足す。ログイン前に
+  // 遊んだぶん(ユーザーID無しのキー)も取り込むので、あとからログインしても
+  // それまでの進みが消えない。
+  function migrateLegacy(map) {
+    var u = currentUser();
+    var doneKey = MIGRATED_KEY + (u ? ':' + u.id : '');
+    if (readLocalFlag(doneKey)) return map;
+    var merged = {};
+    for (var k in map) { if (map[k]) merged[k] = true; }
+    [PROGRESS_KEY, progressStoreKey()].forEach(function (key) {
+      var old = readLocal(key);
+      for (var id in old) { if (old[id]) merged[id] = true; }
+    });
+    try { window.localStorage.setItem(doneKey, '1'); } catch (e) { /* 次回また試す */ }
+    return merged;
+  }
+  function readLocalFlag(key) {
+    try { return !!window.localStorage.getItem(key); } catch (e) { return false; }
+  }
+  function loadProgress() {
+    var hub = progressHub();
+    if (!hub) return readLocal(progressStoreKey());   // game.js がまだ無いとき
+    var stored = hub.readBlockFit();
+    var merged = migrateLegacy(stored);
+    // 旧記録を取り込んだぶんがあれば、その場で新しい保存先に書き戻す
+    if (Object.keys(merged).length !== Object.keys(stored).length) hub.saveBlockFit(merged);
+    return merged;
+  }
   function saveProgress() {
+    var hub = progressHub();
+    if (hub) { hub.saveBlockFit(cleared); return; }
     try {
       window.localStorage.setItem(progressStoreKey(), JSON.stringify(cleared));
     } catch (e) { /* 保存できなくても遊べる */ }
@@ -109,11 +153,29 @@
     $(id).classList.add('is-active');
   }
 
-  function openSelect() {
+  function renderSelect() {
     cleared = loadProgress();
     var done = Object.keys(cleared).length;
     $('bf-select-progress').textContent = 'クリア ' + done + ' / ' + TOTAL_STAGES;
     fillGrid();
+  }
+
+  // ログイン直後などにクラウドの記録が届いたら、開いたままのステージ選択を
+  // 描き直す。game.js は後から読まれるので、登録は最初に開くときに行う。
+  var syncHooked = false;
+  function hookProgressSync() {
+    if (syncHooked) return;
+    var hub = progressHub();
+    if (!hub || !hub.onProgressSync) return;
+    syncHooked = true;
+    hub.onProgressSync(function () {
+      if ($('screen-bf-select').classList.contains('is-active')) renderSelect();
+    });
+  }
+
+  function openSelect() {
+    hookProgressSync();
+    renderSelect();
     showScreen('screen-bf-select');
   }
 
