@@ -49,7 +49,9 @@
      一度だけ新しい保存先へ取り込む（下の migrateLegacy）。
      ---------- */
   var PROGRESS_KEY = 'blockFitPuzzle.progress.v1';
-  var MIGRATED_KEY = 'blockFitPuzzle.movedToAccount.v1';
+  // 取り込み済みの印。探す範囲を広げたときは番号を上げて、端末に残っている
+  // 記録をもう一度だけ見直す。
+  var MIGRATED_KEY = 'blockFitPuzzle.movedToAccount.v2';
   function currentUser() {
     var cloud = window.LinePuzzleCloud || null;
     return cloud ? cloud.user() : null;
@@ -72,19 +74,33 @@
       return {};
     }
   }
-  // 旧版が端末に残した記録を、新しい保存先へ一度だけ足す。ログイン前に
-  // 遊んだぶん(ユーザーID無しのキー)も取り込むので、あとからログインしても
-  // それまでの進みが消えない。
+  // 旧版がこの端末に残した記録を全部探す。ログイン前に遊んだぶん(ユーザーID
+  // 無しのキー)も、別のアカウントで遊んだぶん(ID付きのキー)も対象にする。
+  function legacyKeys() {
+    var keys = [];
+    try {
+      for (var i = 0; i < window.localStorage.length; i++) {
+        var k = window.localStorage.key(i);
+        if (k && k.indexOf(PROGRESS_KEY) === 0) keys.push(k);
+      }
+    } catch (e) { /* 読めなければ取り込めるものが無いだけ */ }
+    return keys;
+  }
+  // 見つけた記録を新しい保存先へ一度だけ足す。クリア済みを取り消すことは
+  // 無いので、どのキーの記録も足すだけでよい。
+  var recovered = 0;   // 取り込めたステージ数（openSelect で知らせる）
   function migrateLegacy(map) {
     var u = currentUser();
     var doneKey = MIGRATED_KEY + (u ? ':' + u.id : '');
     if (readLocalFlag(doneKey)) return map;
     var merged = {};
     for (var k in map) { if (map[k]) merged[k] = true; }
-    [PROGRESS_KEY, progressStoreKey()].forEach(function (key) {
+    var before = Object.keys(merged).length;
+    legacyKeys().forEach(function (key) {
       var old = readLocal(key);
       for (var id in old) { if (old[id]) merged[id] = true; }
     });
+    recovered += Object.keys(merged).length - before;
     try { window.localStorage.setItem(doneKey, '1'); } catch (e) { /* 次回また試す */ }
     return merged;
   }
@@ -173,10 +189,22 @@
     });
   }
 
+  // 端末に残っていた古い記録を拾えたときは、黙って直さずその場で知らせる
+  function reportRecovered() {
+    if (!recovered) return;
+    var t = $('toast');
+    if (!t) { recovered = 0; return; }
+    t.textContent = '以前の記録（' + recovered + 'ステージ）を復元しました';
+    t.hidden = false;
+    recovered = 0;
+    setTimeout(function () { t.hidden = true; }, 2600);
+  }
+
   function openSelect() {
     hookProgressSync();
     renderSelect();
     showScreen('screen-bf-select');
+    reportRecovered();
   }
 
   $('bf-select-back').addEventListener('click', function () { window.openGameSelect(); });
