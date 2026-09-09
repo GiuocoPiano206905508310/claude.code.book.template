@@ -62,8 +62,11 @@
     return u ? STORE_KEY + ':' + u.id : STORE_KEY;
   }
 
+  // blockFit はブロックフィットパズルのクリア済みステージ。あちらも同じ1行に
+  // 入れて、ラインパズルと一緒にクラウドへ運ぶ（保存先が分かれていると
+  // 「ログインし直したら片方だけ消えた」が起きるため）。
   function blankProgress() {
-    return { cleared: {}, uraCleared: {}, lastStage: 1, lastUra: 1, tutorialSeen: false };
+    return { cleared: {}, uraCleared: {}, blockFit: {}, lastStage: 1, lastUra: 1, tutorialSeen: false };
   }
 
   function readProgress() {
@@ -75,6 +78,8 @@
       if (!data.cleared || typeof data.cleared !== 'object') data.cleared = {};
       // 裏ステージは後から足した項目なので、古い保存データには入っていない
       if (!data.uraCleared || typeof data.uraCleared !== 'object') data.uraCleared = {};
+      // ブロックフィットパズルも同様に、後から足した項目
+      if (!data.blockFit || typeof data.blockFit !== 'object') data.blockFit = {};
       return data;
     } catch (e) {
       if (!storageWarned) {
@@ -966,11 +971,25 @@
         for (var id in map) out[field][id] = betterRecord(out[field][id], map[id]);
       });
     });
+    // ブロックフィットパズルは★や手数を持たないので、どちらかでクリアして
+    // いればクリア済みとして残す
+    [a.blockFit || {}, b.blockFit || {}].forEach(function (map) {
+      for (var id in map) { if (map[id]) out.blockFit[id] = true; }
+    });
     out.lastStage = Math.max(a.lastStage || 1, b.lastStage || 1);
     out.lastUra = Math.max(a.lastUra || 1, b.lastUra || 1);
     out.tutorialSeen = !!(a.tutorialSeen || b.tutorialSeen);
     out.lastPlayed = Math.max(a.lastPlayed || 0, b.lastPlayed || 0);
     return out;
+  }
+
+  // クラウドから記録を取り込んだときに知らせる相手（ブロックフィットパズルの
+  // ステージ選択画面など）。開いたままの画面を最新の内容に描き直してもらう。
+  var syncListeners = [];
+  function notifyProgressSync() {
+    syncListeners.forEach(function (fn) {
+      try { fn(); } catch (e) { /* 1つ失敗しても他に知らせる */ }
+    });
   }
 
   // クラウドへの書き戻し。連続クリアで何度も投げないよう少しまとめる
@@ -1002,9 +1021,11 @@
     return cloud.fetchProgress().then(function (remote) {
       merged = mergeProgress(merged, remote);
       writeProgress(merged);
+      notifyProgressSync();
       return cloud.saveProgress(merged);
     }).catch(function (e) {
       writeProgress(merged);
+      notifyProgressSync();
       toast(e && e.message ? e.message : 'クラウドと同期できませんでした');
     });
   }
@@ -1354,6 +1375,7 @@
         var merged = mergeProgress(readProgress(), remote);
         writeProgress(merged);
         openSelect(false);   // 見出しだけ更新。画面はいまどこにいても割り込まない
+        notifyProgressSync();
       }, function () { /* 取れなくても端末の記録で遊べる */ });
     } else if (guestChosen()) {
       window.openGameSelect();   // 前に「ログインせずに遊ぶ」を選んでいる
@@ -1363,8 +1385,18 @@
     }
   }
 
-  // ゲーム選択画面（game-select.js）から呼べるようにする
-  window.LinePuzzleGame = { openSelect: openSelect };
+  // ゲーム選択画面（game-select.js）から呼べるようにする。
+  // ブロックフィットパズル（block-fit-puzzle.js）は、進行状況の保存先として
+  // ここを通る。こうすることで、あちらのクリア状況もラインパズルと同じ1行に
+  // 入り、アカウントに紐づいてクラウドへ保存される。
+  window.LinePuzzleGame = {
+    openSelect: openSelect,
+    readBlockFit: function () { return readProgress().blockFit || {}; },
+    saveBlockFit: function (map) {
+      saveProgress(function (p) { p.blockFit = map; });
+    },
+    onProgressSync: function (fn) { if (typeof fn === 'function') syncListeners.push(fn); }
+  };
 
   boot();
 })();
