@@ -1,0 +1,130 @@
+/* ============================================================
+   深海迷路 (Deep Sea Maze)
+   ラインパズルの画面切り替え・ボタン・モーダルの仕組み（.screen /
+   .icon-btn / .round-btn / .modal / .btn / .stage-grid）をそのまま使い、
+   ここでは深海迷路固有の見た目（ステージ帯カラー・キャンバス・
+   ジョイスティック）だけを追加する。迷路そのものは Canvas に描画するため、
+   ここには盤面の見た目のCSSは無い（deep-sea-maze.js 参照）。
+   ============================================================ */
+
+/* ---------- ゲーム選択カード ---------- */
+.game-choice-dsm .game-choice-icon { background: #1c8fa8; }
+
+/* ---------- ステージ帯カラー(6帯: 5ステージごと) ----------
+   1 入口 / 2 珊瑚地帯 / 3 海底洞窟 / 4 深海峡谷 / 5 沈没船地帯 / 6 超深海・遺跡地帯 */
+.dsm-theme-1 { --dsm-accent: #2fa0c2; --dsm-on-accent: #04303d; }
+.dsm-theme-2 { --dsm-accent: #2bb79f; --dsm-on-accent: #04322b; }
+.dsm-theme-3 { --dsm-accent: #4d7fd1; --dsm-on-accent: #ffffff; }
+.dsm-theme-4 { --dsm-accent: #6a6fd6; --dsm-on-accent: #ffffff; }
+.dsm-theme-5 { --dsm-accent: #8b64d6; --dsm-on-accent: #ffffff; }
+.dsm-theme-6 { --dsm-accent: #c15fc9; --dsm-on-accent: #ffffff; }
+
+#screen-dsm-select, #screen-dsm-game {
+  background: linear-gradient(180deg, #123a52 0%, #061924 100%);
+}
+#screen-dsm-select .topbar-title, #screen-dsm-select .topbar-user { color: #fff; }
+#screen-dsm-select .icon-btn {
+  background: var(--dsm-accent, #2fa0c2);
+  color: var(--dsm-on-accent, #04303d);
+}
+
+/* ---------- ステージ選択タイル ---------- */
+.dsm-stage-grid .stage-btn.is-cleared {
+  background: var(--dsm-tile, #2fa0c2);
+  color: #fff;
+}
+.dsm-stage-grid .stage-btn.is-cleared.dsm-band-1 { --dsm-tile: #2fa0c2; }
+.dsm-stage-grid .stage-btn.is-cleared.dsm-band-2 { --dsm-tile: #2bb79f; }
+.dsm-stage-grid .stage-btn.is-cleared.dsm-band-3 { --dsm-tile: #4d7fd1; }
+.dsm-stage-grid .stage-btn.is-cleared.dsm-band-4 { --dsm-tile: #6a6fd6; }
+.dsm-stage-grid .stage-btn.is-cleared.dsm-band-5 { --dsm-tile: #8b64d6; }
+.dsm-stage-grid .stage-btn.is-cleared.dsm-band-6 { --dsm-tile: #c15fc9; }
+
+/* ---------- ゲーム画面: 上部バー ---------- */
+.dsm-top-row { align-items: center; }
+.dsm-stage-plate {
+  flex: 1;
+  height: 40px;
+  margin: 0 4px;
+}
+.dsm-stage-plate span {
+  font-size: 13px;
+  letter-spacing: .06em;
+}
+
+/* ---------- ゲーム画面: キャンバス領域 ---------- */
+.dsm-game-screen { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+.dsm-canvas-area {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  margin: 6px 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  touch-action: none;
+}
+#dsm-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+/* START の一時表示 */
+.dsm-start-flash {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: 15vw;
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: #fff;
+  text-shadow: 0 2px 14px rgba(0,0,0,.55), 0 0 22px rgba(140,220,255,.6);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity .5s ease-in .8s;
+}
+.dsm-start-flash.is-fading { opacity: 0; }
+
+/* ---------- ジョイスティック ----------
+   ゾーン全体をポインタの取得範囲にし、見た目のベースはその中央に固定する
+   (指がベースの外から降りても取りこぼさない広い当たり判定)。 */
+.dsm-stick-zone {
+  position: relative;
+  height: clamp(128px, 30vh, 176px);
+  display: grid; place-items: center;
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+}
+.dsm-stick-base {
+  position: relative;
+  width: clamp(112px, 26vw, 148px);
+  height: clamp(112px, 26vw, 148px);
+  border-radius: 50%;
+  background: rgba(255,255,255,.10);
+  border: 2px solid rgba(255,255,255,.35);
+  box-shadow: inset 0 0 22px rgba(0,0,0,.35);
+}
+.dsm-stick-knob {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 46%; height: 46%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 35% 30%, #dff6ff 0%, #7fc7e8 55%, #2f8fae 100%);
+  box-shadow: 0 4px 10px rgba(0,0,0,.4);
+}
+
+/* ---------- 遊び方モーダルの中身 ---------- */
+.dsm-howto-list { text-align: left; margin: 0 0 16px; }
+.dsm-howto-list p { margin: 6px 0; font-size: 13.5px; color: var(--ink, #23272b); }
+
+/* ---------- モーダルはステージの帯色を使う ---------- */
+#modal-dsm-pause .btn-primary,
+#modal-dsm-clear .btn-primary {
+  background: var(--dsm-accent, #2fa0c2);
+  color: var(--dsm-on-accent, #04303d);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--dsm-accent, #2fa0c2) 70%, #000);
+}
+#modal-dsm-pause .modal-title,
+#modal-dsm-clear .modal-title,
+#modal-dsm-help .modal-title {
+  color: color-mix(in srgb, var(--dsm-accent, #2fa0c2) 70%, #000);
+}
+#modal-dsm-clear .saved-note { color: color-mix(in srgb, var(--dsm-accent, #2fa0c2) 70%, #000); }
+#modal-dsm-clear .saved-note .dot { background: var(--dsm-accent, #2fa0c2); }

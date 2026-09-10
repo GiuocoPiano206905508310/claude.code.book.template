@@ -62,11 +62,16 @@
     return u ? STORE_KEY + ':' + u.id : STORE_KEY;
   }
 
-  // blockFit はブロックフィットパズルのクリア済みステージ。あちらも同じ1行に
+  // blockFit はブロックフィットパズルのクリア済みステージ。deepSeaMaze は
+  // 深海迷路のクリア済みステージ+最後に遊んだステージ。あちらも同じ1行に
   // 入れて、ラインパズルと一緒にクラウドへ運ぶ（保存先が分かれていると
   // 「ログインし直したら片方だけ消えた」が起きるため）。
   function blankProgress() {
-    return { cleared: {}, uraCleared: {}, blockFit: {}, lastStage: 1, lastUra: 1, tutorialSeen: false };
+    return {
+      cleared: {}, uraCleared: {}, blockFit: {},
+      deepSeaMaze: { cleared: {}, lastStage: 1 },
+      lastStage: 1, lastUra: 1, tutorialSeen: false
+    };
   }
 
   function readProgress() {
@@ -80,6 +85,10 @@
       if (!data.uraCleared || typeof data.uraCleared !== 'object') data.uraCleared = {};
       // ブロックフィットパズルも同様に、後から足した項目
       if (!data.blockFit || typeof data.blockFit !== 'object') data.blockFit = {};
+      // 深海迷路も同様に、後から足した項目
+      if (!data.deepSeaMaze || typeof data.deepSeaMaze !== 'object') data.deepSeaMaze = { cleared: {}, lastStage: 1 };
+      if (!data.deepSeaMaze.cleared || typeof data.deepSeaMaze.cleared !== 'object') data.deepSeaMaze.cleared = {};
+      if (!data.deepSeaMaze.lastStage) data.deepSeaMaze.lastStage = 1;
       return data;
     } catch (e) {
       if (!storageWarned) {
@@ -976,6 +985,13 @@
     [a.blockFit || {}, b.blockFit || {}].forEach(function (map) {
       for (var id in map) { if (map[id]) out.blockFit[id] = true; }
     });
+    // 深海迷路も同様（クリア済みはどちらかで達成していれば残す。
+    // 最後に遊んだステージは大きいほうを採る）
+    var aDsm = a.deepSeaMaze || {}, bDsm = b.deepSeaMaze || {};
+    [aDsm.cleared || {}, bDsm.cleared || {}].forEach(function (map) {
+      for (var did in map) { if (map[did]) out.deepSeaMaze.cleared[did] = true; }
+    });
+    out.deepSeaMaze.lastStage = Math.max(aDsm.lastStage || 1, bDsm.lastStage || 1);
     out.lastStage = Math.max(a.lastStage || 1, b.lastStage || 1);
     out.lastUra = Math.max(a.lastUra || 1, b.lastUra || 1);
     out.tutorialSeen = !!(a.tutorialSeen || b.tutorialSeen);
@@ -1305,6 +1321,7 @@
 
   $('select-account').addEventListener('click', openAccount);
   $('bf-select-account').addEventListener('click', openAccount);
+  $('dsm-select-account').addEventListener('click', openAccount);
   $('account-close').addEventListener('click', function () { closeModal('modal-account'); });
   $('account-login').addEventListener('click', function () {
     closeModal('modal-account');
@@ -1394,6 +1411,10 @@
     readBlockFit: function () { return readProgress().blockFit || {}; },
     saveBlockFit: function (map) {
       saveProgress(function (p) { p.blockFit = map; });
+    },
+    readDeepSeaMaze: function () { return readProgress().deepSeaMaze || { cleared: {}, lastStage: 1 }; },
+    saveDeepSeaMaze: function (data) {
+      saveProgress(function (p) { p.deepSeaMaze = data; });
     },
     onProgressSync: function (fn) { if (typeof fn === 'function') syncListeners.push(fn); }
   };

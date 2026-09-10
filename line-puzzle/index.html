@@ -7,6 +7,7 @@
 <title>ラインパズル</title>
 <link rel="stylesheet" href="style.css?v=56b61f3bc1">
 <link rel="stylesheet" href="block-fit-puzzle.css?v=13">
+<link rel="stylesheet" href="deep-sea-maze.css?v=1">
 </head>
 <body>
 
@@ -53,6 +54,13 @@
     <!-- ゲーム選択カード: ラインパズル -->
     <symbol id="ic-line-path" viewBox="0 0 24 24">
       <polyline points="3,19 3,10 10,10 10,17 17,17 17,7 21,7"/>
+    </symbol>
+    <!-- ゲーム選択カード: 深海迷路(深海探査船) -->
+    <symbol id="ic-submarine" viewBox="0 0 24 24">
+      <path d="M3.2 14.3c0-2.9 3.9-4.7 8.8-4.7s8.8 1.8 8.8 4.7-3.9 4.2-8.8 4.2-8.8-1.3-8.8-4.2Z"/>
+      <path d="M10.1 9.6V6.6h3.8v3"/>
+      <circle cx="12" cy="14.1" r="2.15"/>
+      <path d="M1.4 14.3h1.8M20.8 14.3h1.8"/>
     </symbol>
     <!-- ブロックフィットパズル: ヒント(！) -->
     <symbol id="ic-exclaim" viewBox="0 0 24 24">
@@ -136,6 +144,13 @@
         <span class="game-choice-text">
           <span class="game-choice-name">ブロックフィットパズル</span>
           <span class="game-choice-desc">ブロックを枠にぴったり収めよう</span>
+        </span>
+      </button>
+      <button class="game-choice-card game-choice-dsm" id="choose-deep-sea-maze" type="button">
+        <span class="game-choice-icon"><svg class="ic"><use href="#ic-submarine"/></svg></span>
+        <span class="game-choice-text">
+          <span class="game-choice-name">深海迷路</span>
+          <span class="game-choice-desc">深海探査船を操って海底迷路を突破しよう</span>
         </span>
       </button>
     </div>
@@ -297,6 +312,62 @@
   </div>
 </section>
 
+<!-- ============ 深海迷路: ステージ選択 ============ -->
+<section id="screen-dsm-select" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="dsm-select-back" type="button" aria-label="ゲーム選択へ">
+      <svg class="ic"><use href="#ic-grid"/></svg>
+    </button>
+    <div class="topbar-title">
+      <span class="topbar-user">深海迷路</span>
+      <span id="dsm-select-progress" class="topbar-sub"></span>
+    </div>
+    <button class="icon-btn" id="dsm-select-account" type="button" aria-label="アカウント">
+      <svg class="ic"><use href="#ic-user"/></svg>
+    </button>
+    <button class="icon-btn" id="dsm-select-help" type="button" aria-label="遊び方">
+      <svg class="ic"><use href="#ic-help"/></svg>
+    </button>
+  </header>
+  <div class="stage-scroll">
+    <ul id="dsm-stage-grid" class="stage-grid dsm-stage-grid"></ul>
+  </div>
+</section>
+
+<!-- ============ 深海迷路: ゲーム画面 ============ -->
+<section id="screen-dsm-game" class="screen dsm-game-screen">
+  <header class="topbar dsm-top-row">
+    <button class="icon-btn" id="dsm-back" type="button" aria-label="ステージ選択へ">
+      <svg class="ic"><use href="#ic-grid"/></svg>
+    </button>
+    <div class="level-plate dsm-stage-plate">
+      <span id="dsm-stage-label">STAGE 1</span>
+    </div>
+    <div class="action-btns">
+      <button class="round-btn" id="dsm-help" type="button" aria-label="遊び方">
+        <svg class="ic"><use href="#ic-help"/></svg>
+      </button>
+      <button class="round-btn" id="dsm-restart" type="button" aria-label="やり直す">
+        <svg class="ic"><use href="#ic-retry"/></svg>
+      </button>
+    </div>
+    <button class="icon-btn" id="dsm-pause-btn" type="button" aria-label="中断する">
+      <svg class="ic"><use href="#ic-pause"/></svg>
+    </button>
+  </header>
+
+  <div class="dsm-canvas-area">
+    <canvas id="dsm-canvas"></canvas>
+    <div class="dsm-start-flash" id="dsm-start-flash" hidden>START</div>
+  </div>
+
+  <div class="dsm-stick-zone" id="dsm-stick-zone">
+    <div class="dsm-stick-base" id="dsm-stick-base">
+      <div class="dsm-stick-knob" id="dsm-stick-knob"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ============ 中断モーダル ============ -->
 <div id="modal-pause" class="modal" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
@@ -353,6 +424,43 @@
     <button class="btn btn-primary btn-block" id="bf-clear-next" type="button">次のステージへ</button>
     <button class="btn btn-ghost btn-block" id="bf-clear-retry" type="button">再チャレンジ</button>
     <button class="btn btn-ghost btn-block" id="bf-clear-select" type="button">ステージ選択へ</button>
+  </div>
+</div>
+
+<!-- ============ 深海迷路 中断モーダル ============ -->
+<div id="modal-dsm-pause" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="dsm-pause-title">
+    <h2 id="dsm-pause-title" class="modal-title">中断中</h2>
+    <p class="modal-text">進行状況はクリア時に自動保存されます。</p>
+    <button class="btn btn-primary btn-block" id="dsm-pause-resume" type="button">つづける</button>
+    <button class="btn btn-ghost btn-block" id="dsm-pause-restart" type="button">このステージをやり直す</button>
+    <button class="btn btn-ghost btn-block" id="dsm-pause-select" type="button">ステージ選択へ</button>
+  </div>
+</div>
+
+<!-- ============ 深海迷路 クリア演出 ============ -->
+<div id="modal-dsm-clear" class="modal" hidden>
+  <div class="modal-card clear-card" role="dialog" aria-modal="true" aria-labelledby="dsm-clear-title">
+    <p class="clear-eyebrow">STAGE CLEAR</p>
+    <h2 id="dsm-clear-title" class="modal-title">Stage 1</h2>
+    <p class="saved-note"><span class="dot"></span>自動保存しました</p>
+    <button class="btn btn-primary btn-block" id="dsm-clear-next" type="button">次のステージへ</button>
+    <button class="btn btn-ghost btn-block" id="dsm-clear-retry" type="button">再チャレンジ</button>
+    <button class="btn btn-ghost btn-block" id="dsm-clear-select" type="button">ステージ選択へ</button>
+  </div>
+</div>
+
+<!-- ============ 深海迷路 遊び方 ============ -->
+<div id="modal-dsm-help" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="dsm-help-title">
+    <h2 id="dsm-help-title" class="modal-title">遊び方</h2>
+    <div class="dsm-howto-list">
+      <p>① 画面下のスティックを指で動かします</p>
+      <p>② スティックを倒した方向へ深海探査船が進みます</p>
+      <p>③ 海底の壁にぶつからないよう迷路を探索します</p>
+      <p>④ ゴール地点までたどり着けばステージクリア！</p>
+    </div>
+    <button class="btn btn-ghost btn-block" id="dsm-help-close" type="button">とじる</button>
   </div>
 </div>
 
@@ -437,7 +545,9 @@
 <script src="cloud.js?v=f016a1df5c"></script>
 <script src="bf-levels.js?v=1"></script>
 <script src="block-fit-puzzle.js?v=11"></script>
+<script src="dsm-levels.js?v=1"></script>
+<script src="deep-sea-maze.js?v=1"></script>
 <script src="game-select.js?v=1"></script>
-<script src="game.js?v=a9519a7405"></script>
+<script src="game.js?v=1e5bf001eb"></script>
 </body>
 </html>

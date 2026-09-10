@@ -24,4 +24,8 @@
   $('choose-block-fit').addEventListener('click', function () {
     window.BlockFitPuzzle.openSelect();
   });
+
+  $('choose-deep-sea-maze').addEventListener('click', function () {
+    window.DeepSeaMaze.openSelect();
+  });
 })();
