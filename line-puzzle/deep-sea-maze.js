@@ -471,20 +471,30 @@
   // しまうことがあった。ぶつかった点そのもので法線を取り、滑らせた後も
   // まだ塞がれていれば、その滑り先でもう一度だけ同じ処理をやり直す
   // (角に挟まれたときの保険)。
+  //
+  // 壁へ向かう成分をただ差し引くだけ(射影)だと、壁に正面から近いほど
+  // 沿う方向の成分そのものが小さくなり、進む速さがどんどん落ちて
+  // 「浅い角度でしか滑らかに進めない」ように感じられる。ここでは向きだけを
+  // 壁沿いに直し、速さ(入力の大きさ)は保つ。1フレームあたりの移動量は
+  // もともと小さいので、向きを合わせ直しても壁をすり抜ける心配はない。
   function moveWithSliding(g, dx, dy, depth) {
     var ship = g.ship, index = g.index, shipR = g.stage.shipSize;
     var nx = ship.x + dx, ny = ship.y + dy;
     if (isPassable(index, shipR, nx, ny)) { ship.x = nx; ship.y = ny; return; }
-    if ((depth || 0) >= 3) return;
+    if ((depth || 0) >= 4) return;
 
     var wall = nearestWallNormal(index, shipR, nx, ny);
     if (wall) {
+      // wall.nx/ny は通路の中心線から見て外向き(壁の側)。この向きへさらに
+      // 進もうとしている(内積が正)場合だけ、その成分を取り除いて滑らせる。
       var dot = dx * wall.nx + dy * wall.ny;
-      if (dot < 0) {
-        // 壁へ向かう成分だけを取り除き、沿う方向の成分はそのまま活かす
+      if (dot > 0) {
         var slideX = dx - dot * wall.nx, slideY = dy - dot * wall.ny;
-        if (Math.hypot(slideX, slideY) > 0.02) {
-          moveWithSliding(g, slideX, slideY, (depth || 0) + 1);
+        var slideLen = Math.hypot(slideX, slideY);
+        if (slideLen > 0.001) {
+          var inputMag = Math.hypot(dx, dy);
+          var scale = inputMag / slideLen;
+          moveWithSliding(g, slideX * scale, slideY * scale, (depth || 0) + 1);
           return;
         }
       }
