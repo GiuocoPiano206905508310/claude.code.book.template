@@ -478,10 +478,10 @@ function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, seg
     type = 'fish'; variant = 'spinydorsal'; speed = 108; size = 30;
     count = 4 + Math.floor((stageId - 21) / 4);
   } else if (stageId <= 40) {
-    type = 'eel'; variant = 'glow'; speed = 38; size = 120;
+    type = 'eel'; variant = 'glow'; speed = 38; size = 150;
     count = 3 + Math.floor((stageId - 31) / 5);
   } else {
-    type = 'eel'; variant = 'normal'; speed = 82; size = 120;
+    type = 'eel'; variant = 'normal'; speed = 82; size = 150;
     count = 3 + Math.floor((stageId - 41) / 5);
   }
   const swimmers = [];
