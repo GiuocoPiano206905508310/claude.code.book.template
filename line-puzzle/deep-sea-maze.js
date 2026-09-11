@@ -342,7 +342,8 @@
       camera: { mode: 'fixed', scale: 1, cx: stage.mazeBounds.width / 2, cy: stage.mazeBounds.height / 2 },
       playing: true,
       paused: false,
-      bubbles: makeBubbles(stage)
+      bubbles: makeBubbles(stage),
+      swimmers: makeSwimmers(stage)
     };
     resetStick();
     showScreen('screen-dsm-game');
@@ -367,6 +368,48 @@
       });
     }
     return arr;
+  }
+
+  // 遊泳する敵(ピラニア・ウツボ)の巡回ルートを初期化する。waypoints(ノード
+  // 座標をランダムに繋いだだけの点列)を1つの閉じたループとみなし、一定速度
+  // で周回させる。phase をずらしてあるので、同時に湧いても動きが揃わない。
+  function makeSwimmers(stage) {
+    var list = (stage.enemies && stage.enemies.swimmers) || [];
+    return list.map(function (src) {
+      var pts = src.waypoints;
+      var segLens = [], total = 0;
+      for (var i = 0; i < pts.length; i++) {
+        var a = pts[i], b = pts[(i + 1) % pts.length];
+        var d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        segLens.push(d); total += d;
+      }
+      total = total || 1;
+      var sw = {
+        type: src.type, variant: src.variant, speed: src.speed, size: src.size,
+        waypoints: pts, _segLens: segLens, _total: total, _dist: (src.phase || 0) * total,
+        _x: pts[0][0], _y: pts[0][1], _dir: 1
+      };
+      swimmerAdvance(sw, 0);
+      return sw;
+    });
+  }
+  function swimmerAdvance(sw, dt) {
+    sw._dist += sw.speed * dt;
+    var d = ((sw._dist % sw._total) + sw._total) % sw._total;
+    var pts = sw.waypoints;
+    for (var i = 0; i < pts.length; i++) {
+      var segLen = sw._segLens[i];
+      if (d <= segLen || i === pts.length - 1) {
+        var a = pts[i], b = pts[(i + 1) % pts.length];
+        var tt = segLen > 0 ? d / segLen : 0;
+        sw._x = lerp(a[0], b[0], tt);
+        sw._y = lerp(a[1], b[1], tt);
+        var dx = b[0] - a[0];
+        if (dx !== 0) sw._dir = dx > 0 ? 1 : -1;
+        return;
+      }
+      d -= segLen;
+    }
   }
 
   function flashStart() {
@@ -452,6 +495,9 @@
       return;
     }
 
+    g.swimmers.forEach(function (sw) { swimmerAdvance(sw, dt); });
+    if (checkEnemyHit(g)) { onEnemyHit(); return; }
+
     updateCameraFollow(dt);
     g.bubbles.forEach(function (b) {
       b.y -= b.speed * dt;
@@ -517,6 +563,55 @@
     cam.cy = lerp(cam.cy, targetY, factor);
   }
 
+  // 敵キャラ(ウニ・ピラニア・ウツボ)との当たり判定。HP/ライフ制は仕様上
+  // 使わないため、当たった瞬間にそのステージの最初からやり直しにする。
+  // ウツボはワームのように長い曲線の体を持つため、体の芯(eelSpine)を
+  // 何点かサンプリングして、それぞれとの距離で判定する(壁の当たり判定と
+  // 同じ「点列との距離」方式)。遊泳する敵は壁の当たり判定を持たず、通路の
+  // 外(壁の中)も自由に横切って泳げる想定なので、ここでは壁とは無関係に
+  // 敵自身の座標だけで判定する。
+  function checkEnemyHit(g) {
+    var ship = g.ship, stage = g.stage, shipR = stage.shipSize;
+    var urchins = (stage.enemies && stage.enemies.urchins) || [];
+    for (var i = 0; i < urchins.length; i++) {
+      var u = urchins[i];
+      // 1.4 は tools/gen-dsm-levels.mjs の TENTACLE_HIT_MUL と必ず同じ値にする
+      // (生成時に「船が反対側を通れる余地」を計算する前提の値と一致させる必要がある)
+      var hitR = u.r * (u.variant === 'tentacle' ? 1.4 : 1.0);
+      if (Math.hypot(ship.x - u.x, ship.y - u.y) <= hitR + shipR) return true;
+    }
+    var t = performance.now() / 1000;
+    for (var j = 0; j < g.swimmers.length; j++) {
+      var sw = g.swimmers[j];
+      if (sw.type === 'fish') {
+        var hitR2 = sw.size * 0.8;
+        if (Math.hypot(ship.x - sw._x, ship.y - sw._y) <= hitR2 + shipR) return true;
+      } else {
+        var spine = eelSpine(sw.size, t, 14, sw.variant === 'ribbon');
+        for (var k = 0; k < spine.pts.length; k++) {
+          var wx = sw._x + sw._dir * spine.pts[k][0];
+          var wy = sw._y + spine.pts[k][1];
+          if (Math.hypot(ship.x - wx, ship.y - wy) <= spine.widths[k] + shipR) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  var dsmToastTimer = null;
+  function dsmToast(msg) {
+    var t = $('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(dsmToastTimer);
+    dsmToastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+  function onEnemyHit() {
+    dsmToast('危険な生物に接触！スタートからやり直し');
+    resetCurrentStage();
+  }
+
   function onGoalReached() {
     var g = game;
     g.playing = false;
@@ -576,6 +671,7 @@
     drawCorridors(stage, theme);
     drawDecorations(stage, theme, 'front');
     drawBubbles(g.bubbles, theme);
+    drawEnemies(g);
     drawStartMarker(stage);
     drawGoalMarker(stage);
     drawShip(g.ship, stage);
@@ -774,6 +870,214 @@
     ctx.fill();
 
     ctx.restore();
+  }
+
+  /* ============================================================
+     敵キャラの見た目(ウニ・深海ピラニア・ウツボ)
+     ユーザー選定の候補プレビューから、採用された配色・形状をそのまま移植。
+     ============================================================ */
+  var URCHIN_PALETTE = {
+    fuzzy: { glow: 'rgba(140,255,220,.6)', spikeA: '#123232', spikeB: '#7dfff0', bodyHi: '#2a5a5a', bodyLo: '#081a1a' },
+    tentacle: { glow: 'rgba(120,220,70,.5)', spikeA: '#1e4a22', spikeB: '#f0ff5a', bodyHi: '#4a8a4e', bodyLo: '#13301a' }
+  };
+  function urchinNeedle(a, baseR, len, w, colorA, colorB, curve) {
+    var x0 = Math.cos(a) * baseR, y0 = Math.sin(a) * baseR;
+    var mid = a + (curve || 0);
+    var xm = Math.cos(mid) * (baseR + len * 0.55), ym = Math.sin(mid) * (baseR + len * 0.55);
+    var xt = Math.cos(a + (curve || 0) * 1.8) * (baseR + len), yt = Math.sin(a + (curve || 0) * 1.8) * (baseR + len);
+    var nx = -Math.sin(a), ny = Math.cos(a);
+    ctx.beginPath();
+    ctx.moveTo(x0 + nx * w, y0 + ny * w);
+    ctx.quadraticCurveTo(xm + nx * w * 0.4, ym + ny * w * 0.4, xt, yt);
+    ctx.quadraticCurveTo(xm - nx * w * 0.4, ym - ny * w * 0.4, x0 - nx * w, y0 - ny * w);
+    ctx.closePath();
+    var sg = ctx.createLinearGradient(x0, y0, xt, yt);
+    sg.addColorStop(0, colorA); sg.addColorStop(1, colorB);
+    ctx.fillStyle = sg;
+    ctx.fill();
+  }
+  function drawUrchin(en, t) {
+    var pal = URCHIN_PALETTE[en.variant] || URCHIN_PALETTE.fuzzy;
+    var r = en.r;
+    ctx.save();
+    ctx.translate(en.x, en.y);
+    ctx.rotate((en.rot || 0) * Math.PI / 180);
+    var glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.6);
+    glow.addColorStop(0, pal.glow); glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(0, 0, r * 2.6, 0, Math.PI * 2); ctx.fill();
+    var wob = Math.sin(t * 1.6) * 0.03;
+    if (en.variant === 'tentacle') {
+      var n = 12;
+      for (var i = 0; i < n; i++) {
+        var a = (i / n) * Math.PI * 2;
+        urchinNeedle(a, r * 0.5, r * 1.5, r * 0.12, pal.spikeA, pal.spikeB, 0.55 * Math.sin(t * 1.4 + i));
+      }
+    } else {
+      var n2 = 46;
+      for (var i2 = 0; i2 < n2; i2++) {
+        var a2 = (i2 / n2) * Math.PI * 2 + wob * 2;
+        urchinNeedle(a2, r * 0.58, r * 0.55, r * 0.06, pal.spikeA, pal.spikeB, 0);
+      }
+    }
+    var bg = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r * 0.85);
+    bg.addColorStop(0, pal.bodyHi); bg.addColorStop(1, pal.bodyLo);
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = pal.spikeB;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = Math.max(1, r * 0.05);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  var FISH_PALETTE = {
+    anglerfish: { bodyDark: '#1a1220', bodyMid: '#3a2a4a', bodyLight: '#6a5a80', fin: '#0a0510', eye: '#ffe0ff', lure: '#dfffb0' },
+    spinydorsal: { bodyDark: '#5a6a70', bodyMid: '#c8d8dc', bodyLight: '#f4fbfc', fin: '#3a4a4e', eye: '#e02f2f' }
+  };
+  function drawFish(sw, t) {
+    var v = FISH_PALETTE[sw.variant] || FISH_PALETTE.anglerfish;
+    var s = sw.size;
+    ctx.save();
+    ctx.translate(sw._x, sw._y);
+    ctx.scale(sw._dir, 1);
+    var wag = Math.sin(t * 7) * 0.35;
+    ctx.save(); ctx.translate(-s * 0.9, 0); ctx.rotate(wag * 0.85);
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(-s * 0.55, -s * 0.42); ctx.lineTo(-s * 0.32, 0); ctx.lineTo(-s * 0.55, s * 0.42);
+    ctx.closePath(); ctx.fillStyle = v.fin; ctx.fill();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.moveTo(s * 0.95, 0);
+    ctx.quadraticCurveTo(s * 0.5, -s * 0.5, -s * 0.3, -s * 0.28);
+    ctx.quadraticCurveTo(-s * 0.75, -s * 0.16, -s * 0.9, 0);
+    ctx.quadraticCurveTo(-s * 0.75, s * 0.16, -s * 0.3, s * 0.28);
+    ctx.quadraticCurveTo(s * 0.5, s * 0.5, s * 0.95, 0);
+    ctx.closePath();
+    var bg = ctx.createLinearGradient(-s, 0, s, 0);
+    bg.addColorStop(0, v.bodyDark); bg.addColorStop(0.5, v.bodyMid); bg.addColorStop(1, v.bodyLight);
+    ctx.fillStyle = bg; ctx.fill();
+    if (sw.variant === 'anglerfish') {
+      var lureX = s * 0.55 + Math.sin(t * 3) * s * 0.05;
+      ctx.beginPath();
+      ctx.moveTo(s * 0.35, -s * 0.4);
+      ctx.quadraticCurveTo(s * 0.5, -s * 0.75, lureX, -s * 0.9);
+      ctx.strokeStyle = v.fin; ctx.lineWidth = s * 0.045; ctx.stroke();
+      ctx.beginPath(); ctx.arc(lureX, -s * 0.9, s * 0.09, 0, Math.PI * 2);
+      ctx.fillStyle = v.lure; ctx.shadowColor = v.lure; ctx.shadowBlur = s * 0.3; ctx.fill(); ctx.shadowBlur = 0;
+    } else {
+      for (var i = 0; i < 6; i++) {
+        var xf = i / 5, xx = -s * 0.4 + xf * s * 0.75, base = -s * (0.3 - xf * 0.06);
+        ctx.beginPath(); ctx.moveTo(xx - s * 0.05, base); ctx.lineTo(xx, base - s * 0.28); ctx.lineTo(xx + s * 0.05, base);
+        ctx.closePath(); ctx.fillStyle = v.fin; ctx.fill();
+      }
+    }
+    ctx.beginPath(); ctx.arc(s * 0.58, -s * 0.1, s * 0.1, 0, Math.PI * 2);
+    ctx.fillStyle = v.eye; ctx.fill();
+    ctx.beginPath(); ctx.arc(s * 0.61, -s * 0.11, s * 0.045, 0, Math.PI * 2);
+    ctx.fillStyle = '#0a0a0a'; ctx.fill();
+    ctx.fillStyle = '#fff';
+    for (var it = 0; it < 3; it++) {
+      var tx = s * (0.72 + it * 0.06), ty = s * (0.1 + it * 0.035);
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + s * 0.03, ty + s * 0.07); ctx.lineTo(tx - s * 0.02, ty + s * 0.07);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ウツボの体の芯(点列+太さ)を求める。描画(drawEel、ローカル座標)と
+  // 当たり判定(checkEnemyHit、ワールド座標へ自前で変換)の両方で使う共通処理。
+  function eelSpine(len, t, n, ribbon) {
+    n = n || 14;
+    var amp = ribbon ? len * 0.1 : len * 0.09;
+    var freq = ribbon ? 3.4 : 2.1;
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var xf = i / (n - 1);
+      var x = -len * 0.5 + xf * len;
+      var y = Math.sin(xf * freq + t * (ribbon ? 4 : 3.2)) * amp * (ribbon ? (0.3 + xf * 0.9) : (0.4 + xf * 0.8));
+      pts.push([x, y]);
+    }
+    var widths = pts.map(function (p, i2) {
+      var xf = i2 / (n - 1);
+      return ribbon ? len * 0.028 : len * 0.085 * (0.55 + Math.sin(xf * Math.PI) * 0.9) * (1 - xf * 0.15);
+    });
+    return { pts: pts, widths: widths };
+  }
+  function eelNormals(pts) {
+    var n = pts.length;
+    return pts.map(function (p, i) {
+      if (i === 0 || i === n - 1) return [0, -1];
+      var dx = pts[i + 1][0] - pts[i - 1][0], dy = pts[i + 1][1] - pts[i - 1][1];
+      var l = Math.hypot(dx, dy) || 1;
+      return [-dy / l, dx / l];
+    });
+  }
+  var EEL_PALETTE = {
+    glowbands: { bodyHi: '#0a1a2a', bodyMid: '#050f1a', bodyLo: '#020508', eye: '#c8ffff', eyeGlow: true, patternColor: '#4be8ff' },
+    ribbon: { bodyHi: '#2a2a2a', bodyMid: '#141414', bodyLo: '#050505', eye: '#ffe97a' }
+  };
+  function drawEel(sw, t) {
+    var v = EEL_PALETTE[sw.variant] || EEL_PALETTE.glowbands;
+    var len = sw.size, ribbon = sw.variant === 'ribbon';
+    ctx.save();
+    ctx.translate(sw._x, sw._y);
+    ctx.scale(sw._dir, 1);
+    var n = 18;
+    var spine = eelSpine(len, t, n, ribbon);
+    var pts = spine.pts, widths = spine.widths;
+    var normals = eelNormals(pts);
+    ctx.beginPath();
+    for (var i = 0; i < n; i++) { var p = pts[i], w = widths[i], nrm = normals[i]; var tx = p[0] + nrm[0] * w, ty = p[1] + nrm[1] * w; if (i === 0) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty); }
+    for (var i2 = n - 1; i2 >= 0; i2--) { var p2 = pts[i2], w2 = widths[i2], nrm2 = normals[i2]; ctx.lineTo(p2[0] - nrm2[0] * w2, p2[1] - nrm2[1] * w2); }
+    ctx.closePath();
+    var bg = ctx.createLinearGradient(-len * 0.5, 0, len * 0.5, 0);
+    bg.addColorStop(0, v.bodyHi); bg.addColorStop(0.5, v.bodyMid); bg.addColorStop(1, v.bodyLo);
+    ctx.fillStyle = bg; ctx.fill();
+    if (sw.variant === 'glowbands') {
+      ctx.strokeStyle = v.patternColor; ctx.lineWidth = widths[0] * 0.4;
+      ctx.shadowColor = v.patternColor; ctx.shadowBlur = len * 0.04;
+      for (var b = 2; b < n - 2; b += 3) {
+        var pb = pts[b], wb = widths[b], nb = normals[b];
+        ctx.beginPath();
+        ctx.moveTo(pb[0] + nb[0] * wb * 0.9, pb[1] + nb[1] * wb * 0.9);
+        ctx.lineTo(pb[0] - nb[0] * wb * 0.9, pb[1] - nb[1] * wb * 0.9);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+    }
+    var head = pts[n - 1], hw = widths[n - 1] * (ribbon ? 2.2 : 1.35);
+    ctx.beginPath(); ctx.ellipse(head[0] + hw * 0.35, head[1], hw * 1.15, hw * 0.85, 0, 0, Math.PI * 2);
+    ctx.fillStyle = v.bodyMid; ctx.fill();
+    ctx.beginPath(); ctx.arc(head[0] + hw * 0.55, head[1] - hw * 0.28, hw * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = v.eye;
+    if (v.eyeGlow) { ctx.shadowColor = v.eye; ctx.shadowBlur = hw * 0.6; }
+    ctx.fill(); ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(head[0] + hw * 0.6, head[1] - hw * 0.3, hw * 0.1, 0, Math.PI * 2);
+    ctx.fillStyle = '#050505'; ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(head[0] + hw * 0.9, head[1] + hw * 0.05);
+    ctx.quadraticCurveTo(head[0] + hw * 1.55, head[1] + hw * 0.15, head[0] + hw * 1.5, head[1] + hw * 0.55);
+    ctx.quadraticCurveTo(head[0] + hw * 1.1, head[1] + hw * 0.5, head[0] + hw * 0.85, head[1] + hw * 0.3);
+    ctx.closePath();
+    ctx.fillStyle = '#3a0f0f'; ctx.fill();
+    ctx.fillStyle = '#fff';
+    for (var k = 0; k < 4; k++) {
+      var tx2 = head[0] + hw * (0.95 + k * 0.14), ty2 = head[1] + hw * (0.12 + k * 0.06);
+      ctx.beginPath(); ctx.moveTo(tx2, ty2); ctx.lineTo(tx2 + hw * 0.1, ty2 + hw * 0.22); ctx.lineTo(tx2 - hw * 0.06, ty2 + hw * 0.2);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawEnemies(g) {
+    var stage = g.stage, t = performance.now() / 1000;
+    var urchins = (stage.enemies && stage.enemies.urchins) || [];
+    urchins.forEach(function (u) { drawUrchin(u, t); });
+    g.swimmers.forEach(function (sw) {
+      if (sw.type === 'fish') drawFish(sw, t); else drawEel(sw, t);
+    });
   }
 
   function drawDebugWorld(g) {

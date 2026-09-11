@@ -312,6 +312,9 @@ function buildStage(stageId, rng, tier) {
   // 装飾(岩・海藻など): 通路の外側(壁側)にランダムに点在させる
   const decorations = pickDecorations(rng, segments, boundsW, boundsH, tier);
 
+  // 敵キャラ: Stage1〜10は固定のウニ、11〜50は遊泳するピラニア/ウツボ
+  const enemies = pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, segments);
+
   return {
     stageId,
     difficultyTier: tier.tier,
@@ -325,6 +328,7 @@ function buildStage(stageId, rng, tier) {
     fogRadius: tier.fogRadius || 0,
     segments,
     decorations,
+    enemies,
     stats: {
       routeLength: Math.round(routeLen),
       deadEnds, junctions,
@@ -356,6 +360,108 @@ function pickDecorations(rng, segments, w, h, tier) {
     decos.push({ type, x: Math.round(x), y: Math.round(y), scale: Math.round((0.7 + rng() * 0.8) * 100) / 100, rot: Math.round(rng() * 360) });
   }
   return decos;
+}
+
+/* ---------- 敵キャラ配置 ----------
+   Stage1〜10: 固定のウニ。
+     ・行き止まり(次数1のノード。START/GOALを除く)には「極密フサフサ」型。
+     ・通路の途中(道中の端。壁寄りだが船が横を通れる余地は必ず残す)には
+       「しなる触手」型を数体。
+   Stage11〜20: ゆっくり泳ぐ深海ピラニア(提灯付きアンコウ型)。
+   Stage21〜30: 速く泳ぐ深海ピラニア(棘状背びれ型)。
+   Stage31〜40: ゆっくり泳ぐウツボ(発光バンド型)。
+   Stage41〜50: 速く泳ぐウツボ(リボン型)。
+   遊泳する敵は探査船と違って壁の当たり判定を持たず、通路の外(壁の中)も
+   自由に横切って泳ぐ想定なので、経路はノード座標をランダムに繋ぐだけで
+   良い(壁を避ける必要がない)。実際の当たり判定・見た目はゲーム本体
+   (deep-sea-maze.js)側で持つ定数から作るため、ここでは座標と種類・速さ
+   だけを持たせる。 */
+const URCHIN_R = 18;
+const TENTACLE_HIT_MUL = 1.4;   // deep-sea-maze.js の checkEnemyHit と必ず同じ値にする
+function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, segments) {
+  if (stageId <= 10) {
+    const urchins = [];
+    const deadEndKeys = [];
+    for (const k of adj.keys()) {
+      if (adj.get(k).size === 1 && k !== startKey && k !== goalKey) deadEndKeys.push(k);
+    }
+    const maxFuzzy = Math.min(deadEndKeys.length, 3 + Math.floor(stageId / 2));
+    shuffle(rng, deadEndKeys).slice(0, maxFuzzy).forEach((k) => {
+      const p = shift(nodeWorld.get(k));
+      urchins.push({ variant: 'fuzzy', x: p.x, y: p.y, r: URCHIN_R, rot: Math.round(rng() * 360) });
+    });
+
+    // 道中の端(壁寄り)に「しなる触手」型を配置。船が反対側を通れる余地を
+    // 必ず残すため、通路の壁からわずかに離した位置までしか寄せない。
+    const subsegs = [];
+    let totalLen = 0;
+    for (const seg of segments) {
+      for (let i = 0; i < seg.points.length - 1; i++) {
+        const ax = seg.points[i][0], ay = seg.points[i][1];
+        const bx = seg.points[i + 1][0], by = seg.points[i + 1][1];
+        const len = dist({ x: ax, y: ay }, { x: bx, y: by });
+        if (len < 4) continue;
+        subsegs.push({ ax, ay, bx, by, len, halfW: seg.width / 2 });
+        totalLen += len;
+      }
+    }
+    // 安全確認: 壁いっぱいまで押し込んでも(d = halfW - 3)、船が反対側を
+    // 通り抜けられる余地(gap)が残るか。残らない(通路がその帯そのものより
+    // 狭い)場合は、このステージでは「道中の端」ウニを置かない。
+    // gap = d + halfW - hitR - 2*shipR (船の中心が動ける幅)
+    const hitR = URCHIN_R * TENTACLE_HIT_MUL;
+    const wallMargin = 3;
+    const safeHalfW = subsegs.length ? subsegs[0].halfW : 0;
+    const gapAtWall = 2 * safeHalfW - wallMargin - hitR - 2 * SHIP_RADIUS;
+    const tentacleCount = (subsegs.length && gapAtWall >= SHIP_RADIUS * 0.5) ? 2 + Math.floor(stageId / 3) : 0;
+    for (let i = 0; i < tentacleCount; i++) {
+      let target = rng() * totalLen, chosen = subsegs[subsegs.length - 1];
+      for (const s of subsegs) {
+        if (target <= s.len) { chosen = s; break; }
+        target -= s.len;
+      }
+      const tt = rng();
+      const px = lerp(chosen.ax, chosen.bx, tt), py = lerp(chosen.ay, chosen.by, tt);
+      const dx = chosen.bx - chosen.ax, dy = chosen.by - chosen.ay;
+      const l = Math.hypot(dx, dy) || 1;
+      const nx = -dy / l, ny = dx / l;
+      const side = rng() < 0.5 ? 1 : -1;
+      // 壁際いっぱいまで押し込む(残りの余地は反対側にまとめて残す)
+      const offset = (chosen.halfW - wallMargin) * side;
+      const p = shift({ x: px + nx * offset, y: py + ny * offset });
+      urchins.push({ variant: 'tentacle', x: p.x, y: p.y, r: URCHIN_R, rot: Math.round(rng() * 360) });
+    }
+    return { urchins, swimmers: [] };
+  }
+
+  const nodeKeys = [...adj.keys()];
+  function randomWaypoints() {
+    const k = 3 + Math.floor(rng() * 2);
+    return shuffle(rng, nodeKeys).slice(0, Math.min(k, nodeKeys.length)).map((key) => {
+      const p = shift(nodeWorld.get(key));
+      return [p.x, p.y];
+    });
+  }
+
+  let variant, speed, count, type, size;
+  if (stageId <= 20) {
+    type = 'fish'; variant = 'anglerfish'; speed = 52; size = 30;
+    count = 2 + Math.floor((stageId - 11) / 4);
+  } else if (stageId <= 30) {
+    type = 'fish'; variant = 'spinydorsal'; speed = 108; size = 30;
+    count = 3 + Math.floor((stageId - 21) / 4);
+  } else if (stageId <= 40) {
+    type = 'eel'; variant = 'glowbands'; speed = 38; size = 120;
+    count = 2 + Math.floor((stageId - 31) / 5);
+  } else {
+    type = 'eel'; variant = 'ribbon'; speed = 82; size = 120;
+    count = 2 + Math.floor((stageId - 41) / 5);
+  }
+  const swimmers = [];
+  for (let i = 0; i < count; i++) {
+    swimmers.push({ type, variant, speed, size, waypoints: randomWaypoints(), phase: Math.round(rng() * 1000) / 1000 });
+  }
+  return { urchins: [], swimmers };
 }
 
 function distToSegment(p, a, b) {
@@ -432,6 +538,78 @@ function validateStage(stage) {
   return 'STARTからGOALへの経路が見つかりません';
 }
 
+/* ---------- 検証2: 固定ウニ(Stage1〜10)を避けてもSTART→GOALに到達できるか ----------
+   validateStage() は壁だけを見て「物理的に移動できるか」を確認するが、
+   ウニは壁ではなく「触れたら即やり直し」の危険物なので、それとは別に
+   「ウニに一度も触れずに迷路を解けるか」も検証する必要がある。壁の当たり
+   判定と同じラスタライズ+BFSに、ウニの危険範囲(当たり判定と同じ半径)を
+   通行不可として重ねるだけで確認できる。行き止まりのウニ(fuzzy)は本編の
+   経路上には無いので影響しないが、道中の端のウニ(tentacle)は経路の
+   すぐそばにあるため、置き方次第で経路を完全に塞いでしまう可能性がある。
+   不合格ならこのステージ全体をシードを変えて作り直す(=マップと敵配置が
+   両方変わる)。 */
+function validateHazards(stage) {
+  const urchins = stage.enemies && stage.enemies.urchins;
+  if (!urchins || !urchins.length) return null;
+  const CELL = 6;
+  const { width: W, height: H } = stage.mazeBounds;
+  const gw = Math.ceil(W / CELL), gh = Math.ceil(H / CELL);
+  const passable = new Uint8Array(gw * gh);
+  const shipR = stage.shipSize;
+
+  for (const seg of stage.segments) {
+    const halfW = seg.width / 2 - shipR;
+    if (halfW <= 0) continue;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const [x, y] of seg.points) {
+      minX = Math.min(minX, x); minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+    }
+    const gx0 = Math.max(0, Math.floor((minX - halfW) / CELL));
+    const gy0 = Math.max(0, Math.floor((minY - halfW) / CELL));
+    const gx1 = Math.min(gw - 1, Math.ceil((maxX + halfW) / CELL));
+    const gy1 = Math.min(gh - 1, Math.ceil((maxY + halfW) / CELL));
+    for (let gy = gy0; gy <= gy1; gy++) {
+      for (let gx = gx0; gx <= gx1; gx++) {
+        const idx = gy * gw + gx;
+        if (passable[idx]) continue;
+        const px = gx * CELL + CELL / 2, py = gy * CELL + CELL / 2;
+        if (distToPolyline({ x: px, y: py }, seg.points) <= halfW) passable[idx] = 1;
+      }
+    }
+  }
+
+  const toCell = (p) => [Math.max(0, Math.min(gw - 1, Math.floor(p.x / CELL))), Math.max(0, Math.min(gh - 1, Math.floor(p.y / CELL)))];
+  const [sx, sy] = toCell(stage.startPosition);
+  const [gx, gy] = toCell(stage.goalPosition);
+
+  const seen = new Uint8Array(gw * gh);
+  const q = [sy * gw + sx];
+  seen[sy * gw + sx] = 1;
+  let qi = 0;
+  const goalIdx = gy * gw + gx;
+  while (qi < q.length) {
+    const cur = q[qi++];
+    if (cur === goalIdx) return null; // ウニを避けてもGOALへ到達できた
+    const cx = cur % gw, cy = (cur / gw) | 0;
+    const neigh = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
+    for (const [nx, ny] of neigh) {
+      if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue;
+      const ni = ny * gw + nx;
+      if (!passable[ni] || seen[ni]) continue;
+      const px = nx * CELL + CELL / 2, py = ny * CELL + CELL / 2;
+      let danger = false;
+      for (const u of urchins) {
+        const hitR = u.r * (u.variant === 'tentacle' ? TENTACLE_HIT_MUL : 1.0);
+        if (Math.hypot(px - u.x, py - u.y) <= hitR + shipR) { danger = true; break; }
+      }
+      if (danger) continue;
+      seen[ni] = 1; q.push(ni);
+    }
+  }
+  return 'ウニを避けるとSTARTからGOALへの経路が見つかりません';
+}
+
 /* ---------- 難易度カーブ(連続的) ----------
    ステージ番号を0〜1に正規化し、緩やかに加速するカーブ(t^1.2)に通してから
    各パラメータを線形補間する。段階(tier)で区切らず連続にすることで、
@@ -489,7 +667,7 @@ for (let stageId = 1; stageId <= TOTAL_STAGES; stageId++) {
   for (let seedTry = 0; seedTry < 250 && !stage; seedTry++) {
     const rng = mulberry32(stageId * 92821 + seedTry * 733);
     const candidate = buildStage(stageId, rng, tier);
-    err = validateStage(candidate);
+    err = validateStage(candidate) || validateHazards(candidate);
     if (!err) stage = candidate;
   }
   if (!stage) throw new Error('stage ' + stageId + ' 生成に失敗: ' + err);
