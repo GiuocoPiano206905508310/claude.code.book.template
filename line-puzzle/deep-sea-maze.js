@@ -601,11 +601,12 @@
 
   // 敵キャラ(ウニ・ピラニア・ウツボ)との当たり判定。HP/ライフ制は仕様上
   // 使わないため、当たった瞬間にそのステージの最初からやり直しにする。
-  // ウツボはワームのように長い曲線の体を持つため、体の芯(eelSpine)を
-  // 何点かサンプリングして、それぞれとの距離で判定する(壁の当たり判定と
-  // 同じ「点列との距離」方式)。遊泳する敵は壁の当たり判定を持たず、通路の
-  // 外(壁の中)も自由に横切って泳げる想定なので、ここでは壁とは無関係に
-  // 敵自身の座標だけで判定する。
+  // ウツボは体が長いので、体長方向に何点かサンプリングして、それぞれとの
+  // 距離で判定する(壁の当たり判定と同じ「点列との距離」方式)。絵はS字に
+  // うねっているが、判定はその中心線を直線で近似し、半径も実際の体の太さ
+  // より控えめにして、見た目より当たりにくい(=理不尽にならない)側に倒す。
+  // 遊泳する敵は壁の当たり判定を持たず、通路の外(壁の中)も自由に横切って
+  // 泳げる想定なので、ここでは壁とは無関係に敵自身の座標だけで判定する。
   function checkEnemyHit(g) {
     var ship = g.ship, stage = g.stage, shipR = stage.shipSize;
     var urchins = (stage.enemies && stage.enemies.urchins) || [];
@@ -616,18 +617,16 @@
       var hitR = u.r * (u.variant === 'tentacle' ? 1.4 : 1.15);
       if (Math.hypot(ship.x - u.x, ship.y - u.y) <= hitR + shipR) return true;
     }
-    var t = performance.now() / 1000;
     for (var j = 0; j < g.swimmers.length; j++) {
       var sw = g.swimmers[j];
       if (sw.type === 'fish') {
         var hitR2 = sw.size * 0.8;
         if (Math.hypot(ship.x - sw._x, ship.y - sw._y) <= hitR2 + shipR) return true;
       } else {
-        var spine = eelSpine(sw.size, t, 14, sw.variant === 'ribbon');
-        for (var k = 0; k < spine.pts.length; k++) {
-          var wx = sw._x + sw._dir * spine.pts[k][0];
-          var wy = sw._y + spine.pts[k][1];
-          if (Math.hypot(ship.x - wx, ship.y - wy) <= spine.widths[k] + shipR) return true;
+        var half = sw.size * 0.4, rad = sw.size * 0.1;
+        for (var k = -2; k <= 2; k++) {
+          var wx = sw._x + (k / 2) * half;
+          if (Math.hypot(ship.x - wx, ship.y - sw._y) <= rad + shipR) return true;
         }
       }
     }
@@ -1056,88 +1055,34 @@
     ctx.restore();
   }
 
-  // ウツボの体の芯(点列+太さ)を求める。描画(drawEel、ローカル座標)と
-  // 当たり判定(checkEnemyHit、ワールド座標へ自前で変換)の両方で使う共通処理。
-  function eelSpine(len, t, n, ribbon) {
-    n = n || 14;
-    var amp = ribbon ? len * 0.1 : len * 0.09;
-    var freq = ribbon ? 3.4 : 2.1;
-    var pts = [];
-    for (var i = 0; i < n; i++) {
-      var xf = i / (n - 1);
-      var x = -len * 0.5 + xf * len;
-      var y = Math.sin(xf * freq + t * (ribbon ? 4 : 3.2)) * amp * (ribbon ? (0.3 + xf * 0.9) : (0.4 + xf * 0.8));
-      pts.push([x, y]);
-    }
-    var widths = pts.map(function (p, i2) {
-      var xf = i2 / (n - 1);
-      return ribbon ? len * 0.028 : len * 0.085 * (0.55 + Math.sin(xf * Math.PI) * 0.9) * (1 - xf * 0.15);
-    });
-    return { pts: pts, widths: widths };
-  }
-  function eelNormals(pts) {
-    var n = pts.length;
-    return pts.map(function (p, i) {
-      if (i === 0 || i === n - 1) return [0, -1];
-      var dx = pts[i + 1][0] - pts[i - 1][0], dy = pts[i + 1][1] - pts[i - 1][1];
-      var l = Math.hypot(dx, dy) || 1;
-      return [-dy / l, dx / l];
-    });
-  }
-  var EEL_PALETTE = {
-    glowbands: { bodyHi: '#0a1a2a', bodyMid: '#050f1a', bodyLo: '#020508', eye: '#c8ffff', eyeGlow: true, patternColor: '#4be8ff' },
-    ribbon: { bodyHi: '#2a2a2a', bodyMid: '#141414', bodyLo: '#050505', eye: '#ffe97a' }
+  // ウツボは、用意してもらったイラスト(8コマの泳ぎアニメーション)を
+  // そのまま使う。1枚のPNGに8コマを等幅で横に並べてあるので、コマ番号 ×
+  // セル幅 で切り出す。元絵はどれも頭が左を向いているので、右へ泳ぐときだけ
+  // 左右反転する。
+  var EEL_SHEETS = {
+    glow: { src: 'dsm-eel-glow.png', cellW: 274, cellH: 135 },     // ヒカリウツボ(Stage31〜40)
+    normal: { src: 'dsm-eel-normal.png', cellW: 276, cellH: 131 }  // ノーマルウツボ(Stage41〜50)
   };
+  var EEL_FRAMES = 8, EEL_FPS = 9;
+  Object.keys(EEL_SHEETS).forEach(function (key) {
+    var sheet = EEL_SHEETS[key];
+    var img = new Image();
+    img.onload = function () { sheet.ready = true; };
+    img.src = sheet.src;
+    sheet.img = img;
+    sheet.ready = false;
+  });
+
   function drawEel(sw, t) {
-    var v = EEL_PALETTE[sw.variant] || EEL_PALETTE.glowbands;
-    var len = sw.size, ribbon = sw.variant === 'ribbon';
+    var sheet = EEL_SHEETS[sw.variant] || EEL_SHEETS.glow;
+    if (!sheet.ready) return;
+    // phase は個体ごとにずらしてあるので、同じ種類でもコマが揃わない
+    var frame = Math.floor(t * EEL_FPS + (sw.phase || 0) * EEL_FRAMES) % EEL_FRAMES;
+    var w = sw.size, h = w * (sheet.cellH / sheet.cellW);
     ctx.save();
     ctx.translate(sw._x, sw._y);
-    ctx.scale(sw._dir, 1);
-    var n = 18;
-    var spine = eelSpine(len, t, n, ribbon);
-    var pts = spine.pts, widths = spine.widths;
-    var normals = eelNormals(pts);
-    ctx.beginPath();
-    for (var i = 0; i < n; i++) { var p = pts[i], w = widths[i], nrm = normals[i]; var tx = p[0] + nrm[0] * w, ty = p[1] + nrm[1] * w; if (i === 0) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty); }
-    for (var i2 = n - 1; i2 >= 0; i2--) { var p2 = pts[i2], w2 = widths[i2], nrm2 = normals[i2]; ctx.lineTo(p2[0] - nrm2[0] * w2, p2[1] - nrm2[1] * w2); }
-    ctx.closePath();
-    var bg = ctx.createLinearGradient(-len * 0.5, 0, len * 0.5, 0);
-    bg.addColorStop(0, v.bodyHi); bg.addColorStop(0.5, v.bodyMid); bg.addColorStop(1, v.bodyLo);
-    ctx.fillStyle = bg; ctx.fill();
-    if (sw.variant === 'glowbands') {
-      ctx.strokeStyle = v.patternColor; ctx.lineWidth = widths[0] * 0.4;
-      ctx.shadowColor = v.patternColor; ctx.shadowBlur = len * 0.04;
-      for (var b = 2; b < n - 2; b += 3) {
-        var pb = pts[b], wb = widths[b], nb = normals[b];
-        ctx.beginPath();
-        ctx.moveTo(pb[0] + nb[0] * wb * 0.9, pb[1] + nb[1] * wb * 0.9);
-        ctx.lineTo(pb[0] - nb[0] * wb * 0.9, pb[1] - nb[1] * wb * 0.9);
-        ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-    }
-    var head = pts[n - 1], hw = widths[n - 1] * (ribbon ? 2.2 : 1.35);
-    ctx.beginPath(); ctx.ellipse(head[0] + hw * 0.35, head[1], hw * 1.15, hw * 0.85, 0, 0, Math.PI * 2);
-    ctx.fillStyle = v.bodyMid; ctx.fill();
-    ctx.beginPath(); ctx.arc(head[0] + hw * 0.55, head[1] - hw * 0.28, hw * 0.22, 0, Math.PI * 2);
-    ctx.fillStyle = v.eye;
-    if (v.eyeGlow) { ctx.shadowColor = v.eye; ctx.shadowBlur = hw * 0.6; }
-    ctx.fill(); ctx.shadowBlur = 0;
-    ctx.beginPath(); ctx.arc(head[0] + hw * 0.6, head[1] - hw * 0.3, hw * 0.1, 0, Math.PI * 2);
-    ctx.fillStyle = '#050505'; ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(head[0] + hw * 0.9, head[1] + hw * 0.05);
-    ctx.quadraticCurveTo(head[0] + hw * 1.55, head[1] + hw * 0.15, head[0] + hw * 1.5, head[1] + hw * 0.55);
-    ctx.quadraticCurveTo(head[0] + hw * 1.1, head[1] + hw * 0.5, head[0] + hw * 0.85, head[1] + hw * 0.3);
-    ctx.closePath();
-    ctx.fillStyle = '#3a0f0f'; ctx.fill();
-    ctx.fillStyle = '#fff';
-    for (var k = 0; k < 4; k++) {
-      var tx2 = head[0] + hw * (0.95 + k * 0.14), ty2 = head[1] + hw * (0.12 + k * 0.06);
-      ctx.beginPath(); ctx.moveTo(tx2, ty2); ctx.lineTo(tx2 + hw * 0.1, ty2 + hw * 0.22); ctx.lineTo(tx2 - hw * 0.06, ty2 + hw * 0.2);
-      ctx.closePath(); ctx.fill();
-    }
+    if (sw._dir > 0) ctx.scale(-1, 1);
+    ctx.drawImage(sheet.img, frame * sheet.cellW, 0, sheet.cellW, sheet.cellH, -w / 2, -h / 2, w, h);
     ctx.restore();
   }
 

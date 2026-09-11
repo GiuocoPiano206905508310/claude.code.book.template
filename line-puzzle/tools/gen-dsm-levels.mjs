@@ -372,8 +372,10 @@ function pickDecorations(rng, segments, w, h, tier) {
    1体・道中の端に1体)だけ配置する。
      Stage11〜20: ゆっくり泳ぐ深海ピラニア(提灯付きアンコウ型)。
      Stage21〜30: 速く泳ぐ深海ピラニア(棘状背びれ型)。
-     Stage31〜40: ゆっくり泳ぐウツボ(発光バンド型)。
-     Stage41〜50: 速く泳ぐウツボ(リボン型)。
+     Stage31〜40: ゆっくり泳ぐウツボ(ヒカリウツボ)。
+     Stage41〜50: 速く泳ぐウツボ(ノーマルウツボ)。
+     ウツボは用意してもらったイラスト(8コマのスプライトシート)をそのまま
+     使うので、variant はシート名(glow / normal)と対応する。
    遊泳する敵は探査船と違って壁の当たり判定を持たず、通路の外(壁の中)も
    自由に横切って泳ぐ想定なので、経路はノード座標をランダムに繋ぐだけで
    良い(壁を避ける必要がない)。実際の当たり判定・見た目はゲーム本体
@@ -476,10 +478,10 @@ function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, seg
     type = 'fish'; variant = 'spinydorsal'; speed = 108; size = 30;
     count = 4 + Math.floor((stageId - 21) / 4);
   } else if (stageId <= 40) {
-    type = 'eel'; variant = 'glowbands'; speed = 38; size = 120;
+    type = 'eel'; variant = 'glow'; speed = 38; size = 120;
     count = 3 + Math.floor((stageId - 31) / 5);
   } else {
-    type = 'eel'; variant = 'ribbon'; speed = 82; size = 120;
+    type = 'eel'; variant = 'normal'; speed = 82; size = 120;
     count = 3 + Math.floor((stageId - 41) / 5);
   }
   const swimmers = [];
