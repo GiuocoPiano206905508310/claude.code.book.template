@@ -52,12 +52,21 @@
   letter-spacing: .06em;
 }
 
-/* ---------- ゲーム画面: キャンバス領域 ---------- */
-.dsm-game-screen { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+/* ---------- ゲーム画面: キャンバス領域 ----------
+   .screen は position:absolute; inset:0 で高さを決めるが、埋め込み先
+   （アプリのWebViewや外側のiframeなど）によっては 100% の高さが実際の
+   表示領域とズレることがある（iOS Safariのツールバー開閉など）。
+   dvh は表示中のビューポートを直接参照するため、そのズレに影響されない
+   保険として明示しておく。 */
+.dsm-game-screen {
+  height: 100vh;
+  height: 100dvh;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
 .dsm-canvas-area {
   flex: 1;
   position: relative;
-  min-height: 0;
+  min-height: 160px;
   margin: 6px 0;
   border-radius: 16px;
   overflow: hidden;
@@ -86,7 +95,7 @@
    (指がベースの外から降りても取りこぼさない広い当たり判定)。 */
 .dsm-stick-zone {
   position: relative;
-  height: clamp(128px, 30vh, 176px);
+  flex: 0 0 clamp(128px, 30vh, 176px);
   display: grid; place-items: center;
   touch-action: none;
   -webkit-user-select: none; user-select: none;
