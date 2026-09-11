@@ -699,8 +699,38 @@
     ctx.closePath();
   }
 
-  // ゴール = 深海に沈む宝箱。たどり着いた達成感を出すため、光る宝箱に
-  // ふさわしいビジュアルにする(当たり判定は従来どおり stage.goalRadius の円)。
+  // 楕円の金貨(立体感を出すため放射グラデーション+わずかに潰した楕円)
+  function drawCoin(x, y, r, rot) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    var g = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.15, 0, 0, r);
+    g.addColorStop(0, '#fff6c8');
+    g.addColorStop(0.55, '#ffd35f');
+    g.addColorStop(1, '#b8791f');
+    ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.78, 0, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = 'rgba(90,55,10,.55)'; ctx.lineWidth = 0.4; ctx.stroke();
+    ctx.restore();
+  }
+  // ダイヤ型の宝石(ハイライトで断面のきらめきを表現)
+  function drawGem(x, y, r, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    ctx.moveTo(0, -r); ctx.lineTo(r * 0.8, -r * 0.1); ctx.lineTo(0, r); ctx.lineTo(-r * 0.8, -r * 0.1);
+    ctx.closePath();
+    var g = ctx.createLinearGradient(-r, -r, r, r);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, color); g.addColorStop(1, color);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 0.4; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(0, r); ctx.moveTo(-r * 0.8, -r * 0.1); ctx.lineTo(r * 0.8, -r * 0.1);
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 0.25; ctx.stroke();
+    ctx.restore();
+  }
+
+  // ゴール = 深海に沈む宝箱。たどり着いた達成感を出すため、木目・金具・錠前・
+  // 蝶番まで描き込んだ宝箱にする(当たり判定は従来どおり stage.goalRadius の円)。
   function drawGoalMarker(stage) {
     var p = stage.goalPosition;
     var t = performance.now() / 500;
@@ -709,60 +739,115 @@
     ctx.translate(p.x, p.y);
 
     // 黄金の後光
-    var glow = ctx.createRadialGradient(0, 0, 0, 0, 0, stage.goalRadius * 1.7);
+    var glow = ctx.createRadialGradient(0, 0, 0, 0, 0, stage.goalRadius * 1.8);
     glow.addColorStop(0, 'rgba(255,214,120,' + (0.5 + pulse * 0.3) + ')');
     glow.addColorStop(1, 'rgba(255,214,120,0)');
     ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(0, 0, stage.goalRadius * 1.7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, stage.goalRadius * 1.8, 0, Math.PI * 2); ctx.fill();
 
-    var scale = stage.goalRadius / 32;
+    var scale = stage.goalRadius / 34;
     ctx.save();
     ctx.scale(scale, scale);
 
-    // 台座(海底に半分埋もれた岩)
-    ctx.fillStyle = 'rgba(15,25,20,.6)';
-    ctx.beginPath(); ctx.ellipse(0, 15, 27, 8, 0, 0, Math.PI * 2); ctx.fill();
+    // 海底の砂の台座+こぼれ落ちた金貨
+    ctx.fillStyle = 'rgba(12,20,16,.55)';
+    ctx.beginPath(); ctx.ellipse(0, 18, 31, 8, 0, 0, Math.PI * 2); ctx.fill();
+    drawCoin(-25, 17.5, 3, 0.2);
+    drawCoin(23, 19, 2.5, -0.4);
+    drawCoin(16, 21, 2, 0.6);
 
-    // 宝箱の本体
-    ctx.fillStyle = '#6e4423';
-    roundRectPath(-21, -3, 42, 17, 4);
-    ctx.fill();
-    ctx.strokeStyle = '#3a2211'; ctx.lineWidth = 1.4; ctx.stroke();
-    ctx.fillStyle = '#d1a94e';
-    [-13, 0, 13].forEach(function (bx) { ctx.fillRect(bx - 1.6, -3, 3.2, 17); });
-    ctx.beginPath(); ctx.arc(0, 5, 2.6, 0, Math.PI * 2); ctx.fillStyle = '#d1a94e'; ctx.fill();
+    // 本体(木目のグラデーション+板の継ぎ目)
+    var woodBody = ctx.createLinearGradient(0, -3, 0, 15);
+    woodBody.addColorStop(0, '#8a5a30');
+    woodBody.addColorStop(1, '#4d2f16');
+    roundRectPath(-23, -3, 46, 18, 3);
+    ctx.fillStyle = woodBody; ctx.fill();
+    ctx.strokeStyle = '#2a1809'; ctx.lineWidth = 1.3; ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 0.7;
+    [3, 8].forEach(function (yy) { ctx.beginPath(); ctx.moveTo(-22, yy); ctx.lineTo(22, yy); ctx.stroke(); });
 
-    // 開いたふた(奥へ倒れている)
+    // 縦の金属バンド(リベット付き)
+    [-14.5, 0, 14.5].forEach(function (bx) {
+      var bandGrad = ctx.createLinearGradient(bx - 2, 0, bx + 2, 0);
+      bandGrad.addColorStop(0, '#7a5c22'); bandGrad.addColorStop(0.5, '#dbb35a'); bandGrad.addColorStop(1, '#7a5c22');
+      ctx.fillStyle = bandGrad;
+      ctx.fillRect(bx - 2, -3, 4, 18);
+      ctx.fillStyle = '#5e4419';
+      [-1, 5, 11].forEach(function (ry) { ctx.beginPath(); ctx.arc(bx, ry, 0.9, 0, Math.PI * 2); ctx.fill(); });
+    });
+
+    // 四隅の金属コーナープレート
+    ctx.fillStyle = '#9c7a34';
+    [[-23, -3], [17, -3], [-23, 10.5], [17, 10.5]].forEach(function (c) {
+      roundRectPath(c[0], c[1], 6, 4.5, 1); ctx.fill();
+    });
+
+    // 錠前(鍵穴付き)
+    var lockGrad = ctx.createLinearGradient(-4.5, 2, 4.5, 11);
+    lockGrad.addColorStop(0, '#e8c26e'); lockGrad.addColorStop(1, '#9c7a34');
+    ctx.fillStyle = lockGrad;
+    roundRectPath(-4.5, 2, 9, 9, 2); ctx.fill();
+    ctx.strokeStyle = '#5e4419'; ctx.lineWidth = 0.6; ctx.stroke();
+    ctx.fillStyle = '#2a1c08';
+    ctx.beginPath(); ctx.arc(0, 5.4, 1.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(-0.55, 5.4, 1.1, 3.2);
+
+    // ふた(丸みのあるドーム状。奥のちょうつがいを軸に開いている)
     ctx.save();
-    ctx.translate(-21, -3);
-    ctx.rotate(-0.62);
-    ctx.fillStyle = '#82502a';
-    roundRectPath(0, -9, 42, 9, 4);
-    ctx.fill();
-    ctx.strokeStyle = '#3a2211'; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.translate(-23, -3);
+    ctx.rotate(-0.68);
+    var lidGrad = ctx.createLinearGradient(0, -17, 0, 0);
+    lidGrad.addColorStop(0, '#a8763f'); lidGrad.addColorStop(1, '#5c3a1c');
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -1.5);
+    ctx.quadraticCurveTo(0, -17, 23, -17);
+    ctx.quadraticCurveTo(46, -17, 46, -1.5);
+    ctx.lineTo(46, 0);
+    ctx.closePath();
+    ctx.fillStyle = lidGrad; ctx.fill();
+    ctx.strokeStyle = '#2a1809'; ctx.lineWidth = 1.3; ctx.stroke();
+    // 蓋の縦バンド(本体と揃える位置)
+    ctx.fillStyle = '#d1a94e';
+    [14.5, 29].forEach(function (bx) { ctx.fillRect(bx - 2, -16.5, 4, 16.5); });
     ctx.restore();
 
-    // 中から溢れる光と金貨・宝石
-    var inner = ctx.createRadialGradient(0, -7, 0, 0, -7, 19);
+    // 蝶番(本体とふたの継ぎ目)
+    ctx.fillStyle = '#5e4419';
+    ctx.fillRect(-24.5, -4, 3.5, 4.5);
+    ctx.fillRect(19, -4, 3.5, 4.5);
+
+    // 中から溢れる光
+    var inner = ctx.createRadialGradient(0, -8, 0, 0, -8, 21);
     inner.addColorStop(0, 'rgba(255,240,170,.9)');
     inner.addColorStop(1, 'rgba(255,240,170,0)');
     ctx.fillStyle = inner;
-    ctx.beginPath(); ctx.arc(0, -7, 19, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -8, 21, 0, Math.PI * 2); ctx.fill();
 
-    [[-8, -10, 4, '#ffd76a'], [3, -13, 3.2, '#ffe38a'], [9, -8, 3.6, '#ffd76a'],
-     [-2, -4, 2.8, '#8fe0ff'], [7, -3, 2.4, '#ff8fd0']].forEach(function (c) {
-      ctx.beginPath(); ctx.arc(c[0], c[1], c[2], 0, Math.PI * 2); ctx.fillStyle = c[3]; ctx.fill();
+    // 山盛りの金貨と宝石(立体感のある楕円コイン+ダイヤ型の宝石)
+    drawCoin(-9, -10, 4.2, 0.15);
+    drawCoin(2, -14, 3.6, 0.5);
+    drawCoin(10, -9, 4, -0.25);
+    drawCoin(-2, -6, 3.2, -0.5);
+    drawGem(-4, -3, 3, '#ff6b8a');
+    drawGem(7, -4, 2.6, '#5be0ff');
+    drawGem(1, -9, 2.2, '#7dffb0');
+
+    // フジツボ/貝殻(長く沈んでいた質感)
+    ctx.fillStyle = 'rgba(205,214,204,.55)';
+    [[-20.5, 14], [18.5, 13], [-8, 15.5]].forEach(function (c) {
+      ctx.beginPath(); ctx.arc(c[0], c[1], 1.5, 0, Math.PI * 2); ctx.fill();
     });
 
     ctx.restore();
 
     ctx.fillStyle = '#fff3d0';
-    ctx.font = 'bold ' + Math.max(11, Math.round(stage.goalRadius * 0.34)) + 'px sans-serif';
+    ctx.font = 'bold ' + Math.max(11, Math.round(stage.goalRadius * 0.32)) + 'px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,.6)';
     ctx.shadowBlur = 5;
-    ctx.fillText('GOAL', 0, -stage.goalRadius - 9);
+    ctx.fillText('GOAL', 0, -stage.goalRadius - 10);
     ctx.restore();
   }
 

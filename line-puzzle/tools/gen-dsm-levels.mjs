@@ -451,21 +451,21 @@ const THEMES = [
 function lerp2(a, b, t) { return a + (b - a) * t; }
 function tierFor(stageId) {
   const t = (stageId - 1) / (TOTAL_STAGES - 1);
-  const te = Math.pow(t, 1.2);   // 序盤はゆっくり、終盤ほど速く難しくする
+  const te = Math.pow(t, 1.3);   // 序盤はゆっくり、終盤ほど速く難しくする
 
-  const gw = Math.round(lerp2(4, 13, te));
-  const gh = Math.round(lerp2(4, 16, te)) + (stageId % 3 === 0 ? 1 : 0);
-  const spacing = lerp2(128, 96, te);
-  const width = lerp2(74, 38, te);
-  const branchBias = lerp2(0.12, 0.8, te);
-  const extraLoopFraction = lerp2(0, 0.26, te);
-  const diagonalChance = lerp2(0, 0.36, te);
-  const curveChance = lerp2(0.25, 0.7, te);
-  const jitter = lerp2(8, 20, te);
+  const gw = Math.round(lerp2(4, 16, te));
+  const gh = Math.round(lerp2(4, 20, te)) + (stageId % 3 === 0 ? 1 : 0);
+  const spacing = lerp2(128, 94, te);
+  const width = lerp2(74, 36, te);
+  const branchBias = lerp2(0.12, 0.88, te);
+  const extraLoopFraction = lerp2(0, 0.34, te);
+  const diagonalChance = lerp2(0, 0.42, te);
+  const curveChance = lerp2(0.25, 0.72, te);
+  const jitter = lerp2(8, 22, te);
 
   const band = Math.min(THEMES.length, Math.floor((stageId - 1) / 5) + 1);
   const fogRadius = stageId >= DARK_FROM_STAGE
-    ? Math.round(lerp2(340, 210, (stageId - DARK_FROM_STAGE) / (TOTAL_STAGES - DARK_FROM_STAGE)))
+    ? Math.round(lerp2(320, 180, (stageId - DARK_FROM_STAGE) / (TOTAL_STAGES - DARK_FROM_STAGE)))
     : 0;
 
   return {
