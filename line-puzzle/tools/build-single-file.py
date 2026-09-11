@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""index.html / style.css / 各JS を1枚のHTMLにまとめる。
+"""index.html / 各CSS / 各JS を1枚のHTMLにまとめる。
 
 「HTMLを1ファイルだけ置ける配布先」に載せるとき用。
 既定では <!doctype>/<html>/<head>/<body> を含まない本文だけを出力する
@@ -13,10 +13,17 @@ import re, sys, pathlib
 
 root = pathlib.Path(__file__).resolve().parent.parent
 read = lambda name: (root / name).read_text(encoding='utf-8')
-html, css = read('index.html'), read('style.css')
+html = read('index.html')
 
 body = re.search(r'<body>(.*)</body>', html, re.S).group(1)
 title = re.search(r'<title>(.*?)</title>', html, re.S).group(1)
+
+# どのCSSを何枚読んでいるかも index.html の <link> から拾う（style.css決め打ちだと、
+# 後からゲームを増やして専用CSSを足したときに、そのぶんだけ見た目が抜け落ちる）。
+LINK = re.compile(r'<link rel="stylesheet" href="([A-Za-z0-9_.-]+\.css)(?:\?v=[0-9a-f]+)?">')
+css_names = LINK.findall(html)
+assert css_names, 'link stylesheet タグが見つからない'
+css = '\n'.join(read(n) for n in css_names)
 
 # 外部参照の script タグを、中身をそのまま埋め込んだ script に置き換える。
 # どのJSを何個読んでいるかは index.html から拾うので、JSが増えてもここは直さなくてよい。
