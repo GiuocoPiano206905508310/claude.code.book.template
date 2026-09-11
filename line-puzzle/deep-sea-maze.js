@@ -705,14 +705,14 @@
     ctx.translate(p.x, p.y);
 
     // 黄金の後光
-    var glow = ctx.createRadialGradient(0, 0, 0, 0, 0, stage.goalRadius * 1.8);
+    var glow = ctx.createRadialGradient(0, 0, 0, 0, 0, stage.goalRadius * 1.3);
     glow.addColorStop(0, 'rgba(255,214,120,' + (0.5 + pulse * 0.3) + ')');
     glow.addColorStop(1, 'rgba(255,214,120,0)');
     ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(0, 0, stage.goalRadius * 1.8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, stage.goalRadius * 1.3, 0, Math.PI * 2); ctx.fill();
 
     if (goalImgReady) {
-      var w = stage.goalRadius * 2.5;
+      var w = stage.goalRadius * 1.5;
       var h = w * GOAL_IMG_ASPECT;
       ctx.drawImage(GOAL_IMG, -w / 2, -h / 2, w, h);
     }
