@@ -464,19 +464,29 @@
   // 壁に当たったときに完全に止まってしまう(操作していて「つっかえる」感触)。
   // 実際の壁の法線方向を求め、その接線方向へ滑らせることで、どの角度で
   // 壁に当たってもスッと沿って進めるようにする。
-  function moveWithSliding(g, dx, dy) {
+  //
+  // 法線は「動こうとした先(ぶつかった点)」で取る。動く前の船の位置はまだ
+  // 通路の余裕がある場所なので、そこを基準に法線を求めると、カーブの先で
+  // 実際に当たっている壁と違う向きを拾ってしまい、浅い角度でも止まって
+  // しまうことがあった。ぶつかった点そのもので法線を取り、滑らせた後も
+  // まだ塞がれていれば、その滑り先でもう一度だけ同じ処理をやり直す
+  // (角に挟まれたときの保険)。
+  function moveWithSliding(g, dx, dy, depth) {
     var ship = g.ship, index = g.index, shipR = g.stage.shipSize;
     var nx = ship.x + dx, ny = ship.y + dy;
     if (isPassable(index, shipR, nx, ny)) { ship.x = nx; ship.y = ny; return; }
+    if ((depth || 0) >= 3) return;
 
-    var wall = nearestWallNormal(index, shipR, ship.x, ship.y);
+    var wall = nearestWallNormal(index, shipR, nx, ny);
     if (wall) {
       var dot = dx * wall.nx + dy * wall.ny;
       if (dot < 0) {
         // 壁へ向かう成分だけを取り除き、沿う方向の成分はそのまま活かす
         var slideX = dx - dot * wall.nx, slideY = dy - dot * wall.ny;
-        var sx = ship.x + slideX, sy = ship.y + slideY;
-        if (isPassable(index, shipR, sx, sy)) { ship.x = sx; ship.y = sy; return; }
+        if (Math.hypot(slideX, slideY) > 0.02) {
+          moveWithSliding(g, slideX, slideY, (depth || 0) + 1);
+          return;
+        }
       }
     }
     // 保険: 角に挟まれた場合など、上下左右のどちらかだけなら通れることがある
