@@ -750,13 +750,13 @@
     ctx.fillRect(0, 0, cssW, cssH);
   }
 
-  // ライトを消しているとき: 船のすぐ周り(船体が見えるだけのごく小さな
-  // 範囲)以外は完全な暗闇にし、「先が全く見えない」状態にする。
-  // Stageの霧(drawFog)よりずっと狭い固定半径で、霧の有無に関係なく効く。
-  var BLACKOUT_RADIUS = 46;
+  // ライトを消しているとき: 船のすぐ周り(探査船およそ3隻分先まで)以外は
+  // 完全な暗闇にする。Stageの霧(drawFog)よりずっと狭い固定半径で、
+  // 霧の有無に関係なく効く。
+  var BLACKOUT_RADIUS = 135;
   function drawBlackout(cam, cx, cy) {
     var r = BLACKOUT_RADIUS * cam.scale;
-    var grad = ctx.createRadialGradient(cx, cy, r * 0.35, cx, cy, r);
+    var grad = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
     grad.addColorStop(0.6, 'rgba(0,1,3,.9)');
     grad.addColorStop(1, 'rgba(0,1,3,1)');
