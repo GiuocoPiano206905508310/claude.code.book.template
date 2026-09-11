@@ -461,7 +461,11 @@ function tierFor(stageId) {
   const spacing = lerp2(128, 94, te);
   const width = lerp2(74, 36, te);
   const branchBias = lerp2(0.12, 0.95, te);
-  const extraLoopFraction = lerp2(0, 0.44, te);
+  // extraLoopFraction は「すでに繋がっている2点を追加でつなぐ」処理のため、
+  // 本来は行き止まりになるはずの別々の分岐同士が閉路でショートカットされ、
+  // 「どちらを選んでも同じ1本道に合流する」状態を生んでしまう。分岐を
+  // 複雑にする(選択を有効に保つ)ため、閉路の追加そのものをやめる。
+  const extraLoopFraction = 0;
   const diagonalChance = lerp2(0, 0.42, te);
   const curveChance = lerp2(0.25, 0.72, te);
   const jitter = lerp2(8, 22, te);
