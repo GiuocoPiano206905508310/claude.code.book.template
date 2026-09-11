@@ -724,12 +724,18 @@
     if (DEBUG) drawDebugWorld(g);
 
     ctx.restore();
-    // 視界制限(霧)は画面座標で船の位置を中心に掛けるので、カメラ変換を
-    // 戻した後(スクリーン座標)に描く。デバッグ表示中は調整の邪魔になるので外す。
-    if (stage.fogRadius && !DEBUG) {
+    // 視界制限(霧・消灯時の暗闇)は画面座標で船の位置を中心に掛けるので、
+    // カメラ変換を戻した後(スクリーン座標)に描く。デバッグ表示中は
+    // 調整の邪魔になるので外す。ライトを消しているときは、Stageの霧より
+    // さらに強く絞り、船のすぐ周り以外(先)がまったく見えないようにする。
+    if (!DEBUG) {
       var shipScreenX = cssW / 2 + (g.ship.x - cam.cx) * cam.scale;
       var shipScreenY = cssH / 2 + (g.ship.y - cam.cy) * cam.scale;
-      drawFog(stage, cam, shipScreenX, shipScreenY);
+      if (!g.lightOn) {
+        drawBlackout(cam, shipScreenX, shipScreenY);
+      } else if (stage.fogRadius) {
+        drawFog(stage, cam, shipScreenX, shipScreenY);
+      }
     }
     if (DEBUG) drawDebugScreen(g);
   }
@@ -740,6 +746,20 @@
     grad.addColorStop(0, 'rgba(1,4,10,0)');
     grad.addColorStop(0.7, 'rgba(1,4,10,.55)');
     grad.addColorStop(1, 'rgba(1,4,10,.95)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, cssW, cssH);
+  }
+
+  // ライトを消しているとき: 船のすぐ周り(船体が見えるだけのごく小さな
+  // 範囲)以外は完全な暗闇にし、「先が全く見えない」状態にする。
+  // Stageの霧(drawFog)よりずっと狭い固定半径で、霧の有無に関係なく効く。
+  var BLACKOUT_RADIUS = 46;
+  function drawBlackout(cam, cx, cy) {
+    var r = BLACKOUT_RADIUS * cam.scale;
+    var grad = ctx.createRadialGradient(cx, cy, r * 0.35, cx, cy, r);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.6, 'rgba(0,1,3,.9)');
+    grad.addColorStop(1, 'rgba(0,1,3,1)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, cssW, cssH);
   }
