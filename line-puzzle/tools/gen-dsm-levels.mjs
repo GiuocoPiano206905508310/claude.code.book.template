@@ -363,14 +363,17 @@ function pickDecorations(rng, segments, w, h, tier) {
 }
 
 /* ---------- 敵キャラ配置 ----------
-   Stage1〜10: 固定のウニ。
-     ・行き止まり(次数1のノード。START/GOALを除く)には「極密フサフサ」型。
-     ・通路の途中(道中の端。壁寄りだが船が横を通れる余地は必ず残す)には
-       「しなる触手」型を数体。
-   Stage11〜20: ゆっくり泳ぐ深海ピラニア(提灯付きアンコウ型)。
-   Stage21〜30: 速く泳ぐ深海ピラニア(棘状背びれ型)。
-   Stage31〜40: ゆっくり泳ぐウツボ(発光バンド型)。
-   Stage41〜50: 速く泳ぐウツボ(リボン型)。
+   Stage1〜10: 固定のウニのみ。
+     ・行き止まり(次数1のノード。START/GOALを除く)には「不揃いトゲ
+       (野性的)」型を数体(難易度が上がるほど増える)。
+     ・通路の途中(道中の端・隅。壁寄りだが船が横を通れる余地は必ず残す)
+       には「しなる触手」型を数体。
+   Stage11〜50: 遊泳する敵(下記)に加えて、固定のウニも2体(行き止まりに
+   1体・道中の端に1体)だけ配置する。
+     Stage11〜20: ゆっくり泳ぐ深海ピラニア(提灯付きアンコウ型)。
+     Stage21〜30: 速く泳ぐ深海ピラニア(棘状背びれ型)。
+     Stage31〜40: ゆっくり泳ぐウツボ(発光バンド型)。
+     Stage41〜50: 速く泳ぐウツボ(リボン型)。
    遊泳する敵は探査船と違って壁の当たり判定を持たず、通路の外(壁の中)も
    自由に横切って泳ぐ想定なので、経路はノード座標をランダムに繋ぐだけで
    良い(壁を避ける必要がない)。実際の当たり判定・見た目はゲーム本体
@@ -378,61 +381,83 @@ function pickDecorations(rng, segments, w, h, tier) {
    だけを持たせる。 */
 const URCHIN_R = 18;
 const TENTACLE_HIT_MUL = 1.4;   // deep-sea-maze.js の checkEnemyHit と必ず同じ値にする
-function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, segments) {
-  if (stageId <= 10) {
-    const urchins = [];
-    const deadEndKeys = [];
-    for (const k of adj.keys()) {
-      if (adj.get(k).size === 1 && k !== startKey && k !== goalKey) deadEndKeys.push(k);
-    }
-    const maxFuzzy = Math.min(deadEndKeys.length, 3 + Math.floor(stageId / 2));
-    shuffle(rng, deadEndKeys).slice(0, maxFuzzy).forEach((k) => {
-      const p = shift(nodeWorld.get(k));
-      urchins.push({ variant: 'fuzzy', x: p.x, y: p.y, r: URCHIN_R, rot: Math.round(rng() * 360) });
-    });
 
-    // 道中の端(壁寄り)に「しなる触手」型を配置。船が反対側を通れる余地を
-    // 必ず残すため、通路の壁からわずかに離した位置までしか寄せない。
-    const subsegs = [];
-    let totalLen = 0;
-    for (const seg of segments) {
-      for (let i = 0; i < seg.points.length - 1; i++) {
-        const ax = seg.points[i][0], ay = seg.points[i][1];
-        const bx = seg.points[i + 1][0], by = seg.points[i + 1][1];
-        const len = dist({ x: ax, y: ay }, { x: bx, y: by });
-        if (len < 4) continue;
-        subsegs.push({ ax, ay, bx, by, len, halfW: seg.width / 2 });
-        totalLen += len;
-      }
+// 行き止まり(次数1のノード。START/GOALを除く)に固定のウニを置く
+// (「不揃いトゲ(野性的)」型。行き止まりは本編の必須ルートに無いので
+// 大きさ・当たり判定の余裕は気にせず目立たせてよい)。
+function placeDeadEndUrchins(rng, count, adj, nodeWorld, startKey, goalKey, shift, urchins) {
+  const deadEndKeys = [];
+  for (const k of adj.keys()) {
+    if (adj.get(k).size === 1 && k !== startKey && k !== goalKey) deadEndKeys.push(k);
+  }
+  const n = Math.min(deadEndKeys.length, count);
+  shuffle(rng, deadEndKeys).slice(0, n).forEach((k) => {
+    const p = shift(nodeWorld.get(k));
+    urchins.push({ variant: 'irregular', x: p.x, y: p.y, r: URCHIN_R, rot: Math.round(rng() * 360) });
+  });
+}
+
+// 道中の端・隅(壁寄り)に「しなる触手」型を置く。船が反対側を通り抜けられる
+// 余地(gap)は必ず残すが、体の半分ほどが通路にはみ出す・ギリギリ避けて
+// 進める程度まで壁際いっぱいに押し込む。通路幅はステージが進むほど狭く
+// なる(74px→36px)ので、固定サイズのままだと後半ステージでは余地が
+// 負になってしまう。そこで、その通路幅で確保できる最大サイズまで
+// ウニ自体を縮めることで、どのステージでも「ギリギリ避けられる」余地を
+// 必ず残す(＝通路が狭いステージほど、このウニも自然に小さくなる)。
+function placeTentacleUrchins(rng, count, segments, shift, urchins) {
+  const subsegs = [];
+  let totalLen = 0;
+  for (const seg of segments) {
+    for (let i = 0; i < seg.points.length - 1; i++) {
+      const ax = seg.points[i][0], ay = seg.points[i][1];
+      const bx = seg.points[i + 1][0], by = seg.points[i + 1][1];
+      const len = dist({ x: ax, y: ay }, { x: bx, y: by });
+      if (len < 4) continue;
+      subsegs.push({ ax, ay, bx, by, len, halfW: seg.width / 2 });
+      totalLen += len;
     }
-    // 安全確認: 壁いっぱいまで押し込んでも(d = halfW - 3)、船が反対側を
-    // 通り抜けられる余地(gap)が残るか。残らない(通路がその帯そのものより
-    // 狭い)場合は、このステージでは「道中の端」ウニを置かない。
-    // gap = d + halfW - hitR - 2*shipR (船の中心が動ける幅)
-    const hitR = URCHIN_R * TENTACLE_HIT_MUL;
-    const wallMargin = 3;
-    const safeHalfW = subsegs.length ? subsegs[0].halfW : 0;
-    const gapAtWall = 2 * safeHalfW - wallMargin - hitR - 2 * SHIP_RADIUS;
-    const tentacleCount = (subsegs.length && gapAtWall >= SHIP_RADIUS * 0.5) ? 2 + Math.floor(stageId / 3) : 0;
-    for (let i = 0; i < tentacleCount; i++) {
-      let target = rng() * totalLen, chosen = subsegs[subsegs.length - 1];
-      for (const s of subsegs) {
-        if (target <= s.len) { chosen = s; break; }
-        target -= s.len;
-      }
-      const tt = rng();
-      const px = lerp(chosen.ax, chosen.bx, tt), py = lerp(chosen.ay, chosen.by, tt);
-      const dx = chosen.bx - chosen.ax, dy = chosen.by - chosen.ay;
-      const l = Math.hypot(dx, dy) || 1;
-      const nx = -dy / l, ny = dx / l;
-      const side = rng() < 0.5 ? 1 : -1;
-      // 壁際いっぱいまで押し込む(残りの余地は反対側にまとめて残す)
-      const offset = (chosen.halfW - wallMargin) * side;
-      const p = shift({ x: px + nx * offset, y: py + ny * offset });
-      urchins.push({ variant: 'tentacle', x: p.x, y: p.y, r: URCHIN_R, rot: Math.round(rng() * 360) });
+  }
+  if (!subsegs.length) return;
+  // gap = 2*halfW - wallMargin - hitR - 2*shipR (壁いっぱい(d=halfW-wallMargin)
+  // まで押し込んだときに船の中心が動ける幅)。gap >= minGap になるように
+  // r の上限を逆算する。全ステージ中もっとも狭い通路(Stage50, width=36)
+  // でも minGap(shipR*0.25 ≈ 3.25px)は正の値で確保できる計算式。
+  const wallMargin = 3;
+  const minGap = SHIP_RADIUS * 0.25;
+  const halfW = subsegs[0].halfW;
+  const rMaxForSafety = (2 * halfW - wallMargin - 2 * SHIP_RADIUS - minGap) / TENTACLE_HIT_MUL;
+  const r = Math.max(3, Math.min(URCHIN_R, rMaxForSafety));
+  for (let i = 0; i < count; i++) {
+    let target = rng() * totalLen, chosen = subsegs[subsegs.length - 1];
+    for (const s of subsegs) {
+      if (target <= s.len) { chosen = s; break; }
+      target -= s.len;
     }
+    const tt = rng();
+    const px = lerp(chosen.ax, chosen.bx, tt), py = lerp(chosen.ay, chosen.by, tt);
+    const dx = chosen.bx - chosen.ax, dy = chosen.by - chosen.ay;
+    const l = Math.hypot(dx, dy) || 1;
+    const nx = -dy / l, ny = dx / l;
+    const side = rng() < 0.5 ? 1 : -1;
+    const offset = (chosen.halfW - wallMargin) * side;
+    const p = shift({ x: px + nx * offset, y: py + ny * offset });
+    urchins.push({ variant: 'tentacle', x: p.x, y: p.y, r: Math.round(r * 10) / 10, rot: Math.round(rng() * 360) });
+  }
+}
+
+function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, segments) {
+  const urchins = [];
+  if (stageId <= 10) {
+    // 序盤(固定の危険物のみ): 難易度が上がるほど数を増やす
+    placeDeadEndUrchins(rng, 3 + Math.floor(stageId / 2), adj, nodeWorld, startKey, goalKey, shift, urchins);
+    placeTentacleUrchins(rng, 2 + Math.floor(stageId / 3), segments, shift, urchins);
     return { urchins, swimmers: [] };
   }
+
+  // Stage11以降も、遊泳する敵に加えて固定のウニを2体(行き止まりに1体・
+  // 道中の端に1体)だけ配置する。
+  placeDeadEndUrchins(rng, 1, adj, nodeWorld, startKey, goalKey, shift, urchins);
+  placeTentacleUrchins(rng, 1, segments, shift, urchins);
 
   const nodeKeys = [...adj.keys()];
   function randomWaypoints() {
@@ -461,7 +486,7 @@ function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, seg
   for (let i = 0; i < count; i++) {
     swimmers.push({ type, variant, speed, size, waypoints: randomWaypoints(), phase: Math.round(rng() * 1000) / 1000 });
   }
-  return { urchins: [], swimmers };
+  return { urchins, swimmers };
 }
 
 function distToSegment(p, a, b) {

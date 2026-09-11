@@ -577,7 +577,7 @@
       var u = urchins[i];
       // 1.4 は tools/gen-dsm-levels.mjs の TENTACLE_HIT_MUL と必ず同じ値にする
       // (生成時に「船が反対側を通れる余地」を計算する前提の値と一致させる必要がある)
-      var hitR = u.r * (u.variant === 'tentacle' ? 1.4 : 1.0);
+      var hitR = u.r * (u.variant === 'tentacle' ? 1.4 : 1.15);
       if (Math.hypot(ship.x - u.x, ship.y - u.y) <= hitR + shipR) return true;
     }
     var t = performance.now() / 1000;
@@ -877,7 +877,7 @@
      ユーザー選定の候補プレビューから、採用された配色・形状をそのまま移植。
      ============================================================ */
   var URCHIN_PALETTE = {
-    fuzzy: { glow: 'rgba(140,255,220,.6)', spikeA: '#123232', spikeB: '#7dfff0', bodyHi: '#2a5a5a', bodyLo: '#081a1a' },
+    irregular: { glow: 'rgba(220,60,60,.55)', spikeA: '#6b1414', spikeB: '#ff6a3a', bodyHi: '#4a1414', bodyLo: '#100303' },
     tentacle: { glow: 'rgba(120,220,70,.5)', spikeA: '#1e4a22', spikeB: '#f0ff5a', bodyHi: '#4a8a4e', bodyLo: '#13301a' }
   };
   function urchinNeedle(a, baseR, len, w, colorA, colorB, curve) {
@@ -897,7 +897,7 @@
     ctx.fill();
   }
   function drawUrchin(en, t) {
-    var pal = URCHIN_PALETTE[en.variant] || URCHIN_PALETTE.fuzzy;
+    var pal = URCHIN_PALETTE[en.variant] || URCHIN_PALETTE.irregular;
     var r = en.r;
     ctx.save();
     ctx.translate(en.x, en.y);
@@ -906,7 +906,6 @@
     glow.addColorStop(0, pal.glow); glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(0, 0, r * 2.6, 0, Math.PI * 2); ctx.fill();
-    var wob = Math.sin(t * 1.6) * 0.03;
     if (en.variant === 'tentacle') {
       var n = 12;
       for (var i = 0; i < n; i++) {
@@ -914,10 +913,13 @@
         urchinNeedle(a, r * 0.5, r * 1.5, r * 0.12, pal.spikeA, pal.spikeB, 0.55 * Math.sin(t * 1.4 + i));
       }
     } else {
-      var n2 = 46;
+      // 不揃いトゲ(野性的): 角度をランダムにジッターさせ、トゲの長さも
+      // 個体ごとに揃わないようにして、規則正しさのない野性的な見た目にする。
+      var n2 = 20;
       for (var i2 = 0; i2 < n2; i2++) {
-        var a2 = (i2 / n2) * Math.PI * 2 + wob * 2;
-        urchinNeedle(a2, r * 0.58, r * 0.55, r * 0.06, pal.spikeA, pal.spikeB, 0);
+        var a2 = (i2 / n2) * Math.PI * 2 + Math.sin(i2 * 5.2) * 0.15;
+        var lenMul = 0.6 + ((i2 * 37) % 10) / 10 * 0.9;
+        urchinNeedle(a2, r * 0.55, r * 1.2 * lenMul, r * 0.12, pal.spikeA, pal.spikeB, 0.1 * Math.sin(i2 * 3));
       }
     }
     var bg = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r * 0.85);
