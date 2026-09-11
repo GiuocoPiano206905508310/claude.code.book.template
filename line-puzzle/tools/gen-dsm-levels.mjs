@@ -322,6 +322,7 @@ function buildStage(stageId, rng, tier) {
     goalPosition: goalPosOut,
     goalRadius: Math.round(tier.width * 0.85),
     shipSize: SHIP_RADIUS,
+    fogRadius: tier.fogRadius || 0,
     segments,
     decorations,
     stats: {
@@ -431,49 +432,51 @@ function validateStage(stage) {
   return 'STARTからGOALへの経路が見つかりません';
 }
 
-/* ---------- 難易度帯のパラメータ ----------
-   tier: 1=チュートリアル(1-5) 2=初級(6-10) 3=初中級(11-15) 4=中級(16-20)
-         5=中上級(21-25) 6=上級(26-29) 7=最終(30) */
+/* ---------- 難易度カーブ(連続的) ----------
+   ステージ番号を0〜1に正規化し、緩やかに加速するカーブ(t^1.2)に通してから
+   各パラメータを線形補間する。段階(tier)で区切らず連続にすることで、
+   「1ステージ増えただけで急に難しくなる」段差が生まれにくく、後から
+   TOTAL_STAGES を増やして Stage 51〜 を足すのも tierFor() を触らずに
+   自然に繋がる。
+   帯(5ステージごと)は見た目のテーマ切り替えにだけ使う。
+   Stage 31以降は fogRadius(視界半径)を設定し、探査船の周り以外を
+   徐々に暗くして「先が見えづらい」深海の終盤らしさを出す。 */
 const SHIP_RADIUS = 13;
-const THEMES = ['entrance', 'reef', 'cavern', 'canyon', 'wreck', 'ruins'];
+const TOTAL_STAGES = 50;
+const DARK_FROM_STAGE = 31;
+const THEMES = [
+  'entrance', 'reef', 'cavern', 'canyon', 'wreck', 'ruins',
+  'trench', 'abyss', 'forgotten', 'deepest'
+];
+function lerp2(a, b, t) { return a + (b - a) * t; }
 function tierFor(stageId) {
-  let tier, gw, gh, spacing, width, branchBias, extraLoopFraction, diagonalChance, curveChance, jitter;
-  if (stageId <= 5) {
-    tier = 1; gw = 4 + (stageId - 1 >= 3 ? 1 : 0); gh = 4;
-    spacing = 128; width = 74; branchBias = 0.12; extraLoopFraction = 0;
-    diagonalChance = 0; curveChance = 0.25; jitter = 8;
-  } else if (stageId <= 10) {
-    tier = 2; gw = 5; gh = 5 + ((stageId - 6) % 2);
-    spacing = 122; width = 66; branchBias = 0.24; extraLoopFraction = 0.03;
-    diagonalChance = 0.12; curveChance = 0.4; jitter = 12;
-  } else if (stageId <= 15) {
-    tier = 3; gw = 6; gh = 6 + ((stageId - 11) % 2);
-    spacing = 118; width = 60; branchBias = 0.34; extraLoopFraction = 0.06;
-    diagonalChance = 0.18; curveChance = 0.5; jitter = 14;
-  } else if (stageId <= 20) {
-    tier = 4; gw = 7; gh = 7 + ((stageId - 16) % 3);
-    spacing = 114; width = 54; branchBias = 0.44; extraLoopFraction = 0.1;
-    diagonalChance = 0.22; curveChance = 0.55; jitter = 16;
-  } else if (stageId <= 25) {
-    tier = 5; gw = 8; gh = 8 + ((stageId - 21) % 3);
-    spacing = 110; width = 49; branchBias = 0.52; extraLoopFraction = 0.14;
-    diagonalChance = 0.26; curveChance = 0.6; jitter = 17;
-  } else if (stageId <= 29) {
-    tier = 6; gw = 9; gh = 9 + ((stageId - 26) % 3);
-    spacing = 107; width = 45; branchBias = 0.6; extraLoopFraction = 0.17;
-    diagonalChance = 0.3; curveChance = 0.62; jitter = 18;
-  } else {
-    tier = 7; gw = 10; gh = 12;
-    spacing = 105; width = 42; branchBias = 0.66; extraLoopFraction = 0.2;
-    diagonalChance = 0.32; curveChance = 0.65; jitter = 18;
-  }
-  const themeIdx = Math.min(THEMES.length - 1, Math.floor((stageId - 1) / 5));
-  return { tier, gw, gh, spacing, width, branchBias, extraLoopFraction, diagonalChance, curveChance, jitter, theme: THEMES[themeIdx] };
+  const t = (stageId - 1) / (TOTAL_STAGES - 1);
+  const te = Math.pow(t, 1.2);   // 序盤はゆっくり、終盤ほど速く難しくする
+
+  const gw = Math.round(lerp2(4, 13, te));
+  const gh = Math.round(lerp2(4, 16, te)) + (stageId % 3 === 0 ? 1 : 0);
+  const spacing = lerp2(128, 96, te);
+  const width = lerp2(74, 38, te);
+  const branchBias = lerp2(0.12, 0.8, te);
+  const extraLoopFraction = lerp2(0, 0.26, te);
+  const diagonalChance = lerp2(0, 0.36, te);
+  const curveChance = lerp2(0.25, 0.7, te);
+  const jitter = lerp2(8, 20, te);
+
+  const band = Math.min(THEMES.length, Math.floor((stageId - 1) / 5) + 1);
+  const fogRadius = stageId >= DARK_FROM_STAGE
+    ? Math.round(lerp2(340, 210, (stageId - DARK_FROM_STAGE) / (TOTAL_STAGES - DARK_FROM_STAGE)))
+    : 0;
+
+  return {
+    tier: band, gw, gh, spacing, width, branchBias, extraLoopFraction, diagonalChance, curveChance, jitter,
+    theme: THEMES[band - 1], fogRadius
+  };
 }
 
 /* ---------- 生成本体 ---------- */
 const STAGES = [];
-for (let stageId = 1; stageId <= 30; stageId++) {
+for (let stageId = 1; stageId <= TOTAL_STAGES; stageId++) {
   const tier = tierFor(stageId);
   let stage = null, err = null;
   for (let seedTry = 0; seedTry < 250 && !stage; seedTry++) {
@@ -490,15 +493,15 @@ for (let stageId = 1; stageId <= 30; stageId++) {
 STAGES.forEach((s) => {
   const st = s.stats;
   console.error(
-    `stage ${String(s.stageId).padStart(2, '0')} [tier${s.difficultyTier}] ` +
+    `stage ${String(s.stageId).padStart(2, '0')} [band${s.difficultyTier}] ` +
     `bounds=${s.mazeBounds.width}x${s.mazeBounds.height} route=${st.routeLength} ` +
     `deadEnds=${st.deadEnds} junctions=${st.junctions} curves=${st.curveChains}/${st.totalChains} ` +
-    `diag=${st.diagonalEdges} width=${st.corridorWidth}`
+    `diag=${st.diagonalEdges} width=${st.corridorWidth} fog=${s.fogRadius || '-'}`
   );
 });
 
 const header =
-  '/* 自動生成: 深海迷路 全30ステージ分の海底迷路データ\n' +
+  '/* 自動生成: 深海迷路 全' + STAGES.length + 'ステージ分の海底迷路データ\n' +
   '   生成方法: グリッド上にランダムDFS/Prim\'s混合で全域木を作り(必ず連結)、\n' +
   '   START-GOAL間はその木の直径(最も長い経路)に取る。次数2のノードは\n' +
   '   Catmull-Romスプラインでチェーン化し、直線だけでなく曲線・S字・蛇行を\n' +

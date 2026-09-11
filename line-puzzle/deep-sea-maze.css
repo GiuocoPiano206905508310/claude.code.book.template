@@ -10,14 +10,20 @@
 /* ---------- ゲーム選択カード ---------- */
 .game-choice-dsm .game-choice-icon { background: #1c8fa8; }
 
-/* ---------- ステージ帯カラー(6帯: 5ステージごと) ----------
-   1 入口 / 2 珊瑚地帯 / 3 海底洞窟 / 4 深海峡谷 / 5 沈没船地帯 / 6 超深海・遺跡地帯 */
+/* ---------- ステージ帯カラー(10帯: 5ステージごと) ----------
+   1 入口 / 2 珊瑚地帯 / 3 海底洞窟 / 4 深海峡谷 / 5 沈没船地帯 / 6 遺跡地帯 /
+   7 暗礁トレンチ / 8 深淵 / 9 忘却の深海 / 10 最深部
+   (7以降は視界制限(霧)も掛かる終盤帯。アクセント色も彩度を落として暗くする) */
 .dsm-theme-1 { --dsm-accent: #2fa0c2; --dsm-on-accent: #04303d; }
 .dsm-theme-2 { --dsm-accent: #2bb79f; --dsm-on-accent: #04322b; }
 .dsm-theme-3 { --dsm-accent: #4d7fd1; --dsm-on-accent: #ffffff; }
 .dsm-theme-4 { --dsm-accent: #6a6fd6; --dsm-on-accent: #ffffff; }
 .dsm-theme-5 { --dsm-accent: #8b64d6; --dsm-on-accent: #ffffff; }
 .dsm-theme-6 { --dsm-accent: #c15fc9; --dsm-on-accent: #ffffff; }
+.dsm-theme-7 { --dsm-accent: #5a6ab0; --dsm-on-accent: #ffffff; }
+.dsm-theme-8 { --dsm-accent: #4a5590; --dsm-on-accent: #ffffff; }
+.dsm-theme-9 { --dsm-accent: #3c4472; --dsm-on-accent: #ffffff; }
+.dsm-theme-10 { --dsm-accent: #2e3358; --dsm-on-accent: #ffffff; }
 
 #screen-dsm-select, #screen-dsm-game {
   background: linear-gradient(180deg, #123a52 0%, #061924 100%);
@@ -39,6 +45,10 @@
 .dsm-stage-grid .stage-btn.is-cleared.dsm-band-4 { --dsm-tile: #6a6fd6; }
 .dsm-stage-grid .stage-btn.is-cleared.dsm-band-5 { --dsm-tile: #8b64d6; }
 .dsm-stage-grid .stage-btn.is-cleared.dsm-band-6 { --dsm-tile: #c15fc9; }
+.dsm-stage-grid .stage-btn.is-cleared.dsm-band-7 { --dsm-tile: #5a6ab0; }
+.dsm-stage-grid .stage-btn.is-cleared.dsm-band-8 { --dsm-tile: #4a5590; }
+.dsm-stage-grid .stage-btn.is-cleared.dsm-band-9 { --dsm-tile: #3c4472; }
+.dsm-stage-grid .stage-btn.is-cleared.dsm-band-10 { --dsm-tile: #2e3358; }
 
 /* ---------- ゲーム画面: 上部バー ---------- */
 .dsm-top-row { align-items: center; }

@@ -20,7 +20,7 @@
 
   var LEVELS = window.DSM_LEVELS || [];
   var TOTAL_STAGES = LEVELS.length;
-  function bandOf(stageId) { return Math.min(6, Math.floor((stageId - 1) / 5) + 1); }
+  function bandOf(stageId) { return Math.min(10, Math.floor((stageId - 1) / 5) + 1); }
 
   var DEBUG = /(?:^|[?&])dsmdebug=1(?:&|$)/.test(window.location.search);
 
@@ -321,7 +321,7 @@
   function setTheme(stageId) {
     var band = 'dsm-theme-' + bandOf(stageId);
     [$('screen-dsm-game'), $('screen-dsm-select')].forEach(function (target) {
-      for (var i = 1; i <= 6; i++) target.classList.remove('dsm-theme-' + i);
+      for (var i = 1; i <= 10; i++) target.classList.remove('dsm-theme-' + i);
       target.classList.add(band);
     });
   }
@@ -537,7 +537,13 @@
     3: { top: '#123a5e', bottom: '#050f22', rock: '#101f3a', rockDark: '#080f1e', water: '#3a6fae', waterEdge: '#0c2c52' },
     4: { top: '#1a2f5e', bottom: '#050a1c', rock: '#141c3c', rockDark: '#080b1e', water: '#4a5fc2', waterEdge: '#161f52' },
     5: { top: '#2a1f4e', bottom: '#0a0618', rock: '#241a3c', rockDark: '#0e0a1e', water: '#6a5cc2', waterEdge: '#241a52' },
-    6: { top: '#3a1a3a', bottom: '#0e0412', rock: '#2c1430', rockDark: '#120616', water: '#a24ec2', waterEdge: '#3a1452' }
+    6: { top: '#3a1a3a', bottom: '#0e0412', rock: '#2c1430', rockDark: '#120616', water: '#a24ec2', waterEdge: '#3a1452' },
+    // 7帯目(Stage31)以降は fogRadius による視界制限に加えて、地色そのものも
+    // 徐々に暗く・彩度を落としていく(「少し暗くなっている」深海の終盤らしさ)。
+    7: { top: '#141a30', bottom: '#04060f', rock: '#141a2c', rockDark: '#080a14', water: '#465088', waterEdge: '#181c34' },
+    8: { top: '#0f1424', bottom: '#03040a', rock: '#10131f', rockDark: '#06070d', water: '#3a4270', waterEdge: '#12141f' },
+    9: { top: '#0a0d1a', bottom: '#020307', rock: '#0b0d17', rockDark: '#04050a', water: '#2e3358', waterEdge: '#0d0e18' },
+    10: { top: '#06070e', bottom: '#010102', rock: '#07080f', rockDark: '#020207', water: '#232645', waterEdge: '#08090f' }
   };
 
   function render() {
@@ -575,7 +581,24 @@
     if (DEBUG) drawDebugWorld(g);
 
     ctx.restore();
+    // 視界制限(霧)は画面座標で船の位置を中心に掛けるので、カメラ変換を
+    // 戻した後(スクリーン座標)に描く。デバッグ表示中は調整の邪魔になるので外す。
+    if (stage.fogRadius && !DEBUG) {
+      var shipScreenX = cssW / 2 + (g.ship.x - cam.cx) * cam.scale;
+      var shipScreenY = cssH / 2 + (g.ship.y - cam.cy) * cam.scale;
+      drawFog(stage, cam, shipScreenX, shipScreenY);
+    }
     if (DEBUG) drawDebugScreen(g);
+  }
+
+  function drawFog(stage, cam, cx, cy) {
+    var r = stage.fogRadius * cam.scale;
+    var grad = ctx.createRadialGradient(cx, cy, r * 0.32, cx, cy, r);
+    grad.addColorStop(0, 'rgba(1,4,10,0)');
+    grad.addColorStop(0.7, 'rgba(1,4,10,.55)');
+    grad.addColorStop(1, 'rgba(1,4,10,.95)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, cssW, cssH);
   }
 
   function pathFor(seg) {
@@ -665,29 +688,81 @@
     ctx.restore();
   }
 
+  // 角丸長方形のパスを作る(ctx.roundRect未対応環境でも動くよう自前で用意)
+  function roundRectPath(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // ゴール = 深海に沈む宝箱。たどり着いた達成感を出すため、光る宝箱に
+  // ふさわしいビジュアルにする(当たり判定は従来どおり stage.goalRadius の円)。
   function drawGoalMarker(stage) {
     var p = stage.goalPosition;
     var t = performance.now() / 500;
     var pulse = 0.5 + 0.5 * Math.sin(t);
     ctx.save();
     ctx.translate(p.x, p.y);
-    var glow = ctx.createRadialGradient(0, 0, 0, 0, 0, stage.goalRadius * 1.6);
-    glow.addColorStop(0, 'rgba(140,255,255,' + (0.55 + pulse * 0.25) + ')');
-    glow.addColorStop(1, 'rgba(140,255,255,0)');
+
+    // 黄金の後光
+    var glow = ctx.createRadialGradient(0, 0, 0, 0, 0, stage.goalRadius * 1.7);
+    glow.addColorStop(0, 'rgba(255,214,120,' + (0.5 + pulse * 0.3) + ')');
+    glow.addColorStop(1, 'rgba(255,214,120,0)');
     ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(0, 0, stage.goalRadius * 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, stage.goalRadius * 1.7, 0, Math.PI * 2); ctx.fill();
 
-    ctx.strokeStyle = '#e8fffd';
-    ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(0, 0, stage.goalRadius * (0.72 + pulse * 0.12), 0, Math.PI * 2); ctx.stroke();
+    var scale = stage.goalRadius / 32;
+    ctx.save();
+    ctx.scale(scale, scale);
 
-    ctx.fillStyle = '#e8fffd';
-    ctx.font = 'bold ' + Math.max(11, Math.round(stage.goalRadius * 0.42)) + 'px sans-serif';
+    // 台座(海底に半分埋もれた岩)
+    ctx.fillStyle = 'rgba(15,25,20,.6)';
+    ctx.beginPath(); ctx.ellipse(0, 15, 27, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+    // 宝箱の本体
+    ctx.fillStyle = '#6e4423';
+    roundRectPath(-21, -3, 42, 17, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#3a2211'; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.fillStyle = '#d1a94e';
+    [-13, 0, 13].forEach(function (bx) { ctx.fillRect(bx - 1.6, -3, 3.2, 17); });
+    ctx.beginPath(); ctx.arc(0, 5, 2.6, 0, Math.PI * 2); ctx.fillStyle = '#d1a94e'; ctx.fill();
+
+    // 開いたふた(奥へ倒れている)
+    ctx.save();
+    ctx.translate(-21, -3);
+    ctx.rotate(-0.62);
+    ctx.fillStyle = '#82502a';
+    roundRectPath(0, -9, 42, 9, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#3a2211'; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.restore();
+
+    // 中から溢れる光と金貨・宝石
+    var inner = ctx.createRadialGradient(0, -7, 0, 0, -7, 19);
+    inner.addColorStop(0, 'rgba(255,240,170,.9)');
+    inner.addColorStop(1, 'rgba(255,240,170,0)');
+    ctx.fillStyle = inner;
+    ctx.beginPath(); ctx.arc(0, -7, 19, 0, Math.PI * 2); ctx.fill();
+
+    [[-8, -10, 4, '#ffd76a'], [3, -13, 3.2, '#ffe38a'], [9, -8, 3.6, '#ffd76a'],
+     [-2, -4, 2.8, '#8fe0ff'], [7, -3, 2.4, '#ff8fd0']].forEach(function (c) {
+      ctx.beginPath(); ctx.arc(c[0], c[1], c[2], 0, Math.PI * 2); ctx.fillStyle = c[3]; ctx.fill();
+    });
+
+    ctx.restore();
+
+    ctx.fillStyle = '#fff3d0';
+    ctx.font = 'bold ' + Math.max(11, Math.round(stage.goalRadius * 0.34)) + 'px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,.55)';
-    ctx.shadowBlur = 6;
-    ctx.fillText('GOAL', 0, 1);
+    ctx.shadowColor = 'rgba(0,0,0,.6)';
+    ctx.shadowBlur = 5;
+    ctx.fillText('GOAL', 0, -stage.goalRadius - 9);
     ctx.restore();
   }
 
