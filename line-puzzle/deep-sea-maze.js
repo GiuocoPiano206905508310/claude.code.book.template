@@ -353,7 +353,7 @@
       stageId: stageId,
       stage: stage,
       index: buildCollisionIndex(stage),
-      ship: { x: stage.startPosition.x, y: stage.startPosition.y, angle: stage.startAngle, displayAngle: stage.startAngle },
+      ship: { x: stage.startPosition.x, y: stage.startPosition.y, angle: stage.startAngle, displayAngle: stage.startAngle, propSpin: 0 },
       camera: { mode: 'fixed', scale: 1, cx: stage.mazeBounds.width / 2, cy: stage.mazeBounds.height / 2 },
       playing: true,
       paused: false,
@@ -514,6 +514,8 @@
     if (!g.playing || g.paused) return;
 
     var mag = stickVec.mag;
+    // スクリューは進んでいる間だけ回す(止まると惰性で少しだけ回り続ける)
+    ship.propSpin = (ship.propSpin || 0) + (0.6 + mag * 9) * dt;
     if (mag > 0) {
       var speed = lerp(MIN_SPEED, MAX_SPEED, mag);
       var dx = stickVec.x * speed * dt, dy = stickVec.y * speed * dt;
@@ -889,54 +891,189 @@
     ctx.restore();
   }
 
+  /* ============================================================
+     探査船(ソナー型)
+     見た目はデザイン案の「⑪ソナー型」をそのまま移植。設計図は
+     船体長 L=206・半径 R=56 の座標系で描いてあり、drawShip() で
+     stage.shipSize から縮尺を決めて貼る。当たり判定は従来どおり
+     stage.shipSize の円なので、この描画は見た目だけの役割。
+     ============================================================ */
+  var SHIP_L = 206, SHIP_R = 56, SHIP_TAPER = 0.72;
+  var SHIP_UNIT = 0.019;          // 設計図の1単位 ＝ shipSize × これ
+  var SHIP_PAL = {
+    hull: '#e8e5ef', hullHi: '#ffffff', hullLo: '#a29eb6',
+    trim: '#8a5fc0', trimHi: '#c6a6f2',
+    glass: '#5b50c8', glassHi: '#bdb4ff', glassLo: '#2b2278',
+    port: '#473a96', lamp: 'rgba(240,232,255,.95)'
+  };
+  function shipGrad(x0, y0, x1, y1, stops) {
+    var g = ctx.createLinearGradient(x0, y0, x1, y1);
+    for (var i = 0; i < stops.length; i++) g.addColorStop(stops[i][0], stops[i][1]);
+    return g;
+  }
+  function shipRadial(x, y, r0, r1, stops) {
+    var g = ctx.createRadialGradient(x, y, r0, x, y, r1);
+    for (var i = 0; i < stops.length; i++) g.addColorStop(stops[i][0], stops[i][1]);
+    return g;
+  }
+  function shipRoundRect(x, y, w, h, r) {
+    r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+  /* 船体: 前が丸くふくらみ、後ろがすぼまるカプセル */
+  function shipHullPath() {
+    var L = SHIP_L, R = SHIP_R, back = -L / 2, front = L / 2, rb = R * SHIP_TAPER;
+    ctx.beginPath();
+    ctx.moveTo(back, -rb);
+    ctx.bezierCurveTo(back - rb * 0.52, -rb, back - rb * 0.52, rb, back, rb);
+    ctx.bezierCurveTo(back + L * 0.34, R * 1.04, front - R * 0.92, R, front - R * 0.04, R * 0.60);
+    ctx.bezierCurveTo(front + R * 0.36, R * 0.30, front + R * 0.36, -R * 0.30, front - R * 0.04, -R * 0.60);
+    ctx.bezierCurveTo(front - R * 0.92, -R, back + L * 0.34, -R * 1.04, back, -rb);
+    ctx.closePath();
+  }
+  function shipHull(p) {
+    var R = SHIP_R, L = SHIP_L;
+    shipHullPath();
+    ctx.fillStyle = shipGrad(0, -R, 0, R, [[0, p.hullHi], [0.40, p.hull], [1, p.hullLo]]);
+    ctx.fill();
+    ctx.save();
+    shipHullPath();
+    ctx.clip();
+    ctx.fillStyle = shipRadial(-L * 0.10, -R * 0.72, R * 0.1, R * 2.1,
+      [[0, 'rgba(255,255,255,.85)'], [1, 'rgba(255,255,255,0)']]);
+    ctx.fillRect(-L, -R * 1.2, L * 2, R * 2.4);
+    ctx.fillStyle = shipGrad(0, R * 0.05, 0, R * 1.05,
+      [[0, 'rgba(0,0,0,0)'], [1, 'rgba(12,28,52,.42)']]);
+    ctx.fillRect(-L, 0, L * 2, R * 1.2);
+    ctx.restore();
+  }
+  /* 前のガラスドーム */
+  function shipDome(p) {
+    var L = SHIP_L, R = SHIP_R, w = R * 1.15, front = L / 2, x0 = front - w;
+    ctx.save();
+    shipHullPath();
+    ctx.clip();
+    ctx.beginPath();
+    ctx.moveTo(x0, -R * 1.3);
+    ctx.quadraticCurveTo(x0 - w * 0.26, 0, x0, R * 1.3);
+    ctx.lineTo(front + R, R * 1.3);
+    ctx.lineTo(front + R, -R * 1.3);
+    ctx.closePath();
+    ctx.fillStyle = shipRadial(x0 + w * 0.34, -R * 0.34, R * 0.06, w * 1.9,
+      [[0, p.glassHi], [0.42, p.glass], [1, p.glassLo]]);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x0 + w * 0.44, -R * 0.34, w * 0.30, R * 0.20, -0.32, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x0, -R * 1.3);
+    ctx.quadraticCurveTo(x0 - w * 0.26, 0, x0, R * 1.3);
+    ctx.strokeStyle = 'rgba(255,255,255,.34)';
+    ctx.lineWidth = R * 0.05;
+    ctx.stroke();
+    ctx.restore();
+  }
+  /* 上のハッチ(セイル) */
+  function shipSail(x, w, h, p) {
+    var R = SHIP_R, top = -R * 0.92 - h;
+    shipRoundRect(x - w / 2, top, w, h + R * 0.26, Math.min(w, h) * 0.34);
+    ctx.fillStyle = shipGrad(0, top, 0, top + h, [[0, p.trimHi], [1, p.trim]]);
+    ctx.fill();
+    shipRoundRect(x - w * 0.30, top + h * 0.20, w * 0.48, h * 0.22, h * 0.11);
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.fill();
+  }
+  /* 後ろのスクリュー */
+  function shipProp(p, spin) {
+    var L = SHIP_L, R = SHIP_R, span = R * 0.78, hub = -L / 2 - R * 0.40;
+    ctx.save();
+    ctx.strokeStyle = p.trim;
+    ctx.lineWidth = R * 0.18;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-L / 2 + R * 0.06, 0); ctx.lineTo(hub, 0); ctx.stroke();
+    ctx.translate(hub, 0);
+    for (var i = 0; i < 4; i++) {
+      var a = (i / 4) * Math.PI * 2 + 0.55 + spin;
+      ctx.save();
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-R * 0.36, -span * 0.55, -R * 0.12, -span);
+      ctx.quadraticCurveTo(R * 0.34, -span * 0.60, 0, 0);
+      ctx.closePath();
+      ctx.fillStyle = shipGrad(0, 0, 0, -span, [[0, p.trim], [1, p.trimHi]]);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.11, 0, Math.PI * 2);
+    ctx.fillStyle = p.trimHi; ctx.fill();
+    ctx.restore();
+  }
+  /* 短い支柱の上のレドーム(ソナー) */
+  function shipRadome(p) {
+    var L = SHIP_L, R = SHIP_R;
+    ctx.save();
+    ctx.translate(-L * 0.26, -R * 0.88);
+    ctx.strokeStyle = p.trim; ctx.lineWidth = R * 0.13; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, R * 0.12); ctx.lineTo(0, -R * 0.22); ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(0, -R * 0.26, R * 0.30, R * 0.24, 0, Math.PI, Math.PI * 2);
+    ctx.closePath();
+    ctx.fillStyle = shipGrad(0, -R * 0.50, 0, -R * 0.26, [[0, p.trimHi], [1, p.trim]]);
+    ctx.fill();
+    ctx.restore();
+  }
+  /* 舷窓 */
+  function shipPort(x, y, r, p) {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = p.port; ctx.fill();
+    ctx.beginPath(); ctx.arc(x - r * 0.28, y - r * 0.3, r * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fill();
+  }
+
   function drawShip(ship, stage, lightOn) {
-    var r = stage.shipSize * 1.3;
+    var p = SHIP_PAL, L = SHIP_L, R = SHIP_R;
+    var ang = ship.displayAngle * Math.PI / 180;
     ctx.save();
     ctx.translate(ship.x, ship.y);
-    ctx.rotate(ship.displayAngle * Math.PI / 180);
+    ctx.rotate(ang);
+    // 左を向いたときは上下を裏返して、ハッチとソナーが常に上に来るようにする
+    if (Math.cos(ang) < 0) ctx.scale(1, -1);
+    ctx.scale(stage.shipSize * SHIP_UNIT, stage.shipSize * SHIP_UNIT);
+    ctx.lineJoin = 'round';
 
     // 前方ライト(消灯中は描かない。敵に見つかりにくくなる代わりに視界も狭まる)
     if (lightOn) {
-      var light = ctx.createRadialGradient(r * 0.9, 0, 0, r * 0.9, 0, r * 3.2);
-      light.addColorStop(0, 'rgba(255,255,220,.55)');
-      light.addColorStop(1, 'rgba(255,255,220,0)');
-      ctx.fillStyle = light;
+      var nose = L / 2 + R * 0.30;
       ctx.beginPath();
-      ctx.moveTo(r * 0.6, 0);
-      ctx.lineTo(r * 3.4, -r * 1.7);
-      ctx.lineTo(r * 3.4, r * 1.7);
+      ctx.moveTo(nose - R * 0.12, -R * 0.16);
+      ctx.quadraticCurveTo(nose + 120, -70, nose + 236, -118);
+      ctx.lineTo(nose + 236, 118);
+      ctx.quadraticCurveTo(nose + 120, 70, nose - R * 0.12, R * 0.16);
       ctx.closePath();
+      ctx.fillStyle = shipGrad(nose, 0, nose + 236, 0,
+        [[0, 'rgba(248,244,255,.55)'], [0.45, 'rgba(232,222,255,.22)'], [1, 'rgba(226,214,255,0)']]);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(nose - R * 0.06, 0, R * 0.44, 0, Math.PI * 2);
+      ctx.fillStyle = shipRadial(nose - R * 0.06, 0, 0, R * 0.44, [[0, p.lamp], [1, 'rgba(0,0,0,0)']]);
       ctx.fill();
     }
 
-    // 船体(丸みのあるカプセル)
-    var hull = ctx.createLinearGradient(0, -r, 0, r);
-    hull.addColorStop(0, '#eef3f6');
-    hull.addColorStop(0.55, '#c3d2da');
-    hull.addColorStop(1, '#8ea3ad');
-    ctx.fillStyle = hull;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r * 1.35, r * 0.92, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(30,40,45,.4)';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
-
-    // ドーム窓
-    ctx.fillStyle = 'rgba(60,150,190,.85)';
-    ctx.beginPath();
-    ctx.ellipse(r * 0.28, -r * 0.08, r * 0.42, r * 0.32, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.6)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // 小型スクリュー(船尾)
-    ctx.fillStyle = '#6b7d86';
-    ctx.beginPath();
-    ctx.ellipse(-r * 1.25, 0, r * 0.24, r * 0.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-
+    // スクリューは進んでいるときだけ回す
+    shipProp(p, (ship.propSpin || 0));
+    shipHull(p);
+    shipRadome(p);
+    shipSail(-L * 0.02, R * 0.84, R * 0.34, p);
+    shipDome(p);
+    shipPort(-L * 0.08, R * 0.02, R * 0.13, p);
     ctx.restore();
   }
 
@@ -1066,7 +1203,7 @@
      元絵は頭が右向きなので、左へ泳ぐときだけ左右反転する。
      ============================================================ */
   var EEL_FRAMES = 8, EEL_FPS = 9;
-  var EEL_BAKE_SCALE = 0.9;      // 焼き込み時の縮小率(画質と容量の折り合い)
+  var EEL_BAKE_SCALE = 0.9;      // 焼き込み時の既定の縮尺(画質と容量の折り合い)
 
   function eeLin(c, x0, y0, x1, y1, stops) {
     var g = c.createLinearGradient(x0, y0, x1, y1);
@@ -1285,7 +1422,7 @@
   // cellW / cellH は影のにじみぶんの余白を含めた焼き込み1コマの大きさ。
   var EEL_KINDS = {
     glow: {                      // 放射状エリマキウツボ(Stage31〜40・ゆっくり)
-      cellW: 390, cellH: 214, span: 366, offX: 109,
+      cellW: 390, cellH: 214, span: 366, offX: 109, bake: 0.9,
       pal: { fanA: '#e9f1e6', fanB: '#c8d8c4', body: '#cfe0cb', bodyLo: '#aec4a9',
         bodyHi: '#eaf3e7', cord: '#aec4a9', cordHi: '#cfe0cb',
         tooth: '#ffffff', eyeRing: '#b8302e' },
@@ -1307,7 +1444,7 @@
       }
     },
     normal: {                    // くねくね太骨ウツボ(Stage41〜50・速い)
-      cellW: 408, cellH: 176, span: 384, offX: -32,
+      cellW: 408, cellH: 176, span: 384, offX: -32, bake: 1.5,
       pal: { body: '#eeebe1', bodyHi: '#fbf9f3', bodyLo: '#cfccc2',
         cord: '#8496af', cordHi: '#9dabc2',
         tooth: '#ffffff', eyeRing: '#b8891f' },
@@ -1330,9 +1467,9 @@
   function eelSheetFor(variant) {
     var key = EEL_KINDS[variant] ? variant : 'glow';
     if (eelSheets[key]) return eelSheets[key];
-    var kind = EEL_KINDS[key];
-    var cw = Math.round(kind.cellW * EEL_BAKE_SCALE);
-    var ch = Math.round(kind.cellH * EEL_BAKE_SCALE);
+    var kind = EEL_KINDS[key], bake = kind.bake || EEL_BAKE_SCALE;
+    var cw = Math.round(kind.cellW * bake);
+    var ch = Math.round(kind.cellH * bake);
     var cv = document.createElement('canvas');
     cv.width = cw * EEL_FRAMES;
     cv.height = ch;
@@ -1345,7 +1482,7 @@
       c.rect(cw * f, 0, cw, ch);
       c.clip();
       c.translate(cw * (f + 0.5), ch / 2);
-      c.scale(EEL_BAKE_SCALE, EEL_BAKE_SCALE);
+      c.scale(bake, bake);
       c.translate(kind.offX, 0);
       kind.draw(c, (f / EEL_FRAMES) * Math.PI * 2);   // 8コマで1周
       c.restore();

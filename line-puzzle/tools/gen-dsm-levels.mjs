@@ -481,7 +481,7 @@ function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, seg
     type = 'eel'; variant = 'glow'; speed = 38; size = 150;
     count = 3 + Math.floor((stageId - 31) / 5);
   } else {
-    type = 'eel'; variant = 'normal'; speed = 82; size = 150;
+    type = 'eel'; variant = 'normal'; speed = 82; size = 300;
     count = 3 + Math.floor((stageId - 41) / 5);
   }
   const swimmers = [];
