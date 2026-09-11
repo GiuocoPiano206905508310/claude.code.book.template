@@ -202,6 +202,14 @@
     var ex = ax + dx * t, ey = ay + dy * t;
     return Math.hypot(px - ex, py - ey);
   }
+  // 点から線分への最短点(壁の法線方向を求めるのに使う)
+  function closestPointOnSeg(px, py, ax, ay, bx, by) {
+    var dx = bx - ax, dy = by - ay;
+    var len2 = dx * dx + dy * dy;
+    var t = len2 === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / len2;
+    t = t < 0 ? 0 : (t > 1 ? 1 : t);
+    return { x: ax + dx * t, y: ay + dy * t, tx: dx, ty: dy };
+  }
   function isPassable(index, shipR, x, y) {
     var cx = Math.floor(x / BUCKET), cy = Math.floor(y / BUCKET);
     for (var gy = cy - 1; gy <= cy + 1; gy++) {
@@ -215,6 +223,31 @@
       }
     }
     return false;
+  }
+  // 現在地点で「いちばん収まりがいい(壁までいちばん余裕がある)」通路を探し、
+  // その通路の中心線から見た外向きの法線を返す。斜め・カーブした壁でも、
+  // 上下左右2方向だけに頼らず正しい向きへ壁ずりさせるために使う。
+  function nearestWallNormal(index, shipR, x, y) {
+    var cx = Math.floor(x / BUCKET), cy = Math.floor(y / BUCKET);
+    var best = null, bestMargin = -Infinity;
+    for (var gy = cy - 1; gy <= cy + 1; gy++) {
+      for (var gx = cx - 1; gx <= cx + 1; gx++) {
+        var arr = index.map[gx + '_' + gy];
+        if (!arr) continue;
+        for (var i = 0; i < arr.length; i++) {
+          var s = index.subSegs[arr[i]];
+          var cp = closestPointOnSeg(x, y, s.ax, s.ay, s.bx, s.by);
+          var d = Math.hypot(x - cp.x, y - cp.y);
+          var margin = (s.halfW - shipR) - d;
+          if (margin > bestMargin) {
+            bestMargin = margin;
+            var nlen = d > 1e-6 ? d : 1e-6;
+            best = { nx: (x - cp.x) / nlen, ny: (y - cp.y) / nlen };
+          }
+        }
+      }
+    }
+    return best;
   }
 
   /* ============================================================
@@ -426,10 +459,27 @@
     });
   }
 
+  // 壁ずり(Wall Sliding)。海底洞窟の通路は斜め・カーブが多いため、
+  // 上下左右2方向だけを試す方式だと、その2方向のどちらでもない角度で
+  // 壁に当たったときに完全に止まってしまう(操作していて「つっかえる」感触)。
+  // 実際の壁の法線方向を求め、その接線方向へ滑らせることで、どの角度で
+  // 壁に当たってもスッと沿って進めるようにする。
   function moveWithSliding(g, dx, dy) {
     var ship = g.ship, index = g.index, shipR = g.stage.shipSize;
     var nx = ship.x + dx, ny = ship.y + dy;
     if (isPassable(index, shipR, nx, ny)) { ship.x = nx; ship.y = ny; return; }
+
+    var wall = nearestWallNormal(index, shipR, ship.x, ship.y);
+    if (wall) {
+      var dot = dx * wall.nx + dy * wall.ny;
+      if (dot < 0) {
+        // 壁へ向かう成分だけを取り除き、沿う方向の成分はそのまま活かす
+        var slideX = dx - dot * wall.nx, slideY = dy - dot * wall.ny;
+        var sx = ship.x + slideX, sy = ship.y + slideY;
+        if (isPassable(index, shipR, sx, sy)) { ship.x = sx; ship.y = sy; return; }
+      }
+    }
+    // 保険: 角に挟まれた場合など、上下左右のどちらかだけなら通れることがある
     if (dx !== 0 && isPassable(index, shipR, nx, ship.y)) { ship.x = nx; return; }
     if (dy !== 0 && isPassable(index, shipR, ship.x, ny)) { ship.y = ny; return; }
   }
@@ -776,7 +826,11 @@
   if (DEBUG) {
     window.DeepSeaMaze.debug = {
       getGame: function () { return game; },
-      warpTo: function (x, y) { if (game) { game.ship.x = x; game.ship.y = y; } }
+      warpTo: function (x, y) { if (game) { game.ship.x = x; game.ship.y = y; } },
+      // 壁ずり(moveWithSliding)の当たり判定を、実際のジョイスティック操作を
+      // 介さず直接テストするためのフック(自動テスト・調整用)。
+      simulateMove: function (dx, dy) { if (game) moveWithSliding(game, dx, dy); },
+      isPassable: function (x, y) { return game ? isPassable(game.index, game.stage.shipSize, x, y) : null; }
     };
   }
 })();
