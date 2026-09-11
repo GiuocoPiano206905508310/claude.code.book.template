@@ -451,14 +451,17 @@ const THEMES = [
 function lerp2(a, b, t) { return a + (b - a) * t; }
 function tierFor(stageId) {
   const t = (stageId - 1) / (TOTAL_STAGES - 1);
-  const te = Math.pow(t, 1.3);   // 序盤はゆっくり、終盤ほど速く難しくする
+  // Stage1(t=0)はどんな指数でも te=0 になり従来どおり最小パラメータのまま。
+  // 指数を1.3→0.62に下げて「序盤ほど速く」難化させ、Stage2の時点で
+  // すでにマップが目に見えて広がり分岐も増えるようにする。
+  const te = Math.pow(t, 0.62);
 
-  const gw = Math.round(lerp2(4, 16, te));
-  const gh = Math.round(lerp2(4, 20, te)) + (stageId % 3 === 0 ? 1 : 0);
+  const gw = Math.round(lerp2(4, 22, te));
+  const gh = Math.round(lerp2(4, 28, te)) + (stageId % 3 === 0 ? 1 : 0);
   const spacing = lerp2(128, 94, te);
   const width = lerp2(74, 36, te);
-  const branchBias = lerp2(0.12, 0.88, te);
-  const extraLoopFraction = lerp2(0, 0.34, te);
+  const branchBias = lerp2(0.12, 0.95, te);
+  const extraLoopFraction = lerp2(0, 0.44, te);
   const diagonalChance = lerp2(0, 0.42, te);
   const curveChance = lerp2(0.25, 0.72, te);
   const jitter = lerp2(8, 22, te);
