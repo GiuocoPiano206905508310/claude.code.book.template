@@ -1058,72 +1058,30 @@
 
   /* ============================================================
      ウツボ(Stage31〜50)
-     ゆっくり泳ぐ「エリマキウツボ」と、速く泳ぐ「骨ウツボ」の2種。
-     どちらも画像ではなくコードで描いている。ただし勾配・影ぼかしを毎フレーム
-     作り直すと重いので、起動時に1個体8コマぶんをオフスクリーンへ焼いておき、
-     本番のループではそのコマを貼るだけにしてある。
-     元絵は頭が右を向いているので、左へ泳ぐときだけ左右反転する。
+     ゆっくり泳ぐ「放射状エリマキウツボ」と、速く泳ぐ「くねくね太骨ウツボ」
+     の2種。どちらも画像ではなくコードで描いている。勾配を毎フレーム作り直すと
+     重いので、eelSheetFor() が起動時に8コマぶんをオフスクリーンへ一度だけ焼き、
+     本番のループではコマを切り出して貼るだけにしてある。
+     開いた口の中は塗らない（＝透明のまま）ので、迷路の背景がそのまま透ける。
+     元絵は頭が右向きなので、左へ泳ぐときだけ左右反転する。
      ============================================================ */
   var EEL_FRAMES = 8, EEL_FPS = 9;
-  var EEL_BAKE_LEN = 430;                               // 焼くときの体長(この座標系で描く)
-  var EEL_BAKE_SCALE = 0.75;                            // 焼き込み時の縮小率(画質と容量の折り合い)
-  var EEL_CELL_W = Math.round(EEL_BAKE_LEN * 1.24 * EEL_BAKE_SCALE);
-  var EEL_CELL_H = Math.round(EEL_BAKE_LEN * 0.50 * EEL_BAKE_SCALE);
-  var EEL_W_PER_LEN = EEL_CELL_W / (EEL_BAKE_LEN * EEL_BAKE_SCALE);  // 体長→貼る幅の倍率
+  var EEL_BAKE_SCALE = 0.9;      // 焼き込み時の縮小率(画質と容量の折り合い)
 
   function eeLin(c, x0, y0, x1, y1, stops) {
     var g = c.createLinearGradient(x0, y0, x1, y1);
     for (var i = 0; i < stops.length; i++) g.addColorStop(stops[i][0], stops[i][1]);
     return g;
   }
-  function eeRad(c, x, y, r0, r1, stops) {
-    var g = c.createRadialGradient(x, y, r0, x, y, r1);
-    for (var i = 0; i < stops.length; i++) g.addColorStop(stops[i][0], stops[i][1]);
-    return g;
-  }
-  /* 背骨: 尾(index 0, 左)から頭(最後, 右)へ。尾ほど大きくうねる。 */
-  function eeSpine(n, len, amp, freq, phase) {
-    var pts = [];
-    for (var i = 0; i < n; i++) {
-      var f = i / (n - 1);
-      var swing = amp * (0.35 + 0.9 * (1 - f));
-      pts.push([-len * 0.5 + f * len, Math.sin(f * freq + phase) * swing]);
-    }
-    return pts;
-  }
-  /* 側面から見た体の深さ: 尾は尖り、胴は保つ */
-  function eeWidths(n, maxW) {
-    var out = [];
-    for (var i = 0; i < n; i++) {
-      var f = i / (n - 1);
-      out.push(maxW * (f < 0.32 ? Math.pow(f / 0.32, 0.85)
-                                : 1 + 0.08 * Math.sin((f - 0.32) / 0.68 * Math.PI)));
-    }
-    return out;
-  }
-  function eeNormals(pts) {
-    var n = pts.length, out = [];
-    for (var i = 0; i < n; i++) {
-      var a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
-      var dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
-      var nx = -dy / l, ny = dx / l;
-      out.push(ny <= 0 ? [nx, ny] : [-nx, -ny]);   // つねに画面の上を向かせる
-    }
-    return out;
-  }
-  function eeTangent(pts, i) {
-    var n = pts.length, a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
-    var dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
-    return [dx / l, dy / l];
-  }
-  function eeEdges(pts, widths) {
-    var nr = eeNormals(pts), top = [], bot = [];
-    for (var i = 0; i < pts.length; i++) {
-      var p = pts[i], w = widths[i], v = nr[i];
-      top.push([p[0] + v[0] * w, p[1] + v[1] * w]);
-      bot.push([p[0] - v[0] * w, p[1] - v[1] * w]);
-    }
-    return { top: top, bot: bot, nr: nr };
+  function eeRoundRect(c, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
+    c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r);
+    c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y);
+    c.closePath();
   }
   /* 点列を中点経由の二次ベジェでなめらかに繋ぐ */
   function eeSmooth(c, e, move) {
@@ -1133,404 +1091,279 @@
     }
     c.lineTo(e[e.length - 1][0], e[e.length - 1][1]);
   }
-  function eeBodyPath(c, pts, widths, E) {
-    var n = pts.length;
-    c.beginPath();
-    eeSmooth(c, E.top, true);
-    var h = pts[n - 1], hw = widths[n - 1], hv = E.nr[n - 1];
-    // 前方(進行方向)側を回り込む向きに掃く。逆向きだと体を半円ぶんえぐって
-    // しまい、首のところに黒い欠けができる。
-    var capA = Math.atan2(hv[1], hv[0]);
-    c.arc(h[0], h[1], hw, capA, capA + Math.PI, false);
-    eeSmooth(c, E.bot.slice().reverse(), false);
-    c.closePath();
+  function eeSample(fn, n) {
+    var p = [];
+    for (var i = 0; i < n; i++) p.push(fn(i / (n - 1)));
+    return p;
   }
-  /* 背びれ・尻びれ: 半透明の膜 + すじ */
-  function eeFin(c, pts, widths, E, o) {
-    var outer = [], inner = [], i;
-    for (i = o.from; i <= o.to; i++) {
-      var f = (i - o.from) / (o.to - o.from);
-      var h = o.h * Math.sin(Math.pow(f, o.skew || 0.85) * Math.PI);
-      var side = o.down ? -1 : 1;
-      var base = o.down ? E.bot[i] : E.top[i];
-      var v = [E.nr[i][0] * side, E.nr[i][1] * side];
-      outer.push([base[0] + v[0] * h, base[1] + v[1] * h]);
-      inner.push([base[0] - v[0] * 1.2, base[1] - v[1] * 1.2]);
+  /* 背骨に沿って、間隔を変えながら置き場所を拾う */
+  function eeWalk(pts, spacingFn) {
+    var cum = [0], i;
+    for (i = 1; i < pts.length; i++) {
+      cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     }
-    c.beginPath();
-    eeSmooth(c, outer, true);
-    eeSmooth(c, inner.slice().reverse(), false);
-    c.closePath();
-    c.fillStyle = o.fill;
-    c.fill();
-    c.save();
-    c.clip();
-    c.strokeStyle = o.ray;
-    c.lineWidth = 0.9;
-    c.globalAlpha = 0.5;
-    for (var k = 0; k < outer.length; k += 3) {
-      c.beginPath();
-      c.moveTo(inner[k][0], inner[k][1]);
-      c.lineTo(outer[k][0], outer[k][1]);
-      c.stroke();
+    var total = cum[cum.length - 1], out = [], d = 0, seg = 1;
+    while (d <= total && out.length < 200) {
+      while (seg < cum.length - 1 && cum[seg] < d) seg++;
+      var a = pts[seg - 1], b = pts[seg];
+      var span = cum[seg] - cum[seg - 1] || 1;
+      var f = (d - cum[seg - 1]) / span;
+      var l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      out.push({ p: [lerp(a[0], b[0], f), lerp(a[1], b[1], f)],
+                 tan: [(b[0] - a[0]) / l, (b[1] - a[1]) / l], u: d / total });
+      d += Math.max(4, spacingFn(d / total));
     }
-    c.globalAlpha = 1;
-    c.restore();
-    if (o.edge) {
-      c.beginPath();
-      eeSmooth(c, outer, true);
-      c.strokeStyle = o.edge;
-      c.lineWidth = 1.3;
-      if (o.edgeGlow) { c.shadowColor = o.edge; c.shadowBlur = 7; }
-      c.stroke();
-      c.shadowBlur = 0;
-    }
+    return out;
   }
-  /* 頭: 上あご・下あご・のどを別部品として組み立てる。体は顎の付け根
-     (背骨の最後の点)で終わっていて、そこを原点に「前方向 x・上方向 y」の
-     ローカル座標で形を作る。 */
-  function eeLrot(p, piv, a) {
-    var dx = p[0] - piv[0], dy = p[1] - piv[1], co = Math.cos(a), si = Math.sin(a);
-    return [piv[0] + dx * co - dy * si, piv[1] + dx * si + dy * co];
-  }
-  function eeHead(c, pts, widths, E, cfg) {
-    var n = pts.length, o = pts[n - 1], w = widths[n - 1];
-    var tg = eeTangent(pts, n - 1), up = E.nr[n - 1];
-    var P = function (x, y) { return [o[0] + tg[0] * x + up[0] * y, o[1] + tg[1] * x + up[1] * y]; };
-    var L = w * cfg.headLen, col = cfg.col, gape = cfg.gape;
-    var jawPivot = [0, -w * 0.72];
 
-    // のど(上下のあごの間。奥ほど暗い)
-    var biteU = [[0, -w * 0.72], [L * 0.5, -w * 0.42], [L * 0.97, w * 0.02]];
-    var biteL = [[0, -w * 0.72], [L * 0.48, -w * 0.52], [L * 0.9, -w * 0.2]]
-      .map(function (p) { return eeLrot(p, jawPivot, -gape); });
-    c.beginPath();
-    c.moveTo.apply(c, P(biteU[0][0], biteU[0][1]));
-    c.quadraticCurveTo.apply(c, P(biteU[1][0], biteU[1][1]).concat(P(biteU[2][0], biteU[2][1])));
-    c.lineTo.apply(c, P(biteL[2][0], biteL[2][1]));
-    c.quadraticCurveTo.apply(c, P(biteL[1][0], biteL[1][1]).concat(P(biteL[0][0], biteL[0][1])));
-    c.closePath();
-    var thr = P(0, -w * 0.7);
-    c.fillStyle = eeRad(c, thr[0], thr[1], 2, L * 1.1, [[0, col.throat1], [1, col.throat0]]);
-    c.fill();
+  /* 頭: あごの付け根を原点に、前方向 x・上方向 -y で組む。
+     口の中は塗らないので、上下のあごの隙間から背景が透ける。 */
+  function eeHead(c, L, H, pal, gape) {
+    var bite = [[0, H * 0.34], [L * 0.52, H * 0.32], [L * 1.0, -H * 0.06]];
+    function jr(p) {                                   // 下あごを蝶番で開く
+      var px = p[0], py = p[1] - H * 0.34, co = Math.cos(gape), si = Math.sin(gape);
+      return [px * co - py * si, px * si + py * co + H * 0.34];
+    }
+    var lj = [[L * 0.92, H * 0.22], [L * 0.5, H * 0.52], [0, H * 0.34]].map(jr);
 
     // 下あご
-    var LS = [[0, -w * 0.72], [L * 0.48, -w * 0.52], [L * 0.9, -w * 0.2],
-              [L * 0.86, -w * 0.52], [L * 0.45, -w * 1.0], [0, -w * 1.12]]
-      .map(function (p) { return eeLrot(p, jawPivot, -gape); });
+    var jaw = [[0, H * 0.34], [L * 0.5, H * 0.52], [L * 0.92, H * 0.22],
+               [L * 0.86, H * 0.52], [L * 0.44, H * 0.86], [0, H * 0.78]].map(jr);
     c.beginPath();
-    c.moveTo.apply(c, P(LS[0][0], LS[0][1]));
-    c.quadraticCurveTo.apply(c, P(LS[1][0], LS[1][1]).concat(P(LS[2][0], LS[2][1])));
-    c.lineTo.apply(c, P(LS[3][0], LS[3][1]));
-    c.quadraticCurveTo.apply(c, P(LS[4][0], LS[4][1]).concat(P(LS[5][0], LS[5][1])));
+    c.moveTo(jaw[0][0], jaw[0][1]);
+    c.quadraticCurveTo(jaw[1][0], jaw[1][1], jaw[2][0], jaw[2][1]);
+    c.lineTo(jaw[3][0], jaw[3][1]);
+    c.quadraticCurveTo(jaw[4][0], jaw[4][1], jaw[5][0], jaw[5][1]);
     c.closePath();
-    c.fillStyle = col.jaw;
+    c.fillStyle = eeLin(c, 0, H * 0.2, 0, H, [[0, pal.body], [1, pal.bodyLo]]);
     c.fill();
-    if (col.jawEdge) { c.strokeStyle = col.jawEdge; c.lineWidth = 1.1; c.stroke(); }
 
-    // 上あご(頭の上半分。体からなめらかに続く)
+    // 頭蓋（後頭部は丸く、鼻先へすぼまる）
     c.beginPath();
-    c.moveTo.apply(c, P(0, w));
-    c.quadraticCurveTo.apply(c, P(L * 0.62, w * 0.96).concat(P(L * 0.99, w * 0.3)));
-    c.lineTo.apply(c, P(L * 0.97, w * 0.02));
-    c.quadraticCurveTo.apply(c, P(L * 0.5, -w * 0.42).concat(P(0, -w * 0.72)));
-    c.lineTo.apply(c, P(0, w));
+    c.moveTo(-L * 0.08, -H * 0.18);
+    c.quadraticCurveTo(L * 0.02, -H * 0.96, L * 0.38, -H * 0.90);
+    c.quadraticCurveTo(L * 0.76, -H * 0.84, L * 1.0, -H * 0.06);
+    c.quadraticCurveTo(L * 0.52, H * 0.32, 0, H * 0.34);
+    c.quadraticCurveTo(-L * 0.24, H * 0.30, -L * 0.08, -H * 0.18);
     c.closePath();
-    var hg0 = P(0, w), hg1 = P(L, -w);
-    c.fillStyle = eeLin(c, hg0[0], hg0[1], hg1[0], hg1[1],
-      [[0, col.head], [0.55, col.head], [1, col.headTip || col.mid]]);
+    c.fillStyle = eeLin(c, 0, -H, 0, H, [[0, pal.bodyHi], [0.55, pal.body], [1, pal.bodyLo]]);
     c.fill();
-    c.save(); c.clip();
-    var a0 = P(0, w * 1.2), a1 = P(0, -w * 1.2);
-    c.fillStyle = eeLin(c, a0[0], a0[1], a1[0], a1[1],
-      [[0, 'rgba(255,255,255,.18)'], [0.45, 'rgba(255,255,255,0)'], [1, 'rgba(0,0,0,.40)']]);
-    c.fillRect(-2000, -2000, 4000, 4000);
-    c.restore();
-    if (col.outline) { c.strokeStyle = col.outline; c.lineWidth = 1.1; c.stroke(); }
 
-    // 頭骨のすじ(骨ウツボ)
-    if (cfg.skull) {
-      c.save();
-      c.strokeStyle = cfg.skull.line;
-      c.lineWidth = 1.2;
-      if (cfg.skull.glow) { c.shadowColor = cfg.skull.glow; c.shadowBlur = 8; }
-      c.beginPath();                                    // 頭頂の稜線
-      c.moveTo.apply(c, P(0, w * 0.72));
-      c.quadraticCurveTo.apply(c, P(L * 0.55, w * 0.74).concat(P(L * 0.92, w * 0.2)));
-      c.stroke();
-      c.beginPath();                                    // 頬骨
-      c.moveTo.apply(c, P(L * 0.1, w * 0.1));
-      c.quadraticCurveTo.apply(c, P(L * 0.42, -w * 0.08).concat(P(L * 0.72, -w * 0.26)));
-      c.stroke();
-      c.beginPath();                                    // 後頭部の継ぎ目
-      c.moveTo.apply(c, P(L * 0.12, w * 0.92));
-      c.lineTo.apply(c, P(L * 0.16, -w * 0.5));
-      c.stroke();
-      c.restore();
-    }
-
-    // 歯(二次ベジェの上に等間隔で立てる)
-    function teeth(curve, dir, count, len) {
-      c.fillStyle = col.tooth;
-      for (var k = 0; k < count; k++) {
-        var f = (k + 0.5) / count, mt = 1 - f;
-        var bx = mt * mt * curve[0][0] + 2 * mt * f * curve[1][0] + f * f * curve[2][0];
-        var by = mt * mt * curve[0][1] + 2 * mt * f * curve[1][1] + f * f * curve[2][1];
-        var dx = 2 * mt * (curve[1][0] - curve[0][0]) + 2 * f * (curve[2][0] - curve[1][0]);
-        var dy = 2 * mt * (curve[1][1] - curve[0][1]) + 2 * f * (curve[2][1] - curve[1][1]);
+    // 歯（噛み合わせ線に沿って立てる）
+    function teeth(a, ctrl, b, dir, n, len) {
+      c.fillStyle = pal.tooth;
+      for (var k = 0; k < n; k++) {
+        var f = (k + 0.5) / n, mt = 1 - f;
+        var bx = mt * mt * a[0] + 2 * mt * f * ctrl[0] + f * f * b[0];
+        var by = mt * mt * a[1] + 2 * mt * f * ctrl[1] + f * f * b[1];
+        var dx = 2 * mt * (ctrl[0] - a[0]) + 2 * f * (b[0] - ctrl[0]);
+        var dy = 2 * mt * (ctrl[1] - a[1]) + 2 * f * (b[1] - ctrl[1]);
         var l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
-        var s = len * (0.55 + 0.45 * Math.sin(f * Math.PI));
+        var sz = len * (0.62 + 0.38 * Math.sin(f * Math.PI));
         c.beginPath();
-        c.moveTo.apply(c, P(bx - dx * s * 0.26, by - dy * s * 0.26));
-        c.lineTo.apply(c, P(bx + dx * s * 0.26, by + dy * s * 0.26));
-        c.lineTo.apply(c, P(bx + dy * s * dir, by - dx * s * dir));
+        c.moveTo(bx - dx * sz * 0.3, by - dy * sz * 0.3);
+        c.lineTo(bx + dx * sz * 0.3, by + dy * sz * 0.3);
+        c.lineTo(bx - dy * sz * dir, by + dx * sz * dir);
         c.closePath();
         c.fill();
       }
     }
-    var tc = cfg.toothCount;
-    teeth(biteU, 1, tc, w * cfg.toothLen);
-    teeth(biteL, -1, tc - 1, w * cfg.toothLen * 0.9);
+    teeth(bite[0], bite[1], bite[2], -1, 9, H * 0.20);
+    teeth(lj[2], lj[1], lj[0], 1, 8, H * 0.18);
 
-    // 目
-    var ep = P(L * 0.30, w * 0.42), r = w * cfg.eyeR;
-    if (cfg.socket) {
-      c.beginPath(); c.arc(ep[0], ep[1], r * 1.4, 0, Math.PI * 2);
-      c.fillStyle = eeRad(c, ep[0], ep[1], 0, r * 1.4,
-        [[0, '#000'], [0.7, 'rgba(0,0,0,.85)'], [1, 'rgba(0,0,0,.25)']]);
-      c.fill();
-      c.beginPath(); c.arc(ep[0] + r * 0.15, ep[1], r * 0.4, 0, Math.PI * 2);
-      c.fillStyle = col.glow;
-      c.shadowColor = col.glow; c.shadowBlur = 16; c.fill(); c.shadowBlur = 0;
-    } else {
-      c.beginPath(); c.arc(ep[0], ep[1], r, 0, Math.PI * 2);
-      c.fillStyle = eeRad(c, ep[0] - r * 0.2, ep[1] - r * 0.25, r * 0.05, r, [[0, col.irisHi], [1, col.iris]]);
-      c.shadowColor = col.iris; c.shadowBlur = 12;
-      c.fill(); c.shadowBlur = 0;
-      c.beginPath(); c.arc(ep[0] + r * 0.1, ep[1], r * 0.42, 0, Math.PI * 2);
-      c.fillStyle = '#06080b'; c.fill();
-      c.beginPath(); c.arc(ep[0] - r * 0.32, ep[1] - r * 0.34, r * 0.24, 0, Math.PI * 2);
-      c.fillStyle = 'rgba(255,255,255,.9)'; c.fill();
-    }
-    // 鼻管
-    var np = P(L * 0.82, w * 0.26);
-    c.beginPath(); c.ellipse(np[0], np[1], w * 0.08, w * 0.05, 0, 0, Math.PI * 2);
-    c.fillStyle = 'rgba(0,0,0,.4)'; c.fill();
+    // 目（白目に色の輪、中央に小さな瞳）
+    var ex = L * 0.42, ey = -H * 0.34, er = H * 0.25;
+    c.beginPath(); c.arc(ex, ey, er, 0, Math.PI * 2);
+    c.fillStyle = '#fbfaf5'; c.fill();
+    c.lineWidth = er * 0.40;
+    c.strokeStyle = pal.eyeRing; c.stroke();
+    c.beginPath(); c.arc(ex + er * 0.06, ey, er * 0.30, 0, Math.PI * 2);
+    c.fillStyle = '#20242c'; c.fill();
   }
-  /* 体の塗り: 背側が明るく腹側が暗い立体感 + リムライト */
-  function eePaintBody(c, pts, widths, E, col, H) {
-    c.save();
-    eeBodyPath(c, pts, widths, E);
-    c.clip();
-    c.fillStyle = eeLin(c, pts[0][0], 0, pts[pts.length - 1][0], 0,
-      [[0, col.tail], [0.55, col.mid], [1, col.head]]);
-    c.fillRect(-H, -H, H * 3, H * 3);
-    c.fillStyle = eeLin(c, 0, -H * 0.5, 0, H * 0.5,
-      [[0, 'rgba(255,255,255,.16)'], [0.42, 'rgba(255,255,255,0)'],
-       [0.72, 'rgba(0,0,0,.30)'], [1, 'rgba(0,0,0,.55)']]);
-    c.fillRect(-H, -H, H * 3, H * 3);
-    if (col.dots) {                                       // 発光斑
-      c.fillStyle = col.dots;
-      c.shadowColor = col.dots; c.shadowBlur = 9;
-      for (var i = 4; i < pts.length - 5; i += 3) {
-        var p = pts[i], w = widths[i], v = E.nr[i];
-        c.beginPath();
-        c.arc(p[0] + v[0] * w * 0.45, p[1] + v[1] * w * 0.45, 2.2, 0, Math.PI * 2);
-        c.fill();
-      }
-      c.shadowBlur = 0;
-    }
-    c.restore();
-    c.beginPath();                                        // 背側のリムライト
-    eeSmooth(c, E.top, true);
-    c.strokeStyle = col.rim;
-    c.lineWidth = 1.6;
-    c.stroke();
-    eeBodyPath(c, pts, widths, E);                        // 輪郭を軽く締める
-    c.strokeStyle = col.outline;
-    c.lineWidth = 1.2;
-    c.stroke();
-  }
-  /* エリマキ(襟): 首の後ろから扇状に開く膜 */
-  function eeFrill(c, pts, widths, E, cfg, rip) {
-    var i = pts.length - 3, p = pts[i], w = widths[i], tg = eeTangent(pts, i);
+
+  /* ---- くねくね太骨ウツボ(Stage41〜50・速い) ---- */
+  function eeVertebra(c, p, tan, thick, r, pal) {
     c.save();
     c.translate(p[0], p[1]);
-    c.rotate(Math.atan2(tg[1], tg[0]));
-    var R = w * cfg.frillR, layers = cfg.layers || 1, segs = cfg.segs;
-    for (var L = layers - 1; L >= 0; L--) {
-      var rr = R * (1 - L * 0.26), a0 = -cfg.spread, a1 = cfg.spread, k;
-      var rippleAt = function (f) { return 1 + cfg.ruffle * Math.sin(f * segs * Math.PI + rip + L); };
-      c.beginPath();                                      // 膜(波打つ外周)
-      c.moveTo(0, 0);
-      for (k = 0; k <= segs; k++) {
-        var f = k / segs, a = lerp(a0, a1, f), ri = rippleAt(f);
-        c.lineTo(-Math.cos(a) * rr * ri, Math.sin(a) * rr * ri);
-      }
-      c.closePath();
-      c.fillStyle = eeRad(c, 0, 0, w * 0.3, rr * 1.1, [[0, cfg.frillIn], [1, cfg.frillOut]]);
-      c.fill();
-      c.strokeStyle = cfg.frillRay;                       // 放射状の支持骨
-      c.lineWidth = 1.5;
-      for (k = 0; k <= segs; k++) {
-        var f2 = k / segs, a2 = lerp(a0, a1, f2), r2 = rippleAt(f2);
-        c.beginPath();
-        c.moveTo(-Math.cos(a2) * w * 0.35, Math.sin(a2) * w * 0.35);
-        c.lineTo(-Math.cos(a2) * rr * r2, Math.sin(a2) * rr * r2);
-        c.stroke();
-      }
-      c.beginPath();                                      // 光る縁
-      for (k = 0; k <= segs; k++) {
-        var f3 = k / segs, a3 = lerp(a0, a1, f3), r3 = rippleAt(f3);
-        var x = -Math.cos(a3) * rr * r3, y = Math.sin(a3) * rr * r3;
-        if (k === 0) c.moveTo(x, y); else c.lineTo(x, y);
-      }
-      c.strokeStyle = cfg.frillEdge;
-      c.lineWidth = 1.8;
-      c.shadowColor = cfg.frillEdge; c.shadowBlur = 10;
-      c.stroke();
-      c.shadowBlur = 0;
-    }
+    c.rotate(Math.atan2(tan[1], tan[0]));
+    c.shadowColor = 'rgba(0,8,18,.5)'; c.shadowBlur = 7; c.shadowOffsetY = 3;
+    eeRoundRect(c, -thick / 2, -r, thick, r * 2, Math.min(thick, r * 2) * 0.32);
+    c.fillStyle = eeLin(c, 0, -r, 0, r, [[0, pal.bodyHi], [0.45, pal.body], [1, pal.bodyLo]]);
+    c.fill();
+    c.shadowColor = 'transparent'; c.shadowBlur = 0; c.shadowOffsetY = 0;
+    eeRoundRect(c, -thick * 0.38, -r * 0.86, thick * 0.76, r * 0.34, r * 0.17);
+    c.fillStyle = 'rgba(255,255,255,.42)';
+    c.fill();
     c.restore();
   }
-  /* 骨: 背骨(脊索+椎骨)と肋骨 */
-  function eeBones(c, pts, widths, E, col) {
-    var n = pts.length, from = 2, to = Math.round(n * 0.88), i;
-    c.strokeStyle = col.bone;
-    c.lineCap = 'round';
-    if (col.boneGlow) { c.shadowColor = col.boneGlow; c.shadowBlur = 10; }
-    for (i = from; i <= to; i += 2) {                     // 肋骨(下へ、後ろへ反る)
-      var p = pts[i], w = widths[i], v = E.nr[i], tg = eeTangent(pts, i);
-      var len = w * (1.65 - 0.5 * Math.abs(0.55 - i / n));
-      c.lineWidth = Math.max(0.9, w * 0.065);
+  function eeBoneChain(c, spine, opt, pal) {
+    var nodes = eeWalk(spine, function (u) { return opt.thickAt(u) + opt.gap; });
+    c.beginPath();                                     // 背骨を通す紐
+    eeSmooth(c, spine, true);
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    c.strokeStyle = pal.cord; c.lineWidth = opt.cordW; c.stroke();
+    c.strokeStyle = pal.cordHi; c.lineWidth = opt.cordW * 0.34; c.stroke();
+
+    var first = nodes[0], last = nodes[nodes.length - 1];
+    c.save();                                          // 尾びれ
+    c.translate(first.p[0], first.p[1]);
+    c.rotate(Math.atan2(first.tan[1], first.tan[0]) + Math.PI);
+    c.fillStyle = pal.body;
+    for (var k = -1; k <= 1; k++) {
+      var fr = opt.rAt(0) * 0.9;
+      c.save(); c.rotate(k * 0.42);
       c.beginPath();
-      c.moveTo(p[0] + v[0] * w * 0.1, p[1] + v[1] * w * 0.1);
-      c.quadraticCurveTo(
-        p[0] - v[0] * len * 0.55 - tg[0] * len * 0.12, p[1] - v[1] * len * 0.55 - tg[1] * len * 0.12,
-        p[0] - v[0] * len * 0.92 - tg[0] * len * 0.5, p[1] - v[1] * len * 0.92 - tg[1] * len * 0.5);
-      c.stroke();
-    }
-    var spineAt = function (k) {
-      var q = pts[k], w2 = widths[k], v2 = E.nr[k];
-      return [q[0] + v2[0] * w2 * 0.1, q[1] + v2[1] * w2 * 0.1];
-    };
-    c.beginPath();                                        // 脊索を1本通す
-    var s0 = spineAt(from);
-    c.moveTo(s0[0], s0[1]);
-    for (i = from + 1; i <= to + 3 && i < n; i++) {
-      var a = spineAt(i - 1), b = spineAt(i);
-      c.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
-    }
-    c.lineWidth = Math.max(1, widths[Math.round(n * 0.5)] * 0.07);
-    c.stroke();
-    for (i = from; i <= to + 3 && i < n; i++) {            // 椎骨(短い横棒)
-      var q3 = pts[i], w3 = widths[i], v3 = E.nr[i], t3 = eeTangent(pts, i);
-      var cx3 = q3[0] + v3[0] * w3 * 0.1, cy3 = q3[1] + v3[1] * w3 * 0.1;
-      var half = Math.max(1.2, w3 * 0.11);
-      c.beginPath();
-      c.lineWidth = Math.max(1.4, w3 * 0.17);
-      c.moveTo(cx3 - t3[0] * half, cy3 - t3[1] * half);
-      c.lineTo(cx3 + t3[0] * half, cy3 + t3[1] * half);
-      c.stroke();
-    }
-    c.shadowBlur = 0;
-  }
-  /* 1コマぶんを（背景なしで）描く。u は 0〜1 の位相で、1周すると元に戻る。 */
-  function eeDrawOne(c, cfg, u) {
-    var n = 44, ph = u * Math.PI * 2;
-    var pts = eeSpine(n, cfg.len, cfg.amp, 2.0, ph);
-    var widths = eeWidths(n, cfg.thick);
-    var E = eeEdges(pts, widths);
-    var H = EEL_CELL_H / EEL_BAKE_SCALE;
-    c.lineJoin = 'round';
-    if (cfg.aura) {                                       // 体のまわりの淡い光
-      c.fillStyle = eeRad(c, 0, 0, cfg.thick, cfg.len * 0.55, [[0, cfg.aura], [1, 'rgba(0,0,0,0)']]);
-      c.fillRect(-cfg.len, -H, cfg.len * 2, H * 2);
-    }
-    eeFin(c, pts, widths, E, { from: 2, to: n - 8, h: cfg.thick * cfg.dorsal, skew: 0.75,
-      fill: cfg.finFill, ray: cfg.finRay, edge: cfg.finEdge, edgeGlow: true });
-    eeFin(c, pts, widths, E, { from: 2, to: Math.round(n * 0.5), h: cfg.thick * 0.38, skew: 0.9, down: true,
-      fill: cfg.finFill, ray: cfg.finRay, edge: cfg.finEdge });
-    if (cfg.frill) eeFrill(c, pts, widths, E, cfg.frill, ph);
-    eePaintBody(c, pts, widths, E, cfg.col, H);
-    if (cfg.bones) {                                      // 身が透けて骨が見える
-      c.save();
-      eeBodyPath(c, pts, widths, E);
-      c.clip();
-      eeBones(c, pts, widths, E, cfg.bones);
+      c.moveTo(0, -fr * 0.34); c.lineTo(fr * 1.15, -fr * 0.5);
+      c.lineTo(fr * 1.15, fr * 0.5); c.lineTo(0, fr * 0.34);
+      c.closePath(); c.fill();
       c.restore();
     }
-    eeHead(c, pts, widths, E, cfg);
-    var gi = n - 3, gp = pts[gi], gw = widths[gi], gv = E.nr[gi];   // えら穴
-    c.beginPath();
-    c.ellipse(gp[0] - gv[0] * gw * 0.45, gp[1] - gv[1] * gw * 0.45, gw * 0.13, gw * 0.09, 0, 0, Math.PI * 2);
-    c.fillStyle = 'rgba(0,0,0,.32)';
-    c.fill();
+    c.restore();
+
+    nodes.forEach(function (nd, i) {
+      if (i >= nodes.length - 1) return;                // 最後は頭の場所
+      eeVertebra(c, nd.p, nd.tan, opt.thickAt(nd.u), opt.rAt(nd.u), pal);
+    });
+    c.save();
+    c.translate(last.p[0], last.p[1]);
+    c.rotate(Math.atan2(last.tan[1], last.tan[0]));
+    c.shadowColor = 'rgba(0,8,18,.5)'; c.shadowBlur = 8; c.shadowOffsetY = 3;
+    eeHead(c, opt.headL, opt.headH, pal, opt.gape);
+    c.restore();
   }
 
-  // エリマキウツボ(Stage31〜40・ゆっくり)と骨ウツボ(Stage41〜50・速い)。
-  // どちらも暗い迷路の中で見えるよう、発光する部分を必ず持たせてある。
+  /* ---- 放射状エリマキウツボ(Stage31〜40・ゆっくり) ---- */
+  function eeRays(c, R, spread, n, pal, wob) {
+    for (var i = 0; i < n; i++) {
+      var f = (i + 0.5) / n;
+      var a = lerp(Math.PI - spread, Math.PI + spread, f);
+      var len = R * (0.70 + 0.50 * Math.sin(Math.PI * f)) * (1 + 0.06 * Math.sin(wob + i));
+      var w = R * 0.105;
+      c.save();
+      c.rotate(a);
+      c.beginPath();
+      c.moveTo(0, -w);
+      c.quadraticCurveTo(len * 0.6, -w * 0.45, len, 0);
+      c.quadraticCurveTo(len * 0.6, w * 0.45, 0, w);
+      c.closePath();
+      c.fillStyle = (i % 2) ? pal.fanA : pal.fanB;
+      c.fill();
+      c.restore();
+    }
+  }
+  function eeFrilledBody(c, spine, widths, pal) {
+    var top = [], bot = [], i;
+    for (i = 0; i < spine.length; i++) {
+      var a = spine[Math.max(0, i - 1)], b = spine[Math.min(spine.length - 1, i + 1)];
+      var dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+      var nx = -dy / l, ny = dx / l;
+      if (ny > 0) { nx = -nx; ny = -ny; }
+      top.push([spine[i][0] + nx * widths[i], spine[i][1] + ny * widths[i]]);
+      bot.push([spine[i][0] - nx * widths[i], spine[i][1] - ny * widths[i]]);
+    }
+    function path() {
+      c.beginPath();
+      eeSmooth(c, top, true);
+      eeSmooth(c, bot.slice().reverse(), false);
+      c.closePath();
+    }
+    c.save();
+    c.shadowColor = 'rgba(0,8,18,.42)'; c.shadowBlur = 10; c.shadowOffsetY = 4;
+    path();
+    c.fillStyle = eeLin(c, spine[0][0], 0, 0, 0, [[0, pal.bodyLo], [1, pal.body]]);
+    c.fill();
+    c.restore();
+    c.save();
+    path(); c.clip();
+    c.fillStyle = eeLin(c, 0, -36, 0, 36,
+      [[0, 'rgba(255,255,255,.22)'], [0.5, 'rgba(255,255,255,0)'], [1, 'rgba(0,0,0,.22)']]);
+    c.fillRect(-360, -90, 720, 180);
+    c.restore();
+  }
+
+  // 描画は「中身の長さ span がそのまま swimmer.size になる」ように作ってある。
+  // cellW / cellH は影のにじみぶんの余白を含めた焼き込み1コマの大きさ。
   var EEL_KINDS = {
-    glow: {   // エリマキウツボ
-      len: 430, amp: 20, thick: 17, gape: 0.5, headLen: 2.6,
-      toothLen: 0.26, toothCount: 14, eyeR: 0.3, dorsal: 0.6,
-      aura: 'rgba(90,160,220,.16)',
-      finFill: 'rgba(140,190,235,.30)', finRay: 'rgba(200,235,255,.22)', finEdge: 'rgba(140,220,255,.55)',
-      frill: { frillR: 4.0, spread: 1.72, segs: 15, ruffle: 0.06, layers: 1,
-        frillIn: 'rgba(120,160,225,.72)', frillOut: 'rgba(60,90,180,.30)',
-        frillRay: 'rgba(190,220,255,.45)', frillEdge: '#7fd4ff' },
-      col: { tail: '#2a1f52', mid: '#3d2a6e', head: '#513a88',
-        rim: 'rgba(180,200,255,.42)', outline: 'rgba(4,6,16,.55)',
-        throat0: '#5a1430', throat1: '#1a0410', jaw: '#3f2c6d', jawEdge: 'rgba(10,8,24,.6)',
-        tooth: '#f2f6ff', iris: '#ffd166', irisHi: '#fff3c4', dots: 'rgba(140,220,255,.85)' }
+    glow: {                      // 放射状エリマキウツボ(Stage31〜40・ゆっくり)
+      cellW: 390, cellH: 214, span: 366, offX: 109,
+      pal: { fanA: '#e9f1e6', fanB: '#c8d8c4', body: '#cfe0cb', bodyLo: '#aec4a9',
+        bodyHi: '#eaf3e7', cord: '#aec4a9', cordHi: '#cfe0cb',
+        tooth: '#ffffff', eyeRing: '#b8302e' },
+      draw: function (c, ph) {
+        var spine = eeSample(function (u) {
+          return [-292 + u * 292, 56 * Math.sin((1 - u) * Math.PI * 1.3 + ph) * Math.pow(1 - u, 0.85)];
+        }, 60);
+        var widths = spine.map(function (p, i) { return 29 * Math.pow(i / (spine.length - 1), 0.58); });
+        eeFrilledBody(c, spine, widths, this.pal);
+        c.save();
+        c.translate(-4, 0);
+        c.shadowColor = 'rgba(0,8,18,.42)'; c.shadowBlur = 11; c.shadowOffsetY = 4;
+        eeRays(c, 86, 1.98, 11, this.pal, ph);
+        c.restore();
+        c.save();
+        c.shadowColor = 'rgba(0,8,18,.45)'; c.shadowBlur = 9; c.shadowOffsetY = 3;
+        eeHead(c, 74, 30, this.pal, 0.42);
+        c.restore();
+      }
     },
-    normal: { // 骨ウツボ
-      len: 425, amp: 23, thick: 16, gape: 0.66, headLen: 2.8,
-      toothLen: 0.36, toothCount: 15, eyeR: 0.3, dorsal: 0.85, socket: true,
-      aura: 'rgba(60,190,255,.20)',
-      finFill: 'rgba(120,215,255,.34)', finRay: 'rgba(200,248,255,.3)', finEdge: 'rgba(130,240,255,.75)',
-      bones: { bone: '#eafcff', boneGlow: '#5fe0ff' },
-      skull: { line: 'rgba(225,250,255,.8)', glow: '#5fe0ff' },
-      col: { tail: 'rgba(30,74,102,.72)', mid: 'rgba(38,96,130,.78)', head: 'rgba(48,116,152,.86)',
-        rim: 'rgba(170,242,255,.75)', outline: 'rgba(1,6,12,.5)',
-        throat0: '#123040', throat1: '#03080c', jaw: '#3f88a8', jawEdge: 'rgba(1,6,10,.55)',
-        tooth: '#f2fdff', glow: '#6fe8ff' }
+    normal: {                    // くねくね太骨ウツボ(Stage41〜50・速い)
+      cellW: 408, cellH: 176, span: 384, offX: -32,
+      pal: { body: '#eeebe1', bodyHi: '#fbf9f3', bodyLo: '#cfccc2',
+        cord: '#8496af', cordHi: '#9dabc2',
+        tooth: '#ffffff', eyeRing: '#b8891f' },
+      draw: function (c, ph) {
+        var spine = eeSample(function (u) {
+          return [(u - 0.5) * 300, -46 * Math.sin(u * 2.15 * Math.PI + 0.25 + ph)];
+        }, 70);
+        eeBoneChain(c, spine, {
+          thickAt: function (u) { return 11 + 12 * Math.sin(Math.pow(u, 0.8) * Math.PI * 0.9); },
+          rAt: function (u) { return 8 + 19 * Math.sin(Math.pow(u, 0.7) * Math.PI * 0.85); },
+          gap: 7, cordW: 13, headL: 74, headH: 28, gape: 0.5
+        }, this.pal);
+      }
     }
   };
 
   // 8コマを横に並べたシートをオフスクリーンへ焼く(種類ごとに一度だけ)。
   var eelSheets = {};
+  function eelKindOf(variant) { return EEL_KINDS[variant] || EEL_KINDS.glow; }
   function eelSheetFor(variant) {
     var key = EEL_KINDS[variant] ? variant : 'glow';
     if (eelSheets[key]) return eelSheets[key];
+    var kind = EEL_KINDS[key];
+    var cw = Math.round(kind.cellW * EEL_BAKE_SCALE);
+    var ch = Math.round(kind.cellH * EEL_BAKE_SCALE);
     var cv = document.createElement('canvas');
-    cv.width = EEL_CELL_W * EEL_FRAMES;
-    cv.height = EEL_CELL_H;
+    cv.width = cw * EEL_FRAMES;
+    cv.height = ch;
     var c = cv.getContext('2d');
+    c.lineJoin = 'round'; c.lineCap = 'round';
     for (var f = 0; f < EEL_FRAMES; f++) {
       c.save();
-      // 光のにじみが隣のコマへはみ出さないよう、必ずセル内へ閉じ込める
+      // 影のにじみが隣のコマへ漏れないよう、必ずセル内へ閉じ込める
       c.beginPath();
-      c.rect(EEL_CELL_W * f, 0, EEL_CELL_W, EEL_CELL_H);
+      c.rect(cw * f, 0, cw, ch);
       c.clip();
-      c.translate(EEL_CELL_W * (f + 0.5), EEL_CELL_H / 2);
+      c.translate(cw * (f + 0.5), ch / 2);
       c.scale(EEL_BAKE_SCALE, EEL_BAKE_SCALE);
-      eeDrawOne(c, EEL_KINDS[key], f / EEL_FRAMES);
+      c.translate(kind.offX, 0);
+      kind.draw(c, (f / EEL_FRAMES) * Math.PI * 2);   // 8コマで1周
       c.restore();
     }
-    eelSheets[key] = cv;
-    return cv;
+    eelSheets[key] = { cv: cv, cw: cw, ch: ch };
+    return eelSheets[key];
   }
 
   function drawEel(sw, t) {
-    var sheet = eelSheetFor(sw.variant);
+    var kind = eelKindOf(sw.variant), sheet = eelSheetFor(sw.variant);
     // phase は個体ごとにずらしてあるので、同じ種類でもコマが揃わない
     var frame = Math.floor(t * EEL_FPS + (sw.phase || 0) * EEL_FRAMES) % EEL_FRAMES;
-    var w = sw.size * EEL_W_PER_LEN, h = w * (EEL_CELL_H / EEL_CELL_W);
+    var w = sw.size * (kind.cellW / kind.span);
+    var h = w * (kind.cellH / kind.cellW);
     ctx.save();
     ctx.translate(sw._x, sw._y);
     if (sw._dir < 0) ctx.scale(-1, 1);   // 元絵は頭が右向き
-    ctx.drawImage(sheet, frame * EEL_CELL_W, 0, EEL_CELL_W, EEL_CELL_H, -w / 2, -h / 2, w, h);
+    ctx.drawImage(sheet.cv, frame * sheet.cw, 0, sheet.cw, sheet.ch, -w / 2, -h / 2, w, h);
     ctx.restore();
   }
 
