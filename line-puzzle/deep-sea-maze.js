@@ -259,6 +259,13 @@
   var stickVec = { x: 0, y: 0, mag: 0 };
   var DEADZONE = 0.16;
 
+  // 操作バー(ジョイスティック)の中心を「タップ」(ドラッグせずに素早く
+  // 押して離す)すると探査船のライトをオン/オフする。ドラッグ操作との
+  // 混同を避けるため、押した位置からの最大移動距離と押していた時間で
+  // タップかどうかを判定する。
+  var TAP_MAX_DIST = 12, TAP_MAX_MS = 350;
+  var stickDownX = 0, stickDownY = 0, stickDownTime = 0, stickMaxDrag = 0;
+
   function stickBaseRect() { return stickBase.getBoundingClientRect(); }
 
   function updateStickFromPointer(clientX, clientY) {
@@ -290,17 +297,24 @@
     if (stickPointerId !== null) return;
     ev.preventDefault();
     stickPointerId = ev.pointerId;
+    stickDownX = ev.clientX; stickDownY = ev.clientY;
+    stickDownTime = performance.now();
+    stickMaxDrag = 0;
     try { stickZone.setPointerCapture(ev.pointerId); } catch (e) { /* 未対応環境は通常のイベントで続行 */ }
     updateStickFromPointer(ev.clientX, ev.clientY);
   });
   stickZone.addEventListener('pointermove', function (ev) {
     if (ev.pointerId !== stickPointerId) return;
     ev.preventDefault();
+    var d = Math.hypot(ev.clientX - stickDownX, ev.clientY - stickDownY);
+    if (d > stickMaxDrag) stickMaxDrag = d;
     updateStickFromPointer(ev.clientX, ev.clientY);
   });
   function onStickEnd(ev) {
     if (ev.pointerId !== stickPointerId) return;
+    var isTap = stickMaxDrag <= TAP_MAX_DIST && (performance.now() - stickDownTime) <= TAP_MAX_MS;
     resetStick();
+    if (isTap && game) toggleLight();
   }
   stickZone.addEventListener('pointerup', onStickEnd);
   stickZone.addEventListener('pointercancel', onStickEnd);
@@ -343,7 +357,8 @@
       playing: true,
       paused: false,
       bubbles: makeBubbles(stage),
-      swimmers: makeSwimmers(stage)
+      swimmers: makeSwimmers(stage),
+      lightOn: true
     };
     resetStick();
     showScreen('screen-dsm-game');
@@ -409,6 +424,27 @@
         return;
       }
       d -= segLen;
+    }
+  }
+
+  // 探査船のライトが点いていて一定範囲(LIGHT_ATTRACT_RANGE)まで近づくと、
+  // ピラニア・ウツボは巡回ルートを外れて船めがけて近づいてくる(通常より
+  // 少し速い)。ライトを消すか範囲外に出れば、巡回ルート上の元の進み具合
+  // (_dist)からそのまま巡回を再開する(近づいている間は _dist を進めない
+  // ので、巡回の「続き」がそのまま残る)。
+  var LIGHT_ATTRACT_RANGE = 220;
+  function swimmerUpdate(sw, dt, ship, lightOn) {
+    var d = Math.hypot(ship.x - sw._x, ship.y - sw._y);
+    sw._attracted = lightOn && d <= LIGHT_ATTRACT_RANGE;
+    if (sw._attracted) {
+      var dx = ship.x - sw._x, dy = ship.y - sw._y;
+      var len = Math.hypot(dx, dy) || 1;
+      var move = sw.speed * 1.3 * dt;
+      sw._x += (dx / len) * move;
+      sw._y += (dy / len) * move;
+      if (dx !== 0) sw._dir = dx > 0 ? 1 : -1;
+    } else {
+      swimmerAdvance(sw, dt);
     }
   }
 
@@ -495,7 +531,7 @@
       return;
     }
 
-    g.swimmers.forEach(function (sw) { swimmerAdvance(sw, dt); });
+    g.swimmers.forEach(function (sw) { swimmerUpdate(sw, dt, ship, g.lightOn); });
     if (checkEnemyHit(g)) { onEnemyHit(); return; }
 
     updateCameraFollow(dt);
@@ -612,6 +648,16 @@
     resetCurrentStage();
   }
 
+  // 操作バー(ジョイスティック)の中心をタップしてライトを点灯/消灯する。
+  // ライトが点いていると、近くのピラニア・ウツボが寄ってきてしまうため、
+  // 消灯は「見えにくくなるが敵に見つかりにくくなる」というリスクと
+  // 引き換えの選択になる。
+  function toggleLight() {
+    if (!game) return;
+    game.lightOn = !game.lightOn;
+    dsmToast(game.lightOn ? 'ライト ON' : 'ライト OFF(敵が近づきにくくなる)');
+  }
+
   function onGoalReached() {
     var g = game;
     g.playing = false;
@@ -674,7 +720,7 @@
     drawEnemies(g);
     drawStartMarker(stage);
     drawGoalMarker(stage);
-    drawShip(g.ship, stage);
+    drawShip(g.ship, stage, g.lightOn);
     if (DEBUG) drawDebugWorld(g);
 
     ctx.restore();
@@ -823,23 +869,25 @@
     ctx.restore();
   }
 
-  function drawShip(ship, stage) {
+  function drawShip(ship, stage, lightOn) {
     var r = stage.shipSize * 1.3;
     ctx.save();
     ctx.translate(ship.x, ship.y);
     ctx.rotate(ship.displayAngle * Math.PI / 180);
 
-    // 前方ライト
-    var light = ctx.createRadialGradient(r * 0.9, 0, 0, r * 0.9, 0, r * 3.2);
-    light.addColorStop(0, 'rgba(255,255,220,.55)');
-    light.addColorStop(1, 'rgba(255,255,220,0)');
-    ctx.fillStyle = light;
-    ctx.beginPath();
-    ctx.moveTo(r * 0.6, 0);
-    ctx.lineTo(r * 3.4, -r * 1.7);
-    ctx.lineTo(r * 3.4, r * 1.7);
-    ctx.closePath();
-    ctx.fill();
+    // 前方ライト(消灯中は描かない。敵に見つかりにくくなる代わりに視界も狭まる)
+    if (lightOn) {
+      var light = ctx.createRadialGradient(r * 0.9, 0, 0, r * 0.9, 0, r * 3.2);
+      light.addColorStop(0, 'rgba(255,255,220,.55)');
+      light.addColorStop(1, 'rgba(255,255,220,0)');
+      ctx.fillStyle = light;
+      ctx.beginPath();
+      ctx.moveTo(r * 0.6, 0);
+      ctx.lineTo(r * 3.4, -r * 1.7);
+      ctx.lineTo(r * 3.4, r * 1.7);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     // 船体(丸みのあるカプセル)
     var hull = ctx.createLinearGradient(0, -r, 0, r);
