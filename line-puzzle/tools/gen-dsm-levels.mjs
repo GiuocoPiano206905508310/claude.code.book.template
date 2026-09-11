@@ -473,16 +473,17 @@ function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, seg
   let variant, speed, count, type, size;
   if (stageId <= 20) {
     type = 'fish'; variant = 'anglerfish'; speed = 52; size = 30;
-    count = 3 + Math.floor((stageId - 11) / 4);
+    count = 5 + Math.floor((stageId - 11) / 3);
   } else if (stageId <= 30) {
     type = 'fish'; variant = 'spinydorsal'; speed = 108; size = 30;
-    count = 4 + Math.floor((stageId - 21) / 4);
+    count = 6 + Math.floor((stageId - 21) / 3);
   } else if (stageId <= 40) {
-    type = 'eel'; variant = 'glow'; speed = 38; size = 150;
-    count = 3 + Math.floor((stageId - 31) / 5);
+    type = 'eel'; variant = 'glow'; speed = 38; size = 180;
+    count = 4 + Math.floor((stageId - 31) / 4);
   } else {
+    // 骨ウツボは1体が大きいので、増やし方はひかえめにする
     type = 'eel'; variant = 'normal'; speed = 82; size = 300;
-    count = 3 + Math.floor((stageId - 41) / 5);
+    count = 4 + Math.floor((stageId - 41) / 4);
   }
   const swimmers = [];
   for (let i = 0; i < count; i++) {

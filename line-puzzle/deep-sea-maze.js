@@ -899,7 +899,7 @@
      stage.shipSize の円なので、この描画は見た目だけの役割。
      ============================================================ */
   var SHIP_L = 206, SHIP_R = 56, SHIP_TAPER = 0.72;
-  var SHIP_UNIT = 0.019;          // 設計図の1単位 ＝ shipSize × これ
+  var SHIP_UNIT = 0.016;          // 設計図の1単位 ＝ shipSize × これ
   var SHIP_PAL = {
     hull: '#e8e5ef', hullHi: '#ffffff', hullLo: '#a29eb6',
     trim: '#8a5fc0', trimHi: '#c6a6f2',
