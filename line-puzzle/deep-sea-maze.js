@@ -1686,6 +1686,9 @@
       // 介さず直接テストするためのフック(自動テスト・調整用)。
       simulateMove: function (dx, dy) { if (game) moveWithSliding(game, dx, dy); },
       isPassable: function (x, y) { return game ? isPassable(game.index, game.stage.shipSize, x, y) : null; },
+      // 敵との当たり判定を、本番とまったく同じ関数で確かめるためのフック。
+      // (船を warpTo で置いてから呼ぶ。全ステージ踏破チェックに使う)
+      enemyHit: function () { return game ? checkEnemyHit(game) : null; },
       // 当たり判定などのデバッグ描画だけを消す。ワープで位置を作ってから
       // 本番と同じ見た目のスクリーンショットを撮るために使う。
       setOverlay: function (on) { debugOverlay = !!on; }
