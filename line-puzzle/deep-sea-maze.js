@@ -212,7 +212,35 @@
     t = t < 0 ? 0 : (t > 1 ? 1 : t);
     return { x: ax + dx * t, y: ay + dy * t, tx: dx, ty: dy };
   }
+  // 船は「点」ではなく半径 shipR の円。通路を1本ずつ shipR だけ痩せさせて
+  // その合併をとる(下の速い判定)と、通路どうしが交わる隅がごっそり欠ける。
+  // 本来は「通路を合併してから痩せさせた」領域が通れるはずで、その差が
+  // 交差点での引っかかりになる。そこで速い判定が外れたときだけ、船の円周が
+  // どれかの通路に収まっているかを見て、正しい領域を近似する。
+  var SHIP_RING = (function () {
+    var pts = [], N = 12;
+    for (var i = 0; i < N; i++) {
+      var a = (i / N) * Math.PI * 2;
+      pts.push([Math.cos(a), Math.sin(a)]);
+    }
+    return pts;
+  })();
+  function insideAnyCorridor(index, x, y) {
+    var cx = Math.floor(x / BUCKET), cy = Math.floor(y / BUCKET);
+    for (var gy = cy - 1; gy <= cy + 1; gy++) {
+      for (var gx = cx - 1; gx <= cx + 1; gx++) {
+        var arr = index.map[gx + '_' + gy];
+        if (!arr) continue;
+        for (var i = 0; i < arr.length; i++) {
+          var s = index.subSegs[arr[i]];
+          if (distPointSeg(x, y, s.ax, s.ay, s.bx, s.by) <= s.halfW) return true;
+        }
+      }
+    }
+    return false;
+  }
   function isPassable(index, shipR, x, y) {
+    // 速い判定: 1本の通路だけで収まっているか(通路を進んでいる間はここで決まる)
     var cx = Math.floor(x / BUCKET), cy = Math.floor(y / BUCKET);
     for (var gy = cy - 1; gy <= cy + 1; gy++) {
       for (var gx = cx - 1; gx <= cx + 1; gx++) {
@@ -224,7 +252,12 @@
         }
       }
     }
-    return false;
+    // 隅の判定: 中心と円周がすべてどれかの通路の内側にあれば通れる
+    if (!insideAnyCorridor(index, x, y)) return false;
+    for (var k = 0; k < SHIP_RING.length; k++) {
+      if (!insideAnyCorridor(index, x + SHIP_RING[k][0] * shipR, y + SHIP_RING[k][1] * shipR)) return false;
+    }
+    return true;
   }
   // 現在地点で「いちばん収まりがいい(壁までいちばん余裕がある)」通路を探し、
   // その通路の中心線から見た外向きの法線を返す。斜め・カーブした壁でも、
@@ -551,43 +584,72 @@
   // 実際の壁の法線方向を求め、その接線方向へ滑らせることで、どの角度で
   // 壁に当たってもスッと沿って進めるようにする。
   //
-  // 法線は「動こうとした先(ぶつかった点)」で取る。動く前の船の位置はまだ
-  // 通路の余裕がある場所なので、そこを基準に法線を求めると、カーブの先で
-  // 実際に当たっている壁と違う向きを拾ってしまい、浅い角度でも止まって
-  // しまうことがあった。ぶつかった点そのもので法線を取り、滑らせた後も
-  // まだ塞がれていれば、その滑り先でもう一度だけ同じ処理をやり直す
-  // (角に挟まれたときの保険)。
-  //
-  // 壁へ向かう成分をただ差し引くだけ(射影)だと、壁に正面から近いほど
-  // 沿う方向の成分そのものが小さくなり、進む速さがどんどん落ちて
-  // 「浅い角度でしか滑らかに進めない」ように感じられる。ここでは向きだけを
-  // 壁沿いに直し、速さ(入力の大きさ)は保つ。1フレームあたりの移動量は
-  // もともと小さいので、向きを合わせ直しても壁をすり抜ける心配はない。
-  function moveWithSliding(g, dx, dy, depth) {
-    var ship = g.ship, index = g.index, shipR = g.stage.shipSize;
-    var nx = ship.x + dx, ny = ship.y + dy;
-    if (isPassable(index, shipR, nx, ny)) { ship.x = nx; ship.y = ny; return; }
-    if ((depth || 0) >= 4) return;
+  // 塞がれていたときは、まず壁の法線から沿う向きを求めて滑らせる(滑った先も
+  // 塞がれていれば、その先でもう一度法線を取り直す)。それでも駄目なら入力の
+  // 向きを少しずつ回して、通れる向きを探す。交差点では法線が「どちらの通路の
+  // ものか」紛らわしく、法線だけだと進める道があるのに止まってしまうことが
+  // あった。角度で探せば、通れる向きが残っているかぎり止まらない。
+  // 速さ(入力の大きさ)は向きを変えても保つので、壁に正面から近づくほど
+  // 遅くなることもない。
 
-    var wall = nearestWallNormal(index, shipR, nx, ny);
-    if (wall) {
-      // wall.nx/ny は通路の中心線から見て外向き(壁の側)。この向きへさらに
-      // 進もうとしている(内積が正)場合だけ、その成分を取り除いて滑らせる。
-      var dot = dx * wall.nx + dy * wall.ny;
-      if (dot > 0) {
-        var slideX = dx - dot * wall.nx, slideY = dy - dot * wall.ny;
-        var slideLen = Math.hypot(slideX, slideY);
-        if (slideLen > 0.001) {
-          var inputMag = Math.hypot(dx, dy);
-          var scale = inputMag / slideLen;
-          moveWithSliding(g, slideX * scale, slideY * scale, (depth || 0) + 1);
-          return;
-        }
-      }
+  // コマ落ちで dt が大きくなったときに、一度に飛びすぎないようにするだけの
+  // 上限。通常のフレーム(最大11.6px)は1回で動かす。ここを細かくすると
+  // 壁ぎわをより正確になぞる代わりに、交差点の細い隙間でいちいち止まって
+  // しまい、かえって引っかかる感触になる。
+  var STEP_MAX = 12;
+  // 入力の向きをここまで回して、通れる向きを探す(約8〜85度)
+  var SLIDE_ANGLES = [0.14, 0.28, 0.42, 0.58, 0.76, 0.95, 1.16, 1.32, 1.42, 1.48];
+
+  function tryStep(g, dx, dy) {
+    var ship = g.ship, nx = ship.x + dx, ny = ship.y + dy;
+    if (!isPassable(g.index, g.stage.shipSize, nx, ny)) return false;
+    ship.x = nx; ship.y = ny;
+    return true;
+  }
+  function tryRotatedStep(g, dx, dy, a) {
+    var c = Math.cos(a), s = Math.sin(a);
+    return tryStep(g, dx * c - dy * s, dx * s + dy * c);
+  }
+  // 壁の法線から沿う向きを求めて滑らせる。滑らせた先もまだ塞がれていれば、
+  // その先でもう一度法線を取り直す(カーブや角に挟まれたときの保険)。
+  function slideStep(g, dx, dy, depth) {
+    if (tryStep(g, dx, dy)) return true;
+    if (depth >= 4) return false;
+    var ship = g.ship;
+    var wall = nearestWallNormal(g.index, g.stage.shipSize, ship.x + dx, ship.y + dy);
+    if (!wall) return false;
+    var dot = dx * wall.nx + dy * wall.ny;
+    if (dot <= 0) return false;                        // その向きへは進んでいない
+    var sx = dx - dot * wall.nx, sy = dy - dot * wall.ny;
+    var sl = Math.hypot(sx, sy);
+    if (sl <= 1e-6) return false;
+    var mag = Math.hypot(dx, dy);
+    return slideStep(g, sx / sl * mag, sy / sl * mag, depth + 1);
+  }
+  function moveStep(g, dx, dy) {
+    if (slideStep(g, dx, dy, 0)) return true;
+    var mag = Math.hypot(dx, dy);
+    if (mag < 1e-6) return false;
+    // 法線だけでは逃がせない交差点向けの保険。入力の向きを少しずつ回して、
+    // 通れる向きをそのまま使う。壁に沿う側から先に試す。
+    var wall = nearestWallNormal(g.index, g.stage.shipSize, g.ship.x + dx, g.ship.y + dy);
+    var first = 1;
+    if (wall) first = (dx * -wall.ny + dy * wall.nx) >= 0 ? 1 : -1;
+    for (var k = 0; k < SLIDE_ANGLES.length; k++) {
+      if (tryRotatedStep(g, dx, dy, SLIDE_ANGLES[k] * first)) return true;
+      if (tryRotatedStep(g, dx, dy, -SLIDE_ANGLES[k] * first)) return true;
     }
-    // 保険: 角に挟まれた場合など、上下左右のどちらかだけなら通れることがある
-    if (dx !== 0 && isPassable(index, shipR, nx, ship.y)) { ship.x = nx; return; }
-    if (dy !== 0 && isPassable(index, shipR, ship.x, ny)) { ship.y = ny; return; }
+    // 最後の保険: 縦横どちらかだけなら通れることがある
+    if (dx !== 0 && tryStep(g, dx, 0)) return true;
+    if (dy !== 0 && tryStep(g, 0, dy)) return true;
+    return false;
+  }
+  function moveWithSliding(g, dx, dy) {
+    var dist = Math.hypot(dx, dy);
+    var steps = Math.max(1, Math.ceil(dist / STEP_MAX));
+    for (var i = 0; i < steps; i++) {
+      if (!moveStep(g, dx / steps, dy / steps)) return;   // 完全に塞がれたら打ち切り
+    }
   }
 
   function updateCameraFollow(dt) {
