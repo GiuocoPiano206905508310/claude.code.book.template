@@ -16,7 +16,14 @@ GitHub Pages は静的ファイルをブラウザにキャッシュさせるた�
 import hashlib, pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ASSETS = ['style.css', 'levels.js', 'ura-levels.js', 'cloud.js', 'game.js']
+# index.html が ?v= 付きで読み込むファイルはすべてここに並べる。
+# 手で番号を増やす運用のまま残すと、そのファイルだけ付け忘れる。
+ASSETS = [
+    'style.css', 'levels.js', 'ura-levels.js', 'cloud.js', 'game.js',
+    'game-select.js',
+    'block-fit-puzzle.css', 'block-fit-puzzle.js', 'bf-levels.js',
+    'deep-sea-maze.css', 'deep-sea-maze.js', 'dsm-levels.js',
+]
 
 def digest(name):
     return hashlib.sha1((ROOT / name).read_bytes()).hexdigest()[:10]
@@ -39,7 +46,7 @@ def main():
         print('版数が中身と一致していません。stamp-assets.py を実行してください。', file=sys.stderr)
         for name in ASSETS:
             cur = re.search(r'%s\?v=([0-9a-f]+)' % re.escape(name), before)
-            print('  %-11s 記載=%s  実際=%s' % (name, cur.group(1) if cur else '(なし)', digest(name)),
+            print('  %-21s 記載=%s  実際=%s' % (name, cur.group(1) if cur else '(なし)', digest(name)),
                   file=sys.stderr)
         return 1
     path.write_text(after, encoding='utf-8')
