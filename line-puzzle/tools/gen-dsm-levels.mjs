@@ -573,8 +573,12 @@ function placeTentacleUrchins(rng, count, segments, urchins, routeWorld, onRoute
   // r の上限を逆算する。全ステージ中もっとも狭い通路(Stage50, width=36)
   // でも minGap(shipR*0.25 ≈ 3.25px)は正の値で確保できる計算式。
   const wallMargin = 3;
-  const minGap = SHIP_RADIUS * 0.25;
+  // 船が左右に動ける幅(freeBand)のうち、ウニが食べてよいのは半分ちょっとまで。
+  // 固定値で「3pxだけ残す」とすると、通路が細いステージでは人の操作では
+  // 通せない隙間になってしまうため、通路の余裕に対する割合で決める。
   const halfW = subsegs[0].halfW;
+  const freeBand = 2 * (halfW - SHIP_RADIUS);
+  const minGap = Math.max(SHIP_RADIUS * 0.5, freeBand * 0.45);
   const rMaxForSafety = (2 * halfW - wallMargin - 2 * SHIP_RADIUS - minGap) / TENTACLE_HIT_MUL;
   const r = Math.max(3, Math.min(URCHIN_R, rMaxForSafety));
   // 緑のウニは左右に揺れるので、横向きの通路に置く。縦向きの通路だと
@@ -915,10 +919,14 @@ function validateStage(stage) {
    左右に揺れる緑のウニは、揺れて通る範囲すべて(横向きのカプセル)を危険と
    みなす。こうしておけば「揺れの向こう側で待たされて詰む」ことが無く、
    どの瞬間でも通り抜けられることを保証できる。 */
+// 検証では当たり判定そのものより少し太らせて見る。ちょうど当たらないだけの
+// 数pxの隙間を「通れる」と数えてしまうと、格子の刻み方ひとつで判定が
+// ひっくり返るうえ、人の操作ではまず通せない道を正解ルートにしてしまう。
+const HAZARD_MARGIN = 6;
 function urchinDanger(urchins, shipR, px, py) {
   for (const u of urchins) {
     // 1.15 / TENTACLE_HIT_MUL は deep-sea-maze.js の checkEnemyHit と同じ値
-    const hitR = u.r * (u.variant === 'tentacle' ? TENTACLE_HIT_MUL : 1.15) + shipR;
+    const hitR = u.r * (u.variant === 'tentacle' ? TENTACLE_HIT_MUL : 1.15) + shipR + HAZARD_MARGIN;
     const dx = u.moveX ? Math.max(0, Math.abs(px - u.x) - u.moveX) : px - u.x;
     if (Math.hypot(dx, py - u.y) <= hitR) return true;
   }
@@ -985,7 +993,10 @@ function tierFor(stageId) {
   const gw = Math.round(lerp2(4, 22, te));
   const gh = Math.round(lerp2(4, 28, te)) + (stageId % 3 === 0 ? 1 : 0);
   const spacing = lerp2(128, 94, te);
-  const width = lerp2(74, 36, te);
+  // 後半の通路幅の下限は48px。船の直径が26pxなので、36pxまで細くすると
+  // 船が左右に動ける幅が10pxしか無く、「道中に半分はみ出したウニ」を置くと
+  // 残る隙間が数pxになり、人の操作では通せない道になってしまう。
+  const width = lerp2(74, 48, te);
   const branchBias = lerp2(0.12, 0.95, te);
   // extraLoopFraction は「すでに繋がっている2点を追加でつなぐ」処理のため、
   // 本来は行き止まりになるはずの別々の分岐同士が閉路でショートカットされ、
