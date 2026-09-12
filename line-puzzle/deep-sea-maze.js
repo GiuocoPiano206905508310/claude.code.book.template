@@ -21,6 +21,9 @@
   var LEVELS = window.DSM_LEVELS || [];
   var TOTAL_STAGES = LEVELS.length;
   function bandOf(stageId) { return Math.min(10, Math.floor((stageId - 1) / 5) + 1); }
+  // ステージの呼び名。潜った深さに見立てて「深海○○マイル」で統一する。
+  // 画面に出す名前はすべてここを通す。
+  function stageName(stageId) { return '深海' + stageId + 'マイル'; }
 
   var DEBUG = /(?:^|[?&])dsmdebug=1(?:&|$)/.test(window.location.search);
   var debugOverlay = true;   // デバッグ表示だけを一時的に消せるようにしておく(見た目の確認用)
@@ -111,10 +114,10 @@
       btn.classList.add('is-locked');
       btn.disabled = true;
       btn.innerHTML = '<svg class="ic"><use href="#ic-lock"/></svg>';
-      btn.setAttribute('aria-label', 'Stage ' + id + '（未開放）');
+      btn.setAttribute('aria-label', stageName(id) + '（未開放）');
     } else {
       btn.textContent = String(id).length < 2 ? '0' + id : String(id);
-      btn.setAttribute('aria-label', 'Stage ' + id);
+      btn.setAttribute('aria-label', stageName(id));
       if (progress.cleared[id]) {
         btn.classList.add('is-cleared', 'dsm-band-' + bandOf(id));
       } else if (id === highestUnlocked()) {
@@ -381,7 +384,7 @@
     stopLoop();
     setTheme(stageId);
     setLastStage(stageId);
-    $('dsm-stage-label').textContent = 'STAGE ' + stageId;
+    $('dsm-stage-label').textContent = stageName(stageId);
     game = {
       stageId: stageId,
       stage: stage,
@@ -737,7 +740,7 @@
     resetStick();
     var firstClear = markCleared(g.stageId);
     setTimeout(function () {
-      $('dsm-clear-title').textContent = 'Stage ' + g.stageId;
+      $('dsm-clear-title').textContent = stageName(g.stageId);
       $('dsm-clear-next').textContent = g.stageId >= TOTAL_STAGES ? '全ステージ制覇！' : '次のステージへ';
       openModal('modal-dsm-clear');
     }, firstClear ? 420 : 320);
