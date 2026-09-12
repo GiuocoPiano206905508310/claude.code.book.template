@@ -525,11 +525,14 @@ function placeDeadEndUrchins(rng, count, adj, nodeWorld, startKey, goalKey, shif
   for (const k of adj.keys()) {
     if (adj.get(k).size === 1 && k !== startKey && k !== goalKey) deadEndKeys.push(k);
   }
-  const n = Math.min(deadEndKeys.length, count);
-  shuffle(rng, deadEndKeys).slice(0, n).forEach((k) => {
+  let placed = 0;
+  for (const k of shuffle(rng, deadEndKeys)) {
+    if (placed >= count) break;
     const p = shift(nodeWorld.get(k));
+    if (urchins.some((u) => dist(u, p) < (u.r + URCHIN_R) * 3.2)) continue;
     urchins.push({ variant: 'irregular', x: p.x, y: p.y, r: URCHIN_R, rot: Math.round(rng() * 360) });
-  });
+    placed++;
+  }
 }
 
 // 道中の端・隅(壁寄り)に「しなる触手」型を置く。船が反対側を通り抜けられる
@@ -539,7 +542,7 @@ function placeDeadEndUrchins(rng, count, adj, nodeWorld, startKey, goalKey, shif
 // 負になってしまう。そこで、その通路幅で確保できる最大サイズまで
 // ウニ自体を縮めることで、どのステージでも「ギリギリ避けられる」余地を
 // 必ず残す(＝通路が狭いステージほど、このウニも自然に小さくなる)。
-function placeTentacleUrchins(rng, count, segments, shift, urchins, routeWorld) {
+function placeTentacleUrchins(rng, count, segments, shift, urchins, routeWorld, onRouteCount) {
   const subsegs = [];
   let totalLen = 0;
   for (const seg of segments) {
@@ -568,22 +571,33 @@ function placeTentacleUrchins(rng, count, segments, shift, urchins, routeWorld) 
   const halfW = subsegs[0].halfW;
   const rMaxForSafety = (2 * halfW - wallMargin - 2 * SHIP_RADIUS - minGap) / TENTACLE_HIT_MUL;
   const r = Math.max(3, Math.min(URCHIN_R, rMaxForSafety));
+  // 先頭の onRouteCount 体だけを正解ルート上に置き、残りは全区間から選ぶ。
+  // 全部をルート上に集めると、向かい合わせに並んで道を塞いでしまい、
+  // 生成のやり直しが増える。
+  const nOnRoute = Math.min(count, onRouteCount === undefined ? count : onRouteCount);
   for (let i = 0; i < count; i++) {
-    const pool = onRoute.length ? onRoute : subsegs;
+    const pool = (i < nOnRoute && onRoute.length) ? onRoute : subsegs;
     const poolLen = pool.reduce((a, sg) => a + sg.len, 0);
-    let target = rng() * poolLen, chosen = pool[pool.length - 1];
-    for (const s of pool) {
-      if (target <= s.len) { chosen = s; break; }
-      target -= s.len;
+    // 近すぎるウニ同士が固まらないよう、何度か置き直す
+    let p = null, chosen = null, nx = 0, ny = 0;
+    for (let attempt = 0; attempt < 12; attempt++) {
+      let target = rng() * poolLen;
+      chosen = pool[pool.length - 1];
+      for (const s of pool) {
+        if (target <= s.len) { chosen = s; break; }
+        target -= s.len;
+      }
+      const tt = rng();
+      const px = lerp(chosen.ax, chosen.bx, tt), py = lerp(chosen.ay, chosen.by, tt);
+      const dx = chosen.bx - chosen.ax, dy = chosen.by - chosen.ay;
+      const l = Math.hypot(dx, dy) || 1;
+      nx = -dy / l; ny = dx / l;
+      const side = rng() < 0.5 ? 1 : -1;
+      const offset = (chosen.halfW - wallMargin) * side;
+      const cand = shift({ x: px + nx * offset, y: py + ny * offset });
+      const tooClose = urchins.some((u) => dist(u, cand) < (u.r + r) * 3.2);
+      if (!tooClose || attempt === 11) { p = cand; break; }
     }
-    const tt = rng();
-    const px = lerp(chosen.ax, chosen.bx, tt), py = lerp(chosen.ay, chosen.by, tt);
-    const dx = chosen.bx - chosen.ax, dy = chosen.by - chosen.ay;
-    const l = Math.hypot(dx, dy) || 1;
-    const nx = -dy / l, ny = dx / l;
-    const side = rng() < 0.5 ? 1 : -1;
-    const offset = (chosen.halfW - wallMargin) * side;
-    const p = shift({ x: px + nx * offset, y: py + ny * offset });
     // 緑のウニは左右に揺れる。振れ幅はウニ3個分(直径×3)をこの位置で
     // 確保できるぶんまで。実際に通れるかは validateHazards() で確かめ、
     // 通れなければ後段で振れ幅を詰める。
@@ -633,14 +647,16 @@ function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, seg
   if (stageId <= 10) {
     // 序盤(固定の危険物のみ): 難易度が上がるほど数を増やす
     placeDeadEndUrchins(rng, 3 + Math.floor(stageId / 2), adj, nodeWorld, startKey, goalKey, shift, urchins);
-    placeTentacleUrchins(rng, 2 + Math.floor(stageId / 3), segments, shift, urchins, routeWorld);
+    placeTentacleUrchins(rng, 2 + Math.floor(stageId / 3), segments, shift, urchins, routeWorld, 2);
     return { urchins, swimmers: [] };
   }
 
-  // Stage11以降も、遊泳する敵に加えて固定のウニを2体(行き止まりに1体・
-  // 正解ルートの端に1体)だけ配置する。
-  placeDeadEndUrchins(rng, 1, adj, nodeWorld, startKey, goalKey, shift, urchins);
-  placeTentacleUrchins(rng, 1, segments, shift, urchins, routeWorld);
+  // Stage11以降も、遊泳する敵に加えて固定のウニを置く。迷路がどんどん
+  // 広くなる(561px四方 → 2100×2700px)ので、数を増やさないと散らばりすぎて
+  // ほとんど出会わなくなる。序盤と同じくらいの密度になるよう、ステージが
+  // 進むほど増やす。
+  placeDeadEndUrchins(rng, 3 + Math.floor(stageId / 6), adj, nodeWorld, startKey, goalKey, shift, urchins);
+  placeTentacleUrchins(rng, 2 + Math.floor(stageId / 8), segments, shift, urchins, routeWorld, 2);
 
   const nodeKeys = [...adj.keys()];
   function randomWaypoints() {
@@ -957,6 +973,7 @@ STAGES.forEach((s) => {
     `deadEnds=${st.deadEnds} junctions=${st.junctions} curves=${st.curveChains}/${st.totalChains} ` +
     `diag=${st.diagonalEdges} width=${Math.round(st.corridorWidth)} ` +
     `迂回+${st.detourExtra}% 揺れ${st.swayKept} ` +
+    `赤${s.enemies.urchins.filter((u) => u.variant === 'irregular').length}/緑${s.enemies.urchins.filter((u) => u.variant === 'tentacle').length} ` +
     `通せんぼ=${s.enemies.urchins.some((u) => u.blocker) ? 'あり' : 'なし'} ` +
     `だまし分岐=${st.falseLoop ? 'あり' : 'なし'} 回り道=${st.detourLoop ? 'あり' : 'なし'}`
   );
