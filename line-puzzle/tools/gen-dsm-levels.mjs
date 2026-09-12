@@ -748,69 +748,166 @@ function distToPolyline(p, points) {
 }
 
 /* ---------- 検証: ラスタライズ+BFSでSTART→GOALに実際に到達できるか ---------- */
-function validateStage(stage) {
-  const CELL = 6;
-  const { width: W, height: H } = stage.mazeBounds;
-  const gw = Math.ceil(W / CELL), gh = Math.ceil(H / CELL);
-  const passable = new Uint8Array(gw * gh);
-  const shipR = stage.shipSize;
+/* ---------- 通れる範囲のラスタ ----------
+   deep-sea-maze.js の isPassable() とまったく同じ考え方で作る。船は点では
+   なく半径 shipR の円なので、通路を1本ずつ痩せさせた合併(fast)だけでは、
+   通路どうしが交わる隅が欠ける。本番は「合併してから痩せさせた」領域を
+   船の円周12点で近似して通しているので、ここでも同じにする。
 
+   ここを本番と揃えないと、生成側が「遠回りしないと着けない」と思っている
+   のに本番では隅を抜けて近道できてしまう。実際、揃える前のステージ7は
+   生成側の想定5838pxに対して本番では552pxで着けていた。 */
+const RASTER_CELL = 4;
+const SHIP_RING = (function () {
+  const pts = [], N = 12;
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    pts.push([Math.cos(a), Math.sin(a)]);
+  }
+  return pts;
+})();
+
+// deep-sea-maze.js と同じ「90px のバケットに小区間を登録し、周囲3×3だけ見る」
+// 索引。判定の食い違いを避けるため、区切り方も見る範囲もそろえてある。
+const RASTER_BUCKET = 90;
+function buildSubsegIndex(stage) {
+  const subs = [], map = new Map();
   for (const seg of stage.segments) {
-    const halfW = seg.width / 2 - shipR;
-    if (halfW <= 0) return '通路幅が船より狭いセグメントがあります';
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const [x, y] of seg.points) {
-      minX = Math.min(minX, x); minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
-    }
-    const gx0 = Math.max(0, Math.floor((minX - halfW) / CELL));
-    const gy0 = Math.max(0, Math.floor((minY - halfW) / CELL));
-    const gx1 = Math.min(gw - 1, Math.ceil((maxX + halfW) / CELL));
-    const gy1 = Math.min(gh - 1, Math.ceil((maxY + halfW) / CELL));
-    for (let gy = gy0; gy <= gy1; gy++) {
-      for (let gx = gx0; gx <= gx1; gx++) {
-        const idx = gy * gw + gx;
-        if (passable[idx]) continue;
-        const px = gx * CELL + CELL / 2, py = gy * CELL + CELL / 2;
-        if (distToPolyline({ x: px, y: py }, seg.points) <= halfW) passable[idx] = 1;
+    const halfW = seg.width / 2;
+    for (let i = 0; i < seg.points.length - 1; i++) {
+      const sg = { ax: seg.points[i][0], ay: seg.points[i][1],
+                   bx: seg.points[i + 1][0], by: seg.points[i + 1][1], halfW };
+      const id = subs.push(sg) - 1;
+      const x0 = Math.min(sg.ax, sg.bx) - halfW, x1 = Math.max(sg.ax, sg.bx) + halfW;
+      const y0 = Math.min(sg.ay, sg.by) - halfW, y1 = Math.max(sg.ay, sg.by) + halfW;
+      for (let cy = Math.floor(y0 / RASTER_BUCKET); cy <= Math.floor(y1 / RASTER_BUCKET); cy++) {
+        for (let cx = Math.floor(x0 / RASTER_BUCKET); cx <= Math.floor(x1 / RASTER_BUCKET); cx++) {
+          const k = cx + '_' + cy;
+          let arr = map.get(k);
+          if (!arr) { arr = []; map.set(k, arr); }
+          arr.push(id);
+        }
       }
     }
   }
-
-  const toCell = (p) => [Math.max(0, Math.min(gw - 1, Math.floor(p.x / CELL))), Math.max(0, Math.min(gh - 1, Math.floor(p.y / CELL)))];
-  const [sx, sy] = toCell(stage.startPosition);
-  const [gx, gy] = toCell(stage.goalPosition);
-  if (!passable[sy * gw + sx]) return 'START地点が通路内にありません';
-  if (!passable[gy * gw + gx]) return 'GOAL地点が通路内にありません';
-
-  const seen = new Uint8Array(gw * gh);
-  const q = [sy * gw + sx];
-  seen[sy * gw + sx] = 1;
-  let qi = 0;
-  const goalIdx = gy * gw + gx;
-  while (qi < q.length) {
-    const cur = q[qi++];
-    if (cur === goalIdx) return null; // 到達できた
-    const cx = cur % gw, cy = (cur / gw) | 0;
-    const neigh = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
-    for (const [nx, ny] of neigh) {
-      if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue;
-      const ni = ny * gw + nx;
-      if (passable[ni] && !seen[ni]) { seen[ni] = 1; q.push(ni); }
+  return { subs, map };
+}
+// 使い捨ての配列を毎回作るとゴミが増えて遅いので、作業用の配列を使い回す。
+// nearbySubs() と insideAnyCorridor() は入れ子で呼ばないため別々に持たせる。
+const _nearBuf = [], _insideBuf = [];
+function collectSubs(ix, x, y, out) {
+  out.length = 0;
+  const cx = Math.floor(x / RASTER_BUCKET), cy = Math.floor(y / RASTER_BUCKET);
+  for (let gy = cy - 1; gy <= cy + 1; gy++) {
+    for (let gx = cx - 1; gx <= cx + 1; gx++) {
+      const arr = ix.map.get(gx + '_' + gy);
+      if (arr) for (const id of arr) out.push(ix.subs[id]);
     }
   }
-  return 'STARTからGOALへの経路が見つかりません';
+  return out;
+}
+function nearbySubs(ix, x, y) { return collectSubs(ix, x, y, _nearBuf); }
+function insideAnyCorridor(ix, x, y) {
+  const list = collectSubs(ix, x, y, _insideBuf);
+  for (let i = 0; i < list.length; i++) {
+    const sg = list[i];
+    if (distToSegment({ x, y }, { x: sg.ax, y: sg.ay }, { x: sg.bx, y: sg.by }) <= sg.halfW) return true;
+  }
+  return false;
+}
+// deep-sea-maze.js の isPassable() と同じ判定
+function runtimePassable(ix, shipR, x, y) {
+  const list = nearbySubs(ix, x, y);
+  for (let i = 0; i < list.length; i++) {
+    const sg = list[i];
+    if (distToSegment({ x, y }, { x: sg.ax, y: sg.ay }, { x: sg.bx, y: sg.by }) <= sg.halfW - shipR) return true;
+  }
+  if (!insideAnyCorridor(ix, x, y)) return false;
+  for (const [rx, ry] of SHIP_RING) {
+    if (!insideAnyCorridor(ix, x + rx * shipR, y + ry * shipR)) return false;
+  }
+  return true;
+}
+
+// 迷路の外接矩形を丸ごと計算すると 100 万セルを超えて遅い。BFS が触るのは
+// 通路とそのすぐ外側だけなので、聞かれたセルだけ判定して覚えておく。
+function buildRaster(stage) {
+  const CELL = RASTER_CELL;
+  const { width: W, height: H } = stage.mazeBounds;
+  const gw = Math.ceil(W / CELL) + 2, gh = Math.ceil(H / CELL) + 2;
+  const ix = buildSubsegIndex(stage);
+  const shipR = stage.shipSize;
+  const cache = new Int8Array(gw * gh).fill(-1);
+  return {
+    gw, gh, CELL,
+    at(gx, gy) {
+      const i = gy * gw + gx;
+      let v = cache[i];
+      if (v < 0) {
+        v = runtimePassable(ix, shipR, gx * CELL, gy * CELL) ? 1 : 0;
+        cache[i] = v;
+      }
+      return v;
+    },
+  };
+}
+
+// START から GOAL 判定を満たす所までの最短距離(px)。届かなければ -1。
+// danger(x,y) を渡すと、そこを避けた最短距離になる。
+function walkDistance(stage, grid, danger) {
+  const { gw, gh, CELL } = grid;
+  const si = Math.max(0, Math.min(gw - 1, Math.round(stage.startPosition.x / CELL)));
+  const sj = Math.max(0, Math.min(gh - 1, Math.round(stage.startPosition.y / CELL)));
+  const reach = stage.goalRadius - stage.shipSize * 0.3;
+  const goalOK = (x, y) => Math.hypot(x - stage.goalPosition.x, y - stage.goalPosition.y) <= reach;
+  const start = sj * gw + si;
+  if (!grid.at(si, sj)) return -1;
+  if (danger && danger(si * CELL, sj * CELL)) return -1;
+  const dist = new Int32Array(gw * gh).fill(-1);
+  dist[start] = 0;
+  const q = [start];
+  for (let h = 0; h < q.length; h++) {
+    const cur = q[h], cx = cur % gw, cy = (cur / gw) | 0;
+    if (goalOK(cx * CELL, cy * CELL)) return dist[cur] * CELL;
+    for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]]) {
+      if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue;
+      const ni = ny * gw + nx;
+      if (dist[ni] >= 0 || !grid.at(nx, ny)) continue;
+      if (danger && danger(nx * CELL, ny * CELL)) continue;
+      dist[ni] = dist[cur] + 1;
+      q.push(ni);
+    }
+  }
+  return -1;
+}
+
+/* ---------- 検証1: 壁だけを見て、STARTからGOALへ実際に動けるか ----------
+   あわせて「本番で実際に歩く距離」も測り、木の直径に対して短すぎないかを見る。
+   通路が交わる隅を抜ける近道があると、設計より大幅に短い道で着けてしまう。 */
+const MIN_WALK_OF_TREE = 0.62;   // 木の直径のこの割合は歩かせる
+function validateStage(stage) {
+  for (const seg of stage.segments) {
+    if (seg.width / 2 - stage.shipSize <= 0) return '通路幅が船より狭いセグメントがあります';
+  }
+  const grid = buildRaster(stage);
+  stage._grid = grid;
+  const walk = walkDistance(stage, grid, null);
+  if (walk < 0) return 'STARTからGOALへの経路が見つかりません';
+  stage.stats.walkLength = walk;
+  const need = Math.round(stage.stats.routeLength * MIN_WALK_OF_TREE);
+  if (walk < need) {
+    return '近道が効きすぎて短すぎます(実歩行' + walk + ' < 必要' + need + ')';
+  }
+  return null;
 }
 
 /* ---------- 検証2: ウニを避けてSTART→GOALに到達できるか ----------
-   validateStage() は壁だけを見て「物理的に移動できるか」を確認するが、
-   ウニは壁ではなく「触れたら即やり直し」の危険物なので、別に検証する。
-   壁の当たり判定と同じラスタライズ+BFSに、ウニの危険範囲を通行不可として
-   重ねるだけで確認できる。
+   壁の当たり判定と同じラスタ(validateStage が作ったものを使い回す)に、
+   ウニの危険範囲を通行不可として重ねるだけで確認できる。
 
    ここでは2つ測る。
-     direct … ウニを無視したときのSTART→GOALの最短(セル数)
-     free   … ウニを避けたときの最短
+     direct … ウニを無視したときの実歩行(validateStage が測った値)
+     free   … ウニを避けたときの実歩行
    「通せんぼのウニ」は正解ルートを完全に塞ぐ大きさで置いてあるので、
    回り道がちゃんと機能していれば free は direct より長くなる。free が
    見つからなければ詰み、direct と変わらなければ通せんぼが効いていない。
@@ -828,106 +925,36 @@ function urchinDanger(urchins, shipR, px, py) {
   return false;
 }
 
-function rasterPassable(stage, CELL) {
-  const { width: W, height: H } = stage.mazeBounds;
-  const gw = Math.ceil(W / CELL), gh = Math.ceil(H / CELL);
-  const passable = new Uint8Array(gw * gh);
-  const shipR = stage.shipSize;
-  for (const seg of stage.segments) {
-    const halfW = seg.width / 2 - shipR;
-    if (halfW <= 0) continue;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const [x, y] of seg.points) {
-      minX = Math.min(minX, x); minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
-    }
-    const gx0 = Math.max(0, Math.floor((minX - halfW) / CELL));
-    const gy0 = Math.max(0, Math.floor((minY - halfW) / CELL));
-    const gx1 = Math.min(gw - 1, Math.ceil((maxX + halfW) / CELL));
-    const gy1 = Math.min(gh - 1, Math.ceil((maxY + halfW) / CELL));
-    for (let gy = gy0; gy <= gy1; gy++) {
-      for (let gx = gx0; gx <= gx1; gx++) {
-        const idx = gy * gw + gx;
-        if (passable[idx]) continue;
-        const px = gx * CELL + CELL / 2, py = gy * CELL + CELL / 2;
-        if (distToPolyline({ x: px, y: py }, seg.points) <= halfW) passable[idx] = 1;
-      }
-    }
-  }
-  return { passable, gw, gh };
-}
-
-// START から GOAL までの最短セル数。avoid=true ならウニを避ける。
-function bfsCells(stage, CELL, grid, avoid) {
-  const { passable, gw, gh } = grid;
-  const urchins = (stage.enemies && stage.enemies.urchins) || [];
-  const shipR = stage.shipSize;
-  const toCell = (p) => [Math.max(0, Math.min(gw - 1, Math.floor(p.x / CELL))),
-                         Math.max(0, Math.min(gh - 1, Math.floor(p.y / CELL)))];
-  const [sx, sy] = toCell(stage.startPosition);
-  const [gx, gy] = toCell(stage.goalPosition);
-  const startIdx = sy * gw + sx, goalIdx = gy * gw + gx;
-  if (avoid && urchinDanger(urchins, shipR, sx * CELL + CELL / 2, sy * CELL + CELL / 2)) return -1;
-  const distArr = new Int32Array(gw * gh).fill(-1);
-  distArr[startIdx] = 0;
-  const q = [startIdx];
-  let qi = 0;
-  while (qi < q.length) {
-    const cur = q[qi++];
-    if (cur === goalIdx) return distArr[cur];
-    const cx = cur % gw, cy = (cur / gw) | 0;
-    const neigh = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
-    for (const [nx, ny] of neigh) {
-      if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue;
-      const ni = ny * gw + nx;
-      if (!passable[ni] || distArr[ni] >= 0) continue;
-      if (avoid && urchinDanger(urchins, shipR, nx * CELL + CELL / 2, ny * CELL + CELL / 2)) continue;
-      distArr[ni] = distArr[cur] + 1;
-      q.push(ni);
-    }
-  }
-  return -1;
-}
-
-// 1つの候補につきラスタライズは1回だけ。揺れ幅を詰めながら何度も
-// 確かめるので、毎回作り直すと生成が極端に遅くなる。
-function hazardChecker(stage) {
-  const CELL = 6;
-  const grid = rasterPassable(stage, CELL);
-  const direct = bfsCells(stage, CELL, grid, false);
-  return function () {
-    const free = bfsCells(stage, CELL, grid, true);
-    if (free < 0) return -1;                       // ウニを避けると到達不能
-    return direct > 0 ? Math.round((free / direct - 1) * 100) : 0;
-  };
-}
-
 // 緑のウニの揺れ幅は、そのステージで実際に通り抜けられる範囲まで詰める。
-// 揺れて通る範囲すべてを危険とみなして検証するので、ここを通れば
-// 「揺れのせいでいつまでも通れない」ことは起きない。
 // あわせて、通せんぼが効いているか(迂回で道のりが伸びるか)も確かめる。
 function validateHazards(stage, requireDetour) {
   const urchins = (stage.enemies && stage.enemies.urchins) || [];
   if (!urchins.length) return null;
-  const test = hazardChecker(stage);
+  const grid = stage._grid || buildRaster(stage);
+  const direct = stage.stats.walkLength;
+  const test = () => walkDistance(stage, grid,
+    (x, y) => urchinDanger(urchins, stage.shipSize, x, y));
+
   const swaying = urchins.filter((u) => u.moveX);
-  let extra = test();
-  for (let k = 0; k < 8 && extra < 0 && swaying.length; k++) {
+  let free = test();
+  for (let k = 0; k < 8 && free < 0 && swaying.length; k++) {
     let shrunk = false;
     for (const u of swaying) {
       if (u.moveX > 0.4) { u.moveX = Math.round(u.moveX * 0.6 * 10) / 10; shrunk = true; }
     }
     if (!shrunk) break;
-    extra = test();
+    free = test();
   }
-  if (extra < 0 && swaying.length) {
+  if (free < 0 && swaying.length) {
     for (const u of swaying) u.moveX = 0;          // 最後は揺れなしで確かめる
-    extra = test();
+    free = test();
   }
-  if (extra < 0) return 'ウニを避けるとSTARTからGOALへの経路が見つかりません';
-  stage.stats.detourExtra = extra;
+  if (free < 0) return 'ウニを避けるとSTARTからGOALへの経路が見つかりません';
+  stage.stats.detourExtra = direct > 0 ? Math.round((free / direct - 1) * 100) : 0;
   stage.stats.swayKept = swaying.length ? Math.max(...swaying.map((u) => u.moveX)) : 0;
-  if (requireDetour && extra < 15) return '通せんぼのウニが効いていません(迂回しても道のりが伸びない)';
+  if (requireDetour && stage.stats.detourExtra < 15) {
+    return '通せんぼのウニが効いていません(迂回しても道のりが伸びない)';
+  }
   return null;
 }
 
@@ -1012,7 +1039,7 @@ STAGES.forEach((s) => {
     `bounds=${s.mazeBounds.width}x${s.mazeBounds.height} route=${st.routeLength} ` +
     `deadEnds=${st.deadEnds} junctions=${st.junctions} curves=${st.curveChains}/${st.totalChains} ` +
     `diag=${st.diagonalEdges} width=${Math.round(st.corridorWidth)} ` +
-    `迂回+${st.detourExtra}% 揺れ${st.swayKept} ` +
+    `実歩行${st.walkLength}/${st.routeLength} 迂回+${st.detourExtra}% 揺れ${st.swayKept} ` +
     `赤${s.enemies.urchins.filter((u) => u.variant === 'irregular').length}/緑${s.enemies.urchins.filter((u) => u.variant === 'tentacle').length} ` +
     `通せんぼ=${s.enemies.urchins.some((u) => u.blocker) ? 'あり' : 'なし'} ` +
     `だまし分岐=${st.falseLoop ? 'あり' : 'なし'} 回り道=${st.detourLoop ? 'あり' : 'なし'}`
@@ -1028,5 +1055,6 @@ const header =
   '   見た目とヒットボックスがズレない。生成後、ラスタライズ+BFSで\n' +
   '   STARTからGOALへ実際に到達できることを検証済み(tools/gen-dsm-levels.mjs)。\n' +
   '   segments[].points は [x,y] のワールド座標(px)。 */\n';
+STAGES.forEach((s) => { delete s._grid; });
 const body = STAGES.map((s) => '  ' + JSON.stringify(s)).join(',\n');
 process.stdout.write(header + 'window.DSM_LEVELS = [\n' + body + '\n];\n');
