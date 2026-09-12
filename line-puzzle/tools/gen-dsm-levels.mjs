@@ -222,6 +222,124 @@ function buildChains(adj) {
   return chains;
 }
 
+/* ---------- 経路(START→GOAL)をノードキーの配列で取り出す ---------- */
+function routeKeys(prevMap, goalKey) {
+  const out = [goalKey];
+  let cur = goalKey;
+  while (prevMap.has(cur)) { cur = prevMap.get(cur); out.push(cur); }
+  return out.reverse();
+}
+
+/* ---------- 迂回路をつくる(「ウニの通せんぼ」用) ----------
+   正解ルートの1辺(A,B)を選び、その辺を通らずに A から B へ戻れる回り道を
+   グリッド上に作る。全域木はすべてのセルを訪れているので、既存のセル同士を
+   追加でつなぐだけでよく、連結性は絶対に壊れない。
+   返した辺の上に「通せんぼのウニ」を置くと、
+   「まっすぐ行くと塞がれている → 回り道すると先に出られる」構図になる。 */
+function addDetourLoop(rng, adj, gw, gh, route) {
+  const key = (x, y) => x + ',' + y;
+  const inB = (x, y) => x >= 0 && y >= 0 && x < gw && y < gh;
+  const lo = Math.max(1, Math.floor(route.length * 0.25));
+  const hi = Math.max(lo + 1, Math.floor(route.length * 0.75));
+  const idxs = [];
+  for (let i = lo; i < hi && i + 1 < route.length; i++) idxs.push(i);
+
+  for (const i of shuffle(rng, idxs)) {
+    const A = keyToXY(route[i]), B = keyToXY(route[i + 1]);
+    const dx = B.x - A.x, dy = B.y - A.y;
+    // A→B に対して横へ張り出す箱型の回り道の候補を並べる
+    const cands = [];
+    if (dx === 0 || dy === 0) {
+      const perps = dx === 0 ? [[1, 0], [-1, 0]] : [[0, 1], [0, -1]];
+      for (const [px, py] of perps) {
+        for (const depth of [1, 2]) {
+          const path = [];
+          for (let d = 1; d <= depth; d++) path.push({ x: A.x + px * d, y: A.y + py * d });
+          for (let d = depth; d >= 1; d--) path.push({ x: B.x + px * d, y: B.y + py * d });
+          cands.push(path);
+        }
+      }
+    } else {
+      // 斜めの辺は、直角に曲がる2辺で回り込める
+      cands.push([{ x: A.x + dx, y: A.y }]);
+      cands.push([{ x: A.x, y: A.y + dy }]);
+    }
+    for (const path of shuffle(rng, cands)) {
+      const chain = [A, ...path, B];
+      let ok = true;
+      for (const c of path) if (!inB(c.x, c.y) || !adj.has(key(c.x, c.y))) { ok = false; break; }
+      if (!ok) continue;
+      // 塞ぐつもりの辺(A,B)そのものを回り道が使ってしまっては意味がない
+      for (let j = 0; j < chain.length - 1 && ok; j++) {
+        const a = chain[j], b = chain[j + 1];
+        if (a.x === b.x && a.y === b.y) ok = false;
+        if ((a.x === A.x && a.y === A.y && b.x === B.x && b.y === B.y) ||
+            (a.x === B.x && a.y === B.y && b.x === A.x && b.y === A.y)) ok = false;
+      }
+      if (!ok) continue;
+      for (let j = 0; j < chain.length - 1; j++) {
+        const k1 = key(chain[j].x, chain[j].y), k2 = key(chain[j + 1].x, chain[j + 1].y);
+        adj.get(k1).add(k2); adj.get(k2).add(k1);
+      }
+      return { blockEdge: [route[i], route[i + 1]] };
+    }
+  }
+  return null;
+}
+
+/* ---------- だまし分岐をつくる ----------
+   プレイヤーが必ず通る分岐点Jの、2本の枝の先どうしを繋ぐ。すると
+   「3本に分かれていて、1本を選んで進んだら、ぐるっと回って分岐の
+   別の枝から同じ分岐点に戻ってきた」という構図になる。 */
+function walkBranch(adj, from, first, steps) {
+  let prev = from, cur = first;
+  for (let i = 0; i < steps; i++) {
+    const nexts = [...adj.get(cur)].filter((x) => x !== prev);
+    if (!nexts.length) break;
+    prev = cur; cur = nexts[0];
+  }
+  return cur;
+}
+function addFalseLoop(rng, adj, gw, gh, route) {
+  const key = (x, y) => x + ',' + y;
+  const inB = (x, y) => x >= 0 && y >= 0 && x < gw && y < gh;
+  const cands = shuffle(rng, route.filter((k) => adj.get(k).size >= 3));
+  for (const J of cands) {
+    const nbs = shuffle(rng, [...adj.get(J)]);
+    for (let a = 0; a < nbs.length; a++) {
+      for (let b = a + 1; b < nbs.length; b++) {
+        const t1 = walkBranch(adj, J, nbs[a], 2 + Math.floor(rng() * 2));
+        const t2 = walkBranch(adj, J, nbs[b], 2 + Math.floor(rng() * 2));
+        if (t1 === t2 || t1 === J || t2 === J) continue;
+        const p1 = keyToXY(t1), p2 = keyToXY(t2);
+        const man = Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
+        if (man < 1 || man > 4) continue;               // 遠すぎる繋ぎは大きな近道になる
+        // L字に1マスずつ繋ぐ。分岐点Jを通ってしまう繋ぎ方は使わない。
+        const path = [p1];
+        let c = { x: p1.x, y: p1.y };
+        while (c.x !== p2.x) { c = { x: c.x + Math.sign(p2.x - c.x), y: c.y }; path.push(c); }
+        while (c.y !== p2.y) { c = { x: c.x, y: c.y + Math.sign(p2.y - c.y) }; path.push(c); }
+        let ok = true;
+        for (const q of path) {
+          if (!inB(q.x, q.y) || !adj.has(key(q.x, q.y))) { ok = false; break; }
+          if (key(q.x, q.y) === J) { ok = false; break; }
+        }
+        if (!ok) continue;
+        let added = 0;
+        for (let j = 0; j < path.length - 1; j++) {
+          const k1 = key(path[j].x, path[j].y), k2 = key(path[j + 1].x, path[j + 1].y);
+          if (k1 === k2 || adj.get(k1).has(k2)) continue;
+          adj.get(k1).add(k2); adj.get(k2).add(k1);
+          added++;
+        }
+        if (!added) continue;                           // すでに繋がっていた=周回にならない
+        return { junction: J };
+      }
+    }
+  }
+  return null;
+}
+
 /* ---------- 通路チェーン(グリッド座標)をワールド座標のセグメントへ ---------- */
 function keyToXY(k) { const [x, y] = k.split(',').map(Number); return { x, y }; }
 
@@ -234,6 +352,15 @@ function buildStage(stageId, rng, tier) {
   // startからいちばん遠い葉をGOALにする(直径のもう一方の端)
   const sweep3 = bfsFarthest(adj, startKey);
   const goalKey = sweep3.far;
+
+  // ここまでは木(閉路なし)。ここから「意図した閉路」だけを2つ足す。
+  // ランダムに閉路をばらまくと、どの枝を選んでも同じ道に合流してしまい
+  // 分岐の意味が無くなるので、閉路は必ずこの2つだけにする。
+  //   detour … 正解ルートの1辺を迂回できる回り道(その辺をウニで塞ぐ)
+  //   false  … 分岐の2本の枝の先を繋ぎ、進むと同じ分岐点に戻る周回路
+  const route = routeKeys(sweep3.prev, goalKey);
+  const detour = addDetourLoop(rng, adj, tier.gw, tier.gh, route);
+  const falseLoop = addFalseLoop(rng, adj, tier.gw, tier.gh, route);
 
   // ノードのワールド座標(グリッド座標+ジッター)
   const nodeWorld = new Map();
@@ -313,7 +440,12 @@ function buildStage(stageId, rng, tier) {
   const decorations = pickDecorations(rng, segments, boundsW, boundsH, tier);
 
   // 敵キャラ: Stage1〜10は固定のウニ、11〜50は遊泳するピラニア/ウツボ
-  const enemies = pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, segments);
+  const routeWorld = route.map((k) => shift(nodeWorld.get(k)));
+  const blockAt = detour ? shift({
+    x: (nodeWorld.get(detour.blockEdge[0]).x + nodeWorld.get(detour.blockEdge[1]).x) / 2,
+    y: (nodeWorld.get(detour.blockEdge[0]).y + nodeWorld.get(detour.blockEdge[1]).y) / 2
+  }) : null;
+  const enemies = pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, segments, blockAt, routeWorld);
 
   return {
     stageId,
@@ -332,6 +464,7 @@ function buildStage(stageId, rng, tier) {
     stats: {
       routeLength: Math.round(routeLen),
       deadEnds, junctions,
+      detourLoop: !!detour, falseLoop: !!falseLoop,
       curveChains: curveChainCount,
       diagonalEdges: diagonalEdgeCount,
       corridorWidth: tier.width,
@@ -406,7 +539,7 @@ function placeDeadEndUrchins(rng, count, adj, nodeWorld, startKey, goalKey, shif
 // 負になってしまう。そこで、その通路幅で確保できる最大サイズまで
 // ウニ自体を縮めることで、どのステージでも「ギリギリ避けられる」余地を
 // 必ず残す(＝通路が狭いステージほど、このウニも自然に小さくなる)。
-function placeTentacleUrchins(rng, count, segments, shift, urchins) {
+function placeTentacleUrchins(rng, count, segments, shift, urchins, routeWorld) {
   const subsegs = [];
   let totalLen = 0;
   for (const seg of segments) {
@@ -420,6 +553,12 @@ function placeTentacleUrchins(rng, count, segments, shift, urchins) {
     }
   }
   if (!subsegs.length) return;
+  // 「ゴールまでの道のりにウニがいない=簡単すぎる」ので、正解ルートの
+  // 近くにある区間を優先して選ぶ。近い区間が無ければ全区間から選ぶ。
+  const routePts = routeWorld && routeWorld.length ? routeWorld.map((q) => [q.x, q.y]) : null;
+  const onRoute = routePts
+    ? subsegs.filter((sg) => distToPolyline({ x: (sg.ax + sg.bx) / 2, y: (sg.ay + sg.by) / 2 }, routePts) <= sg.halfW * 1.2)
+    : [];
   // gap = 2*halfW - wallMargin - hitR - 2*shipR (壁いっぱい(d=halfW-wallMargin)
   // まで押し込んだときに船の中心が動ける幅)。gap >= minGap になるように
   // r の上限を逆算する。全ステージ中もっとも狭い通路(Stage50, width=36)
@@ -430,8 +569,10 @@ function placeTentacleUrchins(rng, count, segments, shift, urchins) {
   const rMaxForSafety = (2 * halfW - wallMargin - 2 * SHIP_RADIUS - minGap) / TENTACLE_HIT_MUL;
   const r = Math.max(3, Math.min(URCHIN_R, rMaxForSafety));
   for (let i = 0; i < count; i++) {
-    let target = rng() * totalLen, chosen = subsegs[subsegs.length - 1];
-    for (const s of subsegs) {
+    const pool = onRoute.length ? onRoute : subsegs;
+    const poolLen = pool.reduce((a, sg) => a + sg.len, 0);
+    let target = rng() * poolLen, chosen = pool[pool.length - 1];
+    for (const s of pool) {
       if (target <= s.len) { chosen = s; break; }
       target -= s.len;
     }
@@ -443,23 +584,63 @@ function placeTentacleUrchins(rng, count, segments, shift, urchins) {
     const side = rng() < 0.5 ? 1 : -1;
     const offset = (chosen.halfW - wallMargin) * side;
     const p = shift({ x: px + nx * offset, y: py + ny * offset });
-    urchins.push({ variant: 'tentacle', x: p.x, y: p.y, r: Math.round(r * 10) / 10, rot: Math.round(rng() * 360) });
+    // 緑のウニは左右に揺れる。振れ幅はウニ3個分(直径×3)をこの位置で
+    // 確保できるぶんまで。実際に通れるかは validateHazards() で確かめ、
+    // 通れなければ後段で振れ幅を詰める。
+    urchins.push({ variant: 'tentacle', x: p.x, y: p.y, r: Math.round(r * 10) / 10,
+      rot: Math.round(rng() * 360), moveX: Math.round(r * 3 * 10) / 10,
+      phase: Math.round(rng() * 100) / 100 });
   }
 }
 
-function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, segments) {
+// 通路の中心線のうち、与えた点にいちばん近いところを返す(幅つき)
+function nearestOnSegments(segments, p) {
+  let best = null, bd = Infinity;
+  for (const seg of segments) {
+    for (let i = 0; i < seg.points.length - 1; i++) {
+      const a = { x: seg.points[i][0], y: seg.points[i][1] };
+      const b = { x: seg.points[i + 1][0], y: seg.points[i + 1][1] };
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const l2 = dx * dx + dy * dy;
+      const t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2)) : 0;
+      const q = { x: a.x + dx * t, y: a.y + dy * t };
+      const d = dist(p, q);
+      if (d < bd) { bd = d; best = { x: q.x, y: q.y, halfW: seg.width / 2 }; }
+    }
+  }
+  return best;
+}
+
+// 「通せんぼ」のウニ。回り道が用意してある辺の上に、通路を完全に塞ぐ
+// 大きさで置く。船の中心が左右どちらからも抜けられないよう、
+// 当たり半径(r×1.15)+船の半径 が通路の半幅以上になる大きさを逆算する。
+function placeBlockerUrchin(rng, blockAt, segments, urchins) {
+  if (!blockAt) return false;
+  const spot = nearestOnSegments(segments, blockAt);
+  if (!spot) return false;
+  const needed = (spot.halfW - SHIP_RADIUS) / 1.15 + 1.5;   // 完全に塞ぐのに要る半径
+  const r = Math.max(needed, spot.halfW * 0.55);
+  urchins.push({ variant: 'irregular', x: Math.round(spot.x * 10) / 10, y: Math.round(spot.y * 10) / 10,
+    r: Math.round(r * 10) / 10, rot: Math.round(rng() * 360), blocker: true });
+  return true;
+}
+
+function pickEnemies(rng, stageId, adj, nodeWorld, startKey, goalKey, shift, segments, blockAt, routeWorld) {
   const urchins = [];
+  // どのステージにも「通せんぼのウニ」を1体。回り道は addDetourLoop() が
+  // 作ってあるので、まっすぐ行けない代わりに迂回すれば先へ進める。
+  placeBlockerUrchin(rng, blockAt, segments, urchins);
   if (stageId <= 10) {
     // 序盤(固定の危険物のみ): 難易度が上がるほど数を増やす
     placeDeadEndUrchins(rng, 3 + Math.floor(stageId / 2), adj, nodeWorld, startKey, goalKey, shift, urchins);
-    placeTentacleUrchins(rng, 2 + Math.floor(stageId / 3), segments, shift, urchins);
+    placeTentacleUrchins(rng, 2 + Math.floor(stageId / 3), segments, shift, urchins, routeWorld);
     return { urchins, swimmers: [] };
   }
 
   // Stage11以降も、遊泳する敵に加えて固定のウニを2体(行き止まりに1体・
-  // 道中の端に1体)だけ配置する。
+  // 正解ルートの端に1体)だけ配置する。
   placeDeadEndUrchins(rng, 1, adj, nodeWorld, startKey, goalKey, shift, urchins);
-  placeTentacleUrchins(rng, 1, segments, shift, urchins);
+  placeTentacleUrchins(rng, 1, segments, shift, urchins, routeWorld);
 
   const nodeKeys = [...adj.keys()];
   function randomWaypoints() {
@@ -566,25 +747,37 @@ function validateStage(stage) {
   return 'STARTからGOALへの経路が見つかりません';
 }
 
-/* ---------- 検証2: 固定ウニ(Stage1〜10)を避けてもSTART→GOALに到達できるか ----------
+/* ---------- 検証2: ウニを避けてSTART→GOALに到達できるか ----------
    validateStage() は壁だけを見て「物理的に移動できるか」を確認するが、
-   ウニは壁ではなく「触れたら即やり直し」の危険物なので、それとは別に
-   「ウニに一度も触れずに迷路を解けるか」も検証する必要がある。壁の当たり
-   判定と同じラスタライズ+BFSに、ウニの危険範囲(当たり判定と同じ半径)を
-   通行不可として重ねるだけで確認できる。行き止まりのウニ(fuzzy)は本編の
-   経路上には無いので影響しないが、道中の端のウニ(tentacle)は経路の
-   すぐそばにあるため、置き方次第で経路を完全に塞いでしまう可能性がある。
-   不合格ならこのステージ全体をシードを変えて作り直す(=マップと敵配置が
-   両方変わる)。 */
-function validateHazards(stage) {
-  const urchins = stage.enemies && stage.enemies.urchins;
-  if (!urchins || !urchins.length) return null;
-  const CELL = 6;
+   ウニは壁ではなく「触れたら即やり直し」の危険物なので、別に検証する。
+   壁の当たり判定と同じラスタライズ+BFSに、ウニの危険範囲を通行不可として
+   重ねるだけで確認できる。
+
+   ここでは2つ測る。
+     direct … ウニを無視したときのSTART→GOALの最短(セル数)
+     free   … ウニを避けたときの最短
+   「通せんぼのウニ」は正解ルートを完全に塞ぐ大きさで置いてあるので、
+   回り道がちゃんと機能していれば free は direct より長くなる。free が
+   見つからなければ詰み、direct と変わらなければ通せんぼが効いていない。
+
+   左右に揺れる緑のウニは、揺れて通る範囲すべて(横向きのカプセル)を危険と
+   みなす。こうしておけば「揺れの向こう側で待たされて詰む」ことが無く、
+   どの瞬間でも通り抜けられることを保証できる。 */
+function urchinDanger(urchins, shipR, px, py) {
+  for (const u of urchins) {
+    // 1.15 / TENTACLE_HIT_MUL は deep-sea-maze.js の checkEnemyHit と同じ値
+    const hitR = u.r * (u.variant === 'tentacle' ? TENTACLE_HIT_MUL : 1.15) + shipR;
+    const dx = u.moveX ? Math.max(0, Math.abs(px - u.x) - u.moveX) : px - u.x;
+    if (Math.hypot(dx, py - u.y) <= hitR) return true;
+  }
+  return false;
+}
+
+function rasterPassable(stage, CELL) {
   const { width: W, height: H } = stage.mazeBounds;
   const gw = Math.ceil(W / CELL), gh = Math.ceil(H / CELL);
   const passable = new Uint8Array(gw * gh);
   const shipR = stage.shipSize;
-
   for (const seg of stage.segments) {
     const halfW = seg.width / 2 - shipR;
     if (halfW <= 0) continue;
@@ -606,36 +799,81 @@ function validateHazards(stage) {
       }
     }
   }
+  return { passable, gw, gh };
+}
 
-  const toCell = (p) => [Math.max(0, Math.min(gw - 1, Math.floor(p.x / CELL))), Math.max(0, Math.min(gh - 1, Math.floor(p.y / CELL)))];
+// START から GOAL までの最短セル数。avoid=true ならウニを避ける。
+function bfsCells(stage, CELL, grid, avoid) {
+  const { passable, gw, gh } = grid;
+  const urchins = (stage.enemies && stage.enemies.urchins) || [];
+  const shipR = stage.shipSize;
+  const toCell = (p) => [Math.max(0, Math.min(gw - 1, Math.floor(p.x / CELL))),
+                         Math.max(0, Math.min(gh - 1, Math.floor(p.y / CELL)))];
   const [sx, sy] = toCell(stage.startPosition);
   const [gx, gy] = toCell(stage.goalPosition);
-
-  const seen = new Uint8Array(gw * gh);
-  const q = [sy * gw + sx];
-  seen[sy * gw + sx] = 1;
+  const startIdx = sy * gw + sx, goalIdx = gy * gw + gx;
+  if (avoid && urchinDanger(urchins, shipR, sx * CELL + CELL / 2, sy * CELL + CELL / 2)) return -1;
+  const distArr = new Int32Array(gw * gh).fill(-1);
+  distArr[startIdx] = 0;
+  const q = [startIdx];
   let qi = 0;
-  const goalIdx = gy * gw + gx;
   while (qi < q.length) {
     const cur = q[qi++];
-    if (cur === goalIdx) return null; // ウニを避けてもGOALへ到達できた
+    if (cur === goalIdx) return distArr[cur];
     const cx = cur % gw, cy = (cur / gw) | 0;
     const neigh = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
     for (const [nx, ny] of neigh) {
       if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue;
       const ni = ny * gw + nx;
-      if (!passable[ni] || seen[ni]) continue;
-      const px = nx * CELL + CELL / 2, py = ny * CELL + CELL / 2;
-      let danger = false;
-      for (const u of urchins) {
-        const hitR = u.r * (u.variant === 'tentacle' ? TENTACLE_HIT_MUL : 1.0);
-        if (Math.hypot(px - u.x, py - u.y) <= hitR + shipR) { danger = true; break; }
-      }
-      if (danger) continue;
-      seen[ni] = 1; q.push(ni);
+      if (!passable[ni] || distArr[ni] >= 0) continue;
+      if (avoid && urchinDanger(urchins, shipR, nx * CELL + CELL / 2, ny * CELL + CELL / 2)) continue;
+      distArr[ni] = distArr[cur] + 1;
+      q.push(ni);
     }
   }
-  return 'ウニを避けるとSTARTからGOALへの経路が見つかりません';
+  return -1;
+}
+
+// 1つの候補につきラスタライズは1回だけ。揺れ幅を詰めながら何度も
+// 確かめるので、毎回作り直すと生成が極端に遅くなる。
+function hazardChecker(stage) {
+  const CELL = 6;
+  const grid = rasterPassable(stage, CELL);
+  const direct = bfsCells(stage, CELL, grid, false);
+  return function () {
+    const free = bfsCells(stage, CELL, grid, true);
+    if (free < 0) return -1;                       // ウニを避けると到達不能
+    return direct > 0 ? Math.round((free / direct - 1) * 100) : 0;
+  };
+}
+
+// 緑のウニの揺れ幅は、そのステージで実際に通り抜けられる範囲まで詰める。
+// 揺れて通る範囲すべてを危険とみなして検証するので、ここを通れば
+// 「揺れのせいでいつまでも通れない」ことは起きない。
+// あわせて、通せんぼが効いているか(迂回で道のりが伸びるか)も確かめる。
+function validateHazards(stage, requireDetour) {
+  const urchins = (stage.enemies && stage.enemies.urchins) || [];
+  if (!urchins.length) return null;
+  const test = hazardChecker(stage);
+  const swaying = urchins.filter((u) => u.moveX);
+  let extra = test();
+  for (let k = 0; k < 8 && extra < 0 && swaying.length; k++) {
+    let shrunk = false;
+    for (const u of swaying) {
+      if (u.moveX > 0.4) { u.moveX = Math.round(u.moveX * 0.6 * 10) / 10; shrunk = true; }
+    }
+    if (!shrunk) break;
+    extra = test();
+  }
+  if (extra < 0 && swaying.length) {
+    for (const u of swaying) u.moveX = 0;          // 最後は揺れなしで確かめる
+    extra = test();
+  }
+  if (extra < 0) return 'ウニを避けるとSTARTからGOALへの経路が見つかりません';
+  stage.stats.detourExtra = extra;
+  stage.stats.swayKept = swaying.length ? Math.max(...swaying.map((u) => u.moveX)) : 0;
+  if (requireDetour && extra < 6) return '通せんぼのウニが効いていません(迂回しても道のりが伸びない)';
+  return null;
 }
 
 /* ---------- 難易度カーブ(連続的) ----------
@@ -689,14 +927,22 @@ function tierFor(stageId) {
 
 /* ---------- 生成本体 ---------- */
 const STAGES = [];
-for (let stageId = 1; stageId <= TOTAL_STAGES; stageId++) {
+const ONLY = process.env.DSM_ONLY ? Number(process.env.DSM_ONLY) : 0;
+for (let stageId = ONLY || 1; stageId <= (ONLY || TOTAL_STAGES); stageId++) {
   const tier = tierFor(stageId);
+  if (process.env.DSM_TRACE) console.error('stage ' + stageId + ' start');
   let stage = null, err = null;
-  for (let seedTry = 0; seedTry < 250 && !stage; seedTry++) {
-    const rng = mulberry32(stageId * 92821 + seedTry * 733);
-    const candidate = buildStage(stageId, rng, tier);
-    err = validateStage(candidate) || validateHazards(candidate);
-    if (!err) stage = candidate;
+  // まずは「通せんぼがちゃんと効いている(迂回で道のりが伸びる)」ものを
+  // 探し、どうしても見つからなければ条件を緩めて作り直す。
+  for (let pass = 0; pass < 2 && !stage; pass++) {
+    const requireDetour = pass === 0;
+    for (let seedTry = 0; seedTry < 200 && !stage; seedTry++) {
+      const rng = mulberry32(stageId * 92821 + seedTry * 733);
+      if (process.env.DSM_TRACE) console.error('  pass=' + pass + ' seed=' + seedTry);
+      const candidate = buildStage(stageId, rng, tier);
+      err = validateStage(candidate) || validateHazards(candidate, requireDetour);
+      if (!err) stage = candidate;
+    }
   }
   if (!stage) throw new Error('stage ' + stageId + ' 生成に失敗: ' + err);
   STAGES.push(stage);
@@ -709,7 +955,10 @@ STAGES.forEach((s) => {
     `stage ${String(s.stageId).padStart(2, '0')} [band${s.difficultyTier}] ` +
     `bounds=${s.mazeBounds.width}x${s.mazeBounds.height} route=${st.routeLength} ` +
     `deadEnds=${st.deadEnds} junctions=${st.junctions} curves=${st.curveChains}/${st.totalChains} ` +
-    `diag=${st.diagonalEdges} width=${st.corridorWidth} fog=${s.fogRadius || '-'}`
+    `diag=${st.diagonalEdges} width=${Math.round(st.corridorWidth)} ` +
+    `迂回+${st.detourExtra}% 揺れ${st.swayKept} ` +
+    `通せんぼ=${s.enemies.urchins.some((u) => u.blocker) ? 'あり' : 'なし'} ` +
+    `だまし分岐=${st.falseLoop ? 'あり' : 'なし'} 回り道=${st.detourLoop ? 'あり' : 'なし'}`
   );
 });
 

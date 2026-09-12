@@ -672,15 +672,24 @@
   // より控えめにして、見た目より当たりにくい(=理不尽にならない)側に倒す。
   // 遊泳する敵は壁の当たり判定を持たず、通路の外(壁の中)も自由に横切って
   // 泳げる想定なので、ここでは壁とは無関係に敵自身の座標だけで判定する。
+  // 左右に揺れるウニ(緑の触手つき)の、その瞬間の中心。描画と当たり判定で
+  // 必ず同じ式を通す。moveX が無いウニ(赤い通せんぼなど)は動かない。
+  var URCHIN_SWAY = 0.9;   // ラジアン/秒
+  function urchinX(u, t) {
+    if (!u.moveX) return u.x;
+    return u.x + Math.sin(t * URCHIN_SWAY + (u.phase || 0) * Math.PI * 2) * u.moveX;
+  }
+
   function checkEnemyHit(g) {
     var ship = g.ship, stage = g.stage, shipR = stage.shipSize;
+    var now = performance.now() / 1000;
     var urchins = (stage.enemies && stage.enemies.urchins) || [];
     for (var i = 0; i < urchins.length; i++) {
       var u = urchins[i];
       // 1.4 は tools/gen-dsm-levels.mjs の TENTACLE_HIT_MUL と必ず同じ値にする
       // (生成時に「船が反対側を通れる余地」を計算する前提の値と一致させる必要がある)
       var hitR = u.r * (u.variant === 'tentacle' ? 1.4 : 1.15);
-      if (Math.hypot(ship.x - u.x, ship.y - u.y) <= hitR + shipR) return true;
+      if (Math.hypot(ship.x - urchinX(u, now), ship.y - u.y) <= hitR + shipR) return true;
     }
     for (var j = 0; j < g.swimmers.length; j++) {
       var sw = g.swimmers[j];
@@ -1167,7 +1176,7 @@
     var pal = URCHIN_PALETTE[en.variant] || URCHIN_PALETTE.irregular;
     var r = en.r;
     ctx.save();
-    ctx.translate(en.x, en.y);
+    ctx.translate(urchinX(en, t), en.y);
     ctx.rotate((en.rot || 0) * Math.PI / 180);
     var glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.6);
     glow.addColorStop(0, pal.glow); glow.addColorStop(1, 'rgba(0,0,0,0)');

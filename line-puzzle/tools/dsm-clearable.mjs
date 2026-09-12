@@ -48,19 +48,25 @@ for (let sid = 1; sid <= 50; sid++) {
     // 並んでいると誤った値を拾う。1体だけ残して測り、あとで戻す。
     const hitR = urchins.map((u) => {
       st.enemies.urchins = [u];
+      const sway = u.moveX;                 // 揺れは止めて、半径そのものを測る
+      u.moveX = 0;
       let lo = 0, hi = 400;
       for (let k = 0; k < 24; k++) {
         const mid = (lo + hi) / 2;
         dbg.warpTo(u.x + mid, u.y);
         if (dbg.enemyHit()) lo = mid; else hi = mid;
       }
+      u.moveX = sway;
       return hi;
     });
     st.enemies.urchins = urchins;
+    // 左右に揺れるウニは、揺れて通る範囲すべて(横向きのカプセル)を危険とみなす。
+    // こうしておけば「どの瞬間でも通れる道がある」ことを確かめられる。
     const onUrchin = (x, y) => {
       for (let i = 0; i < urchins.length; i++) {
         const u = urchins[i];
-        if (Math.hypot(x - u.x, y - u.y) <= hitR[i]) return true;
+        const dx = u.moveX ? Math.max(0, Math.abs(x - u.x) - u.moveX) : x - u.x;
+        if (Math.hypot(dx, y - u.y) <= hitR[i]) return true;
       }
       return false;
     };
@@ -73,9 +79,12 @@ for (let sid = 1; sid <= 50; sid++) {
     // ゴール判定は本番と同じ式
     const goalOK = (x, y) => Math.hypot(x - st.goalPosition.x, y - st.goalPosition.y) <= st.goalRadius - st.shipSize * 0.3;
 
+    // ゴールまでの道のり(ウニを無視した最短)を出して、そこに「半分はみ出した
+    // ウニ」が乗っているかも見る。行き止まりにしか居ないと簡単すぎるため。
+    const prev = new Map();
     const q = [si * H + sj];
     seen[si * H + sj] = 1;
-    let reached = false, visited = 0, nearest = Infinity;
+    let reached = false, visited = 0, nearest = Infinity, goalCell = -1;
     const N4 = [[1,0],[-1,0],[0,1],[0,-1]];
     for (let h = 0; h < q.length; h++) {
       const k = q[h], i = (k / H) | 0, j = k % H;
@@ -83,7 +92,7 @@ for (let sid = 1; sid <= 50; sid++) {
       visited++;
       const dg = Math.hypot(x - st.goalPosition.x, y - st.goalPosition.y);
       if (dg < nearest) nearest = dg;
-      if (goalOK(x, y)) { reached = true; break; }
+      if (goalOK(x, y)) { reached = true; goalCell = k; break; }
       for (const [di, dj] of N4) {
         const ni = i + di, nj = j + dj;
         if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
@@ -93,10 +102,44 @@ for (let sid = 1; sid <= 50; sid++) {
         const nx = ni * CELL, ny = nj * CELL;
         if (!dbg.isPassable(nx, ny)) continue;
         if (onUrchin(nx, ny)) continue;
+        prev.set(nk, k);
         q.push(nk);
       }
     }
-    return { stageId: st.stageId, reached, startOK, visited,
+    // 「ウニが居なければ通るはずの道」を別に出して、その上にウニが何体
+    // 乗っているかを数える。ウニを避けた経路で数えると、避けたぶん必ず
+    // 離れてしまい、いつでも0体になってしまう。
+    let onPath = 0;
+    {
+      const seen2 = new Uint8Array(W * H), prev2 = new Map();
+      const q2 = [si * H + sj];
+      seen2[si * H + sj] = 1;
+      let gc = -1;
+      for (let h = 0; h < q2.length; h++) {
+        const k = q2[h], i = (k / H) | 0, j = k % H;
+        if (goalOK(i * CELL, j * CELL)) { gc = k; break; }
+        for (const [di, dj] of N4) {
+          const ni = i + di, nj = j + dj;
+          if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+          const nk = ni * H + nj;
+          if (seen2[nk] || !dbg.isPassable(ni * CELL, nj * CELL)) continue;
+          seen2[nk] = 1; prev2.set(nk, k); q2.push(nk);
+        }
+      }
+      if (gc >= 0) {
+        const path = [];
+        for (let k = gc; ; k = prev2.get(k)) {
+          path.push([((k / H) | 0) * CELL, (k % H) * CELL]);
+          if (!prev2.has(k)) break;
+        }
+        for (const u of urchins) {
+          let near = Infinity;
+          for (const [px, py] of path) near = Math.min(near, Math.hypot(px - u.x, py - u.y));
+          if (near <= st.shipSize * 3) onPath++;
+        }
+      }
+    }
+    return { stageId: st.stageId, reached, startOK, visited, onPath,
       urchins: urchins.length, hitR: hitR.map((v) => +v.toFixed(1)),
       nearest: +nearest.toFixed(1), goalRadius: st.goalRadius, shipSize: st.shipSize };
   });
@@ -104,7 +147,7 @@ for (let sid = 1; sid <= 50; sid++) {
   const ok = r.reached && r.startOK;
   if (!ok) bad++;
   const mark = ok ? 'OK ' : '★NG';
-  console.log(`${mark} stage ${String(r.stageId).padStart(2)}  START可=${r.startOK ? 'はい' : 'いいえ'}  ゴール到達=${r.reached ? 'はい' : 'いいえ'}  ウニ${r.urchins}体(当たる半径 ${r.hitR.join('/')})  到達セル${r.visited}  ゴールまで最短${r.nearest}`);
+  console.log(`${mark} stage ${String(r.stageId).padStart(2)}  START可=${r.startOK ? 'はい' : 'いいえ'}  ゴール到達=${r.reached ? 'はい' : 'いいえ'}  ウニ${r.urchins}体(当たる半径 ${r.hitR.join('/')})  ルート上のウニ${r.onPath}体  到達セル${r.visited}  ゴールまで最短${r.nearest}`);
 }
 console.log('');
 console.log(bad === 0 ? `全50ステージ クリア可能を確認` : `★ ${bad} ステージが到達不能`);
