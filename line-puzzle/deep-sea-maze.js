@@ -896,7 +896,7 @@
   function toggleLight() {
     if (!game) return;
     game.lightOn = !game.lightOn;
-    dsmToast(game.lightOn ? 'ライト ON' : 'ライト OFF(敵が近づきにくくなる)');
+    dsmToast(game.lightOn ? 'ライト オン' : 'ライト オフ(深海生物が近づきにくくなる)');
   }
 
   function onGoalReached() {
