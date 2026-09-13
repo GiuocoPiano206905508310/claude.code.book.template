@@ -143,7 +143,10 @@ const maps = STAGES.map((st) => {
     sh: R(st.shipSize),
     s: [R(st.startPosition.x), R(st.startPosition.y)],
     g: [R(st.goalPosition.x), R(st.goalPosition.y), R(st.goalRadius)],
-    sg: st.segments.map((seg) => [R(seg.width / 2)].concat(seg.points.flatMap((p) => [R(p[0]), R(p[1])]))),
+    // 通路は太い線で描くので、中心線の細かい揺れは見た目に出ない。
+    // 間引いておかないとデータが重く、スマホでは開くだけで詰まる。
+    sg: st.segments.map((seg) => [R(seg.width / 2)].concat(
+      simplify(seg.points.map((p) => [p[0], p[1]]), 2).flatMap((p) => [R(p[0]), R(p[1])]))),
     ur: urchins.map((u) => [R(u.x), R(u.y), R(u.r), R(u.moveX || 0), u.blocker ? 1 : 0, u.variant === 'tentacle' ? 1 : 0]),
     rt: route(st).flatMap((p) => [p[0], p[1]]),
     st: {
