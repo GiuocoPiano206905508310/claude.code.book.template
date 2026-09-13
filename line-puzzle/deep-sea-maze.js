@@ -878,12 +878,8 @@
       ctx.stroke();
       ctx.globalAlpha = 1;
     });
-    stage.segments.forEach(function (seg) {
-      pathFor(seg);
-      ctx.strokeStyle = 'rgba(255,255,255,.10)';
-      ctx.lineWidth = Math.max(2, seg.width * 0.22);
-      ctx.stroke();
-    });
+    // 以前はここで通路の中心に細く明るい線を重ねていたが、道の真ん中に
+    // うっすら筋が走って見えるだけだったので描かない。
   }
 
   function drawDecorations(stage, theme, layer) {
