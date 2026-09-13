@@ -410,13 +410,15 @@
       paused: false,
       bubbles: makeBubbles(stage),
       swimmers: makeSwimmers(stage),
-      lightOn: true
+      lightOn: true,
+      invulnUntil: 0,
+      resetCount: 0        // 敵に当たってやり直した回数(テストで見る)
     };
     resetStick();
     showScreen('screen-dsm-game');
     resizeCanvas();
     requestAnimationFrame(resizeCanvas);
-    flashStart();
+    beginFromStart(game);
     lastFrameTime = performance.now();
     game.rafId = requestAnimationFrame(loop);
   }
@@ -509,6 +511,41 @@
     setTimeout(function () { f.hidden = true; }, 1300);
   }
 
+  /* ---------- スタート地点からの再開 ----------
+     敵に当たってスタートに戻したとき、そこに魚が居座っていると、戻った
+     そばからまた当たってしまい、やり直しが止まらなくなる(画面が固まった
+     ように見える)。これを防ぐために2つ手を打つ。
+
+       1. スタート付近にいる魚は、通り道に沿って十分離れた所まで進めておく
+       2. 戻った直後の短い間は敵に当たらない(その間に船は点滅する)
+
+     1だけだと、魚が寄ってくる速さによっては間に合わない。2だけだと、
+     無敵が切れた瞬間にまた当たる。両方でようやく「戻ったら動き出せる」
+     状態になる。 */
+  var RESPAWN_GRACE = 1.6;         // 秒。戻った直後に当たらない時間
+  var RESPAWN_CLEAR = 6;           // 船の半径の何倍まで魚をどかすか
+
+  function clearSwimmersFromStart(g) {
+    var sx = g.stage.startPosition.x, sy = g.stage.startPosition.y;
+    var safe = g.stage.shipSize * RESPAWN_CLEAR;
+    g.swimmers.forEach(function (sw) {
+      // 通り道が丸ごとスタートの近くにある場合は逃げ場が無いので、
+      // 一周ぶんだけ試して諦める(そのときは無敵時間が受け止める)。
+      var steps = Math.ceil(sw._total / Math.max(1, sw.speed * 0.05));
+      for (var i = 0; i < steps; i++) {
+        if (Math.hypot(sw._x - sx, sw._y - sy) >= safe + sw.size * 0.8) break;
+        swimmerAdvance(sw, 0.05);
+      }
+      sw._attracted = false;
+    });
+  }
+
+  function beginFromStart(g) {
+    clearSwimmersFromStart(g);
+    g.invulnUntil = performance.now() / 1000 + RESPAWN_GRACE;
+    flashStart();
+  }
+
   function resetCurrentStage() {
     if (!game) return;
     var stage = game.stage;
@@ -521,7 +558,7 @@
     game.playing = true;
     game.paused = false;
     resetStick();
-    flashStart();
+    beginFromStart(game);
   }
 
   /* ---------- キャンバスサイズ（devicePixelRatio対応） ---------- */
@@ -585,8 +622,12 @@
       return;
     }
 
-    g.swimmers.forEach(function (sw) { swimmerUpdate(sw, dt, ship, g.lightOn); });
-    if (checkEnemyHit(g)) { onEnemyHit(); return; }
+    // 戻った直後の無敵の間は、魚から船が見えていない扱いにする。ここで
+    // 寄ってこられると、スタート地点に貼りついたままになり、無敵が切れた
+    // 瞬間にまた当たる(やり直しが止まらなくなる)。
+    var seen = g.lightOn && performance.now() / 1000 >= g.invulnUntil;
+    g.swimmers.forEach(function (sw) { swimmerUpdate(sw, dt, ship, seen); });
+    if (performance.now() / 1000 >= g.invulnUntil && checkEnemyHit(g)) { onEnemyHit(); return; }
 
     updateCameraFollow(dt);
     g.bubbles.forEach(function (b) {
@@ -735,6 +776,7 @@
     dsmToastTimer = setTimeout(function () { t.hidden = true; }, 2600);
   }
   function onEnemyHit() {
+    if (game) game.resetCount++;
     dsmToast('危険な生物に接触！スタートからやり直し');
     resetCurrentStage();
   }
@@ -811,7 +853,16 @@
     drawEnemies(g);
     drawStartMarker(stage);
     drawGoalMarker(stage);
-    drawShip(g.ship, stage, g.lightOn);
+    // 戻った直後の無敵の間は船を点滅させ、「今は当たらない」と分かるようにする
+    var invulnLeft = g.invulnUntil - performance.now() / 1000;
+    if (invulnLeft > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.45 + 0.55 * Math.abs(Math.sin(invulnLeft * 9));
+      drawShip(g.ship, stage, g.lightOn);
+      ctx.restore();
+    } else {
+      drawShip(g.ship, stage, g.lightOn);
+    }
     if (DEBUG && debugOverlay) drawDebugWorld(g);
 
     ctx.restore();
