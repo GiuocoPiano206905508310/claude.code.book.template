@@ -66,8 +66,9 @@ await page.evaluate(() => {
 });
 
 // --- 5. 同じ場所を素早く2回叩くと、2回目は既定動作(拡大)が止まる ---
+//        (操作バーと迷路は常に止めているので、ここではそれ以外の場所で見る)
 st = await page.evaluate(() => {
-  const el = document.getElementById('dsm-stick-knob');
+  const el = document.getElementById('dsm-stage-label');
   const r = el.getBoundingClientRect();
   const x = r.left + r.width / 2, y = r.top + r.height / 2;
   const tap = (cx, cy) => {
@@ -84,7 +85,7 @@ ok(st.first === false && st.second === true, '同じ場所の連続タップは2
 
 // --- 6. 離れた場所のタップは止めない(別々のボタン操作を壊さない) ---
 st = await page.evaluate(() => {
-  const el = document.getElementById('dsm-stick-knob');
+  const el = document.getElementById('dsm-stage-label');
   const r = el.getBoundingClientRect();
   const tap = (cx, cy) => {
     const t = new Touch({ identifier: 1, target: el, clientX: cx, clientY: cy });
@@ -152,6 +153,39 @@ st = await page.evaluate(async () => {
   return { clicks, prevented: false };
 });
 ok(st.clicks === 3, '回転ボタンは素早く3回叩いても3回とも効く', st);
+
+// --- 10. 操作バーと迷路の上では、タッチの既定動作(拡大)を止めている ---
+st = await page.evaluate(() => {
+  const fire = (id, type) => {
+    const el = document.getElementById(id);
+    const t = new Touch({ identifier: 9, target: el, clientX: 10, clientY: 10 });
+    const ev = new TouchEvent(type, { bubbles: true, cancelable: true, changedTouches: [t], touches: [t] });
+    el.dispatchEvent(ev);
+    return ev.defaultPrevented;
+  };
+  return {
+    knobStart: fire('dsm-stick-knob', 'touchstart'),
+    knobEnd: fire('dsm-stick-knob', 'touchend'),
+    canvasStart: fire('dsm-canvas', 'touchstart'),
+  };
+});
+ok(st.knobStart && st.knobEnd && st.canvasStart,
+  '操作バー・迷路のタッチは既定動作を止める', st);
+
+// --- 11. 実際に指で叩いてライトが切り替わる(既定動作を止めても操作は効く) ---
+await page.evaluate(() => window.DeepSeaMaze.openSelect());
+await page.waitForTimeout(150);
+await page.evaluate(() => document.querySelectorAll('#dsm-stage-grid .stage-btn')[0].click());
+await page.waitForTimeout(400);
+const knob = await page.locator('#dsm-stick-knob').boundingBox();
+const kx = knob.x + knob.width / 2, ky = knob.y + knob.height / 2;
+const light0 = await page.evaluate(() => window.DeepSeaMaze.debug.getGame().lightOn);
+await page.touchscreen.tap(kx, ky); await page.waitForTimeout(120);
+const light1 = await page.evaluate(() => window.DeepSeaMaze.debug.getGame().lightOn);
+await page.touchscreen.tap(kx, ky); await page.waitForTimeout(120);
+const light2 = await page.evaluate(() => window.DeepSeaMaze.debug.getGame().lightOn);
+ok(light0 !== light1 && light1 !== light2,
+  '操作バーの中心を指で叩くとライトが切り替わる', { light0, light1, light2 });
 
 console.log('\n' + pass + '/' + (pass + fail) + ' passed');
 console.log('errors:', JSON.stringify(errors));

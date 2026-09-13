@@ -356,13 +356,28 @@
   stickZone.addEventListener('pointerup', onStickEnd);
   stickZone.addEventListener('pointercancel', onStickEnd);
   stickZone.addEventListener('lostpointercapture', function () { if (stickPointerId !== null) resetStick(); });
-  stickZone.addEventListener('touchmove', function (ev) { ev.preventDefault(); }, { passive: false });
+  /* iOS Safari のダブルタップ拡大は、touch-action だけでは止まらない端末が
+     ある。操作バーはタップもドラッグも pointer イベントで処理していて、
+     ブラウザの既定動作(拡大・スクロール・選択)は一切要らないので、
+     この範囲のタッチは既定動作をすべて止めてしまう。
+     touchstart から止めないと、2回目のタップで拡大が始まってしまう。 */
+  function killTouchDefault(ev) { if (ev.cancelable) ev.preventDefault(); }
+  stickZone.addEventListener('touchstart', killTouchDefault, { passive: false });
+  stickZone.addEventListener('touchmove', killTouchDefault, { passive: false });
+  stickZone.addEventListener('touchend', killTouchDefault, { passive: false });
+  stickZone.addEventListener('dblclick', killTouchDefault);
 
   /* ============================================================
      ゲーム画面
      ============================================================ */
   var canvas = $('dsm-canvas');
   var ctx = canvas.getContext('2d');
+  // 迷路の絵の上も、操作バーと同じくブラウザの既定動作は要らない。
+  // ここを叩いても拡大しないようにする。
+  ['touchstart', 'touchmove', 'touchend'].forEach(function (name) {
+    canvas.addEventListener(name, killTouchDefault, { passive: false });
+  });
+  canvas.addEventListener('dblclick', killTouchDefault);
   var game = null;   // { stage, index, ship:{x,y,angle,displayAngle}, camera, playing, paused, rafId }
   var MIN_SPEED = 66, MAX_SPEED = 232;   // px/秒
   var ANGLE_TAU = 0.09;   // 秒。向き変更の補間の速さ(約100〜200msで収束)
