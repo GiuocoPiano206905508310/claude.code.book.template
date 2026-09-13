@@ -57,7 +57,9 @@ for path in sorted(root.glob('*.png')) + sorted(root.glob('*.jpg')):
         continue
     mime = 'image/png' if path.suffix == '.png' else 'image/jpeg'
     uri = 'data:%s;base64,%s' % (mime, base64.b64encode(path.read_bytes()).decode())
-    out = out.replace(path.name, uri)
+    # ファイル名には版数(?v=...)が付いていることがある。data URI の後ろに
+    # 残すと壊れるので、版数ごと置き換える。
+    out = re.sub(re.escape(path.name) + r'(?:\?v=[0-9a-f]+)?', uri.replace('\\', '\\\\'), out)
 
 dest = next((a for a in sys.argv[1:] if not a.startswith('--')), None)
 if dest:

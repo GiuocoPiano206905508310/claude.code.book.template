@@ -217,6 +217,13 @@ python3 stamp-assets.py          # 付け直す
 python3 stamp-assets.py --check  # ずれていれば終了コード1
 ```
 
+**画像も対象です。** 画像は JS の中でファイル名(例 `'dsm-howto-3.jpg'`)で
+参照しているため、中身を差し替えてもファイル名が同じだと、ブラウザは古い
+画像を使い続けます。`stamp-assets.py` は JS の中の画像参照にも `?v=` を
+入れ直すので、画像が変わる → JS の中身が変わる → JS のハッシュが変わる →
+`index.html` の `?v=` も変わる、と自動で連鎖します(手で番号を増やす場所を
+作りません)。**画像を差し替えたら必ず実行してください。**
+
 対象は `index.html` が `?v=` 付きで読み込むファイルすべてです
 (`style.css` / `levels.js` / `ura-levels.js` / `cloud.js` / `game.js` /
 `game-select.js` / `block-fit-puzzle.*` / `bf-levels.js` /

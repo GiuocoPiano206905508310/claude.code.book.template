@@ -167,18 +167,18 @@
      作りはラインパズルの遊び方に合わせてある(STEP表示・左右の矢印・
      下のドット・最後の1枚だけOKボタン)。 */
   var HOWTO_STEPS = [
-    { img: 'dsm-howto-1.jpg', title: '進む',
+    { img: 'dsm-howto-1.jpg?v=78d0926d97', title: '進む',
       alt: '操作バーを傾けて探査船が進んでいる画面',
       caption: '操作バーを進みたい方向へ傾けると進みます。' },
-    { img: 'dsm-howto-2.jpg', title: '深海生物',
+    { img: 'dsm-howto-2.jpg?v=ce53b516f2', title: '深海生物',
       alt: '探査船がトゲのある深海生物に接触しようとしている画面',
       caption: '深海生物に接触するとゲームオーバー。スタート地点からやり直しになります。' },
-    { img: 'dsm-howto-3.jpg', title: 'ライト',
+    { img: 'dsm-howto-3.jpg?v=7f930caa2c', title: 'ライト',
       alt: 'ライトを消して暗くなった迷路と、ライトOFFの表示',
       caption: '操作バー付近をタップすると、ライトが「オフ」となり、もう一度押すと「オン」になります。' +
         'ライトの光に寄ってくる深海生物もいるので、注意してください。' +
         'なお、ライトをオフにすると、深海生物が近づきにくくなります。' },
-    { img: 'dsm-howto-4.jpg', title: 'ゴール',
+    { img: 'dsm-howto-4.jpg?v=f0d63a508c', title: 'ゴール',
       alt: 'ゴールの目印である宝箱に近づいた探査船',
       caption: '宝箱がゴールの目印です。ゴールまでがんばりましょう！' }
   ];
@@ -1102,7 +1102,7 @@
   var GOAL_IMG = new Image();
   var goalImgReady = false;
   GOAL_IMG.onload = function () { goalImgReady = true; };
-  GOAL_IMG.src = 'dsm-goal-chest.png';
+  GOAL_IMG.src = 'dsm-goal-chest.png?v=d72754284d';
   var GOAL_IMG_ASPECT = GOAL_IMG_H / GOAL_IMG_W;
 
   function drawGoalMarker(stage) {
