@@ -1402,6 +1402,38 @@
     }
   }
 
+  /* ---------- スマホのダブルタップ拡大を止める ----------
+     iOS Safari は、同じ場所を素早く2回叩くと画面を拡大する。深海迷路の
+     ライトのオン/オフのように「同じ場所を連打する」操作があると、遊んでいる
+     最中に勝手にズームしてしまう。CSS の touch-action だけでは止まらない
+     端末があるため、直前のタップから350ms以内・40px以内の2回目のタップは
+     既定動作を明示的に止める。
+
+     場所が離れていれば止めないので、別々のボタンを続けて叩く操作は
+     今までどおり効く。タップの処理自体は pointer イベントで受けているため、
+     操作感も変わらない。 */
+  var TAP_CONTROLS = 'button, a, input, select, textarea, label, [role="button"]';
+  var lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+  document.addEventListener('touchend', function (ev) {
+    var t = ev.changedTouches && ev.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var repeat = now - lastTapTime <= 350 &&
+      Math.abs(t.clientX - lastTapX) <= 40 && Math.abs(t.clientY - lastTapY) <= 40;
+    lastTapTime = now; lastTapX = t.clientX; lastTapY = t.clientY;
+    if (!repeat) return;
+    // ボタンの上では止めない。ここで既定動作を止めるとクリックまで消えてしまい、
+    // 「回転」のように同じボタンを連打する操作が効かなくなる。ボタンは CSS の
+    // touch-action: manipulation 側で拡大を防いでいる。
+    if (ev.target && ev.target.closest && ev.target.closest(TAP_CONTROLS)) return;
+    ev.preventDefault();
+  }, { passive: false });
+
+  // ピンチや「文字を2本指で広げる」操作でもズームしないようにする(iOS 独自)。
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (name) {
+    document.addEventListener(name, function (ev) { ev.preventDefault(); });
+  });
+
   // ゲーム選択画面（game-select.js）から呼べるようにする。
   // ブロックフィットパズル（block-fit-puzzle.js）は、進行状況の保存先として
   // ここを通る。こうすることで、あちらのクリア状況もラインパズルと同じ1行に

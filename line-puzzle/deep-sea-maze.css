@@ -119,6 +119,11 @@
   border: 2px solid rgba(255,255,255,.35);
   box-shadow: inset 0 0 22px rgba(0,0,0,.35);
 }
+/* touch-action は子要素に継承されない。ここが抜けていると、真ん中のノブを
+   素早く2回叩いたときにブラウザの「ダブルタップで拡大」が働いて画面が
+   ズームしてしまう(ライトのオン/オフはまさにこの位置を叩く操作)。 */
+.dsm-stick-base, .dsm-stick-knob { touch-action: none; }
+
 .dsm-stick-knob {
   position: absolute;
   left: 50%; top: 50%;

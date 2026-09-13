@@ -25,6 +25,13 @@
 /* hidden 属性を確実に効かせる（.modal 等の display 指定に負けないように） */
 [hidden] { display: none !important; }
 
+/* スマホで同じ場所を素早く2回叩いたときの「ダブルタップで拡大」を無効にする。
+   manipulation はタップ(クリック)とスクロールは今までどおり通すので、
+   操作感は変わらない。touch-action は継承されないため、まとめて指定する。 */
+html, body, .screen, .btn, button, a, input, select, textarea, label {
+  touch-action: manipulation;
+}
+
 html, body {
   margin: 0;
   height: 100%;

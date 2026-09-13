@@ -1652,7 +1652,11 @@
   });
   $('dsm-pause-resume').addEventListener('click', function () {
     closeModal('modal-dsm-pause');
-    if (game) game.paused = false;
+    if (!game) return;
+    // 中断していた間の時間をそのまま1フレーム分として渡さないよう、
+    // 時計を今に合わせてから再開する。
+    lastFrameTime = performance.now();
+    game.paused = false;
   });
   $('dsm-pause-restart').addEventListener('click', function () {
     closeModal('modal-dsm-pause');
@@ -1678,11 +1682,26 @@
     openSelect();
   });
 
-  // 何かの拍子(ブラウザBack・複数タッチ等)でポインタが浮いたままにならないよう、
-  // 画面全体でのpointercancel/離脱もスティックの解除に含める
-  window.addEventListener('blur', function () { if (stickPointerId !== null) resetStick(); if (game) game.paused = true; });
+  /* ---------- 別のアプリ・タブに切り替えられたとき ----------
+     ブラウザは背面に回ると描画(requestAnimationFrame)を止める。以前は
+     中断フラグを立てるだけだったので、戻ってきても操作を受け付けないまま
+     絵だけが残り、「固まった」ように見えて何もできなくなっていた。
+     中断中のポーズ画面を出し、「つづける」で再開できるようにする。
+
+     何かの拍子(ブラウザBack・複数タッチ等)でスティックが押されたままに
+     ならないよう、ここで必ず離した状態に戻す。 */
+  function pauseForInterruption() {
+    if (stickPointerId !== null) resetStick();
+    if (!game || !game.playing || game.paused) return;
+    // クリア演出や遊び方など、別のモーダルが出ているときは触らない
+    if (anyDsmModalOpen()) return;
+    game.paused = true;
+    openModal('modal-dsm-pause');
+  }
+  window.addEventListener('blur', pauseForInterruption);
+  window.addEventListener('pagehide', pauseForInterruption);
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { if (stickPointerId !== null) resetStick(); if (game) game.paused = true; }
+    if (document.hidden) pauseForInterruption();
   });
 
   window.DeepSeaMaze = { openSelect: openSelect };
