@@ -46,7 +46,8 @@
     var g = window.LinePuzzleGame;
     return (g && g.readDeepSeaMaze && g.saveDeepSeaMaze) ? g : null;
   }
-  function blankProgress() { return { cleared: {}, lastStage: 1 }; }
+  // howtoSeen は「遊び方を一度見たか」。初回だけ自動で出すために持つ。
+  function blankProgress() { return { cleared: {}, lastStage: 1, howtoSeen: false }; }
   function readLocal() {
     try {
       var raw = window.localStorage.getItem(progressStoreKey());
@@ -161,9 +162,115 @@
   }
 
   $('dsm-select-back').addEventListener('click', function () { window.openGameSelect(); });
-  $('dsm-select-help').addEventListener('click', function () { openModal('modal-dsm-help'); });
-  $('dsm-help').addEventListener('click', function () { openModal('modal-dsm-help'); });
-  $('dsm-help-close').addEventListener('click', function () { closeModal('modal-dsm-help'); });
+  /* ---------- 遊び方 ----------
+     文字だけの箇条書きでは伝わりにくいので、実際の画面をそのまま見せる。
+     作りはラインパズルの遊び方に合わせてある(STEP表示・左右の矢印・
+     下のドット・最後の1枚だけOKボタン)。 */
+  var HOWTO_STEPS = [
+    { img: 'dsm-howto-1.jpg', title: '進む',
+      alt: '操作バーを傾けて探査船が進んでいる画面',
+      caption: '操作バーを進みたい方向へ傾けると進みます。' },
+    { img: 'dsm-howto-2.jpg', title: '深海生物',
+      alt: '探査船がトゲのある深海生物に接触しようとしている画面',
+      caption: '深海生物に接触するとゲームオーバー。スタート地点からやり直しになります。' },
+    { img: 'dsm-howto-3.jpg', title: 'ライト',
+      alt: 'ライトを消して暗くなった迷路と、ライトOFFの表示',
+      caption: '操作バー付近をタップすると、ライトが「オフ」となり、もう一度押すと「オン」になります。' +
+        'ライトの光に寄ってくる深海生物もいるので、注意してください。' +
+        'なお、ライトをオフにすると、深海生物が近づきにくくなります。' },
+    { img: 'dsm-howto-4.jpg', title: 'ゴール',
+      alt: 'ゴールの目印である宝箱に近づいた探査船',
+      caption: '宝箱がゴールの目印です。ゴールまでがんばりましょう！' }
+  ];
+
+  var howtoIdx = 0, howtoBuilt = false, howtoPausedGame = false;
+
+  function buildHowto() {
+    var root = $('modal-dsm-help');
+    var shots = '';
+    for (var i = 0; i < HOWTO_STEPS.length; i++) {
+      shots += '<img class="dsm-tut-shot" src="' + HOWTO_STEPS[i].img + '" alt="' +
+        HOWTO_STEPS[i].alt + '" hidden>';
+    }
+    var dots = '';
+    for (var d = 0; d < HOWTO_STEPS.length; d++) dots += '<span></span>';
+    root.innerHTML =
+      '<div class="tut-card dsm-tut-card" role="dialog" aria-modal="true" aria-labelledby="dsm-tut-steplabel">' +
+        '<p class="tut-step-label" id="dsm-tut-steplabel"></p>' +
+        '<p class="tut-caption" id="dsm-tut-caption"></p>' +
+        '<div class="dsm-tut-shots">' + shots + '</div>' +
+        '<div class="tut-nav">' +
+          '<button class="tut-arrow-btn" id="dsm-tut-prev" type="button" aria-label="前へ">' +
+            '<svg viewBox="0 0 24 24"><polyline points="15,5 8,12 15,19"/></svg></button>' +
+          '<div class="tut-dots" id="dsm-tut-dots">' + dots + '</div>' +
+          '<button class="tut-arrow-btn" id="dsm-tut-next" type="button" aria-label="次へ">' +
+            '<svg viewBox="0 0 24 24"><polyline points="9,5 16,12 9,19"/></svg></button>' +
+        '</div>' +
+      '</div>';
+    // ボタンは使い回し、見た目だけ差し替える(毎回付け直すとリスナーが積み重なる)
+    $('dsm-tut-prev').addEventListener('click', function () { showHowto(howtoIdx - 1); });
+    $('dsm-tut-next').addEventListener('click', function () {
+      if (howtoIdx === HOWTO_STEPS.length - 1) { closeHowto(); return; }
+      showHowto(howtoIdx + 1);
+    });
+    howtoBuilt = true;
+  }
+
+  function showHowto(i) {
+    howtoIdx = Math.max(0, Math.min(HOWTO_STEPS.length - 1, i));
+    var step = HOWTO_STEPS[howtoIdx];
+    $('dsm-tut-steplabel').textContent =
+      'STEP ' + (howtoIdx + 1) + ' / ' + HOWTO_STEPS.length + '　' + step.title;
+    $('dsm-tut-caption').textContent = step.caption;
+    var shots = document.querySelectorAll('#modal-dsm-help .dsm-tut-shot');
+    for (var k = 0; k < shots.length; k++) shots[k].hidden = k !== howtoIdx;
+    var dots = $('dsm-tut-dots').children;
+    for (var d = 0; d < dots.length; d++) dots[d].className = d === howtoIdx ? 'is-on' : '';
+    $('dsm-tut-prev').disabled = howtoIdx === 0;
+    var next = $('dsm-tut-next');
+    if (howtoIdx === HOWTO_STEPS.length - 1) {
+      next.className = 'tut-ok-btn';
+      next.textContent = 'OK';
+      next.setAttribute('aria-label', '閉じる');
+    } else {
+      next.className = 'tut-arrow-btn';
+      next.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="9,5 16,12 9,19"/></svg>';
+      next.setAttribute('aria-label', '次へ');
+    }
+  }
+
+  // 初めて深海1マイルを開いたときだけ、遊び方を自動で出す
+  // (2回目以降は「?」ボタンから)。ラインパズルの遊び方と同じ考え方。
+  function maybeAutoHowto(stageId) {
+    if (stageId !== 1 || progress.howtoSeen) return;
+    progress.howtoSeen = true;
+    saveProgress();
+    openHowto();
+  }
+
+  function openHowto() {
+    if (!howtoBuilt) buildHowto();
+    showHowto(0);
+    // 読んでいる間にゲームが進まないよう止める(閉じたらこちらで再開する)
+    if (game && game.playing && !game.paused) {
+      game.paused = true;
+      howtoPausedGame = true;
+      resetStick();
+    }
+    openModal('modal-dsm-help');
+  }
+
+  function closeHowto() {
+    closeModal('modal-dsm-help');
+    if (howtoPausedGame && game) {
+      lastFrameTime = performance.now();
+      game.paused = false;
+    }
+    howtoPausedGame = false;
+  }
+
+  $('dsm-select-help').addEventListener('click', openHowto);
+  $('dsm-help').addEventListener('click', openHowto);
 
   /* ============================================================
      当たり判定（空間バケットで高速化）
@@ -421,6 +528,7 @@
     beginFromStart(game);
     lastFrameTime = performance.now();
     game.rafId = requestAnimationFrame(loop);
+    maybeAutoHowto(stageId);
   }
 
   function makeBubbles(stage) {

@@ -7,7 +7,7 @@
 <title>ラインパズル</title>
 <link rel="stylesheet" href="style.css?v=626c75c48a">
 <link rel="stylesheet" href="block-fit-puzzle.css?v=adaffa6aca">
-<link rel="stylesheet" href="deep-sea-maze.css?v=842b92e7c2">
+<link rel="stylesheet" href="deep-sea-maze.css?v=fc4e2c9e6c">
 </head>
 <body>
 
@@ -450,19 +450,9 @@
   </div>
 </div>
 
-<!-- ============ 深海迷路 遊び方 ============ -->
-<div id="modal-dsm-help" class="modal" hidden>
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="dsm-help-title">
-    <h2 id="dsm-help-title" class="modal-title">遊び方</h2>
-    <div class="dsm-howto-list">
-      <p>① 画面下のスティックを指で動かします</p>
-      <p>② スティックを倒した方向へ深海探査船が進みます</p>
-      <p>③ 海底の壁にぶつからないよう迷路を探索します</p>
-      <p>④ ゴール地点までたどり着けばステージクリア！</p>
-    </div>
-    <button class="btn btn-ghost btn-block" id="dsm-help-close" type="button">とじる</button>
-  </div>
-</div>
+<!-- ============ 深海迷路 遊び方 ============
+     中身は deep-sea-maze.js が組み立てる(ラインパズルの遊び方と同じ作り)。 -->
+<div id="modal-dsm-help" class="modal" hidden></div>
 
 <!-- ============ 行き止まり（上下左右どこにも進めない） ============ -->
 <div id="modal-stuck" class="modal" hidden>
@@ -546,8 +536,8 @@
 <script src="bf-levels.js?v=104d74a0a3"></script>
 <script src="block-fit-puzzle.js?v=aadb9be076"></script>
 <script src="dsm-levels.js?v=76fb0ddcc8"></script>
-<script src="deep-sea-maze.js?v=3fc293bd6f"></script>
+<script src="deep-sea-maze.js?v=cd8736b123"></script>
 <script src="game-select.js?v=6e6408bd2d"></script>
-<script src="game.js?v=4f8f1bae5a"></script>
+<script src="game.js?v=b80f35766a"></script>
 </body>
 </html>

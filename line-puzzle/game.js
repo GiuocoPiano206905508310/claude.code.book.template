@@ -992,6 +992,8 @@
       for (var did in map) { if (map[did]) out.deepSeaMaze.cleared[did] = true; }
     });
     out.deepSeaMaze.lastStage = Math.max(aDsm.lastStage || 1, bDsm.lastStage || 1);
+    // 遊び方を見たかどうかも残す(どちらかで見ていれば見たことにする)
+    out.deepSeaMaze.howtoSeen = !!(aDsm.howtoSeen || bDsm.howtoSeen);
     out.lastStage = Math.max(a.lastStage || 1, b.lastStage || 1);
     out.lastUra = Math.max(a.lastUra || 1, b.lastUra || 1);
     out.tutorialSeen = !!(a.tutorialSeen || b.tutorialSeen);

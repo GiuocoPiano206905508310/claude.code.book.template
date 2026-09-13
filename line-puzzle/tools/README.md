@@ -263,7 +263,10 @@ python3 build-single-file.py out.html --standalone   # 単体で開ける完全�
 python3 build-single-file.py out.html                # head を配布先が用意する形式（本文のみ）
 ```
 
-CSS と JS をすべて埋め込むので、1枚のHTMLだけを置ける場所にそのまま配布できます。
+CSS と JS に加えて、画像(`*.png` / `*.jpg`)も data URI にして埋め込むので、
+1枚のHTMLだけを置ける場所にそのまま配布できます。画像を足しても
+`build-single-file.py` を直す必要はありません(ファイル名で参照している
+ものを自動で拾います)。
 
 ## 8. 深海迷路のステージを作り直す
 
@@ -494,6 +497,31 @@ PW_CHROMIUM=/opt/pw-browsers/chromium node line-puzzle/tools/dsm-clearable.mjs
 検証時は `HAZARD_MARGIN`(6px)だけウニを太らせて判定します。ちょうど
 当たらないだけの隙間を「通れる」と数えると、ラスタの刻み幅を4pxから3pxに
 変えただけで判定がひっくり返るほど不安定になります。
+
+### 遊び方(画面写真つきのポップアップ)
+
+```bash
+python3 -m http.server 8777 &
+PW_CHROMIUM=/opt/pw-browsers/chromium node line-puzzle/tools/dsm-howto-test.mjs
+```
+
+深海迷路の遊び方は、ラインパズルの遊び方と同じ作りです(STEP表示・左右の
+矢印・下のドット・最後の1枚だけ OK ボタン)。見た目は `style.css` の
+`.tut-card` などをそのまま使い、`deep-sea-maze.css` では画面写真の
+出し方だけを足しています。
+
+文章だけでは伝わりにくい操作(ライトの切り替えなど)があるため、説明は
+実際の画面写真 `dsm-howto-1.jpg` 〜 `dsm-howto-4.jpg` で見せています。
+写真を差し替えるときは `deep-sea-maze.js` の `HOWTO_STEPS` にある
+`img` / `alt` / `caption` も合わせて直してください。
+
+初めて深海1マイルを開いたときだけ自動で出ます(`progress.howtoSeen`)。
+2回目以降は「?」ボタンから開きます。開いている間はゲームを止め、
+閉じたときに再開します。
+
+`howtoSeen` はクラウド同期のマージ(`game.js` の `mergeProgress`)にも
+足してあります。ここに書き忘れると、同期のたびに「まだ見ていない」に
+戻ってしまいます。
 
 ### スタート地点でのやり直しの連鎖を防ぐ
 

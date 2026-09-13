@@ -9,7 +9,7 @@
   python3 build-single-file.py out.html
   python3 build-single-file.py out.html --standalone
 """
-import re, sys, pathlib
+import base64, re, sys, pathlib
 
 root = pathlib.Path(__file__).resolve().parent.parent
 read = lambda name: (root / name).read_text(encoding='utf-8')
@@ -48,6 +48,16 @@ if '--standalone' in sys.argv:
            + out.split('\n', 1)[0] + '\n' + out.split('\n', 1)[1].split('</style>')[0]
            + '</style>\n</head>\n<body>\n'
            + out.split('</style>\n', 1)[1] + '</body>\n</html>\n')
+
+# 画像は JS や HTML の中でファイル名(例 'dsm-goal-chest.png')で参照している。
+# 1ファイルだけ配る形では隣にファイルを置けないので、中身を data URI に
+# 置き換えて埋め込む。画像を足してもここは直さなくてよい。
+for path in sorted(root.glob('*.png')) + sorted(root.glob('*.jpg')):
+    if path.name not in out:
+        continue
+    mime = 'image/png' if path.suffix == '.png' else 'image/jpeg'
+    uri = 'data:%s;base64,%s' % (mime, base64.b64encode(path.read_bytes()).decode())
+    out = out.replace(path.name, uri)
 
 dest = next((a for a in sys.argv[1:] if not a.startswith('--')), None)
 if dest:

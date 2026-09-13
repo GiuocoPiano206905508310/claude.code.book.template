@@ -134,9 +134,18 @@
   box-shadow: 0 4px 10px rgba(0,0,0,.4);
 }
 
-/* ---------- 遊び方モーダルの中身 ---------- */
-.dsm-howto-list { text-align: left; margin: 0 0 16px; }
-.dsm-howto-list p { margin: 6px 0; font-size: 13.5px; color: var(--ink, #23272b); }
+/* ---------- 遊び方 ----------
+   見た目はラインパズルの遊び方(.tut-card ほか。style.css)をそのまま使い、
+   ここでは画面写真の出し方だけを足す。 */
+/* 3枚目は縦に長いので、画面が小さいと入りきらない。はみ出したら
+   切り落とさずに縦へスクロールさせる(余裕があるときは中央のまま)。 */
+#modal-dsm-help { overflow-y: auto; place-items: start center; }
+.dsm-tut-card { width: min(340px, 100%); margin-block: auto; }
+.dsm-tut-shots { margin: 0 0 14px; }
+.dsm-tut-shot {
+  display: block; width: 100%; height: auto;
+  border-radius: 12px; background: #0b202c;
+}
 
 /* ---------- モーダルはステージの帯色を使う ---------- */
 #modal-dsm-pause .btn-primary,
