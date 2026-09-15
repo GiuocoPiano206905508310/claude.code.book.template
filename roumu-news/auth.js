@@ -3,9 +3,14 @@
 // 見せず、ユーザー名から一意に決まる内部専用メールアドレスをSupabase Auth
 // 用に裏側で生成して使う）。給与・勤怠管理システムと同じSupabaseプロジェクトを
 // 使うが、AUTH_EMAIL_DOMAINを別にすることでアカウントの名前空間を分けている。
+//
+// ドメイン末尾は「.internal」等のIANA予約済み特殊用途ドメイン
+// （.test/.example/.invalid/.localhost/.local/.internal など）にしないこと。
+// Supabase Auth（GoTrue）のメール形式チェックがこれらを "invalid" として
+// 拒否するため、新規登録が常に失敗する（実際に .internal で発生した不具合）。
 // ============================================================================
 
-const AUTH_EMAIL_DOMAIN = 'roumu-news-app.internal';
+const AUTH_EMAIL_DOMAIN = 'roumu-news-app-account.com';
 
 function usernameToEmail(username) {
   return `${username.trim().toLowerCase()}@${AUTH_EMAIL_DOMAIN}`;
