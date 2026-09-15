@@ -20,8 +20,10 @@
   --shadow: rgba(35, 40, 42, 0.08);
 }
 
+/* 端末の設定に合わせる場合。アカウント設定で「白」を明示的に選択している
+   場合（:root[data-theme="light"]）は、この端末設定より優先させないため除外する */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #14181a;
     --surface: #1c2224;
@@ -44,7 +46,32 @@
   }
 }
 
+/* 設定画面で「白」「ダーク」を明示的に選択している場合。端末の設定によらず適用する */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14181a;
+  --surface: #1c2224;
+  --surface-line: #2c3436;
+  --ink: #ece7da;
+  --ink-soft: #a8ac9f;
+  --ink-faint: #767b70;
+  --indigo: #7fb0dd;
+  --indigo-ink: #a8cced;
+  --indigo-bg: rgba(127, 176, 221, 0.14);
+  --stamp: #e2765f;
+  --stamp-bg: rgba(226, 118, 95, 0.14);
+  --success: #74c79a;
+  --success-bg: rgba(116, 199, 154, 0.14);
+  --warn: #d9b35e;
+  --warn-bg: rgba(217, 179, 94, 0.14);
+  --border: #333c3a;
+  --focus: #7fb0dd;
+  --shadow: rgba(0, 0, 0, 0.35);
+}
+:root[data-theme="light"] { color-scheme: light; }
+
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -319,6 +346,135 @@ footer { text-align: center; font-size: 11.5px; color: var(--ink-faint); line-he
   white-space: nowrap;
 }
 .news-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------- 記事カード: 概要の続きを読む ---------- */
+.news-summary.is-expanded { display: block; -webkit-line-clamp: unset; overflow: visible; }
+
+.news-expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px dashed var(--surface-line);
+  margin-top: 2px;
+  padding: 8px 0 0;
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-family: inherit;
+  cursor: pointer;
+}
+.news-expand-btn:hover { color: var(--indigo); }
+.news-expand-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.news-expand-btn .chevron { display: inline-block; transition: transform 0.15s ease; }
+.news-expand-btn[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+/* ---------- 設定ボタン（ヘッダー、ログアウトの下） ---------- */
+.gear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-faint);
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-family: inherit;
+}
+.gear-btn:hover { color: var(--indigo); }
+.gear-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.gear-btn svg { width: 16px; height: 16px; }
+
+/* ---------- 設定パネル（モーダル） ---------- */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 20, 16, 0.42);
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+@media (min-width: 560px) {
+  .settings-overlay { align-items: center; padding: 20px; }
+}
+
+.settings-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px 14px 0 0;
+  width: 100%;
+  max-width: 440px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 18px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -6px 28px var(--shadow);
+}
+@media (min-width: 560px) {
+  .settings-panel { border-radius: 14px; padding: 18px 20px 24px; }
+}
+
+.settings-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.settings-panel-head h2 { border-bottom: none; padding-bottom: 0; margin: 0; }
+.settings-close-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-faint);
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.settings-close-btn:hover { color: var(--ink); }
+.settings-close-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.settings-section { margin-top: 16px; }
+.settings-section-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 4px; }
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px dashed var(--surface-line);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-row-text { min-width: 0; }
+.settings-row-label { font-size: 13.5px; color: var(--ink); }
+.settings-row-note { font-size: 11px; color: var(--ink-faint); margin: 2px 0 0; line-height: 1.5; }
+
+/* iOS風のトグルスイッチ。ON時は緑、OFF時はグレーの台形に丸いつまみ */
+.toggle-switch {
+  flex: 0 0 auto;
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-line);
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.toggle-switch .toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+.toggle-switch[aria-checked="true"] { background: var(--success); border-color: var(--success); }
+.toggle-switch[aria-checked="true"] .toggle-knob { transform: translateX(20px); }
+.toggle-switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 @media (max-width: 520px) {
   body { padding: 0 14px 56px; }
