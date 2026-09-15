@@ -18,20 +18,28 @@ class CategoryChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => onTap(),
-        showCheckmark: false,
-        labelStyle: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: selected ? Colors.white : scheme.onSurfaceVariant,
+      child: Material(
+        color: selected ? scheme.primary : Theme.of(context).cardColor,
+        shape: StadiumBorder(
+          side: BorderSide(color: selected ? scheme.primary : Theme.of(context).dividerColor),
         ),
-        backgroundColor: Theme.of(context).cardColor,
-        selectedColor: scheme.primary,
-        side: BorderSide(color: selected ? scheme.primary : Theme.of(context).dividerColor),
-        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              label,
+              softWrap: false,
+              overflow: TextOverflow.visible,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
