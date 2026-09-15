@@ -79,9 +79,70 @@ function markArticleRead(id) {
   try { localStorage.setItem(READ_IDS_KEY, JSON.stringify(trimmed)); } catch (e) { /* noop */ }
 }
 
+// ---------- おすすめトピック（社労士業務に関わりそうな分野。税務も含む） ----------
+const TOPICS = [
+  { id: 'social-insurance', label: '社会保険・厚生年金', keywords: ['社会保険', '厚生年金', '標準報酬'] },
+  { id: 'labor-standards', label: '労働基準・労働時間', keywords: ['労働基準', '36協定', '労働時間', '時間外労働', '割増賃金'] },
+  { id: 'minimum-wage', label: '最低賃金', keywords: ['最低賃金'] },
+  { id: 'employment-labor-insurance', label: '雇用保険・労災保険', keywords: ['雇用保険', '労災保険', '労働保険'] },
+  { id: 'childcare-leave', label: '育児・介護休業', keywords: ['育児休業', '介護休業', '育児・介護'] },
+  { id: 'equal-pay', label: '同一労働同一賃金・非正規雇用', keywords: ['同一労働同一賃金', 'パートタイム', '有期雇用', '非正規'] },
+  { id: 'harassment', label: 'ハラスメント対策', keywords: ['ハラスメント', 'パワハラ', 'セクハラ'] },
+  { id: 'foreign-workers', label: '外国人雇用', keywords: ['外国人労働者', '技能実習', '特定技能'] },
+  { id: 'tax', label: '税務・年末調整', keywords: ['年末調整', '源泉徴収', '所得税', '確定申告', '税制'] },
+  { id: 'disability-employment', label: '障害者雇用', keywords: ['障害者雇用'] },
+  { id: 'subsidies', label: '助成金・給付金', keywords: ['助成金', '給付金', '支援金'] },
+];
+
+const TOPICS_STORAGE_KEY = 'roumuNewsInterestedTopics';
+
+function getInterestedTopicIds() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(TOPICS_STORAGE_KEY) || '[]');
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function setTopicChecked(id, checked) {
+  const ids = getInterestedTopicIds();
+  if (checked) ids.add(id); else ids.delete(id);
+  try { localStorage.setItem(TOPICS_STORAGE_KEY, JSON.stringify(Array.from(ids))); } catch (e) { /* noop */ }
+}
+
+function getInterestedKeywords() {
+  const ids = getInterestedTopicIds();
+  return TOPICS.filter((t) => ids.has(t.id)).flatMap((t) => t.keywords);
+}
+
+function articleMatchesKeywords(article, keywords) {
+  if (!keywords.length) return false;
+  const text = `${article.title} ${article.summary}`;
+  return keywords.some((k) => text.includes(k));
+}
+
+// ---------- 並び替え ----------
+function sortArticles(list, mode, keywords) {
+  const sorted = list.slice();
+  if (mode === 'oldest') {
+    sorted.sort((a, b) => (a.publishedDate < b.publishedDate ? -1 : a.publishedDate > b.publishedDate ? 1 : 0));
+  } else if (mode === 'recommended') {
+    sorted.sort((a, b) => {
+      const am = articleMatchesKeywords(a, keywords) ? 1 : 0;
+      const bm = articleMatchesKeywords(b, keywords) ? 1 : 0;
+      if (am !== bm) return bm - am;
+      return a.publishedDate < b.publishedDate ? 1 : a.publishedDate > b.publishedDate ? -1 : 0;
+    });
+  } else {
+    sorted.sort((a, b) => (a.publishedDate < b.publishedDate ? 1 : a.publishedDate > b.publishedDate ? -1 : 0));
+  }
+  return sorted;
+}
+
 let articles = [];
 let favoriteIds = new Set();
-const state = { tab: 'latest', filter: 'all' };
+const state = { tab: 'latest', filter: 'all', search: '', sort: 'newest' };
 
 const listEl = document.getElementById('list');
 const tabLatest = document.getElementById('tabLatest');
@@ -89,6 +150,8 @@ const tabFav = document.getElementById('tabFav');
 const filtersEl = document.getElementById('filters');
 const countFavEl = document.getElementById('countFav');
 const countLatestEl = document.getElementById('countLatest');
+const searchInput = document.getElementById('searchInput');
+const sortSelect = document.getElementById('sortSelect');
 const toastEl = document.getElementById('toast');
 const userLabelEl = document.getElementById('userLabel');
 const syncBtn = document.getElementById('syncBtn');
@@ -128,35 +191,82 @@ function formatSyncMeta(run) {
   return `最終更新: ${jp}（${run.articlesUpserted}件を確認）`;
 }
 
+function updateChipCounts(scopedList, keywords) {
+  filtersEl.querySelectorAll('.news-chip').forEach((chip) => {
+    const filter = chip.dataset.filter;
+    let count;
+    if (filter === 'all') count = scopedList.length;
+    else if (filter === 'recommended') count = scopedList.filter((a) => articleMatchesKeywords(a, keywords)).length;
+    else if (filter === 'paid') count = scopedList.filter((a) => a.isPaid).length;
+    else count = scopedList.filter((a) => a.category === filter).length;
+
+    let countEl = chip.querySelector('.news-chip-count');
+    if (!countEl) {
+      countEl = document.createElement('span');
+      countEl.className = 'news-chip-count';
+      chip.appendChild(countEl);
+    }
+    countEl.textContent = String(count);
+  });
+}
+
+function emptyMessageHtml(keywords) {
+  if (state.tab === 'favorites') {
+    return 'お気に入りに登録した記事はまだありません。<br>記事右上の☆をタップすると、ここに一覧表示されます。';
+  }
+  if (state.search.trim()) {
+    return '検索条件に一致する記事がありません。';
+  }
+  if (state.filter === 'recommended') {
+    return keywords.length === 0
+      ? 'おすすめトピックがまだ選ばれていません。<br>設定 → おすすめトピックから興味のある分野を選んでください。'
+      : '選択したトピックに一致する記事は、現在配信中の記事の中にはまだありません。';
+  }
+  if (state.filter === 'news' || state.filter === 'pamphlet') {
+    return '現在、この分類の記事はまだありません。<br>今は厚生労働省の新着情報のみを配信しているためです。';
+  }
+  return '該当する記事がありません。';
+}
+
 function render() {
   const hideSettings = getHideSettings();
   const readIds = getReadIds();
+  const keywords = getInterestedKeywords();
 
   let visible = articles;
   if (hideSettings.hidePaid) visible = visible.filter((a) => !a.isPaid);
   if (hideSettings.hidePamphlet) visible = visible.filter((a) => a.category !== 'pamphlet');
   if (hideSettings.hideRead) visible = visible.filter((a) => !readIds.has(a.id));
 
-  let pool = visible;
+  const searchTerm = state.search.trim().toLowerCase();
+  const searchScoped = searchTerm
+    ? visible.filter((a) => `${a.title} ${a.summary}`.toLowerCase().includes(searchTerm))
+    : visible;
+
+  updateChipCounts(searchScoped, keywords);
+
+  let pool = searchScoped;
   if (state.tab === 'favorites') {
     pool = pool.filter((a) => favoriteIds.has(a.id));
   } else if (state.filter === 'paid') {
     pool = pool.filter((a) => a.isPaid);
+  } else if (state.filter === 'recommended') {
+    pool = pool.filter((a) => articleMatchesKeywords(a, keywords));
   } else if (state.filter !== 'all') {
     pool = pool.filter((a) => a.category === state.filter);
   }
 
-  countFavEl.textContent = String(visible.filter((a) => favoriteIds.has(a.id)).length);
-  countLatestEl.textContent = String(visible.length);
+  pool = sortArticles(pool, state.sort, keywords);
+
+  countFavEl.textContent = String(searchScoped.filter((a) => favoriteIds.has(a.id)).length);
+  countLatestEl.textContent = String(searchScoped.length);
 
   listEl.innerHTML = '';
 
   if (pool.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'news-empty';
-    empty.innerHTML = state.tab === 'favorites'
-      ? starSVG(false) + '<p>お気に入りに登録した記事はまだありません。<br>記事右上の☆をタップすると、ここに一覧表示されます。</p>'
-      : starSVG(false) + '<p>該当する記事がありません。</p>';
+    empty.innerHTML = starSVG(false) + `<p>${emptyMessageHtml(keywords)}</p>`;
     listEl.appendChild(empty);
     return;
   }
@@ -268,6 +378,18 @@ filtersEl.addEventListener('click', (e) => {
   render();
 });
 
+let searchDebounceTimer;
+searchInput.addEventListener('input', () => {
+  state.search = searchInput.value;
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(render, 150);
+});
+
+sortSelect.addEventListener('change', () => {
+  state.sort = sortSelect.value;
+  render();
+});
+
 // ---------- 設定パネル ----------
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsOverlay = document.getElementById('settingsOverlay');
@@ -276,6 +398,29 @@ const toggleDarkMode = document.getElementById('toggleDarkMode');
 const toggleHidePaid = document.getElementById('toggleHidePaid');
 const toggleHidePamphlet = document.getElementById('toggleHidePamphlet');
 const toggleHideRead = document.getElementById('toggleHideRead');
+const topicsListEl = document.getElementById('topicsList');
+
+function renderTopicsSettings() {
+  const checkedIds = getInterestedTopicIds();
+  topicsListEl.innerHTML = TOPICS.map((t) => `
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <div class="settings-row-label">${escapeHtml(t.label)}</div>
+      </div>
+      <button class="toggle-switch" data-topic-id="${t.id}" type="button" role="switch" aria-checked="${checkedIds.has(t.id)}" aria-label="${escapeHtml(t.label)}"><span class="toggle-knob"></span></button>
+    </div>
+  `).join('');
+}
+
+topicsListEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.toggle-switch');
+  if (!btn) return;
+  const id = btn.dataset.topicId;
+  const next = btn.getAttribute('aria-checked') !== 'true';
+  btn.setAttribute('aria-checked', String(next));
+  setTopicChecked(id, next);
+  render();
+});
 
 function openSettings() {
   const hideSettings = getHideSettings();
@@ -283,6 +428,7 @@ function openSettings() {
   toggleHidePaid.setAttribute('aria-checked', String(hideSettings.hidePaid));
   toggleHidePamphlet.setAttribute('aria-checked', String(hideSettings.hidePamphlet));
   toggleHideRead.setAttribute('aria-checked', String(hideSettings.hideRead));
+  renderTopicsSettings();
   settingsOverlay.hidden = false;
 }
 function closeSettings() { settingsOverlay.hidden = true; }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>労務ニュース便覧</title>
 <script>(function(){try{var t=localStorage.getItem('themePreference');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <div class="page narrow">
@@ -15,7 +15,7 @@
         <p class="eyebrow">SR News Board</p>
         <h1>労務ニュース便覧</h1>
       </div>
-      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+      <div class="news-header-controls">
         <button class="sync-btn" id="syncBtn" type="button">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M16 4v4h-4"/><path d="M4 16v-4h4"/><path d="M4.6 8.5A5.6 5.6 0 0 1 15 6.3M15.4 11.5A5.6 5.6 0 0 1 5 13.7"/></svg>
           <span id="syncLabel">最新の状態を確認</span>
@@ -37,8 +37,21 @@
       </button>
     </div>
 
+    <div class="news-search-row">
+      <div class="news-search-box">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M17 17l-4-4"/></svg>
+        <input type="search" id="searchInput" placeholder="キーワードで検索" aria-label="記事をキーワードで検索">
+      </div>
+      <select id="sortSelect" class="news-sort-select" aria-label="並び替え">
+        <option value="newest">最新順</option>
+        <option value="oldest">古い順</option>
+        <option value="recommended">おすすめ順</option>
+      </select>
+    </div>
+
     <div class="news-filters" id="filters">
       <button class="news-chip" data-filter="all" aria-pressed="true" type="button">すべて</button>
+      <button class="news-chip" data-filter="recommended" aria-pressed="false" type="button">おすすめ</button>
       <button class="news-chip" data-filter="ministry" aria-pressed="false" type="button">省庁情報</button>
       <button class="news-chip" data-filter="news" aria-pressed="false" type="button">ニュース</button>
       <button class="news-chip" data-filter="pamphlet" aria-pressed="false" type="button">パンフレット</button>
@@ -94,6 +107,12 @@
           <button class="toggle-switch" id="toggleHideRead" type="button" role="switch" aria-checked="false" aria-label="既読の記事を非表示"><span class="toggle-knob"></span></button>
         </div>
       </div>
+
+      <div class="settings-section">
+        <p class="settings-section-title">おすすめトピック</p>
+        <p class="settings-row-note" style="margin-bottom:8px;">チェックした分野の記事が「おすすめ」タブに表示され、並び替えの「おすすめ順」でも上位に出るようになります。</p>
+        <div id="topicsList"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -102,6 +121,6 @@
 <script src="supabase-client.js?v=1"></script>
 <script src="auth.js?v=1"></script>
 <script src="data.js?v=1"></script>
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

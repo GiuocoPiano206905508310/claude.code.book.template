@@ -224,6 +224,17 @@ footer { text-align: center; font-size: 11.5px; color: var(--ink-faint); line-he
 .news-brand h1 { margin: 0; text-align: left; }
 .news-brand .eyebrow { text-align: left; margin: 0 0 2px; }
 
+/* 画面が狭くブランドと折り返される場合でも、常に右端に寄るようにする
+   （justify-content: space-between だけだと、折り返して単独行になった
+   ときに左寄りになってしまうため margin-left: auto で強制する） */
+.news-header-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .sync-btn {
   display: flex;
   align-items: center;
@@ -267,9 +278,52 @@ footer { text-align: center; font-size: 11.5px; color: var(--ink-faint); line-he
 .news-tab .count { font-size: 11px; background: var(--indigo-bg); color: var(--indigo); padding: 1px 7px; border-radius: 10px; font-variant-numeric: tabular-nums; }
 .news-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
+.news-search-row { display: flex; gap: 8px; padding-top: 12px; }
+.news-search-box {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 0 12px;
+}
+.news-search-box svg { width: 15px; height: 15px; color: var(--ink-faint); flex: 0 0 auto; }
+.news-search-box input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-size: 13.5px;
+  color: var(--ink);
+  padding: 8px 0;
+  font-family: inherit;
+}
+.news-search-box input:focus { outline: none; }
+.news-search-box input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.news-search-box:focus-within { border-color: var(--indigo); }
+
+.news-sort-select {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-family: inherit;
+  border-radius: 18px;
+  padding: 0 10px;
+  max-width: 118px;
+}
+.news-sort-select:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+
 .news-filters { display: flex; gap: 8px; padding: 12px 0; overflow-x: auto; }
 .news-chip {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--ink-soft);
@@ -282,6 +336,7 @@ footer { text-align: center; font-size: 11.5px; color: var(--ink-faint); line-he
 }
 .news-chip[aria-pressed="true"] { background: var(--indigo); border-color: var(--indigo); color: #fff; }
 .news-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.news-chip-count { font-size: 10.5px; opacity: 0.75; font-variant-numeric: tabular-nums; }
 
 .news-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 10px; }
 
