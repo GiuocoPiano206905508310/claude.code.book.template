@@ -63,6 +63,72 @@ function stripHtml(html: string | undefined): string {
   return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 300);
 }
 
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+// 厚労省の新着情報RSSはタイトル・リンク・日付のみで、記事ごとの概要
+// （description）を含んでいない。そのため、リンク先の記事ページを実際に
+// 取得し、見出し直後に続くテキストを概要として抜き出す。
+// 官公庁サイトはページごとに構成が異なりベストエフォートの抽出にしかならない
+// ため、取得や抽出に失敗した場合は空文字を返し、記事自体の取り込みは
+// 失敗させない（is_paid/カテゴリ等の他の項目には影響しない）。
+async function fetchArticleExcerpt(url: string, title: string): Promise<string> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return '';
+    const html = await res.text();
+    const lines = decodeEntities(
+      html
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]*>/g, '\n'),
+    )
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    // ページ冒頭にはパンくずリスト（「政策について > 審議会・研究会等 > …」）に
+    // も記事タイトルの断片が現れることがあるため、冒頭付近で最後にタイトルと
+    // 一致した行（＝本文の見出し本体である可能性が高い）の直後から抜粋する
+    const titleKey = title.slice(0, 10);
+    let titleLineIdx = -1;
+    for (let i = 0; i < Math.min(lines.length, 60); i++) {
+      if (titleKey && lines[i].includes(titleKey)) titleLineIdx = i;
+    }
+    const startIdx = titleLineIdx >= 0 ? titleLineIdx + 1 : 0;
+    const excerpt = lines.slice(startIdx, startIdx + 12).join(' ');
+    return excerpt.replace(/\s+/g, ' ').trim().slice(0, 200);
+  } catch {
+    return '';
+  }
+}
+
+// 記事ページの取得を同時に走らせすぎないよう、限られた並列数で処理する
+// （厚労省サイトに数十〜百件超のリクエストを一度に送りつけないための配慮）
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < items.length) {
+      const current = nextIndex++;
+      results[current] = await fn(items[current]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 Deno.serve(async () => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -76,28 +142,33 @@ Deno.serve(async () => {
   for (const feed of FEEDS) {
     try {
       const result = await parser.parseURL(feed.url);
-      const rows = (result.items || []).map((item) => {
+      const rows = await mapWithConcurrency(result.items || [], 5, async (item) => {
         const title = item.title || '(無題)';
         const link = item.link || '';
         const guid = item.guid || item.id || link;
+        let summary = stripHtml(item.contentSnippet || item.content || item.summary as string | undefined);
+        if (!summary && link) {
+          summary = await fetchArticleExcerpt(link, title);
+        }
         return {
           source: feed.source,
           category: classifyCategory(feed.category, title, link),
           title,
-          summary: stripHtml(item.contentSnippet || item.content || item.summary as string | undefined),
+          summary,
           url: link,
           is_paid: feed.isPaid,
           published_date: toPublishedDate(item.isoDate || item.pubDate),
           feed_guid: guid,
           updated_at: new Date().toISOString(),
         };
-      }).filter((row) => row.url && row.feed_guid);
+      });
+      const validRows = rows.filter((row) => row.url && row.feed_guid);
 
       // フィード内に同じ記事(同じfeed_guid)が重複して含まれることがあり、
       // その状態のままupsertするとPostgresが「同じ行を2回更新しようとしている」
       // として1件もupsertできずにエラーになる。後勝ちで同一feed_guidを1件にまとめる
       const dedupedRows = Array.from(
-        new Map(rows.map((row) => [row.feed_guid, row])).values(),
+        new Map(validRows.map((row) => [row.feed_guid, row])).values(),
       );
 
       if (dedupedRows.length === 0) continue;
