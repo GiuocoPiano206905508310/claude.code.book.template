@@ -93,14 +93,21 @@ Deno.serve(async () => {
         };
       }).filter((row) => row.url && row.feed_guid);
 
-      if (rows.length === 0) continue;
+      // フィード内に同じ記事(同じfeed_guid)が重複して含まれることがあり、
+      // その状態のままupsertするとPostgresが「同じ行を2回更新しようとしている」
+      // として1件もupsertできずにエラーになる。後勝ちで同一feed_guidを1件にまとめる
+      const dedupedRows = Array.from(
+        new Map(rows.map((row) => [row.feed_guid, row])).values(),
+      );
+
+      if (dedupedRows.length === 0) continue;
 
       const { error } = await supabase
         .from('news_articles')
-        .upsert(rows, { onConflict: 'source,feed_guid' });
+        .upsert(dedupedRows, { onConflict: 'source,feed_guid' });
       if (error) throw error;
 
-      totalUpserted += rows.length;
+      totalUpserted += dedupedRows.length;
     } catch (err) {
       errors.push(`${feed.source}: ${(err as Error).message || err}`);
     }
