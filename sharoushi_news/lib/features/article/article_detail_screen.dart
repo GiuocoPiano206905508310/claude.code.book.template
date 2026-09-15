@@ -56,7 +56,8 @@ class _DetailBody extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        child: Column(
+        child: SelectionArea(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -134,13 +135,14 @@ class _DetailBody extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );
   }
 
   Future<void> _openSource(BuildContext context) async {
-    final uri = Uri.tryParse(article.sourceUrl);
+    final uri = Uri.tryParse(article.canonicalUrl);
     if (uri == null) return;
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && context.mounted) {

@@ -1,11 +1,8 @@
-name: Deploy sharoushi_news to GitHub Pages
+name: Deploy Pages site (incl. sharoushi_news)
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'sharoushi_news/**'
-      - '.github/workflows/deploy-sharoushi-news-pages.yml'
   workflow_dispatch: {}
 
 permissions:
@@ -36,12 +33,24 @@ jobs:
 
       - name: Build web
         working-directory: sharoushi_news
-        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+        run: flutter build web --release --base-href "/${{ github.event.repository.name }}/SharoushiNews/"
+
+      # The rest of the repo (payroll simulator at the root, roumu-news, timeclock,
+      # etc.) is served as-is; the Flutter build is placed under /SharoushiNews/
+      # so this deployment doesn't replace the other apps already on Pages.
+      - name: Assemble Pages site
+        run: |
+          SITE_DIR="${{ runner.temp }}/site"
+          mkdir -p "$SITE_DIR"
+          rsync -a --exclude='.git' --exclude='.github' --exclude='sharoushi_news' ./ "$SITE_DIR/"
+          mkdir -p "$SITE_DIR/SharoushiNews"
+          cp -r sharoushi_news/build/web/. "$SITE_DIR/SharoushiNews/"
+          echo "SITE_DIR=$SITE_DIR" >> "$GITHUB_ENV"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: sharoushi_news/build/web
+          path: ${{ env.SITE_DIR }}
 
       - name: Deploy to GitHub Pages
         id: deployment
