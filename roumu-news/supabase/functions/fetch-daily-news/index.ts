@@ -73,37 +73,51 @@ function decodeEntities(text: string): string {
     .replace(/&#39;/g, "'");
 }
 
+function htmlFragmentToLines(fragment: string): string[] {
+  return decodeEntities(
+    fragment
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]*>/g, '\n'),
+  )
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 // 厚労省の新着情報RSSはタイトル・リンク・日付のみで、記事ごとの概要
 // （description）を含んでいない。そのため、リンク先の記事ページを実際に
-// 取得し、見出し直後に続くテキストを概要として抜き出す。
-// 官公庁サイトはページごとに構成が異なりベストエフォートの抽出にしかならない
-// ため、取得や抽出に失敗した場合は空文字を返し、記事自体の取り込みは
-// 失敗させない（is_paid/カテゴリ等の他の項目には影響しない）。
+// 取得し、見出しタグの直後に続くテキストを概要として抜き出す。
+// 単純に「タイトル文字列を含む行を探す」方式だと、ページ冒頭のスキップリンク・
+// アクセシビリティ表記（「本文へ」「サイトマップ」等）を本文と誤認することが
+// あったため、<h1>/<h2> タグ自体を手がかりにし、その中の文字列が記事タイトルと
+// 一致するものが見つかった場合だけ、そのタグの直後（＝本文が始まる位置）から
+// 抜粋する。官公庁サイトはページごとに構成が異なりベストエフォートの抽出に
+// しかならないため、見出しが見つからない・取得や抽出に失敗した場合は空文字を
+// 返し、記事自体の取り込みは失敗させない（is_paid/カテゴリ等には影響しない）。
 async function fetchArticleExcerpt(url: string, title: string): Promise<string> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return '';
     const html = await res.text();
-    const lines = decodeEntities(
-      html
-        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-        .replace(/<[^>]*>/g, '\n'),
-    )
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
 
-    // ページ冒頭にはパンくずリスト（「政策について > 審議会・研究会等 > …」）に
-    // も記事タイトルの断片が現れることがあるため、冒頭付近で最後にタイトルと
-    // 一致した行（＝本文の見出し本体である可能性が高い）の直後から抜粋する
-    const titleKey = title.slice(0, 10);
-    let titleLineIdx = -1;
-    for (let i = 0; i < Math.min(lines.length, 60); i++) {
-      if (titleKey && lines[i].includes(titleKey)) titleLineIdx = i;
+    const titleKey = title.slice(0, 8);
+    if (!titleKey) return '';
+
+    let afterHeadingStart = -1;
+    const headingRegex = /<h[12][^>]*>([\s\S]*?)<\/h[12]>/gi;
+    let match: RegExpExecArray | null;
+    while ((match = headingRegex.exec(html)) !== null) {
+      const headingText = htmlFragmentToLines(match[1]).join(' ');
+      if (headingText.includes(titleKey)) {
+        afterHeadingStart = match.index + match[0].length;
+      }
     }
-    const startIdx = titleLineIdx >= 0 ? titleLineIdx + 1 : 0;
-    const excerpt = lines.slice(startIdx, startIdx + 12).join(' ');
+    if (afterHeadingStart < 0) return '';
+
+    const bodyFragment = html.slice(afterHeadingStart, afterHeadingStart + 8000);
+    const lines = htmlFragmentToLines(bodyFragment);
+    const excerpt = lines.slice(0, 12).join(' ');
     return excerpt.replace(/\s+/g, ' ').trim().slice(0, 200);
   } catch {
     return '';
