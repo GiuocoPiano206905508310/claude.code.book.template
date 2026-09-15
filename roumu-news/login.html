@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ログイン | 労務ニュース便覧</title>
+<script>(function(){try{var t=localStorage.getItem('themePreference');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div class="page narrow">
+  <header class="masthead">
+    <p class="eyebrow">SR News Board</p>
+    <h1>労務ニュース便覧</h1>
+    <div class="rule"></div>
+    <p class="sub">社労士業務に関わる厚労省・関係省庁のお知らせとパンフレットを、毎日自動で取りまとめます。</p>
+  </header>
+
+  <div class="notice">
+    <p>※ ユーザー名・パスワードでログインします。メールアドレスの登録は不要です。お気に入り登録した記事は、このアカウントに保存され、別の端末からログインしても引き継がれます。</p>
+  </div>
+
+  <div class="login-tabs" style="max-width:360px; margin:0 auto 24px;">
+    <button type="button" class="login-tab-btn active" id="tabLoginBtn">ログイン</button>
+    <button type="button" class="login-tab-btn" id="tabSignupBtn">新規登録</button>
+  </div>
+
+  <section class="card form-card" style="max-width:420px; margin:0 auto;">
+    <div id="loginPanel">
+      <h2>ログイン</h2>
+      <div class="field-row">
+        <label for="loginUsername">ユーザー名</label>
+        <div class="field-input"><input type="text" id="loginUsername" autocomplete="username"></div>
+      </div>
+      <div class="field-row">
+        <label for="loginPassword">パスワード</label>
+        <div class="field-input">
+          <input type="password" id="loginPassword" autocomplete="current-password">
+          <button type="button" class="password-toggle-btn" data-target="loginPassword" aria-label="パスワードを表示">表示</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-block" id="loginBtn">ログイン</button>
+      <p class="export-status error" id="loginError"></p>
+    </div>
+
+    <div id="signupPanel" style="display:none;">
+      <h2>新規登録</h2>
+      <div class="field-row">
+        <label for="signupUsername">ユーザー名</label>
+        <div class="field-input"><input type="text" id="signupUsername" autocomplete="username"></div>
+        <p class="field-note">※ 半角英数字を推奨します。後から変更できません。</p>
+      </div>
+      <div class="field-row">
+        <label for="signupPassword">パスワード</label>
+        <div class="field-input">
+          <input type="password" id="signupPassword" autocomplete="new-password">
+          <button type="button" class="password-toggle-btn" data-target="signupPassword" aria-label="パスワードを表示">表示</button>
+        </div>
+        <p class="field-note">※ 6文字以上で設定してください。</p>
+      </div>
+      <div class="field-row">
+        <label for="signupPasswordConfirm">パスワード（確認）</label>
+        <div class="field-input">
+          <input type="password" id="signupPasswordConfirm" autocomplete="new-password">
+          <button type="button" class="password-toggle-btn" data-target="signupPasswordConfirm" aria-label="パスワードを表示">表示</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-block" id="signupBtn">登録する</button>
+      <p class="export-status error" id="signupError"></p>
+    </div>
+  </section>
+
+  <footer>厚生労働省・関係省庁等が公表する情報を取りまとめて表示する非公式のツールです。記事の内容は各配信元の発表をご確認ください。</footer>
+</div>
+
+<script src="supabase-sdk.js?v=1"></script>
+<script src="supabase-client.js?v=1"></script>
+<script src="auth.js?v=1"></script>
+<script src="login.js?v=1"></script>
+</body>
+</html>

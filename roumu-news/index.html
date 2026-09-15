@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>労務ニュース便覧</title>
+<script>(function(){try{var t=localStorage.getItem('themePreference');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+<div class="page narrow">
+  <header class="news-header">
+    <div class="news-header-top">
+      <div class="news-brand">
+        <p class="eyebrow">SR News Board</p>
+        <h1>労務ニュース便覧</h1>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+        <button class="sync-btn" id="syncBtn" type="button">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M16 4v4h-4"/><path d="M4 16v-4h4"/><path d="M4.6 8.5A5.6 5.6 0 0 1 15 6.3M15.4 11.5A5.6 5.6 0 0 1 5 13.7"/></svg>
+          <span id="syncLabel">最新の状態を確認</span>
+        </button>
+        <span style="font-size:11.5px; color:var(--ink-faint);" id="userLabel"></span>
+        <button class="gear-btn" id="settingsBtn" type="button" aria-haspopup="dialog" aria-controls="settingsOverlay">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          設定
+        </button>
+      </div>
+    </div>
+    <p class="sync-meta" id="syncMeta">最終更新: 取得中…</p>
+
+    <div class="news-tabs" role="tablist">
+      <button class="news-tab" role="tab" id="tabLatest" aria-selected="true" type="button">最新情報 <span class="count" id="countLatest">0</span></button>
+      <button class="news-tab" role="tab" id="tabFav" aria-selected="false" type="button">
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M10 1.6l2.6 5.5 6 .7-4.4 4.1 1.2 6-5.4-3-5.4 3 1.2-6-4.4-4.1 6-.7z"/></svg>
+        お気に入り <span class="count" id="countFav">0</span>
+      </button>
+    </div>
+
+    <div class="news-filters" id="filters">
+      <button class="news-chip" data-filter="all" aria-pressed="true" type="button">すべて</button>
+      <button class="news-chip" data-filter="ministry" aria-pressed="false" type="button">省庁情報</button>
+      <button class="news-chip" data-filter="news" aria-pressed="false" type="button">ニュース</button>
+      <button class="news-chip" data-filter="pamphlet" aria-pressed="false" type="button">パンフレット</button>
+      <button class="news-chip" data-filter="paid" aria-pressed="false" type="button">有料のみ</button>
+    </div>
+  </header>
+
+  <main class="news-list" id="list" aria-live="polite"></main>
+
+  <footer>厚生労働省・関係省庁等が公表する情報を取りまとめて表示する非公式のツールです。記事タップで各配信元サイトの元記事・パンフレットを新しいタブで開きます。記事内容の正確性は配信元サイトでご確認ください。</footer>
+
+  <div class="news-toast" id="toast"></div>
+
+  <div class="settings-overlay" id="settingsOverlay" hidden>
+    <div class="settings-panel card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="settings-panel-head">
+        <h2 id="settingsTitle">表示設定</h2>
+        <button class="settings-close-btn" id="settingsCloseBtn" type="button" aria-label="設定を閉じる">×</button>
+      </div>
+
+      <div class="settings-section">
+        <p class="settings-section-title">外観</p>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <div class="settings-row-label">ダークモード</div>
+            <p class="settings-row-note">オフのときは端末の設定に関わらず白背景で表示します。</p>
+          </div>
+          <button class="toggle-switch" id="toggleDarkMode" type="button" role="switch" aria-checked="false" aria-label="ダークモード"><span class="toggle-knob"></span></button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <p class="settings-section-title">記事の表示</p>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <div class="settings-row-label">有料記事を非表示</div>
+            <p class="settings-row-note">「有料」表示のある記事を一覧から隠します。</p>
+          </div>
+          <button class="toggle-switch" id="toggleHidePaid" type="button" role="switch" aria-checked="false" aria-label="有料記事を非表示"><span class="toggle-knob"></span></button>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <div class="settings-row-label">パンフレット・資料を非表示</div>
+            <p class="settings-row-note">省庁のパンフレット・リーフレットを一覧から隠します。</p>
+          </div>
+          <button class="toggle-switch" id="toggleHidePamphlet" type="button" role="switch" aria-checked="false" aria-label="パンフレット・資料を非表示"><span class="toggle-knob"></span></button>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <div class="settings-row-label">既読の記事を非表示</div>
+            <p class="settings-row-note">一度開いた記事を一覧から隠します（この端末のみ）。</p>
+          </div>
+          <button class="toggle-switch" id="toggleHideRead" type="button" role="switch" aria-checked="false" aria-label="既読の記事を非表示"><span class="toggle-knob"></span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="supabase-sdk.js?v=1"></script>
+<script src="supabase-client.js?v=1"></script>
+<script src="auth.js?v=1"></script>
+<script src="data.js?v=1"></script>
+<script src="app.js?v=2"></script>
+</body>
+</html>
