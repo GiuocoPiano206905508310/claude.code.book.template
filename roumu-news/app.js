@@ -180,10 +180,11 @@ function render() {
         <span class="news-source">${escapeHtml(a.source)}</span>
       </div>
       <h3>${escapeHtml(a.title)}</h3>
+      ${a.summary ? `
       <p class="news-summary">${escapeHtml(a.summary)}</p>
       <button class="news-expand-btn" aria-expanded="false" type="button">
         <span class="chevron">▼</span><span class="expand-label">概要をもっと見る</span>
-      </button>
+      </button>` : ''}
       <div class="news-card-bottom">
         <span class="news-date">${formatDate(a.publishedDate)}</span>
         <span class="news-open-hint">${openSVG()}${a.category === 'pamphlet' ? '資料を開く' : '元記事を開く'}</span>
@@ -205,14 +206,16 @@ function render() {
 
     const expandBtn = card.querySelector('.news-expand-btn');
     const summaryEl = card.querySelector('.news-summary');
-    expandBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const expanded = summaryEl.classList.toggle('is-expanded');
-      expandBtn.setAttribute('aria-expanded', String(expanded));
-      expandBtn.querySelector('.chevron').textContent = expanded ? '▲' : '▼';
-      expandBtn.querySelector('.expand-label').textContent = expanded ? '閉じる' : '概要をもっと見る';
-    });
-    expandBtn.addEventListener('keydown', (e) => e.stopPropagation());
+    if (expandBtn && summaryEl) {
+      expandBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const expanded = summaryEl.classList.toggle('is-expanded');
+        expandBtn.setAttribute('aria-expanded', String(expanded));
+        expandBtn.querySelector('.chevron').textContent = expanded ? '▲' : '▼';
+        expandBtn.querySelector('.expand-label').textContent = expanded ? '閉じる' : '概要をもっと見る';
+      });
+      expandBtn.addEventListener('keydown', (e) => e.stopPropagation());
+    }
 
     const starBtn = card.querySelector('.news-star-btn');
     starBtn.addEventListener('click', async (e) => {
