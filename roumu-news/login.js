@@ -23,6 +23,16 @@ function friendlyAuthError(error) {
   return 'エラーが発生しました：' + msg;
 }
 
+// ---------- ポップアップ表示（画面下部に一時的に出るメッセージ） ----------
+const toastEl = document.getElementById('toast');
+let toastTimer;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3200);
+}
+
 document.getElementById('tabLoginBtn').addEventListener('click', () => {
   document.getElementById('tabLoginBtn').classList.add('active');
   document.getElementById('tabSignupBtn').classList.remove('active');
@@ -49,7 +59,9 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     await signInWithUsername(username, password);
     location.href = getNextPage();
   } catch (e) {
-    errorEl.textContent = friendlyAuthError(e);
+    const message = friendlyAuthError(e);
+    errorEl.textContent = message;
+    showToast(message);
   }
 });
 
@@ -81,7 +93,9 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
     }
     location.href = getNextPage();
   } catch (e) {
-    errorEl.textContent = friendlyAuthError(e);
+    const message = friendlyAuthError(e);
+    errorEl.textContent = message;
+    showToast(message);
   }
 });
 
