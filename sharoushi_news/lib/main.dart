@@ -1,31 +1,44 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'core/constants/app_theme.dart';
+import 'core/database/app_database.dart';
 import 'features/favorite/favorite_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'repositories/article_repository.dart';
+import 'repositories/local_article_repository.dart';
 
-void main() {
-  runApp(const SharoushiNewsApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(SharoushiNewsApp(repository: await _buildRepository()));
+}
+
+/// Web向けビルドはローカルDB（sqflite）を使わず、Phase 1〜2同様のインメモリ
+/// ダミーデータで動作させる（実機のiOS/Androidではローカルのsqflite DBを使う）。
+Future<ArticleRepository> _buildRepository() async {
+  if (kIsWeb) return DummyArticleRepository();
+  final db = await AppDatabase.open();
+  return LocalArticleRepository.create(db);
 }
 
 /// アプリのルートウィジェット。
-/// Phase 1〜2はダミーデータのみで動作し、ネットワークアクセスは行わない。
+/// [repository] は呼び出し側（main、またはテスト）が用意したものを注入する。
 class SharoushiNewsApp extends StatefulWidget {
-  const SharoushiNewsApp({super.key});
+  const SharoushiNewsApp({super.key, required this.repository});
+
+  final ArticleRepository repository;
 
   @override
   State<SharoushiNewsApp> createState() => _SharoushiNewsAppState();
 }
 
 class _SharoushiNewsAppState extends State<SharoushiNewsApp> {
-  final ArticleRepository _repository = DummyArticleRepository();
   ThemeMode _themeMode = ThemeMode.system;
 
   @override
   void dispose() {
-    _repository.dispose();
+    widget.repository.dispose();
     super.dispose();
   }
 
@@ -38,7 +51,7 @@ class _SharoushiNewsAppState extends State<SharoushiNewsApp> {
       darkTheme: AppTheme.dark(),
       themeMode: _themeMode,
       home: _RootShell(
-        repository: _repository,
+        repository: widget.repository,
         themeMode: _themeMode,
         onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
       ),
