@@ -8,10 +8,19 @@ import 'features/home/home_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'repositories/article_repository.dart';
 import 'repositories/local_article_repository.dart';
+import 'services/news/news_sync_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(SharoushiNewsApp(repository: await _buildRepository()));
+  final repository = await _buildRepository();
+  runApp(
+    SharoushiNewsApp(
+      repository: repository,
+      newsSyncService: repository is LocalArticleRepository
+          ? NewsSyncService(repository: repository)
+          : null,
+    ),
+  );
 }
 
 /// Web向けビルドはローカルDB（sqflite）を使わず、Phase 1〜2同様のインメモリ
@@ -24,10 +33,13 @@ Future<ArticleRepository> _buildRepository() async {
 
 /// アプリのルートウィジェット。
 /// [repository] は呼び出し側（main、またはテスト）が用意したものを注入する。
+/// [newsSyncService] はローカルDBを使うプラットフォーム（非Web）でのみ渡され、
+/// 設定画面の手動データ取得ボタンから使われる（Phase 4、初版・要実機確認）。
 class SharoushiNewsApp extends StatefulWidget {
-  const SharoushiNewsApp({super.key, required this.repository});
+  const SharoushiNewsApp({super.key, required this.repository, this.newsSyncService});
 
   final ArticleRepository repository;
+  final NewsSyncService? newsSyncService;
 
   @override
   State<SharoushiNewsApp> createState() => _SharoushiNewsAppState();
@@ -52,6 +64,7 @@ class _SharoushiNewsAppState extends State<SharoushiNewsApp> {
       themeMode: _themeMode,
       home: _RootShell(
         repository: widget.repository,
+        newsSyncService: widget.newsSyncService,
         themeMode: _themeMode,
         onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
       ),
@@ -62,11 +75,13 @@ class _SharoushiNewsAppState extends State<SharoushiNewsApp> {
 class _RootShell extends StatefulWidget {
   const _RootShell({
     required this.repository,
+    this.newsSyncService,
     required this.themeMode,
     required this.onThemeModeChanged,
   });
 
   final ArticleRepository repository;
+  final NewsSyncService? newsSyncService;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
 
@@ -82,7 +97,11 @@ class _RootShellState extends State<_RootShell> {
     final screens = [
       HomeScreen(repository: widget.repository),
       FavoriteScreen(repository: widget.repository),
-      SettingsScreen(themeMode: widget.themeMode, onThemeModeChanged: widget.onThemeModeChanged),
+      SettingsScreen(
+        themeMode: widget.themeMode,
+        onThemeModeChanged: widget.onThemeModeChanged,
+        newsSyncService: widget.newsSyncService,
+      ),
     ];
     return Scaffold(
       body: IndexedStack(index: _tabIndex, children: screens),

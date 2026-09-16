@@ -49,4 +49,23 @@ class LocalArticleRepository extends ArticleRepository {
     ];
     notifyListeners();
   }
+
+  /// 実データ取得（Phase 4〜）の結果をDBへ反映する。
+  /// 既に存在する記事（同一id）については、お気に入り・既読状態を
+  /// 上書きしないよう既存の値を引き継ぐ。
+  /// 戻り値は新規に追加された記事数。
+  Future<int> upsertFetched(List<Article> fetched) async {
+    final existingById = {for (final a in _articles) a.id: a};
+    final merged = [
+      for (final a in fetched)
+        if (existingById[a.id] case final existing?)
+          a.copyWith(isFavorite: existing.isFavorite, isRead: existing.isRead)
+        else
+          a,
+    ];
+    await _db.upsertArticles(merged);
+    _articles = await _db.getAllArticles();
+    notifyListeners();
+    return merged.where((a) => !existingById.containsKey(a.id)).length;
+  }
 }

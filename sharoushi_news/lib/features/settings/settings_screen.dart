@@ -1,21 +1,35 @@
 import 'package:flutter/material.dart';
 
+import '../../services/news/news_sync_service.dart';
+
 /// 設定画面（仕様セクション20・21）。
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     required this.themeMode,
     required this.onThemeModeChanged,
+    this.newsSyncService,
   });
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+
+  /// Web版では常にnull（ローカルDBを使わないため）。
+  final NewsSyncService? newsSyncService;
 
   static const _disclaimer =
       '本アプリは公的機関が公開する情報を、個人の情報収集を目的として整理する非公式アプリです。\n\n'
       '厚生労働省、日本年金機構、全国健康保険協会その他の公的機関とは関係ありません。\n\n'
       '要約・分類等には自動処理またはAIを利用する場合があります。\n\n'
       '情報の正確性・完全性を保証するものではありません。実務上の判断を行う際は、必ず各公的機関の公式情報・原文を確認してください。';
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _syncing = false;
+  String? _lastResultMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -32,30 +46,87 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 _ThemeOptionTile(
                   label: '端末の設定に合わせる',
-                  selected: themeMode == ThemeMode.system,
-                  onTap: () => onThemeModeChanged(ThemeMode.system),
+                  selected: widget.themeMode == ThemeMode.system,
+                  onTap: () => widget.onThemeModeChanged(ThemeMode.system),
                 ),
                 _ThemeOptionTile(
                   label: 'ライト',
-                  selected: themeMode == ThemeMode.light,
-                  onTap: () => onThemeModeChanged(ThemeMode.light),
+                  selected: widget.themeMode == ThemeMode.light,
+                  onTap: () => widget.onThemeModeChanged(ThemeMode.light),
                 ),
                 _ThemeOptionTile(
                   label: 'ダーク',
-                  selected: themeMode == ThemeMode.dark,
-                  onTap: () => onThemeModeChanged(ThemeMode.dark),
+                  selected: widget.themeMode == ThemeMode.dark,
+                  onTap: () => widget.onThemeModeChanged(ThemeMode.dark),
                 ),
               ],
             ),
           ),
+          if (widget.newsSyncService != null) ...[
+            const SizedBox(height: 16),
+            _SectionCard(
+              title: 'データ取得（試験運用）',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '厚生労働省サイトから最新情報を取得します。まだ試験段階の機能のため、'
+                    'タイトルと原文リンクのみを取得し、概要等はAI要約が未実装のためプレースホルダー表示になります。',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.6),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _syncing ? null : _runSync,
+                      icon: _syncing
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.sync_rounded, size: 18),
+                      label: Text(_syncing ? '取得中…' : '厚生労働省の最新情報を取得'),
+                    ),
+                  ),
+                  if (_lastResultMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Text(_lastResultMessage!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  ],
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           _SectionCard(
             title: 'このアプリについて',
-            child: Text(_disclaimer, style: theme.textTheme.bodySmall?.copyWith(height: 1.8, color: theme.colorScheme.onSurfaceVariant)),
+            child: Text(
+              SettingsScreen._disclaimer,
+              style: theme.textTheme.bodySmall?.copyWith(height: 1.8, color: theme.colorScheme.onSurfaceVariant),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _runSync() async {
+    final service = widget.newsSyncService;
+    if (service == null) return;
+    setState(() {
+      _syncing = true;
+      _lastResultMessage = null;
+    });
+    try {
+      final result = await service.syncMhlw();
+      if (!mounted) return;
+      setState(() {
+        _lastResultMessage = result.hasErrors
+            ? '${result.fetchedCount}件取得（うち新規${result.newCount}件）。一部のページ取得に失敗しました（${result.errors.length}件）。'
+            : '${result.fetchedCount}件取得しました（うち新規${result.newCount}件）。';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _lastResultMessage = '取得に失敗しました: $e');
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
   }
 }
 

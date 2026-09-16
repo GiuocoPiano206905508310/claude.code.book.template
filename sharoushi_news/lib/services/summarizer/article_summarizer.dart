@@ -1,4 +1,4 @@
-import '../parser/news_source_parser.dart';
+import '../../models/article_candidate.dart';
 
 /// 記事候補から社労士向け要約を生成するインターフェース（仕様セクション8）。
 /// Phase 1〜2では抽象定義のみを置く。AI APIを使う実装は将来ここに追加する。
