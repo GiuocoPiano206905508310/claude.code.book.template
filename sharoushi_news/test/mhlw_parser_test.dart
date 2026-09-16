@@ -57,4 +57,39 @@ void main() {
     expect(candidates[1].publishedAt, DateTime(2026, 9, 15));
     expect(candidates[2].publishedAt, DateTime(2026, 9, 14));
   });
+
+  // 実際の厚労省サイト（分野別トピックス一覧ページ）を検証したところ、日付は
+  // 見出しではなく各リンクの文字列自体の先頭に埋め込まれていた
+  // （例:「2012年5月9日掲載\n年度更新申告書...」）。また、日付を持たない
+  // 案内リンク（サイドバー等）も混在していたため、日付が取れないリンクは
+  // 誤検出として除外する仕様にした。
+  const bunyaHtml = '''
+<html><body>
+  <ul class="topics-list">
+    <li><a href="/stf/seisakunitsuite/bunya/0000017154.html">2012年5月9日掲載
+平成24年度全国労働衛生週間のスローガン募集について</a></li>
+    <li><a href="/stf/seisakunitsuite/bunya/kodomo/shokuba_kosodate/kurumin/index.html">くるみんマークについて</a></li>
+  </ul>
+</body></html>
+''';
+
+  test('リンク先頭に埋め込まれた日付をタイトルから分離する', () {
+    final candidates = MhlwParser().parse(
+      bunyaHtml,
+      'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/topics_150858_161_162.html',
+    );
+
+    expect(candidates, hasLength(1));
+    expect(candidates[0].title, '平成24年度全国労働衛生週間のスローガン募集について');
+    expect(candidates[0].publishedAt, DateTime(2012, 5, 9));
+  });
+
+  test('日付が特定できない案内リンクは除外する', () {
+    final candidates = MhlwParser().parse(
+      bunyaHtml,
+      'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/topics_150858_161_162.html',
+    );
+
+    expect(candidates.any((c) => c.title == 'くるみんマークについて'), isFalse);
+  });
 }

@@ -22,7 +22,7 @@ jobs:
 
       - name: Run MHLW fetch/parse preview
         working-directory: sharoushi_news
-        run: dart run tool/fetch_mhlw_preview.dart | tee fetch-preview-result.json
+        run: dart run tool/fetch_mhlw_preview.dart
 
       - name: Upload result as artifact
         uses: actions/upload-artifact@v4
