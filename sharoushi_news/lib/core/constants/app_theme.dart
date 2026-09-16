@@ -30,6 +30,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      fontFamily: 'Noto Sans JP',
       scaffoldBackgroundColor: const Color(0xFFF7F8FA),
       appBarTheme: AppBarTheme(
         backgroundColor: const Color(0xFFF7F8FA),
@@ -66,6 +67,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      fontFamily: 'Noto Sans JP',
       scaffoldBackgroundColor: const Color(0xFF14181E),
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF14181E),
