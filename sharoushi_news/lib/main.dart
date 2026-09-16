@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -14,6 +16,9 @@ import 'services/news/news_sync_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final repository = await _buildRepository();
+  // GitHub Actions上で1日1回更新される記事一覧を起動時に取得する。
+  // 失敗してもアプリの起動は妨げないよう、結果を待たずに実行する。
+  unawaited(repository.refreshFromDailyFeed());
   runApp(
     SharoushiNewsApp(
       repository: repository,

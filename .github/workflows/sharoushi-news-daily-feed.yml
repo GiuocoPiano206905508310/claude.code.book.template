@@ -1,0 +1,50 @@
+name: Sharoushi News daily feed
+
+# 毎日決まった時刻にMHLW・日本年金機構のサイトを取得し（RSSは使わず、
+# 通常のHTTP GET+HTMLパースのみ）、結果をsharoushi-news-feed/articles.json
+# としてmainへコミットする。ここへの push が既存の
+# deploy-sharoushi-news-pages.yml をトリガーし、GitHub Pages上の
+# アプリから読み込めるようになる。
+
+on:
+  schedule:
+    # 21:00 UTC = 06:00 JST
+    - cron: '0 21 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sharoushi-news-daily-feed
+  cancel-in-progress: false
+
+jobs:
+  fetch-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        working-directory: sharoushi_news
+        run: flutter pub get
+
+      - name: Fetch daily feed
+        working-directory: sharoushi_news
+        run: dart run tool/fetch_daily_feed.dart
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sharoushi-news-feed/articles.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "sharoushi_news: update daily feed"
+          git push
