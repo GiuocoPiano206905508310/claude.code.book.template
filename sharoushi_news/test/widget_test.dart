@@ -5,10 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:sharoushi_news/main.dart';
+import 'package:sharoushi_news/repositories/article_repository.dart';
 
 void main() {
   testWidgets('ホーム画面が起動し、タイトルと記事一覧が表示される', (WidgetTester tester) async {
-    await tester.pumpWidget(const SharoushiNewsApp());
+    await tester.pumpWidget(SharoushiNewsApp(repository: DummyArticleRepository()));
     await tester.pumpAndSettle();
 
     expect(find.text('社労士NEWS'), findsOneWidget);
