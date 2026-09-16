@@ -2,9 +2,12 @@ name: Sharoushi News daily feed
 
 # 毎日決まった時刻にMHLW・日本年金機構のサイトを取得し（RSSは使わず、
 # 通常のHTTP GET+HTMLパースのみ）、結果をsharoushi-news-feed/articles.json
-# としてmainへコミットする。ここへの push が既存の
-# deploy-sharoushi-news-pages.yml をトリガーし、GitHub Pages上の
-# アプリから読み込めるようになる。
+# としてmainへコミットする。
+#
+# 注意: デフォルトのGITHUB_TOKENでのpushは、ループ防止のためGitHub側で
+# 他のworkflowのpushトリガーを起動しない仕様になっている。そのため、
+# deploy-sharoushi-news-pages.yml（GitHub Pagesへの公開）は自動連鎖せず、
+# 最後のステップで明示的にworkflow_dispatchとして呼び出している。
 
 on:
   schedule:
@@ -14,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: sharoushi-news-daily-feed
@@ -38,13 +42,22 @@ jobs:
         run: dart run tool/fetch_daily_feed.dart
 
       - name: Commit and push if changed
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add sharoushi-news-feed/articles.json
           if git diff --cached --quiet; then
             echo "No changes to commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git commit -m "sharoushi_news: update daily feed"
           git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger Pages redeploy
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-sharoushi-news-pages.yml --ref main
