@@ -29,10 +29,10 @@ class _SearchScreenState extends State<SearchScreen> {
     final q = _query.trim();
     if (q.isEmpty) return const [];
     return all.where((a) {
-      final haystack = '${a.title} ${a.summary} ${a.category.label} ${a.sourceName}';
+      final haystack =
+          '${a.title} ${a.summary} ${a.category.label} ${a.sourceName}';
       return haystack.contains(q);
-    }).toList()
-      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+    }).toList()..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
   }
 
   @override
@@ -72,11 +72,15 @@ class _SearchScreenState extends State<SearchScreen> {
                   widget.repository.markAsRead(article.id);
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => ArticleDetailScreen(repository: widget.repository, articleId: article.id),
+                      builder: (_) => ArticleDetailScreen(
+                        repository: widget.repository,
+                        articleId: article.id,
+                      ),
                     ),
                   );
                 },
-                onToggleFavorite: () => widget.repository.toggleFavorite(article.id),
+                onToggleFavorite: () =>
+                    widget.repository.toggleFavorite(article.id),
               );
             },
           );
@@ -98,9 +102,17 @@ class _Hint extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_rounded, size: 36, color: Theme.of(context).colorScheme.outline),
+            Icon(
+              Icons.search_rounded,
+              size: 36,
+              color: Theme.of(context).colorScheme.outline,
+            ),
             const SizedBox(height: 12),
-            Text('タイトル・要約・カテゴリー・情報源から検索できます。', textAlign: TextAlign.center, style: style),
+            Text(
+              'タイトル・要約・カテゴリー・情報源から検索できます。',
+              textAlign: TextAlign.center,
+              style: style,
+            ),
           ],
         ),
       ),

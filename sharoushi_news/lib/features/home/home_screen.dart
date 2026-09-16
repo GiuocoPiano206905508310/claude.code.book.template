@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_categories.dart';
+import '../../core/constants/recommended_topics.dart';
 import '../../models/article.dart';
 import '../../repositories/article_repository.dart';
 import '../../widgets/category_chip.dart';
@@ -9,9 +10,14 @@ import '../article/article_detail_screen.dart';
 import '../search/search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.repository});
+  const HomeScreen({
+    super.key,
+    required this.repository,
+    required this.selectedTopicIds,
+  });
 
   final ArticleRepository repository;
+  final Set<String> selectedTopicIds;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -28,13 +34,19 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Text('社労士NEWS', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+            child: Text(
+              '社労士NEWS',
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
             child: _SearchEntryField(
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => SearchScreen(repository: widget.repository)),
+                MaterialPageRoute(
+                  builder: (_) => SearchScreen(repository: widget.repository),
+                ),
               ),
             ),
           ),
@@ -48,7 +60,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 final option = homeFilterOptions[index];
                 return CategoryChip(
                   label: option.label,
-                  selected: identical(option, _filter) || option.label == _filter.label,
+                  selected:
+                      identical(option, _filter) ||
+                      option.label == _filter.label,
                   onTap: () => setState(() => _filter = option),
                 );
               },
@@ -59,10 +73,26 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ListenableBuilder(
               listenable: widget.repository,
               builder: (context, _) {
-                final items = widget.repository.articles.where(_filter.matches).toList()
-                  ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+                final isRecommended =
+                    _filter.kind == HomeFilterKind.recommended;
+                final items =
+                    widget.repository.articles
+                        .where(
+                          isRecommended
+                              ? (a) => articleMatchesSelectedTopics(
+                                  a,
+                                  widget.selectedTopicIds,
+                                )
+                              : _filter.matches,
+                        )
+                        .toList()
+                      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
                 if (items.isEmpty) {
-                  return const _EmptyState(message: '該当するニュースがありません。');
+                  final message =
+                      isRecommended && widget.selectedTopicIds.isEmpty
+                      ? '設定画面の「おすすめトピック」でチェックした項目に関連するニュースがここに表示されます。'
+                      : '該当するニュースがありません。';
+                  return _EmptyState(message: message);
                 }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -73,7 +103,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     return NewsCard(
                       article: article,
                       onTap: () => _openDetail(context, article),
-                      onToggleFavorite: () => widget.repository.toggleFavorite(article.id),
+                      onToggleFavorite: () =>
+                          widget.repository.toggleFavorite(article.id),
                     );
                   },
                 );
@@ -89,7 +120,10 @@ class _HomeScreenState extends State<HomeScreen> {
     widget.repository.markAsRead(article.id);
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ArticleDetailScreen(repository: widget.repository, articleId: article.id),
+        builder: (_) => ArticleDetailScreen(
+          repository: widget.repository,
+          articleId: article.id,
+        ),
       ),
     );
   }
@@ -118,9 +152,18 @@ class _SearchEntryField extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(Icons.search_rounded, size: 20, color: theme.colorScheme.outline),
+              Icon(
+                Icons.search_rounded,
+                size: 20,
+                color: theme.colorScheme.outline,
+              ),
               const SizedBox(width: 8),
-              Text('キーワードで検索', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline)),
+              Text(
+                'キーワードで検索',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
             ],
           ),
         ),

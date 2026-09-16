@@ -21,7 +21,9 @@ class CategoryChip extends StatelessWidget {
       child: Material(
         color: selected ? scheme.primary : Theme.of(context).cardColor,
         shape: StadiumBorder(
-          side: BorderSide(color: selected ? scheme.primary : Theme.of(context).dividerColor),
+          side: BorderSide(
+            color: selected ? scheme.primary : Theme.of(context).dividerColor,
+          ),
         ),
         child: InkWell(
           customBorder: const StadiumBorder(),

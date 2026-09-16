@@ -20,11 +20,17 @@ class MhlwParser implements NewsSourceParser {
     r'|kaiken/daijin/\d+_\d+\.html'
     r'|houdou/[\w./\-]+\.html'
     r'|shingi2?/[\w./\-]+\.html'
-    r'|seisakunitsuite/bunya/[\w./\-]+\.html)$',
+    r'|seisakunitsuite/bunya/[\w./\-]+\.html)$'
+    // 人事労務マガジン（コラム・連載記事）。
+    r'|/web_magazine/(column|series)/[\w./\-]+\.html$'
+    // パンフレット等のPDF（/content/配下に置かれることが多い）。
+    r'|/content/[\w./\-]+\.pdf$',
   );
 
   // 「令和8年9月15日」「2026年9月15日」のような和暦・西暦どちらの表記も拾う。
-  static final _datePattern = RegExp(r'(令和(\d+)年|(\d{4})年)(\d{1,2})月(\d{1,2})日');
+  static final _datePattern = RegExp(
+    r'(令和(\d+)年|(\d{4})年)(\d{1,2})月(\d{1,2})日',
+  );
 
   // リンク文字列の先頭に埋め込まれた「YYYY年M月D日掲載」「YYYY年M月D日更新」を
   // 日付部分とタイトル部分に分離するためのパターン。
@@ -52,7 +58,11 @@ class MhlwParser implements NewsSourceParser {
         return;
       }
 
-      final ownText = node.nodes.whereType<Text>().map((t) => t.text).join().trim();
+      final ownText = node.nodes
+          .whereType<Text>()
+          .map((t) => t.text)
+          .join()
+          .trim();
       final match = _datePattern.firstMatch(ownText);
       if (match != null) {
         headingDate = _parseDate(match) ?? headingDate;
@@ -97,12 +107,19 @@ class MhlwParser implements NewsSourceParser {
     final absoluteUrl = base.resolveUri(Uri.parse(href)).toString();
     if (!seenUrls.add(absoluteUrl)) return;
 
-    candidates.add(ArticleCandidate(title: title, url: absoluteUrl, publishedAt: publishedAt));
+    candidates.add(
+      ArticleCandidate(
+        title: title,
+        url: absoluteUrl,
+        publishedAt: publishedAt,
+      ),
+    );
   }
 
   DateTime? _parseDate(RegExpMatch match) {
     final year = match.group(2) != null
-        ? int.parse(match.group(2)!) + 1988 // 令和N年 → 西暦
+        ? int.parse(match.group(2)!) +
+              1988 // 令和N年 → 西暦
         : int.parse(match.group(3)!);
     final month = int.parse(match.group(4)!);
     final day = int.parse(match.group(5)!);

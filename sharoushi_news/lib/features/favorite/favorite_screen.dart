@@ -18,14 +18,19 @@ class FavoriteScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Text('お気に入り', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+            child: Text(
+              'お気に入り',
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
           ),
           Expanded(
             child: ListenableBuilder(
               listenable: repository,
               builder: (context, _) {
-                final items = repository.articles.where((a) => a.isFavorite).toList()
-                  ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+                final items =
+                    repository.articles.where((a) => a.isFavorite).toList()
+                      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
                 if (items.isEmpty) {
                   return Center(
                     child: Padding(
@@ -33,12 +38,18 @@ class FavoriteScreen extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.star_border_rounded, size: 36, color: Theme.of(context).colorScheme.outline),
+                          Icon(
+                            Icons.star_border_rounded,
+                            size: 36,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             'お気に入りに登録したニュースはまだありません。\nカード右上の☆をタップすると、ここに表示されます。',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Theme.of(context).colorScheme.outline),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
                           ),
                         ],
                       ),
@@ -57,11 +68,15 @@ class FavoriteScreen extends StatelessWidget {
                         repository.markAsRead(article.id);
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => ArticleDetailScreen(repository: repository, articleId: article.id),
+                            builder: (_) => ArticleDetailScreen(
+                              repository: repository,
+                              articleId: article.id,
+                            ),
                           ),
                         );
                       },
-                      onToggleFavorite: () => repository.toggleFavorite(article.id),
+                      onToggleFavorite: () =>
+                          repository.toggleFavorite(article.id),
                     );
                   },
                 );

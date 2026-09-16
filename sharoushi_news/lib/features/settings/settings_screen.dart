@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/recommended_topics.dart';
 import '../../services/news/news_sync_service.dart';
 
 /// 設定画面（仕様セクション20・21）。
@@ -8,11 +9,15 @@ class SettingsScreen extends StatefulWidget {
     super.key,
     required this.themeMode,
     required this.onThemeModeChanged,
+    required this.selectedTopicIds,
+    required this.onSelectedTopicIdsChanged,
     this.newsSyncService,
   });
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final Set<String> selectedTopicIds;
+  final ValueChanged<Set<String>> onSelectedTopicIdsChanged;
 
   /// Web版では常にnull（ローカルDBを使わないため）。
   final NewsSyncService? newsSyncService;
@@ -38,7 +43,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
-          Text('設定', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+          Text(
+            '設定',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: 18),
           _SectionCard(
             title: '外観',
@@ -62,6 +72,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: 'おすすめトピック',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'チェックしたトピックに関連するニュースが、ホーム画面の「おすすめ」タブに表示されます。',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                for (final topic in recommendedTopics)
+                  _TopicCheckboxTile(
+                    label: topic.label,
+                    checked: widget.selectedTopicIds.contains(topic.id),
+                    onChanged: (checked) {
+                      final updated = Set<String>.from(widget.selectedTopicIds);
+                      if (checked) {
+                        updated.add(topic.id);
+                      } else {
+                        updated.remove(topic.id);
+                      }
+                      widget.onSelectedTopicIdsChanged(updated);
+                    },
+                  ),
+              ],
+            ),
+          ),
           if (widget.newsSyncService != null) ...[
             const SizedBox(height: 16),
             _SectionCard(
@@ -72,7 +113,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Text(
                     '厚生労働省サイトから最新情報を取得します。まだ試験段階の機能のため、'
                     'タイトルと原文リンクのみを取得し、概要等はAI要約が未実装のためプレースホルダー表示になります。',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.6),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.6,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
@@ -80,14 +124,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _syncing ? null : _runSync,
                       icon: _syncing
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                           : const Icon(Icons.sync_rounded, size: 18),
                       label: Text(_syncing ? '取得中…' : '厚生労働省の最新情報を取得'),
                     ),
                   ),
                   if (_lastResultMessage != null) ...[
                     const SizedBox(height: 8),
-                    Text(_lastResultMessage!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    Text(
+                      _lastResultMessage!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -98,7 +151,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'このアプリについて',
             child: Text(
               SettingsScreen._disclaimer,
-              style: theme.textTheme.bodySmall?.copyWith(height: 1.8, color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(
+                height: 1.8,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -147,7 +203,10 @@ class _SectionCard extends StatelessWidget {
           children: [
             Text(
               title,
-              style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800, color: theme.colorScheme.primary),
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 10),
             child,
@@ -158,8 +217,46 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
+class _TopicCheckboxTile extends StatelessWidget {
+  const _TopicCheckboxTile({
+    required this.label,
+    required this.checked,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool checked;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: () => onChanged(!checked),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Checkbox(
+              value: checked,
+              onChanged: (v) => onChanged(v ?? false),
+              visualDensity: VisualDensity.compact,
+            ),
+            Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ThemeOptionTile extends StatelessWidget {
-  const _ThemeOptionTile({required this.label, required this.selected, required this.onTap});
+  const _ThemeOptionTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;
@@ -176,7 +273,12 @@ class _ThemeOptionTile extends StatelessWidget {
         child: Row(
           children: [
             Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-            if (selected) Icon(Icons.check_rounded, color: theme.colorScheme.primary, size: 20),
+            if (selected)
+              Icon(
+                Icons.check_rounded,
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
           ],
         ),
       ),

@@ -66,10 +66,7 @@ class Article {
   /// この要約がAIまたは自動処理によって生成されたものかどうか。
   final bool isAiGenerated;
 
-  Article copyWith({
-    bool? isRead,
-    bool? isFavorite,
-  }) {
+  Article copyWith({bool? isRead, bool? isFavorite}) {
     return Article(
       id: id,
       title: title,
