@@ -13,7 +13,7 @@ import 'package:sharoushi_news/core/constants/source_config.dart';
 import 'package:sharoushi_news/services/news/news_fetcher.dart';
 import 'package:sharoushi_news/services/parser/nenkin_parser.dart';
 
-const _maxPerPage = 50;
+const _maxPerPage = 10;
 
 Future<void> main() async {
   final fetcher = NewsFetcher(parser: NenkinParser());
