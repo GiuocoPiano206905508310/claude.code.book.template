@@ -79,3 +79,28 @@ final List<ListingTarget> mhlwListingTargets = [
     defaultCategory: NewsCategory.pension,
   ),
 ];
+
+const nenkinSource = SourceConfig(
+  id: 'nenkin',
+  name: '日本年金機構',
+  baseUrl: 'https://www.nenkin.go.jp',
+);
+
+/// ユーザーから提供された実在URL（https://www.nenkin.go.jp/oshirase/taisetu/
+/// kojin/2026/202604/0401.html）から、個人向け（kojin）・事業所向け
+/// （jigyosho）それぞれの年別インデックスページという構造を推測している。
+/// jigyosho/2026/index.html はユーザーから提供された実URL。kojin側は同じ
+/// 命名規則からの推測のため、存在しない場合は取得時にエラーとして扱われる
+/// （NewsFetcher／診断スクリプト側でハンドリング済み）。
+final List<ListingTarget> nenkinListingTargets = [
+  const ListingTarget(
+    source: nenkinSource,
+    url: 'https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/index.html',
+    defaultCategory: NewsCategory.socialInsurance,
+  ),
+  const ListingTarget(
+    source: nenkinSource,
+    url: 'https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/index.html',
+    defaultCategory: NewsCategory.pension,
+  ),
+];
