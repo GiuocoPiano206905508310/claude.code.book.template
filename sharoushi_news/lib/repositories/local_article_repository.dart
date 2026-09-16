@@ -1,5 +1,6 @@
 import '../core/database/app_database.dart';
 import '../models/article.dart';
+import '../services/feed/daily_feed_service.dart';
 import 'article_repository.dart';
 import 'dummy_seed_data.dart';
 
@@ -10,17 +11,25 @@ import 'dummy_seed_data.dart';
 /// アプリを再起動しても保持される。Phase 4以降で実データ取得を実装する際は、
 /// このリポジトリの [_db] へ upsert するだけで置き換えられる想定。
 class LocalArticleRepository extends ArticleRepository {
-  LocalArticleRepository._(this._db, this._articles);
+  LocalArticleRepository._(this._db, this._articles, this._feedService);
 
   final AppDatabase _db;
   List<Article> _articles;
+  final DailyFeedService _feedService;
 
-  static Future<LocalArticleRepository> create(AppDatabase db) async {
+  static Future<LocalArticleRepository> create(
+    AppDatabase db, {
+    DailyFeedService? feedService,
+  }) async {
     if (await db.countArticles() == 0) {
       await db.upsertArticles(buildSeedArticles());
     }
     final articles = await db.getAllArticles();
-    return LocalArticleRepository._(db, articles);
+    return LocalArticleRepository._(
+      db,
+      articles,
+      feedService ?? DailyFeedService(),
+    );
   }
 
   @override
@@ -67,5 +76,15 @@ class LocalArticleRepository extends ArticleRepository {
     _articles = await _db.getAllArticles();
     notifyListeners();
     return merged.where((a) => !existingById.containsKey(a.id)).length;
+  }
+
+  @override
+  Future<void> refreshFromDailyFeed() async {
+    try {
+      final fetched = await _feedService.fetchDailyFeed();
+      await upsertFetched(fetched);
+    } catch (_) {
+      // オフライン等で取得できない場合は既存の表示を維持する。
+    }
   }
 }

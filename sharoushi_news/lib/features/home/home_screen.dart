@@ -94,19 +94,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       : '該当するニュースがありません。';
                   return _EmptyState(message: message);
                 }
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final article = items[index];
-                    return NewsCard(
-                      article: article,
-                      onTap: () => _openDetail(context, article),
-                      onToggleFavorite: () =>
-                          widget.repository.toggleFavorite(article.id),
-                    );
-                  },
+                return RefreshIndicator(
+                  onRefresh: widget.repository.refreshFromDailyFeed,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final article = items[index];
+                      return NewsCard(
+                        article: article,
+                        onTap: () => _openDetail(context, article),
+                        onToggleFavorite: () =>
+                            widget.repository.toggleFavorite(article.id),
+                      );
+                    },
+                  ),
                 );
               },
             ),
