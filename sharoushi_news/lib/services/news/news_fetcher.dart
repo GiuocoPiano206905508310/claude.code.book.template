@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 import '../../core/network/news_fetch_exception.dart';
@@ -33,6 +35,11 @@ class NewsFetcher {
     if (response.statusCode != 200) {
       throw NewsFetchException('$url が HTTP ${response.statusCode} を返しました');
     }
-    return parser.parse(response.body, url);
+    // response.body は HTTP ヘッダーの charset が無いと Latin-1 にフォール
+    // バックしてしまい、ヘッダーで文字コードを明示しないサイト（HTMLの
+    // <meta charset> のみで宣言しているサイト）で文字化けする。取得元は
+    // いずれも実際にはUTF-8で配信されているため、常にUTF-8として明示的に
+    // デコードする。
+    return parser.parse(utf8.decode(response.bodyBytes), url);
   }
 }
