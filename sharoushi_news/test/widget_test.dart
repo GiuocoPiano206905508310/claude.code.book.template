@@ -9,7 +9,9 @@ import 'package:sharoushi_news/repositories/article_repository.dart';
 
 void main() {
   testWidgets('ホーム画面が起動し、タイトルと記事一覧が表示される', (WidgetTester tester) async {
-    await tester.pumpWidget(SharoushiNewsApp(repository: DummyArticleRepository()));
+    await tester.pumpWidget(
+      SharoushiNewsApp(repository: DummyArticleRepository()),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('社労士NEWS'), findsOneWidget);
@@ -20,9 +22,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('お気に入り'), findsWidgets);
 
-    // 設定タブへ切り替え、免責事項が表示されることを確認
+    // 設定タブへ切り替え、おすすめトピック・免責事項が表示されることを確認
     await tester.tap(find.byIcon(Icons.settings_rounded));
     await tester.pumpAndSettle();
+    expect(find.text('おすすめトピック'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('このアプリについて'), 300);
     expect(find.text('このアプリについて'), findsOneWidget);
   });
 }

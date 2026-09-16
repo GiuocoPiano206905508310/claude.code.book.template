@@ -2,7 +2,11 @@ import '../../models/article.dart';
 
 /// 取得元サイト1件分の設定（仕様: SourceConfig(id, name, baseUrl)）。
 class SourceConfig {
-  const SourceConfig({required this.id, required this.name, required this.baseUrl});
+  const SourceConfig({
+    required this.id,
+    required this.name,
+    required this.baseUrl,
+  });
 
   final String id;
   final String name;
@@ -13,7 +17,11 @@ class SourceConfig {
 /// URLごとに対応するカテゴリーを固定しておくことで、AI要約（Phase 9〜）が
 /// 実装されるまでの間も、ある程度意味のあるカテゴリー分類ができるようにする。
 class ListingTarget {
-  const ListingTarget({required this.source, required this.url, required this.defaultCategory});
+  const ListingTarget({
+    required this.source,
+    required this.url,
+    required this.defaultCategory,
+  });
 
   final SourceConfig source;
   final String url;

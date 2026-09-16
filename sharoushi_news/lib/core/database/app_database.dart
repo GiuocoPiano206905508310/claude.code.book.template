@@ -59,7 +59,9 @@ class AppDatabase {
   }
 
   Future<int> countArticles() async {
-    final result = await _db.rawQuery('SELECT COUNT(*) AS c FROM $_tableArticles');
+    final result = await _db.rawQuery(
+      'SELECT COUNT(*) AS c FROM $_tableArticles',
+    );
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
@@ -124,7 +126,9 @@ class AppDatabase {
       sourceName: row['sourceName'] as String,
       sourceUrl: row['sourceUrl'] as String,
       canonicalUrl: row['canonicalUrl'] as String,
-      publishedAt: DateTime.fromMillisecondsSinceEpoch(row['publishedAt'] as int),
+      publishedAt: DateTime.fromMillisecondsSinceEpoch(
+        row['publishedAt'] as int,
+      ),
       updatedAt: row['updatedAt'] == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(row['updatedAt'] as int),
@@ -132,7 +136,8 @@ class AppDatabase {
       category: NewsCategory.values.byName(row['category'] as String),
       summary: row['summary'] as String,
       practicalImpact: row['practicalImpact'] as String,
-      importantPoints: (jsonDecode(row['importantPoints'] as String) as List).cast<String>(),
+      importantPoints: (jsonDecode(row['importantPoints'] as String) as List)
+          .cast<String>(),
       deadline: row['deadline'] as String?,
       target: row['target'] as String,
       importance: row['importance'] as int,

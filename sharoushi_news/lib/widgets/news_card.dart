@@ -35,14 +35,21 @@ class NewsCard extends StatelessWidget {
                   if (!article.isRead) ...[
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primary,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: const Text(
                         'NEW',
-                        style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ],
@@ -50,8 +57,12 @@ class NewsCard extends StatelessWidget {
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     icon: Icon(
-                      article.isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
-                      color: article.isFavorite ? const Color(0xFFC79A2B) : theme.colorScheme.outline,
+                      article.isFavorite
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
+                      color: article.isFavorite
+                          ? const Color(0xFFC79A2B)
+                          : theme.colorScheme.outline,
                     ),
                     onPressed: onToggleFavorite,
                     tooltip: article.isFavorite ? 'お気に入り解除' : 'お気に入りに追加',
@@ -61,14 +72,20 @@ class NewsCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 article.title,
-                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, height: 1.4),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  height: 1.4,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 6),
               Text(
                 article.summary,
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.5),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.5,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -77,7 +94,9 @@ class NewsCard extends StatelessWidget {
                 children: [
                   Text(
                     formatArticleDate(article.publishedAt),
-                    style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text('・', style: TextStyle(color: theme.colorScheme.outline)),
@@ -85,15 +104,24 @@ class NewsCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       article.sourceName,
-                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Text(
                     '詳細を見る',
-                    style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  Icon(Icons.chevron_right_rounded, size: 16, color: theme.colorScheme.primary),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
                 ],
               ),
             ],

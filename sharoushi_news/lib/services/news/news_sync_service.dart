@@ -6,7 +6,11 @@ import '../parser/mhlw_parser.dart';
 import 'news_fetcher.dart';
 
 class NewsSyncResult {
-  const NewsSyncResult({required this.newCount, required this.fetchedCount, required this.errors});
+  const NewsSyncResult({
+    required this.newCount,
+    required this.fetchedCount,
+    required this.errors,
+  });
 
   final int newCount;
   final int fetchedCount;
@@ -48,7 +52,11 @@ class NewsSyncService {
     }
 
     final newCount = await repository.upsertFetched(allArticles);
-    return NewsSyncResult(newCount: newCount, fetchedCount: allArticles.length, errors: errors);
+    return NewsSyncResult(
+      newCount: newCount,
+      fetchedCount: allArticles.length,
+      errors: errors,
+    );
   }
 
   Article _toArticle(ArticleCandidate c, ListingTarget target) {

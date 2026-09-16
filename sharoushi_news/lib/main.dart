@@ -37,7 +37,11 @@ Future<ArticleRepository> _buildRepository() async {
 /// [newsSyncService] はローカルDBを使うプラットフォーム（非Web）でのみ渡され、
 /// 設定画面の手動データ取得ボタンから使われる（Phase 4、初版・要実機確認）。
 class SharoushiNewsApp extends StatefulWidget {
-  const SharoushiNewsApp({super.key, required this.repository, this.newsSyncService});
+  const SharoushiNewsApp({
+    super.key,
+    required this.repository,
+    this.newsSyncService,
+  });
 
   final ArticleRepository repository;
   final NewsSyncService? newsSyncService;
@@ -48,6 +52,7 @@ class SharoushiNewsApp extends StatefulWidget {
 
 class _SharoushiNewsAppState extends State<SharoushiNewsApp> {
   ThemeMode _themeMode = ThemeMode.system;
+  Set<String> _selectedTopicIds = {};
 
   @override
   void dispose() {
@@ -75,6 +80,9 @@ class _SharoushiNewsAppState extends State<SharoushiNewsApp> {
         newsSyncService: widget.newsSyncService,
         themeMode: _themeMode,
         onThemeModeChanged: (mode) => setState(() => _themeMode = mode),
+        selectedTopicIds: _selectedTopicIds,
+        onSelectedTopicIdsChanged: (ids) =>
+            setState(() => _selectedTopicIds = ids),
       ),
     );
   }
@@ -86,12 +94,16 @@ class _RootShell extends StatefulWidget {
     this.newsSyncService,
     required this.themeMode,
     required this.onThemeModeChanged,
+    required this.selectedTopicIds,
+    required this.onSelectedTopicIdsChanged,
   });
 
   final ArticleRepository repository;
   final NewsSyncService? newsSyncService;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final Set<String> selectedTopicIds;
+  final ValueChanged<Set<String>> onSelectedTopicIdsChanged;
 
   @override
   State<_RootShell> createState() => _RootShellState();
@@ -103,12 +115,17 @@ class _RootShellState extends State<_RootShell> {
   @override
   Widget build(BuildContext context) {
     final screens = [
-      HomeScreen(repository: widget.repository),
+      HomeScreen(
+        repository: widget.repository,
+        selectedTopicIds: widget.selectedTopicIds,
+      ),
       FavoriteScreen(repository: widget.repository),
       SettingsScreen(
         themeMode: widget.themeMode,
         onThemeModeChanged: widget.onThemeModeChanged,
         newsSyncService: widget.newsSyncService,
+        selectedTopicIds: widget.selectedTopicIds,
+        onSelectedTopicIdsChanged: widget.onSelectedTopicIdsChanged,
       ),
     ];
     return Scaffold(
@@ -117,9 +134,18 @@ class _RootShellState extends State<_RootShell> {
         currentIndex: _tabIndex,
         onTap: (i) => setState(() => _tabIndex = i),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.newspaper_rounded), label: 'ホーム'),
-          BottomNavigationBarItem(icon: Icon(Icons.star_rounded), label: 'お気に入り'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_rounded), label: '設定'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.newspaper_rounded),
+            label: 'ホーム',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.star_rounded),
+            label: 'お気に入り',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_rounded),
+            label: '設定',
+          ),
         ],
       ),
     );

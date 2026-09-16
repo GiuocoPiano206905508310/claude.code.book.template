@@ -37,12 +37,18 @@ const _sampleHtml = '''
 
 void main() {
   test('記事リンクを抽出し、絶対URLと日付を推定する', () {
-    final candidates = MhlwParser().parse(_sampleHtml, 'https://www.mhlw.go.jp/stf/new-info/');
+    final candidates = MhlwParser().parse(
+      _sampleHtml,
+      'https://www.mhlw.go.jp/stf/new-info/',
+    );
 
     expect(candidates, hasLength(3));
 
     expect(candidates[0].title, '令和８年９月１５日付大臣会見概要');
-    expect(candidates[0].url, 'https://www.mhlw.go.jp/stf/kaiken/daijin/0000194708_00968.html');
+    expect(
+      candidates[0].url,
+      'https://www.mhlw.go.jp/stf/kaiken/daijin/0000194708_00968.html',
+    );
 
     expect(candidates[1].url, 'https://www.mhlw.go.jp/stf/newpage_76212.html');
 
@@ -51,7 +57,10 @@ void main() {
   });
 
   test('見出しの日付を各記事に紐付ける', () {
-    final candidates = MhlwParser().parse(_sampleHtml, 'https://www.mhlw.go.jp/stf/new-info/');
+    final candidates = MhlwParser().parse(
+      _sampleHtml,
+      'https://www.mhlw.go.jp/stf/new-info/',
+    );
 
     expect(candidates[0].publishedAt, DateTime(2026, 9, 15));
     expect(candidates[1].publishedAt, DateTime(2026, 9, 15));

@@ -8,7 +8,11 @@ import '../../widgets/importance_badge.dart';
 
 /// ニュース詳細画面（仕様セクション11）。
 class ArticleDetailScreen extends StatelessWidget {
-  const ArticleDetailScreen({super.key, required this.repository, required this.articleId});
+  const ArticleDetailScreen({
+    super.key,
+    required this.repository,
+    required this.articleId,
+  });
 
   final ArticleRepository repository;
   final String articleId;
@@ -18,7 +22,9 @@ class ArticleDetailScreen extends StatelessWidget {
     return ListenableBuilder(
       listenable: repository,
       builder: (context, _) {
-        final article = repository.articles.where((a) => a.id == articleId).firstOrNull;
+        final article = repository.articles
+            .where((a) => a.id == articleId)
+            .firstOrNull;
         if (article == null) {
           return const Scaffold(body: Center(child: Text('この記事は見つかりませんでした。')));
         }
@@ -46,7 +52,9 @@ class _DetailBody extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(
-              article.isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
+              article.isFavorite
+                  ? Icons.star_rounded
+                  : Icons.star_border_rounded,
               color: article.isFavorite ? const Color(0xFFC79A2B) : null,
             ),
             onPressed: onToggleFavorite,
@@ -58,83 +66,122 @@ class _DetailBody extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         child: SelectionArea(
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              article.title,
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                ImportanceBadge(importance: article.importance),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '${article.sourceName} ・ ${formatYmd(article.publishedAt)}公表',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                article.title,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  ImportanceBadge(importance: article.importance),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '${article.sourceName} ・ ${formatYmd(article.publishedAt)}公表',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+              const _SectionLabel('概要'),
+              Text(
+                article.summary,
+                style: theme.textTheme.bodyMedium?.copyWith(height: 1.7),
+              ),
+              const SizedBox(height: 22),
+              const _SectionLabel('社労士実務への影響'),
+              Text(
+                article.practicalImpact,
+                style: theme.textTheme.bodyMedium?.copyWith(height: 1.7),
+              ),
+              const SizedBox(height: 22),
+              const _SectionLabel('重要ポイント'),
+              ...article.importantPoints.map(
+                (p) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 7),
+                        child: Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          p,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            height: 1.6,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ),
+              if (article.deadline != null) ...[
+                const SizedBox(height: 22),
+                const _SectionLabel('対応期限'),
+                Text(
+                  article.deadline!,
+                  style: theme.textTheme.bodyMedium?.copyWith(height: 1.7),
+                ),
               ],
-            ),
-            const Divider(height: 32),
-            const _SectionLabel('概要'),
-            Text(article.summary, style: theme.textTheme.bodyMedium?.copyWith(height: 1.7)),
-            const SizedBox(height: 22),
-            const _SectionLabel('社労士実務への影響'),
-            Text(article.practicalImpact, style: theme.textTheme.bodyMedium?.copyWith(height: 1.7)),
-            const SizedBox(height: 22),
-            const _SectionLabel('重要ポイント'),
-            ...article.importantPoints.map(
-              (p) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 7),
-                      child: Container(width: 5, height: 5, decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle)),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(p, style: theme.textTheme.bodyMedium?.copyWith(height: 1.6))),
-                  ],
-                ),
-              ),
-            ),
-            if (article.deadline != null) ...[
               const SizedBox(height: 22),
-              const _SectionLabel('対応期限'),
-              Text(article.deadline!, style: theme.textTheme.bodyMedium?.copyWith(height: 1.7)),
+              const _SectionLabel('対象'),
+              Text(
+                article.target,
+                style: theme.textTheme.bodyMedium?.copyWith(height: 1.7),
+              ),
+              const SizedBox(height: 22),
+              const _SectionLabel('出典'),
+              Text(
+                article.sourceName,
+                style: theme.textTheme.bodyMedium?.copyWith(height: 1.7),
+              ),
+              const SizedBox(height: 28),
+              if (article.isAiGenerated)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'この内容は公式情報をもとにAIで要約・整理したものです。正確な内容については必ず公式サイトの原文をご確認ください。',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => _openSource(context),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                  label: const Text('公式サイトで原文を見る'),
+                ),
+              ),
             ],
-            const SizedBox(height: 22),
-            const _SectionLabel('対象'),
-            Text(article.target, style: theme.textTheme.bodyMedium?.copyWith(height: 1.7)),
-            const SizedBox(height: 22),
-            const _SectionLabel('出典'),
-            Text(article.sourceName, style: theme.textTheme.bodyMedium?.copyWith(height: 1.7)),
-            const SizedBox(height: 28),
-            if (article.isAiGenerated)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'この内容は公式情報をもとにAIで要約・整理したものです。正確な内容については必ず公式サイトの原文をご確認ください。',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.6),
-                ),
-              ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => _openSource(context),
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: const Text('公式サイトで原文を見る'),
-              ),
-            ),
-          ],
           ),
         ),
       ),
@@ -146,9 +193,8 @@ class _DetailBody extends StatelessWidget {
     if (uri == null) return;
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('リンクを開けませんでした。')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('リンクを開けませんでした。')));
     }
   }
 }
@@ -165,10 +211,10 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: Theme.of(context).colorScheme.primary,
-              letterSpacing: 0.3,
-            ),
+          fontWeight: FontWeight.w800,
+          color: Theme.of(context).colorScheme.primary,
+          letterSpacing: 0.3,
+        ),
       ),
     );
   }
