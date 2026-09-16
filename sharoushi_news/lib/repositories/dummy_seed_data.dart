@@ -4,13 +4,16 @@ import '../models/article.dart';
 /// [DummyArticleRepository]（Web向けフォールバック）と
 /// [LocalArticleRepository] の初回シードの両方から利用される。
 ///
-/// 厚生労働省ソースの記事（a1〜a3, a7, a8, a11〜a15）は、GitHub Actions上で
-/// MhlwParser（RSS不使用・通常のHTTP GET+HTMLパース）を実際のサイトに対して
-/// 動かして取得した実在のタイトル・URLをそのまま使用している。概要・実務影響
-/// 等はAI要約（Phase 9）が未実装のため、タイトルと一般的な制度知識をもとに
-/// 執筆したもの（本文全文の取得は行っていない）。
-/// 日本年金機構・全国健康保険協会の記事（a4〜a6, a9, a10）は、ユーザーから
-/// 共有された実URLが1件のみのため、暫定的に同じURLを共有している。
+/// 厚生労働省ソースの記事（a1〜a3, a7, a8, a11〜a15）・日本年金機構ソースの
+/// 記事（a4〜a6, a9, a10）は、いずれもGitHub Actions上でMhlwParser／
+/// NenkinParser（RSS不使用・通常のHTTP GET+HTMLパース）を実際のサイトに
+/// 対して動かして取得した実在のタイトル・URLをそのまま使用している。概要・
+/// 実務影響等はAI要約（Phase 9）が未実装のため、タイトルと一般的な制度知識
+/// をもとに執筆したもの（本文全文の取得は行っていない）。
+/// なお、月額変更届・賞与支払届そのものをテーマとする記事は、現時点で
+/// 日本年金機構サイトの一覧ページ（直近分）には見つからなかったため、
+/// a5・a6は関連する実在の別記事（現物給与価額の改正、被扶養者認定の取り扱い）
+/// に置き換えている。
 List<Article> buildSeedArticles() {
   DateTime d(int day) => DateTime(2026, 9, day);
 
@@ -81,15 +84,14 @@ List<Article> buildSeedArticles() {
     ),
     Article(
       id: 'a4',
-      title: '算定基礎届の提出時期と留意点について',
+      title: '令和8年度の算定基礎届のご提出について',
       sourceName: '日本年金機構',
       sourceUrl: 'https://www.nenkin.go.jp/',
-      canonicalUrl:
-          'https://www.nenkin.go.jp/service/kounen/info/oshirase/20140627.html',
-      publishedAt: d(13),
+      canonicalUrl: 'https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202605/0521.html',
+      publishedAt: DateTime(2026, 5, 21),
       fetchedAt: d(15),
       category: NewsCategory.socialInsurance,
-      summary: '毎年7月に行う定時決定（算定基礎届）について、提出期間（例年7月1日〜10日）と、4〜6月に支払った報酬の集計方法、支払基礎日数が17日未満の月の取り扱いなど記載上の留意点がまとめて案内されています。あわせて、e-Govを利用した電子申請での提出手順も紹介されています。',
+      summary: '毎年7月に行う定時決定（算定基礎届）について、令和8年度分の提出案内が公表されています。提出期間（例年7月1日〜10日）、4〜6月に支払った報酬の集計方法、支払基礎日数が17日未満の月の取り扱いなど記載上の留意点がまとめられているほか、e-Govを利用した電子申請での提出手順も紹介されています。',
       practicalImpact: '4〜6月の報酬額の集計、支払基礎日数の確認、対象外となる従業員の整理を行った上で届出を準備してください。',
       importantPoints: const [
         '提出期間は例年7月1日〜10日',
@@ -103,23 +105,21 @@ List<Article> buildSeedArticles() {
     ),
     Article(
       id: 'a5',
-      title: '月額変更届（随時改定）の要件と実務上の注意点',
+      title: '令和8年4月1日から現物給与価額が改正されます',
       sourceName: '日本年金機構',
       sourceUrl: 'https://www.nenkin.go.jp/',
-      canonicalUrl:
-          'https://www.nenkin.go.jp/service/kounen/info/oshirase/20140627.html',
-      publishedAt: d(11),
+      canonicalUrl: 'https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202603/0319.html',
+      publishedAt: DateTime(2026, 3, 19),
       fetchedAt: d(15),
       category: NewsCategory.socialInsurance,
-      summary: '昇給・降給などで固定的賃金に変動があった場合の随時改定（月額変更届）について、変動月から3か月間の平均報酬額と現在の標準報酬月額との間に2等級以上の差が生じることなど、届出が必要となる具体的な要件と、提出時に誤りやすいポイントがまとめられています。',
-      practicalImpact:
-          '固定的賃金の変動があった従業員について、3か月平均額と現在の標準報酬月額との差を確認し、2等級以上の差がある場合は届出が必要です。',
+      summary: '食事や住宅など、給与の一部を現物で支給している場合に標準報酬月額の算定に用いる現物給与価額（都道府県ごとの単価）が、令和8年4月1日から改正されます。現物支給を行っている事業所は、随時改定（月額変更届）や定時決定（算定基礎届）の対象判定に影響する可能性があるため、新単価での再計算が必要です。',
+      practicalImpact: '食事・住宅等の現物給与がある従業員について、新単価での標準報酬月額を再確認し、2等級以上の差が生じる場合は月額変更届の対象とならないか確認してください。',
       importantPoints: const [
-        '固定的賃金の変動月から3か月間の平均で判定',
-        '2等級以上の差があることが要件の一つ',
-        '支払基礎日数が17日未満の月は算定対象外',
+        '現物給与価額は都道府県ごとに毎年見直される',
+        '令和8年4月1日以降の報酬から新単価を適用',
+        '現物給与の変動により随時改定の対象となる場合がある',
       ],
-      deadline: null,
+      deadline: '令和8年4月1日から適用',
       target: '厚生年金保険の適用事業所',
       importance: 1,
       contentHash: 'hash-a5',
@@ -127,23 +127,21 @@ List<Article> buildSeedArticles() {
     ),
     Article(
       id: 'a6',
-      title: '賞与支払届の提出方法と記載上の注意',
+      title: '労働契約内容による年間収入での被扶養者の認定の取り扱いについて',
       sourceName: '日本年金機構',
       sourceUrl: 'https://www.nenkin.go.jp/',
-      canonicalUrl:
-          'https://www.nenkin.go.jp/service/kounen/info/oshirase/20140627.html',
-      publishedAt: d(9),
+      canonicalUrl: 'https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202605/0501.html',
+      publishedAt: DateTime(2026, 5, 1),
       fetchedAt: d(15),
       category: NewsCategory.socialInsurance,
-      summary: '賞与を支給した際に提出する賞与支払届について、支給日から5日以内という提出期限や、健康保険（年度累計573万円）・厚生年金保険（1回の支給につき150万円）それぞれの標準賞与額の上限の考え方が、具体例を交えて案内されています。',
-      practicalImpact:
-          '賞与支給日から5日以内の届出が必要です。標準賞与額には年度累計の上限があるため、複数回賞与を支給する場合は累計額の管理が必要です。',
+      summary: '健康保険の被扶養者認定における「年間収入130万円未満」の判定について、雇用契約書等に定められた契約内容から今後1年間の見込み収入を算出して判定する取り扱いが案内されています。実際の支払額だけでなく、契約更新や労働条件変更のタイミングでの再判定の考え方が示されています。',
+      practicalImpact: '従業員の配偶者等を被扶養者として認定する際は、直近の支払実績だけでなく雇用契約の内容（所定労働時間・時給等）から見込み年収を算出し、130万円未満かどうかを確認してください。',
       importantPoints: const [
-        '支給日から5日以内に提出',
-        '健康保険の標準賞与額は年度累計573万円が上限',
-        '厚生年金保険の標準賞与額は1回の支給で150万円が上限',
+        '年間収入は雇用契約の内容から将来分を見込んで算出',
+        '契約更新・労働条件変更時は見込み収入の再判定が必要',
+        '実際の支払額との乖離が大きい場合は追加確認を求められることがある',
       ],
-      deadline: '支給日から5日以内',
+      deadline: null,
       target: '厚生年金保険の適用事業所',
       importance: 1,
       contentHash: 'hash-a6',
@@ -195,9 +193,8 @@ List<Article> buildSeedArticles() {
       title: '令和8年度の年金額改定について',
       sourceName: '日本年金機構',
       sourceUrl: 'https://www.nenkin.go.jp/',
-      canonicalUrl:
-          'https://www.nenkin.go.jp/service/kounen/info/oshirase/20140627.html',
-      publishedAt: d(7),
+      canonicalUrl: 'https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202604/0401.html',
+      publishedAt: DateTime(2026, 4, 1),
       fetchedAt: d(15),
       category: NewsCategory.pension,
       summary: '物価変動率・賃金変動率等を踏まえた次年度の年金額改定内容が公表されました。新規裁定者と既裁定者とで改定率の考え方が異なるほか、在職老齢年金の支給停止調整額も見直される予定で、老齢基礎年金・老齢厚生年金の受給（見込）額に影響します。',
@@ -214,19 +211,20 @@ List<Article> buildSeedArticles() {
     ),
     Article(
       id: 'a10',
-      title: 'ねんきん定期便の電子化（ねんきんネット連携）が進行',
+      title: '「ねんきんネット」によるオンライン文書相談の対象者を拡大しました',
       sourceName: '日本年金機構',
       sourceUrl: 'https://www.nenkin.go.jp/',
-      canonicalUrl:
-          'https://www.nenkin.go.jp/service/kounen/info/oshirase/20140627.html',
-      publishedAt: d(5),
+      canonicalUrl: 'https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202607/0727.html',
+      publishedAt: DateTime(2026, 7, 27),
       fetchedAt: d(15),
       category: NewsCategory.pension,
-      summary: 'ねんきん定期便について、紙での送付からねんきんネットでの電子閲覧への切り替えを促す取り組みが進められています。マイナンバーカードとの連携によりねんきんネットの利用登録が簡便になる一方、紙の定期便は35歳・45歳・59歳の節目年齢では引き続き送付される予定です。',
-      practicalImpact: '従業員からねんきんネットの登録方法について質問を受けるケースが増えることが見込まれます。',
+      summary: 'ねんきんネット上で、年金相談窓口に出向かなくても文書でのやり取りにより年金相談を受けられる「オンライン文書相談」の対象者が拡大されました。従来は対象が限られていましたが、より多くの利用者がねんきんネットの利用登録のみでオンライン相談を利用できるようになります。',
+      practicalImpact:
+          '従業員から年金相談の方法について質問を受けた際、来所不要のオンライン文書相談を案内できる場面が増えることが見込まれます。',
       importantPoints: const [
-        'ねんきんネットの利用登録にはマイナンバーカード連携が便利',
-        '紙の定期便は引き続き節目年齢で送付',
+        'ねんきんネットの利用登録があればオンライン文書相談が可能',
+        '対象者の範囲が従来より拡大',
+        '来所せずに文書でのやり取りで相談できる',
       ],
       deadline: null,
       target: '全被保険者',
