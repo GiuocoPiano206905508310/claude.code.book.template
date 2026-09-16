@@ -6,11 +6,14 @@ import 'news_source_parser.dart';
 
 /// 厚生労働省サイト向けのパーサー。
 ///
-/// 注意: このパーサーは実際のページHTMLを直接確認できない環境で書かれた
-/// 初版であり、ユーザーから共有されたスクリーンショット・実在の記事リンク
-/// 3件（/stf/newpage_NNNNN.html, /stf/kaiken/daijin/xxxxxxxx_xx.html）から
-/// 推測したURLパターン・ページ構造に基づいている。実機での動作確認後、
-/// 必要に応じてパターンや日付抽出のロジックを調整すること。
+/// GitHub Actions経由で実際のサイトに対して検証した結果、ページの種類ごとに
+/// 日付の出し方が異なることが分かっている:
+/// - 新着情報ページ（/stf/new-info/）: 日付は見出し（例:「2026年9月15日（火）掲載」）
+///   としてリンクの外側にあり、複数のリンクをまとめる。
+/// - 分野別トピックス一覧ページ（/stf/seisakunitsuite/bunya/topics_*.html）:
+///   日付はリンクの文字列自体の先頭に「YYYY年M月D日掲載」の形で埋め込まれている。
+///   また、同じページには日付を持たない一般的な案内リンク（サイドバー等）も
+///   混在しているため、日付を検出できなかった候補は誤検出として除外する。
 class MhlwParser implements NewsSourceParser {
   static final _articleHrefPattern = RegExp(
     r'/stf/(newpage_\d+\.html'
@@ -23,6 +26,12 @@ class MhlwParser implements NewsSourceParser {
   // 「令和8年9月15日」「2026年9月15日」のような和暦・西暦どちらの表記も拾う。
   static final _datePattern = RegExp(r'(令和(\d+)年|(\d{4})年)(\d{1,2})月(\d{1,2})日');
 
+  // リンク文字列の先頭に埋め込まれた「YYYY年M月D日掲載」「YYYY年M月D日更新」を
+  // 日付部分とタイトル部分に分離するためのパターン。
+  static final _leadingDatePrefix = RegExp(
+    r'^((?:令和\d+年|\d{4}年)\d{1,2}月\d{1,2}日)(?:更新|掲載)?\s*',
+  );
+
   static const _ignoreTitles = {'NEW', '新着', 'もっと見る', '一覧'};
 
   @override
@@ -31,7 +40,7 @@ class MhlwParser implements NewsSourceParser {
     final base = Uri.parse(pageUrl);
     final seenUrls = <String>{};
     final candidates = <ArticleCandidate>[];
-    DateTime? currentDate;
+    DateTime? headingDate;
 
     // ドキュメント順（見出し→その配下の記事、という順）に走査し、
     // 直近に見た日付見出しを以降の記事に紐付けていく。
@@ -39,14 +48,14 @@ class MhlwParser implements NewsSourceParser {
       if (node is! Element) return;
 
       if (node.localName == 'a') {
-        _tryAddCandidate(node, base, seenUrls, candidates, currentDate);
+        _tryAddCandidate(node, base, seenUrls, candidates, headingDate);
         return;
       }
 
       final ownText = node.nodes.whereType<Text>().map((t) => t.text).join().trim();
       final match = _datePattern.firstMatch(ownText);
       if (match != null) {
-        currentDate = _parseDate(match) ?? currentDate;
+        headingDate = _parseDate(match) ?? headingDate;
       }
 
       for (final child in node.nodes) {
@@ -63,19 +72,32 @@ class MhlwParser implements NewsSourceParser {
     Uri base,
     Set<String> seenUrls,
     List<ArticleCandidate> candidates,
-    DateTime? currentDate,
+    DateTime? headingDate,
   ) {
     final href = anchor.attributes['href']?.trim();
     if (href == null || href.isEmpty) return;
     if (!_articleHrefPattern.hasMatch(Uri.parse(href).path)) return;
 
-    final title = anchor.text.trim();
+    final rawText = anchor.text.trim();
+    if (rawText.isEmpty) return;
+
+    DateTime? publishedAt = headingDate;
+    var title = rawText;
+    final prefixMatch = _leadingDatePrefix.matchAsPrefix(rawText);
+    if (prefixMatch != null) {
+      final dateMatch = _datePattern.firstMatch(prefixMatch.group(1)!);
+      if (dateMatch != null) publishedAt = _parseDate(dateMatch) ?? publishedAt;
+      title = rawText.substring(prefixMatch.end).trim();
+    }
+
     if (title.isEmpty || _ignoreTitles.contains(title)) return;
+    // 日付を特定できないリンクは、サイドバーの案内リンク等である可能性が高いため除外する。
+    if (publishedAt == null) return;
 
     final absoluteUrl = base.resolveUri(Uri.parse(href)).toString();
     if (!seenUrls.add(absoluteUrl)) return;
 
-    candidates.add(ArticleCandidate(title: title, url: absoluteUrl, publishedAt: currentDate));
+    candidates.add(ArticleCandidate(title: title, url: absoluteUrl, publishedAt: publishedAt));
   }
 
   DateTime? _parseDate(RegExpMatch match) {
