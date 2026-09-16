@@ -1,0 +1,31 @@
+name: MHLW fetch preview (manual, diagnostic only)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        working-directory: sharoushi_news
+        run: flutter pub get
+
+      - name: Run MHLW fetch/parse preview
+        working-directory: sharoushi_news
+        run: dart run tool/fetch_mhlw_preview.dart | tee fetch-preview-result.json
+
+      - name: Upload result as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mhlw-fetch-preview-result
+          path: sharoushi_news/fetch-preview-result.json
