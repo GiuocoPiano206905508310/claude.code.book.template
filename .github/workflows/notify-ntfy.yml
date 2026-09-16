@@ -1,0 +1,30 @@
+name: Notify ntfy (task completion)
+
+# Claude Code → GitHub Actions → ntfy.sh → iPhone
+# このサンドボックス環境からntfy.shへ直接アクセスすると403になるため、
+# GitHub Actions経由で通知を送るための専用workflow。手動実行のみ。
+# 他のworkflow・アプリのコードには一切影響しない、独立したworkflow。
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send ntfy notification
+        env:
+          NTFY_TOPIC_URL: ${{ secrets.NTFY_TOPIC_URL }}
+        run: |
+          if [ -z "$NTFY_TOPIC_URL" ]; then
+            echo "::error::NTFY_TOPIC_URL secret is not set. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          curl -sS \
+            -H "Title: Claude Code" \
+            -H "Tags: white_check_mark" \
+            -d "Claude Codeのタスクが完了しました" \
+            "$NTFY_TOPIC_URL"
