@@ -8,6 +8,10 @@ name: Sharoushi News daily feed
 # 他のworkflowのpushトリガーを起動しない仕様になっている。そのため、
 # deploy-sharoushi-news-pages.yml（GitHub Pagesへの公開）は自動連鎖せず、
 # 最後のステップで明示的にworkflow_dispatchとして呼び出している。
+#
+# ANTHROPIC_API_KEY（Settings > Secrets and variables > Actions）が設定
+# されていれば、新規記事のみClaude Haiku 4.5で概要・実務影響・重要ポイント
+# を生成する。未設定でもジョブは失敗せず、汎用の案内文にフォールバックする。
 
 on:
   schedule:
@@ -39,6 +43,8 @@ jobs:
 
       - name: Fetch daily feed
         working-directory: sharoushi_news
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: dart run tool/fetch_daily_feed.dart
 
       - name: Commit and push if changed
