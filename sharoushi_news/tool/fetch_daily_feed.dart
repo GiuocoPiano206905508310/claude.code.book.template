@@ -23,6 +23,7 @@ import 'dart:io';
 
 import 'package:sharoushi_news/core/constants/source_config.dart';
 import 'package:sharoushi_news/models/article_candidate.dart';
+import 'package:sharoushi_news/models/article.dart';
 import 'package:sharoushi_news/services/ai/ai_summary_service.dart';
 import 'package:sharoushi_news/services/feed/article_excerpt_service.dart';
 import 'package:sharoushi_news/services/news/news_fetcher.dart';
@@ -68,7 +69,20 @@ Future<void> main(List<String> args) async {
       a.candidate.publishedAt ?? DateTime(0),
     ),
   );
-  final trimmed = candidates.take(_maxTotalArticles).toList();
+
+  // pinnedArticles（実務上重要な固定ページ）は日付が無い、または一覧の
+  // 新着順から外れがちなため、直近40件の足切りとは無関係に必ず含める。
+  // 同一URLが通常の巡回でも見つかった場合はpinned側の情報を優先する。
+  final byUrl = <String, _Candidate>{
+    for (final c in candidates.take(_maxTotalArticles)) c.candidate.url: c,
+  };
+  for (final p in pinnedArticles) {
+    byUrl[p.url] = _Candidate(
+      ArticleCandidate(title: p.title, url: p.url, publishedAt: DateTime.now()),
+      ListingTarget(source: p.source, url: p.url, defaultCategory: p.category),
+    );
+  }
+  final trimmed = byUrl.values.toList();
 
   final apiKey = Platform.environment['ANTHROPIC_API_KEY'];
   final aiService = (apiKey == null || apiKey.isEmpty)
@@ -133,6 +147,18 @@ Map<String, Map<String, Object?>> _readPreviousEntries(String path) {
   }
 }
 
+// 実データ確認の結果、新着一覧の大半が審議会・記者会見等の開催案内で
+// 占められており、社労士実務に直結しない「参考程度」の記事ばかりに
+// なっていた。これらは会議の存在を知らせるだけで内容の実質を伴わない
+// ため、フィードから除外し、実務に関わる記事の割合を上げる。
+final _lowValueTitlePattern = RegExp(
+  r'審議会|分科会|部会|専門委員会|検討会|ワーキング・グループ|連絡協議会|作業班'
+  r'|記者会見|大臣会見|議事録|議事要旨|傍聴'
+  r'|開催(案内|について|します)$',
+);
+
+bool _isLowValueTitle(String title) => _lowValueTitlePattern.hasMatch(title);
+
 Future<void> _fetchAll({
   required NewsFetcher fetcher,
   required List<ListingTarget> targets,
@@ -144,11 +170,14 @@ Future<void> _fetchAll({
     stderr.writeln('Fetching ${target.url} ...');
     try {
       final candidates = await fetcher.fetchListing(target.url);
+      var kept = 0;
       for (final c in candidates) {
         if (!seenUrls.add(c.url)) continue;
+        if (_isLowValueTitle(c.title)) continue;
         out.add(_Candidate(c, target));
+        kept++;
       }
-      stderr.writeln('  -> ${candidates.length} candidates');
+      stderr.writeln('  -> ${candidates.length} candidates ($kept kept)');
     } catch (e) {
       stderr.writeln('  -> ERROR: $e');
     }
@@ -178,6 +207,11 @@ Future<_BuildResult> _buildEntry(
   final target = item.target;
   final now = DateTime.now();
   final publishedAt = c.publishedAt ?? now;
+  // PDFはパンフレット・報告書等であることが多いため、一覧ページ側の
+  // defaultCategoryに関わらずパンフレットに分類する。
+  final category = c.url.toLowerCase().endsWith('.pdf')
+      ? NewsCategory.pamphlet
+      : target.defaultCategory;
 
   var summary = _genericSummary;
   var practicalImpact = _genericPracticalImpact;
@@ -193,7 +227,7 @@ Future<_BuildResult> _buildEntry(
       final ai = await aiService.summarize(
         title: c.title,
         sourceName: target.source.name,
-        categoryLabel: target.defaultCategory.label,
+        categoryLabel: category.label,
       );
       summary = ai.summary;
       practicalImpact = ai.practicalImpact;
@@ -225,7 +259,7 @@ Future<_BuildResult> _buildEntry(
     'canonicalUrl': c.url,
     'publishedAt': publishedAt.toIso8601String(),
     'fetchedAt': now.toIso8601String(),
-    'category': target.defaultCategory.name,
+    'category': category.name,
     'summary': summary,
     'practicalImpact': practicalImpact,
     'importantPoints': importantPoints,

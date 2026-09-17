@@ -104,3 +104,36 @@ final List<ListingTarget> nenkinListingTargets = [
     defaultCategory: NewsCategory.pension,
   ),
 ];
+
+/// 一覧ページの巡回だけでは拾えない、実務上重要な個別ページ・PDFを
+/// 常に取得対象に含めるための固定リスト（ユーザー指定）。新着一覧に
+/// 載らない制度解説ページや調査報告書など、実務に直結する内容を
+/// 「参考程度」の会議開催案内等に埋もれさせないために用いる。
+class PinnedArticle {
+  const PinnedArticle({
+    required this.title,
+    required this.url,
+    required this.source,
+    required this.category,
+  });
+
+  final String title;
+  final String url;
+  final SourceConfig source;
+  final NewsCategory category;
+}
+
+const pinnedArticles = [
+  PinnedArticle(
+    title: '保険料調整制度（随時改定の特例）について',
+    url: 'https://www.nenkin.go.jp/tokusetsu/hokenryochosei.html',
+    source: nenkinSource,
+    category: NewsCategory.socialInsurance,
+  ),
+  PinnedArticle(
+    title: 'いわゆる社会保険料削減ビジネスを行っていると疑われる事業所に対する事業所調査の状況について（報告）',
+    url: 'https://www.mhlw.go.jp/content/12508000/001749239.pdf',
+    source: mhlwSource,
+    category: NewsCategory.pamphlet,
+  ),
+];

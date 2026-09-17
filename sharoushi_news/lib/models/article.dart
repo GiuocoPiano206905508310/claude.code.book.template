@@ -94,6 +94,7 @@ class Article {
 /// ホーム画面のカテゴリー横スクロールに対応する分類。
 enum NewsCategory {
   lawChange('法改正'),
+  pamphlet('パンフレット'),
   labor('労働'),
   socialInsurance('社会保険'),
   employmentInsurance('雇用保険'),
