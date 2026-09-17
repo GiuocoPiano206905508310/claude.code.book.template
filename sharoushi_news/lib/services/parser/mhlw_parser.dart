@@ -1,6 +1,7 @@
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html_parser;
 
+import '../../core/utils/text_sanitizer.dart';
 import '../../models/article_candidate.dart';
 import 'news_source_parser.dart';
 
@@ -105,7 +106,7 @@ class MhlwParser implements NewsSourceParser {
       if (dateMatch != null) publishedAt = _parseDate(dateMatch) ?? publishedAt;
       title = rawText.substring(prefixMatch.end).trim();
     }
-    title = _cleanTitle(title);
+    title = sanitizeScrapedText(_cleanTitle(title));
 
     if (title.isEmpty || _ignoreTitles.contains(title)) return;
     // 日付を特定できないリンクは、サイドバーの案内リンク等である可能性が高いため除外する。

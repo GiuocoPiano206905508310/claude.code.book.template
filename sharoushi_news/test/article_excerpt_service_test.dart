@@ -132,6 +132,59 @@ void main() {
     expect(excerpt, isNull);
   });
 
+  test('fetchBodyTextは複数の段落を改行区切りでまとめて返す', () async {
+    const html = '''
+<html><body>
+<p>1つ目の段落です。テスト用のダミーテキストになります。</p>
+<p>2つ目の段落です。テスト用のダミーテキストになります。</p>
+<p>短い</p>
+<li>リスト項目もある程度の長さがあれば含める対象です。</li>
+</body></html>
+''';
+    final client = MockClient(
+      (request) async => http.Response.bytes(utf8.encode(html), 200),
+    );
+
+    final body = await ArticleExcerptService(
+      client: client,
+    ).fetchBodyText('https://example.com/a.html');
+
+    expect(body, isNotNull);
+    expect(body, contains('1つ目の段落です'));
+    expect(body, contains('2つ目の段落です'));
+    expect(body, contains('リスト項目もある程度の長さがあれば含める対象です'));
+    expect(body, isNot(contains('短い')));
+  });
+
+  test('fetchBodyTextは定型文・お問い合わせ先ブロックを除外する', () async {
+    const html = '''
+<html><body>
+<p>本文の段落です。テスト用のダミーテキストになります。</p>
+<p>健康・生活衛生局難病対策課 (代表電話) 03(5253)1111 (直通電話) 03(3595)2251</p>
+</body></html>
+''';
+    final client = MockClient(
+      (request) async => http.Response.bytes(utf8.encode(html), 200),
+    );
+
+    final body = await ArticleExcerptService(
+      client: client,
+    ).fetchBodyText('https://example.com/a.html');
+
+    expect(body, isNotNull);
+    expect(body, isNot(contains('代表電話')));
+  });
+
+  test('fetchBodyTextはHTTPエラー時にnullを返す', () async {
+    final client = MockClient((request) async => http.Response('', 500));
+
+    final body = await ArticleExcerptService(
+      client: client,
+    ).fetchBodyText('https://example.com/a.html');
+
+    expect(body, isNull);
+  });
+
   test('長い抜粋は200文字で切り詰める', () async {
     final longText = 'あ' * 300;
     final html = '<html><body><p>$longText</p></body></html>';

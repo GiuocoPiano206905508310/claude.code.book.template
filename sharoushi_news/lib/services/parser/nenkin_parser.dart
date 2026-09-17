@@ -1,5 +1,6 @@
 import 'package:html/parser.dart' as html_parser;
 
+import '../../core/utils/text_sanitizer.dart';
 import '../../models/article_candidate.dart';
 import 'news_source_parser.dart';
 
@@ -28,7 +29,7 @@ class NenkinParser implements NewsSourceParser {
       final match = _articleHrefPattern.firstMatch(Uri.parse(href).path);
       if (match == null) continue;
 
-      final title = anchor.text.trim();
+      final title = sanitizeScrapedText(anchor.text.trim());
       if (title.isEmpty) continue;
 
       final absoluteUrl = base.resolveUri(Uri.parse(href)).toString();
