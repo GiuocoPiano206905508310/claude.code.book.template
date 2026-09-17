@@ -59,6 +59,7 @@ const List<HomeFilterOption> homeFilterOptions = [
   HomeFilterOption.important(),
   HomeFilterOption.recommended(),
   HomeFilterOption.category(NewsCategory.lawChange),
+  HomeFilterOption.category(NewsCategory.pamphlet),
   HomeFilterOption.category(NewsCategory.labor),
   HomeFilterOption.category(NewsCategory.socialInsurance),
   HomeFilterOption.category(NewsCategory.employmentInsurance),
