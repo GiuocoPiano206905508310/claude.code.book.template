@@ -23,8 +23,26 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+enum _SortOrder { newest, oldest, importance }
+
+extension on _SortOrder {
+  String get label {
+    switch (this) {
+      case _SortOrder.newest:
+        return '新しい順';
+      case _SortOrder.oldest:
+        return '古い順';
+      case _SortOrder.importance:
+        return '重要度順';
+    }
+  }
+}
+
 class _HomeScreenState extends State<HomeScreen> {
   HomeFilterOption _filter = const HomeFilterOption.all();
+  _SortOrder _sortOrder = _SortOrder.newest;
+  bool _unreadOnly = false;
+  bool _favoritesOnly = false;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +86,55 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Row(
+              children: [
+                CategoryChip(
+                  label: '未読のみ',
+                  selected: _unreadOnly,
+                  onTap: () => setState(() => _unreadOnly = !_unreadOnly),
+                ),
+                CategoryChip(
+                  label: 'お気に入りのみ',
+                  selected: _favoritesOnly,
+                  onTap: () =>
+                      setState(() => _favoritesOnly = !_favoritesOnly),
+                ),
+                const Spacer(),
+                PopupMenuButton<_SortOrder>(
+                  initialValue: _sortOrder,
+                  onSelected: (order) => setState(() => _sortOrder = order),
+                  itemBuilder: (context) => _SortOrder.values
+                      .map(
+                        (order) => PopupMenuItem(
+                          value: order,
+                          child: Text(order.label),
+                        ),
+                      )
+                      .toList(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.sort_rounded,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _sortOrder.label,
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 4),
           Expanded(
             child: ListenableBuilder(
@@ -85,8 +152,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 )
                               : _filter.matches,
                         )
+                        .where((a) => !_unreadOnly || !a.isRead)
+                        .where((a) => !_favoritesOnly || a.isFavorite)
                         .toList()
-                      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+                      ..sort(_sortComparator);
                 if (items.isEmpty) {
                   final message =
                       isRecommended && widget.selectedTopicIds.isEmpty
@@ -117,6 +186,20 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  int _sortComparator(Article a, Article b) {
+    switch (_sortOrder) {
+      case _SortOrder.newest:
+        return b.publishedAt.compareTo(a.publishedAt);
+      case _SortOrder.oldest:
+        return a.publishedAt.compareTo(b.publishedAt);
+      case _SortOrder.importance:
+        final byImportance = b.importance.compareTo(a.importance);
+        return byImportance != 0
+            ? byImportance
+            : b.publishedAt.compareTo(a.publishedAt);
+    }
   }
 
   void _openDetail(BuildContext context, Article article) {

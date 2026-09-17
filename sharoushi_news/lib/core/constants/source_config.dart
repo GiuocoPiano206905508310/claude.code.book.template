@@ -86,6 +86,18 @@ const nenkinSource = SourceConfig(
   baseUrl: 'https://www.nenkin.go.jp',
 );
 
+const govOnlineSource = SourceConfig(
+  id: 'gov-online',
+  name: '政府広報オンライン',
+  baseUrl: 'https://www.gov-online.go.jp',
+);
+
+const cfaSource = SourceConfig(
+  id: 'cfa',
+  name: 'こども家庭庁',
+  baseUrl: 'https://www.cfa.go.jp',
+);
+
 /// ユーザーから提供された実在URL（https://www.nenkin.go.jp/oshirase/taisetu/
 /// kojin/2026/202604/0401.html）から、個人向け（kojin）・事業所向け
 /// （jigyosho）それぞれの年別インデックスページという構造を推測している。
@@ -109,18 +121,34 @@ final List<ListingTarget> nenkinListingTargets = [
 /// 常に取得対象に含めるための固定リスト（ユーザー指定）。新着一覧に
 /// 載らない制度解説ページや調査報告書など、実務に直結する内容を
 /// 「参考程度」の会議開催案内等に埋もれさせないために用いる。
+///
+/// [summary]以下を指定した場合、その内容は人手で確認済みの正確な情報
+/// として扱われ、AI要約・本文抜粋は行わずそのまま採用する
+/// （[category]も一覧ページ側の推定やAIによる自動分類の対象にせず、
+/// ここで指定した値をそのまま使う）。省略した場合は他の取得記事と
+/// 同様にAI要約→本文抜粋の順にフォールバックする。
 class PinnedArticle {
   const PinnedArticle({
     required this.title,
     required this.url,
     required this.source,
     required this.category,
+    this.summary,
+    this.practicalImpact,
+    this.importantPoints,
+    this.target,
   });
 
   final String title;
   final String url;
   final SourceConfig source;
   final NewsCategory category;
+  final String? summary;
+  final String? practicalImpact;
+  final List<String>? importantPoints;
+  final String? target;
+
+  bool get hasCuratedContent => summary != null;
 }
 
 const pinnedArticles = [
@@ -135,5 +163,106 @@ const pinnedArticles = [
     url: 'https://www.mhlw.go.jp/content/12508000/001749239.pdf',
     source: mhlwSource,
     category: NewsCategory.pamphlet,
+  ),
+  PinnedArticle(
+    title: '労働安全衛生法及び作業環境測定法の改正（2026年1月・4月・10月 順次施行）',
+    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/anzen/an-eihou/index_00001.html',
+    source: mhlwSource,
+    category: NewsCategory.lawChange,
+    summary:
+        '令和7年法律第33号により労働安全衛生法及び作業環境測定法が改正され、2026年1月から2029年にかけて段階的に施行されます。'
+        '個人事業者等（フリーランス等）を安全衛生対策の対象に加えるほか、化学物質による健康障害防止対策、機械等による労働災害防止対策、'
+        '高年齢労働者の労働災害防止対策など、幅広い分野の見直しが行われます。',
+    practicalImpact:
+        '顧問先が個人事業者（一人親方・フリーランス等）と同じ場所で作業させている場合や、化学物質を取り扱う事業場、'
+        '高年齢労働者を雇用する事業場では、施行時期に応じた安全衛生管理体制の見直しが必要になります。',
+    importantPoints: [
+      '個人事業者等への安全衛生対策の推進（発注者・個人事業者双方に新たな義務）',
+      '化学物質による健康障害防止対策の強化（SDS作成対象物質の追加等）',
+      '機械等による労働災害の防止に関するルール見直し',
+      '高年齢労働者の労働災害防止の推進（努力義務の強化）',
+    ],
+    target: '個人事業者と同一の場所で作業を発注する事業者、化学物質を取り扱う事業場、高年齢労働者を雇用する事業場など',
+  ),
+  PinnedArticle(
+    title: '女性活躍推進法の改正（2026年4月1日施行）',
+    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html',
+    source: mhlwSource,
+    category: NewsCategory.lawChange,
+    summary:
+        '女性活躍推進法の改正により、2026年4月1日から「男女間賃金差異」の情報公表義務の対象が常時雇用労働者301人超の'
+        '事業主から101人以上の事業主に拡大されるとともに、新たに「女性管理職比率」の公表も義務づけられます。'
+        '101〜300人の事業主は、この2項目を含む4項目のうち1項目以上の公表が必要です。',
+    practicalImpact:
+        '常時雇用労働者101人以上の顧問先では、施行後最初に終了する事業年度の実績を、翌事業年度開始後おおむね3か月以内に'
+        '公表する体制を整える必要があります。',
+    importantPoints: [
+      '「男女間賃金差異」の公表義務対象が301人超→101人以上に拡大',
+      '新たに「女性管理職比率」の公表を義務づけ',
+      '公表は「女性の活躍推進企業データベース」等を通じて行うのが一般的',
+      '初回公表は施行後最初に終了する事業年度分から',
+    ],
+    target: '常時雇用する労働者数101人以上の事業主',
+  ),
+  PinnedArticle(
+    title: '在職老齢年金の支給停止基準額引き上げ（2026年4月）',
+    url: 'https://www.gov-online.go.jp/tokusyu/roureinenkin/',
+    source: govOnlineSource,
+    category: NewsCategory.lawChange,
+    summary:
+        '在職老齢年金制度について、2026年4月から年金と賃金の合計に応じて年金の一部または全部が支給停止となる基準額が、'
+        '月額51万円から65万円に引き上げられます。法改正によるベースアップと物価変動による例年の改定が重なったことによる'
+        '大幅な引き上げです。',
+    practicalImpact:
+        '60歳以降も就労を続ける従業員の給与設計や、継続雇用時の賃金水準の検討にあたり、年金の支給停止額の見積もりが'
+        '変わります。顧問先の高齢従業員向け説明資料の更新が必要です。',
+    importantPoints: [
+      '支給停止基準額が月額51万円から65万円に引き上げ',
+      '基準額以下であれば老齢厚生年金が全額支給される',
+      '60歳以降の就労継続を検討する従業員への影響が大きい',
+    ],
+    target: '60歳以降も就労し老齢厚生年金を受給する従業員、およびその雇用主',
+  ),
+  PinnedArticle(
+    title: 'カスタマーハラスメント・求職者等セクシュアルハラスメント防止措置の義務化（2026年10月1日施行）',
+    url: 'https://www.mhlw.go.jp/web_magazine/series/20260820.html',
+    source: mhlwSource,
+    category: NewsCategory.lawChange,
+    summary:
+        '2026年10月1日から、改正労働施策総合推進法により「カスタマーハラスメント」と「求職者等に対するセクシュアル'
+        'ハラスメント」の防止措置が事業主の義務となります。\n\n'
+        '職場における「カスタマーハラスメント」とは、①顧客等の言動であって、②その雇用する労働者が従事する業務の'
+        '性質その他の事情に照らして社会通念上許容される範囲を超えたものにより、③労働者の就業環境が害されるもの'
+        'であり、①〜③の要素をすべて満たすものをいいます。電話やSNS等インターネット上で行われるものも含まれます。',
+    practicalImpact:
+        '全事業主が対象となるため、就業規則・相談窓口・対応フローの整備が必須になります。求職者等セクハラでは'
+        '面接・面談の実施方法（複数名対応や記録の保持等）の見直しも必要です。',
+    importantPoints: [
+      '【カスタマーハラスメント】事業主の方針等の明確化及びその周知・啓発',
+      '【カスタマーハラスメント】相談体制の整備、事後の迅速かつ適切な対応',
+      '【カスタマーハラスメント】プライバシー保護・不利益取扱いの禁止の定めと周知等',
+      '【求職者等セクハラ】方針の明確化・周知啓発、相談体制の整備、事後対応、プライバシー保護等も同様に義務化',
+    ],
+    target: 'すべての事業主（業種・規模を問わず対象）',
+  ),
+  PinnedArticle(
+    title: '子ども・子育て支援金制度の創設（2026年度）',
+    url: 'https://www.cfa.go.jp/policies/kodomokosodateshienkinseido',
+    source: cfaSource,
+    category: NewsCategory.lawChange,
+    summary:
+        'こども家庭庁の少子化対策強化の財源として「子ども・子育て支援金制度」が創設され、2026年度から医療保険料と'
+        'あわせて徴収が始まります。被用者保険については2026年4月分保険料（5月納付分）から、健康保険料・介護保険料と'
+        'あわせて徴収され、令和8年度の支援金率は一律0.23%です（事業主負担あり）。',
+    practicalImpact:
+        '健康保険料の給与控除額が支援金分だけ増加するため、給与明細への記載や従業員への周知、保険料計算の見直しが'
+        '必要になります。事業主負担分もあわせて発生します。',
+    importantPoints: [
+      '「子ども・子育て支援金制度」が2026年度に創設',
+      '医療保険料（健康保険料・介護保険料）とあわせて徴収（2026年4月分保険料から）',
+      '令和8年度の支援金率は一律0.23%（労使折半、事業主負担あり）',
+      '給与明細等への記載・従業員への周知対応が必要',
+    ],
+    target: '全事業主および被用者保険（健康保険等）の被保険者',
   ),
 ];
