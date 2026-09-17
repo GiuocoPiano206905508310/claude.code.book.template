@@ -3,14 +3,11 @@ name: Notify ntfy (task completion)
 # Claude Code → GitHub Actions → ntfy.sh → iPhone
 # このサンドボックス環境からntfy.shへ直接アクセスすると403になるため、
 # GitHub Actions経由で通知を送るための専用workflow。
-# Claude Codeのブランチ(claude/**)へのpush、およびそこからのPull Request作成時に自動通知。
+# Claude CodeのブランチからのPull Request作成時に自動通知。
 # 手動実行(workflow_dispatch)も引き続き可能。
 # 他のworkflow・アプリのコードには一切影響しない、独立したworkflow。
 
 on:
-  push:
-    branches:
-      - 'claude/**'
   pull_request:
     types: [opened]
   workflow_dispatch: {}
@@ -33,17 +30,11 @@ jobs:
             exit 1
           fi
 
-          case "$EVENT_NAME" in
-            push)
-              MESSAGE="Claude Code の変更がGitHubへpushされました"
-              ;;
-            pull_request)
-              MESSAGE="Claude Code のPull Requestが作成されました"
-              ;;
-            *)
-              MESSAGE="Claude Codeのタスクが完了しました"
-              ;;
-          esac
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            MESSAGE="Claude Code のPull Requestが作成されました"
+          else
+            MESSAGE="Claude Codeのタスクが完了しました"
+          fi
 
           curl -sS \
             -H "Title: Claude Code" \
