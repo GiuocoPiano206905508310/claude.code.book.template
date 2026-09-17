@@ -84,7 +84,11 @@ Future<void> main(List<String> args) async {
   for (var i = 0; i < trimmed.length; i++) {
     final item = trimmed[i];
     final existing = previousById[item.candidate.url];
-    if (existing != null && existing['title'] == item.candidate.title) {
+    final canReuse =
+        existing != null &&
+        existing['title'] == item.candidate.title &&
+        !_isPlaceholderSummary(existing['summary'] as String?);
+    if (canReuse) {
       entries.add(existing);
       continue;
     }
@@ -102,6 +106,16 @@ Future<void> main(List<String> args) async {
   file.parent.createSync(recursive: true);
   file.writeAsStringSync(json);
   stderr.writeln('Wrote ${entries.length} articles to ${file.path}');
+}
+
+/// 前回の概要が「まだ本物の内容を得られていない」状態（汎用の案内文、
+/// またはサイト共通の定型文）かどうかを判定する。該当する場合は、
+/// タイトルが変わっていなくても再取得の対象とする
+/// （記事自体は同じでも、以前は本文取得やAI要約に失敗していた可能性が
+/// あるため）。
+bool _isPlaceholderSummary(String? summary) {
+  if (summary == null || summary == _genericSummary) return true;
+  return ArticleExcerptService.isBoilerplate(summary);
 }
 
 Map<String, Map<String, Object?>> _readPreviousEntries(String path) {
