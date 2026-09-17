@@ -61,7 +61,12 @@ class ArticleExcerptService {
     return null;
   }
 
-  bool _isBoilerplate(String text) {
+  bool _isBoilerplate(String text) => isBoilerplate(text);
+
+  /// [text]がサイト共通の定型文（記事内容と無関係）と一致するかどうか。
+  /// 過去に取得済みの概要が定型文のままになっている記事を検出し、
+  /// 再取得の対象とするために外部からも利用する。
+  static bool isBoilerplate(String text) {
     return _boilerplatePatterns.any(text.contains);
   }
 
