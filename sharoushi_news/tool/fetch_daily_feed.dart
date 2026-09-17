@@ -115,7 +115,7 @@ Future<void> main(List<String> args) async {
 /// あるため）。
 bool _isPlaceholderSummary(String? summary) {
   if (summary == null || summary == _genericSummary) return true;
-  return ArticleExcerptService.isBoilerplate(summary);
+  return ArticleExcerptService.isLowQualityExcerpt(summary);
 }
 
 Map<String, Map<String, Object?>> _readPreviousEntries(String path) {

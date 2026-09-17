@@ -17,11 +17,23 @@ class ArticleExcerptService {
       'SharoushiNewsApp-Prototype/0.1 (individual use; not for redistribution)';
   static const _maxLength = 200;
 
-  // GitHub Actions上での実データ取得で判明した、記事固有の説明文が
-  // 設定されていないページで使われる定型のmeta description（機械翻訳
-  // ウィジェットの案内文）。個別記事の内容とは無関係なため、これに
-  // 一致する場合は候補として採用しない。
-  static const _boilerplatePatterns = ['このホームページを、英語・中国語・韓国語へ機械的に自動翻訳します'];
+  // GitHub Actions上での実データ取得で判明した、記事内容とは無関係な
+  // サイト共通の定型文・案内文。これらに一致する場合は候補として
+  // 採用しない。
+  static const _boilerplatePatterns = [
+    'このホームページを、英語・中国語・韓国語へ機械的に自動翻訳します',
+    'PDFファイルを見るためには、Adobe Readerというソフトが必要です',
+  ];
+
+  // MHLWの多くのページ末尾にある「お問い合わせ先」ブロック
+  // （部署名・担当者名・電話番号・ページIDなど）を検出するための
+  // パターン。記事本文ではなく事務的な付随情報のため、候補として
+  // 採用しない。
+  static final _contactBlockPatterns = [
+    RegExp('代表電話'),
+    RegExp('直通電話'),
+    RegExp('ページID[：:]'),
+  ];
 
   final http.Client _client;
 
@@ -48,26 +60,26 @@ class ArticleExcerptService {
             ?.attributes['content'];
     if (metaDescription != null &&
         metaDescription.trim().isNotEmpty &&
-        !_isBoilerplate(metaDescription)) {
+        !isLowQualityExcerpt(metaDescription)) {
       return _clean(metaDescription);
     }
 
     for (final p in document.querySelectorAll('p')) {
       final text = p.text.trim();
-      if (text.length >= 20 && !_isBoilerplate(text)) {
+      if (text.length >= 20 && !isLowQualityExcerpt(text)) {
         return _clean(text);
       }
     }
     return null;
   }
 
-  bool _isBoilerplate(String text) => isBoilerplate(text);
-
-  /// [text]がサイト共通の定型文（記事内容と無関係）と一致するかどうか。
-  /// 過去に取得済みの概要が定型文のままになっている記事を検出し、
-  /// 再取得の対象とするために外部からも利用する。
-  static bool isBoilerplate(String text) {
-    return _boilerplatePatterns.any(text.contains);
+  /// [text]が、記事内容と無関係なサイト共通の定型文・案内文、または
+  /// 「お問い合わせ先」ブロック（部署名・電話番号・ページIDなど）と
+  /// 一致するかどうか。過去に取得済みの概要がこれらのままになっている
+  /// 記事を検出し、再取得の対象とするために外部からも利用する。
+  static bool isLowQualityExcerpt(String text) {
+    return _boilerplatePatterns.any(text.contains) ||
+        _contactBlockPatterns.any((p) => p.hasMatch(text));
   }
 
   String _clean(String text) {
