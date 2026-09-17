@@ -70,14 +70,17 @@
     "sourceUrl": "https://www.mhlw.go.jp",
     "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76303.html",
     "publishedAt": "2026-09-17T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:01.975879",
+    "fetchedAt": "2026-09-17T12:51:28.240842",
     "category": "lawChange",
-    "summary": "PDFファイルを見るためには、Adobe Readerというソフトが必要です。Adobe Readerは無料で配布されていますので、こちらからダウンロードしてください。",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "柔道整復療養費のオンライン請求導入に向けた検討が進められています。第12回ワーキング・グループで、システム構築や運用方法等に関する議論がなされたもので、デジタル化による業務効率化と制度運営の適正化を目指しています。",
+    "practicalImpact": "柔道整復施術所の請求業務がオンライン化される際の対応が必要となる可能性があります。社労士が関与する場合は、クライアント施設へのシステム導入支援や手続き指導が新たな業務として生じることが考えられます。",
+    "importantPoints": [
+      "柔道整復療養費のオンライン請求制度の導入に向けた検討が進行中",
+      "システム構築や運用方法について関係者間で協議されている段階"
+    ],
+    "target": "柔道整復施術所、療養費を請求する関係機関、社労士等の支援専門家",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/newpage_76278.html",
@@ -86,14 +89,18 @@
     "sourceUrl": "https://www.mhlw.go.jp",
     "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76278.html",
     "publishedAt": "2026-09-16T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:04.094935",
+    "fetchedAt": "2026-09-17T12:51:32.088690",
     "category": "lawChange",
-    "summary": "(代表電話) 03(5253)1111(内線5763)",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "労働政策審議会職業安定分科会雇用保険部会の第212回会議が開催される案内です。雇用保険制度に関する重要な議題が審議される予定であり、今後の制度改正の方向性が示される可能性があります。",
+    "practicalImpact": "雇用保険制度の改正動向を把握する重要な機会となります。社労士は審議内容を注視し、クライアント対応に備える必要があります。",
+    "importantPoints": [
+      "職業安定分科会雇用保険部会での審議内容の確認が重要",
+      "今後の雇用保険制度改正の方向性を早期に把握できる",
+      "実務への影響範囲を予測するための情報収集機会"
+    ],
+    "target": "雇用保険の適用事業主、従業員、社会保険労務士など雇用保険制度に関わる関係者",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/newpage_76199.html",
@@ -102,14 +109,17 @@
     "sourceUrl": "https://www.mhlw.go.jp",
     "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76199.html",
     "publishedAt": "2026-09-16T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:06.445976",
+    "fetchedAt": "2026-09-17T12:51:35.985732",
     "category": "lawChange",
-    "summary": "PDFファイルを見るためには、Adobe Readerというソフトが必要です。Adobe Readerは無料で配布されていますので、こちらからダウンロードしてください。",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "成年後見制度の利用促進に向けた専門家会議の開催案内です。制度の課題解決や利用促進策について、法律・福祉・医療等の専門家が議論するもので、今後の制度改革の方向性が検討されると考えられます。",
+    "practicalImpact": "成年後見制度に関連する労務管理や従業員支援体制の整備が重要になる可能性があります。特に高齢者雇用や障害者雇用における制度の活用を念頭に置く必要が生じる可能性があります。",
+    "importantPoints": [
+      "成年後見制度の利用促進に関する施策の方向性が示される可能性がある",
+      "企業における従業員の成年後見制度申し立てや利用サポートの対応が実務的課題となる可能性がある"
+    ],
+    "target": "高齢者雇用や障害者雇用に携わる事業主、人事労務担当者、従業員支援制度を検討中の企業",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/newpage_76266.html",
@@ -230,14 +240,18 @@
     "sourceUrl": "https://www.nenkin.go.jp",
     "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
     "publishedAt": "2026-09-16T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:23.172940",
+    "fetchedAt": "2026-09-17T12:51:39.427737",
     "category": "socialInsurance",
-    "summary": "ページID：150020010-196-269-822",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "日本国籍を有しない従業員のフリガナ氏名の取り扱いに関する取り扱いについて、日本年金機構が公表したもの。社会保険手続きや年金記録管理における外国人労働者のフリガナ氏名の記載方法や取り扱い基準を示したと考えられる。",
+    "practicalImpact": "外国人労働者を雇用する事業所の社会保険手続きにおいて、フリガナ氏名の記載方法が明確化され、手続き上の実務が統一される可能性がある。",
+    "importantPoints": [
+      "日本国籍を有しない従業員のフリガナ氏名の記載基準が示されたもの",
+      "社会保険手続きや年金記録における外国人労働者の適切な取り扱いが重要",
+      "各種申請書類作成時の実務対応が影響を受ける可能性"
+    ],
+    "target": "外国人労働者を雇用する事業主、人事労務担当者、および外国人労働者本人",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/kaiken/daijin/0000194708_00968.html",
@@ -294,14 +308,17 @@
     "sourceUrl": "https://www.mhlw.go.jp",
     "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76212.html",
     "publishedAt": "2026-09-15T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:28.160927",
+    "fetchedAt": "2026-09-17T12:51:42.925710",
     "category": "lawChange",
-    "summary": "令和８年９月15日（火） 照会先 健康・生活衛生局 食品監視安全課 輸入食品安全対策室 室長補佐： 新井 剛史 輸出国査察専門官：五十嵐 明夏 (代表電話) 03 (5253) 1111 (内線2469) (直通電話) 03 (3595) 2337",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "コーデックス連絡協議会は食品の国際的な安全基準や規格に関する政府間機関です。本開催案内は、同協議会の会議開催に関する通知と考えられ、食品衛生基準の国際動向の情報提供が行われるものと推測されます。",
+    "practicalImpact": "社労士実務への直接的な影響は限定的ですが、食品関連企業の顧問先がある場合、国際的な食品安全基準の動向把握が経営課題となる可能性があります。",
+    "importantPoints": [
+      "コーデックス委員会は国際的な食品衛生基準を策定する重要な機関である",
+      "国内の食品関連規制の改正につながる可能性がある"
+    ],
+    "target": "食品製造業・流通業などの食品関連企業、及びこれら企業の顧問社労士",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/newpage_76198.html",
@@ -310,14 +327,18 @@
     "sourceUrl": "https://www.mhlw.go.jp",
     "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76198.html",
     "publishedAt": "2026-09-15T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:30.542915",
+    "fetchedAt": "2026-09-17T12:51:46.562684",
     "category": "lawChange",
-    "summary": "（代表電話）03-5253-1111 （直通電話）03-3595-2431",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "薬事審議会の要指導・一般用医薬品部会が開催されます。この部会は医薬品の安全性・有効性の審査や、要指導医薬品と一般用医薬品の分類に関する審議を行い、医薬品の適正な流通と利用環境の整備に向けた検討を進めるものです。",
+    "practicalImpact": "医薬品の分類変更や新たな規制が決定された場合、健康保険組合の医療費管理や従業員への健康指導方針に影響を及ぼす可能性があります。",
+    "importantPoints": [
+      "要指導医薬品と一般用医薬品の分類基準に関する審議内容に注視が必要",
+      "医薬品の新たな安全基準や販売ルール変更が実務に影響する可能性",
+      "従業員の医療・健康管理における医薬品選択の変化に対応の準備"
+    ],
+    "target": "健康保険組合の担当者、企業の衛生管理者、福利厚生・健康経営担当者、医薬品を扱う事業主",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/newpage_76197.html",
@@ -342,14 +363,18 @@
     "sourceUrl": "https://www.mhlw.go.jp",
     "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76158.html",
     "publishedAt": "2026-09-15T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:35.283938",
+    "fetchedAt": "2026-09-17T12:51:50.384708",
     "category": "lawChange",
-    "summary": "労働基準局 監督課 過重労働特別対策室 室長 前村 充 中央労働基準監察監督官 藤代 岳志 (代表電話) 03 (5253) 1111 （内線 5589、5630） (直通電話) 03 (3502) 5308",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "厚生労働省が長時間労働が疑われる事業場に対する令和7年度の監督指導結果を公表しました。違反状況、指導内容、改善事例などが示されており、労働基準関係法令の遵守状況が明らかになっています。",
+    "practicalImpact": "長時間労働対策の実施状況や行政の指導動向が把握でき、クライアント企業の労働時間管理体制の整備・改善における具体的なアドバイスに活かせます。",
+    "importantPoints": [
+      "違反事業場の傾向から、自社の労働時間管理に潜在的なリスクがないか確認できる",
+      "行政指導の重点項目や改善指導の内容を参考に、コンプライアンス体制の強化が必要",
+      "監督指導結果は今後の行政対応方針を示唆する可能性があり、動向把握が重要"
+    ],
+    "target": "長時間労働が疑われた事業場、全業種の事業主、社労士など労務管理専門家",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/newpage_76095.html",
@@ -358,14 +383,17 @@
     "sourceUrl": "https://www.mhlw.go.jp",
     "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76095.html",
     "publishedAt": "2026-09-15T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:37.655983",
+    "fetchedAt": "2026-09-17T12:51:54.505683",
     "category": "lawChange",
-    "summary": "(代表電話)03(5253)1111(内線5427) (直通電話)03(3595)3203",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "厚生労働省が令和7年に外国人技能実習生および特定技能外国人を使用する事業場に対して実施した監督指導と送検等の状況を公表するもの。労働基準法等の違反状況や指導内容の透明化を図ります。",
+    "practicalImpact": "外国人労働者を受け入れている事業場の法令遵守状況が明らかになるため、顧客指導時の参考情報となります。同時に、業界全体の違反傾向を把握することで、事業場の改善対応が求められる可能性があります。",
+    "importantPoints": [
+      "技能実習生および特定技能外国人の受け入れ企業における労働法令の違反実態が示される見通し",
+      "監督指導結果の公表により、同様の違反リスクを有する事業場への予防的な対応が必要となる可能性"
+    ],
+    "target": "外国人技能実習生または特定技能外国人を使用する事業主、および当該事業場の社労士顧問",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/newpage_76083.html",
@@ -432,20 +460,24 @@
     "isAiGenerated": false
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/shingi/newpage_75970.html",
-    "title": "法的脳死判定基準に関する作業班",
+    "id": "https://www.mhlw.go.jp/stf/houdou/newpage_75927.html",
+    "title": "勤務時間が短い正規型の労働者として事業所に使用されている個人事業主等に係る被保険者資格の取扱い等について",
     "sourceName": "厚生労働省",
     "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/shingi/newpage_75970.html",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/houdou/newpage_75927.html",
     "publishedAt": "2026-09-14T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:48.142941",
+    "fetchedAt": "2026-09-17T12:51:58.165789",
     "category": "lawChange",
-    "summary": "PDFファイルを見るためには、Adobe Readerというソフトが必要です。Adobe Readerは無料で配布されていますので、こちらからダウンロードしてください。",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "短時間労働の正規型労働者として雇用されている個人事業主等に対する被保険者資格の取扱いについて、厚生労働省が新たな方針を示したもの。個人事業主等の副業・兼業時の社会保険適用に関する実務的な取扱いの明確化と考えられます。",
+    "practicalImpact": "個人事業主が正規雇用される場合の被保険者資格判定基準が明確化され、短時間正規労働者の社会保険加入要件の確認実務が変わる可能性があります。",
+    "importantPoints": [
+      "個人事業主等が短時間の正規型労働者として雇用される場合の被保険者資格要件の明確化",
+      "事業所での使用形態と個人事業主身分の併存時における社会保険適用基準",
+      "短時間正規型労働者の判定において考慮すべき要素の整理"
+    ],
+    "target": "個人事業主を雇用する事業主、個人事業主としての活動と雇用される立場を併せ持つ労働者、および両者の社会保険手続きを担当する社労士",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0914.html",
@@ -454,30 +486,18 @@
     "sourceUrl": "https://www.nenkin.go.jp",
     "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0914.html",
     "publishedAt": "2026-09-14T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:50.707899",
+    "fetchedAt": "2026-09-17T12:52:02.162707",
     "category": "pension",
-    "summary": "ページID：150010-270-965-184",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "日本年金機構が電子納付（Pay-easy）システムのメンテナンスを実施することに伴い、一時的に利用が休止される予定です。社労士及び事業主は、納付期限を考慮した代替納付方法の準備が必要になる可能性があります。",
+    "practicalImpact": "メンテナンス期間中の保険料納付方法の変更対応が発生するため、顧客への事前周知と代替納付手段の確認が必要です。",
+    "importantPoints": [
+      "電子納付（Pay-easy）が一時的に利用できなくなる期間の確認が重要",
+      "納付期限とメンテナンス期間が重なる場合、他の納付方法への振替が必要な可能性",
+      "クライアント企業への事前通知と納付方法変更の対応準備"
+    ],
+    "target": "保険料を電子納付（Pay-easy）で納付している事業主及び社労士",
     "importance": 1,
-    "isAiGenerated": false
-  },
-  {
-    "id": "https://www.mhlw.go.jp/stf/newpage_76217.html",
-    "title": "第189回労働政策審議会安全衛生分科会（開催案内）",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76217.html",
-    "publishedAt": "2026-09-14T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:53.036932",
-    "category": "lawChange",
-    "summary": "傍聴を希望される方は令和８年９月24日（木）までに下記申込先あてに、「第189回労働政策審議会安全衛生分科会の傍聴希望について」という表題で、電子メールにてお申し込みください。",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/shingi/newpage_75952.html",
@@ -496,15 +516,15 @@
     "isAiGenerated": false
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/houdou/newpage_75927.html",
-    "title": "勤務時間が短い正規型の労働者として事業所に使用されている個人事業主等に係る被保険者資格の取扱い等について",
+    "id": "https://www.mhlw.go.jp/stf/newpage_76217.html",
+    "title": "第189回労働政策審議会安全衛生分科会（開催案内）",
     "sourceName": "厚生労働省",
     "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/houdou/newpage_75927.html",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76217.html",
     "publishedAt": "2026-09-14T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:14:57.796894",
+    "fetchedAt": "2026-09-17T09:14:53.036932",
     "category": "lawChange",
-    "summary": "PDFファイルを見るためには、Adobe Readerというソフトが必要です。Adobe Readerは無料で配布されていますので、こちらからダウンロードしてください。",
+    "summary": "傍聴を希望される方は令和８年９月24日（木）までに下記申込先あてに、「第189回労働政策審議会安全衛生分科会の傍聴希望について」という表題で、電子メールにてお申し込みください。",
     "practicalImpact": "実務への影響は原文をご確認ください。",
     "importantPoints": [],
     "target": "原文をご確認ください。",
@@ -534,14 +554,18 @@
     "sourceUrl": "https://www.mhlw.go.jp",
     "canonicalUrl": "https://www.mhlw.go.jp/stf/shingi/shingi-hosho_126734.html",
     "publishedAt": "2026-09-14T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:15:02.728921",
+    "fetchedAt": "2026-09-17T12:52:05.566745",
     "category": "lawChange",
-    "summary": "PDFファイルを見るためには、Adobe Readerというソフトが必要です。Adobe Readerは無料で配布されていますので、こちらからダウンロードしてください。",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "社会保障審議会の介護保険部会における討議・審査の状況を報告するもの。介護保険制度の改正に向けた検討内容、制度運営上の課題、今後の政策方針などが審議されたと考えられる。",
+    "practicalImpact": "介護保険制度の改正動向を把握し、顧問先企業の介護保険料率や労働条件への影響を予測する際の参考情報となる可能性がある。",
+    "importantPoints": [
+      "介護保険制度に関する最新の審議状況の確認",
+      "今後の制度改正の方向性と検討スケジュールの把握",
+      "事業主・被保険者に影響する制度変更の可能性"
+    ],
+    "target": "介護保険制度に関わる企業経営者、介護事業所管理者、被保険者の保険料・給付に関心のある事業主",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/shingi/other-soumu_198922_00003.html",
@@ -592,20 +616,24 @@
     "isAiGenerated": false
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/newpage_76016.html",
-    "title": "第136回社会保障審議会介護保険部会の開催について",
+    "id": "https://www.mhlw.go.jp/stf/shingi/newpage_75970.html",
+    "title": "法的脳死判定基準に関する作業班",
     "sourceName": "厚生労働省",
     "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76016.html",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/shingi/newpage_75970.html",
     "publishedAt": "2026-09-14T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:15:05.100962",
+    "fetchedAt": "2026-09-17T12:52:09.098671",
     "category": "lawChange",
-    "summary": "厚生労働省老健局総務課 総務係長 櫻井（内線3913） 企画調整係 落合（内線3908） (電話代表)03(5253)1111 (ＦＡＸ)03(3503)2740",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "脳死判定の法的基準に関する検討を行う厚生労働省の作業班。脳死判定の要件や手続きなど、医学的・法的観点から基準の整備・見直しを進めるもので、臓器移植や医療現場の適切な対応に関わる検討と考えられます。",
+    "practicalImpact": "社労士が直接扱う業務との関連は限定的ですが、健康保険や労災保険に関連する医療給付の判断基準に影響を与える可能性があります。",
+    "importantPoints": [
+      "脳死判定基準の法的整備・見直しが進められている",
+      "臓器移植に関連する医学的・法的な判断基準の統一化が検討されている可能性",
+      "医療機関での適切な脳死判定手続きの確立が目的と考えられる"
+    ],
+    "target": "医療機関・臓器移植に関わる医師、厚生労働行政関係者。社労士には間接的な影響",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/newpage_76148.html",
@@ -614,14 +642,17 @@
     "sourceUrl": "https://www.mhlw.go.jp",
     "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76148.html",
     "publishedAt": "2026-09-14T00:00:00.000",
-    "fetchedAt": "2026-09-17T09:15:07.452928",
+    "fetchedAt": "2026-09-17T12:52:13.042690",
     "category": "lawChange",
-    "summary": "厚生労働省保険局総務課 渡邉、宮崎、垣内、日野 (代表電話) 03 (5253) 1111 (内線3215、3175、3177、3689)",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
+    "summary": "厚生労働省の社会保障審議会医療保険部会の開催通知です。医療保険制度に関する重要な議題について審議される見通しです。ペーパーレス開催により、デジタル化対応が進められています。",
+    "practicalImpact": "医療保険制度の改正動向を把握する必要があります。社労士は被保険者資格管理や保険料算定に関わる改正情報を注視すべきです。",
+    "importantPoints": [
+      "医療保険部会での審議内容により、被用者保険の制度変更が検討されている可能性がある",
+      "ペーパーレス開催により、公開情報へのアクセス方法が異なる可能性がある"
+    ],
+    "target": "医療保険（健康保険・協会けんぽ）の実務を扱う社労士および事業主",
     "importance": 1,
-    "isAiGenerated": false
+    "isAiGenerated": true
   },
   {
     "id": "https://www.mhlw.go.jp/stf/newpage_76213.html",
@@ -638,5 +669,25 @@
     "target": "原文をご確認ください。",
     "importance": 1,
     "isAiGenerated": false
+  },
+  {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0914.html",
+    "title": "電子納付（Pay-easy）のシステムメンテナンスによる利用休止について",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0914.html",
+    "publishedAt": "2026-09-14T00:00:00.000",
+    "fetchedAt": "2026-09-17T12:52:16.283687",
+    "category": "socialInsurance",
+    "summary": "日本年金機構が電子納付（Pay-easy）システムのメンテナンスを実施するため、一時的にサービスが利用できなくなることを案内しています。メンテナンス期間中は保険料等の電子納付ができないため、納付方法の事前確認が必要です。",
+    "practicalImpact": "社労士は顧客企業に対してメンテナンス期間の周知と代替納付方法の案内が必要になります。納期限に近い時期のメンテナンスであれば特に納付遅延防止への配慮が求められます。",
+    "importantPoints": [
+      "メンテナンス期間中はPay-easy電子納付が利用できない",
+      "メンテナンス期間の具体的な日時を事前に確認し、顧客に周知する必要がある",
+      "代替納付方法（窓口納付・銀行振込等）の確認と準備が必須"
+    ],
+    "target": "社会保険料を電子納付（Pay-easy）で納付している事業主および給与担当者",
+    "importance": 1,
+    "isAiGenerated": true
   }
 ]
