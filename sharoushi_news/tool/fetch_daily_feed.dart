@@ -5,12 +5,16 @@
 // （.github/workflows/sharoushi-news-daily-feed.yml から呼び出される）。
 //
 // 取得したタイトルのうち、前回のフィードにまだ無い（＝本当に新着の）記事
-// だけを対象に、ANTHROPIC_API_KEY が設定されていればClaude Haiku 4.5で
-// 概要・実務影響・重要ポイント・対象を生成する（記事本文までは取得して
-// いないため、タイトルと一般的な制度知識からの推測になる）。既に前回の
-// フィードに含まれる記事は、AI要約をそのまま引き継ぎ、無駄なAPI呼び出しを
-// しない。ANTHROPIC_API_KEY が未設定、またはAI要約生成に失敗した場合は
-// 汎用の案内文にフォールバックする（ジョブ全体は失敗させない）。
+// だけを対象に、概要・実務影響・重要ポイント・対象を次の優先順位で用意する:
+//   1. ANTHROPIC_API_KEY が設定されていれば、Claude Haiku 4.5で生成
+//      （記事本文までは取得していないため、タイトルと一般的な制度知識
+//      からの推測になる）。
+//   2. 上記が無い、または失敗した場合は、記事の個別ページ本文を取得し、
+//      meta descriptionまたは冒頭の段落を概要欄にそのまま使う（AIは
+//      使わず、単純なHTML解析のみ）。
+//   3. それも取得できない場合は、汎用の案内文にフォールバックする。
+// いずれの場合もジョブ全体は失敗させない。既に前回のフィードに含まれる
+// 記事は内容をそのまま引き継ぎ、無駄なリクエスト・API呼び出しをしない。
 //
 // 使い方: dart run tool/fetch_daily_feed.dart [出力先パス]
 //   （省略時は ../sharoushi-news-feed/articles.json）
@@ -20,6 +24,7 @@ import 'dart:io';
 import 'package:sharoushi_news/core/constants/source_config.dart';
 import 'package:sharoushi_news/models/article_candidate.dart';
 import 'package:sharoushi_news/services/ai/ai_summary_service.dart';
+import 'package:sharoushi_news/services/feed/article_excerpt_service.dart';
 import 'package:sharoushi_news/services/news/news_fetcher.dart';
 import 'package:sharoushi_news/services/parser/mhlw_parser.dart';
 import 'package:sharoushi_news/services/parser/nenkin_parser.dart';
@@ -73,6 +78,8 @@ Future<void> main(List<String> args) async {
     stderr.writeln('ANTHROPIC_API_KEY が未設定のため、新規記事はAI要約なしの汎用文になります。');
   }
 
+  final excerptService = ArticleExcerptService();
+
   final entries = <Map<String, Object?>>[];
   for (var i = 0; i < trimmed.length; i++) {
     final item = trimmed[i];
@@ -81,9 +88,12 @@ Future<void> main(List<String> args) async {
       entries.add(existing);
       continue;
     }
-    entries.add(await _buildEntry(item, aiService));
-    if (aiService != null) {
+    final result = await _buildEntry(item, aiService, excerptService);
+    entries.add(result.entry);
+    if (result.calledAi) {
       await Future.delayed(const Duration(milliseconds: 500));
+    } else if (result.fetchedExcerpt) {
+      await Future.delayed(const Duration(seconds: 2));
     }
   }
 
@@ -134,9 +144,21 @@ Future<void> _fetchAll({
   }
 }
 
-Future<Map<String, Object?>> _buildEntry(
+class _BuildResult {
+  _BuildResult(
+    this.entry, {
+    required this.calledAi,
+    required this.fetchedExcerpt,
+  });
+  final Map<String, Object?> entry;
+  final bool calledAi;
+  final bool fetchedExcerpt;
+}
+
+Future<_BuildResult> _buildEntry(
   _Candidate item,
   AiSummaryService? aiService,
+  ArticleExcerptService excerptService,
 ) async {
   final c = item.candidate;
   final target = item.target;
@@ -148,8 +170,11 @@ Future<Map<String, Object?>> _buildEntry(
   var importantPoints = <String>[];
   var targetLabel = _genericTarget;
   var isAiGenerated = false;
+  var calledAi = false;
+  var fetchedExcerpt = false;
 
   if (aiService != null) {
+    calledAi = true;
     try {
       final ai = await aiService.summarize(
         title: c.title,
@@ -162,11 +187,23 @@ Future<Map<String, Object?>> _buildEntry(
       targetLabel = ai.target;
       isAiGenerated = true;
     } catch (e) {
-      stderr.writeln('AI要約生成に失敗したため汎用文を使用します（${c.url}）: $e');
+      stderr.writeln('AI要約生成に失敗しました（${c.url}）: $e');
     }
   }
 
-  return {
+  if (!isAiGenerated) {
+    fetchedExcerpt = true;
+    try {
+      final excerpt = await excerptService.fetchExcerpt(c.url);
+      if (excerpt != null && excerpt.isNotEmpty) {
+        summary = excerpt;
+      }
+    } catch (e) {
+      stderr.writeln('本文抜粋の取得に失敗したため汎用文を使用します（${c.url}）: $e');
+    }
+  }
+
+  final entry = {
     'id': c.url,
     'title': c.title,
     'sourceName': target.source.name,
@@ -182,4 +219,9 @@ Future<Map<String, Object?>> _buildEntry(
     'importance': 1,
     'isAiGenerated': isAiGenerated,
   };
+  return _BuildResult(
+    entry,
+    calledAi: calledAi,
+    fetchedExcerpt: fetchedExcerpt,
+  );
 }
