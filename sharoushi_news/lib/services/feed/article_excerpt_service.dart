@@ -17,6 +17,12 @@ class ArticleExcerptService {
       'SharoushiNewsApp-Prototype/0.1 (individual use; not for redistribution)';
   static const _maxLength = 200;
 
+  // GitHub Actions上での実データ取得で判明した、記事固有の説明文が
+  // 設定されていないページで使われる定型のmeta description（機械翻訳
+  // ウィジェットの案内文）。個別記事の内容とは無関係なため、これに
+  // 一致する場合は候補として採用しない。
+  static const _boilerplatePatterns = ['このホームページを、英語・中国語・韓国語へ機械的に自動翻訳します'];
+
   final http.Client _client;
 
   /// 抜粋の取得に失敗した場合（ネットワークエラー・該当要素なし等）はnullを返す。
@@ -40,17 +46,23 @@ class ArticleExcerptService {
         document
             .querySelector('meta[property="og:description"]')
             ?.attributes['content'];
-    if (metaDescription != null && metaDescription.trim().isNotEmpty) {
+    if (metaDescription != null &&
+        metaDescription.trim().isNotEmpty &&
+        !_isBoilerplate(metaDescription)) {
       return _clean(metaDescription);
     }
 
     for (final p in document.querySelectorAll('p')) {
       final text = p.text.trim();
-      if (text.length >= 20) {
+      if (text.length >= 20 && !_isBoilerplate(text)) {
         return _clean(text);
       }
     }
     return null;
+  }
+
+  bool _isBoilerplate(String text) {
+    return _boilerplatePatterns.any(text.contains);
   }
 
   String _clean(String text) {

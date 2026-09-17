@@ -60,6 +60,41 @@ void main() {
     expect(excerpt, isNull);
   });
 
+  // 実際のGitHub Actions上での取得結果、記事固有のmeta descriptionが
+  // 設定されていないMHLWのページでは、機械翻訳ウィジェットの定型案内文が
+  // meta descriptionとして返ってくることが分かった（記事内容とは無関係）。
+  test('機械翻訳ウィジェットの定型meta descriptionは採用せず本文段落を使う', () async {
+    const html = '''
+<html><head>
+<meta name="description" content="このホームページを、英語・中国語・韓国語へ機械的に自動翻訳します。以下の内容をご理解のうえ、ご利用いただきますようお願いします。">
+</head><body><p>これは実際の記事本文の最初の段落です。テスト用のダミーテキストになります。</p></body></html>
+''';
+    final client = MockClient(
+      (request) async => http.Response.bytes(utf8.encode(html), 200),
+    );
+
+    final excerpt = await ArticleExcerptService(client: client)
+        .fetchExcerpt('https://example.com/a.html');
+
+    expect(excerpt, 'これは実際の記事本文の最初の段落です。テスト用のダミーテキストになります。');
+  });
+
+  test('本文段落も定型文しか無ければnullを返す', () async {
+    const html = '''
+<html><body>
+<p>このホームページを、英語・中国語・韓国語へ機械的に自動翻訳します。以下の内容をご理解のうえ、ご利用いただきますようお願いします。</p>
+</body></html>
+''';
+    final client = MockClient(
+      (request) async => http.Response.bytes(utf8.encode(html), 200),
+    );
+
+    final excerpt = await ArticleExcerptService(client: client)
+        .fetchExcerpt('https://example.com/a.html');
+
+    expect(excerpt, isNull);
+  });
+
   test('長い抜粋は200文字で切り詰める', () async {
     final longText = 'あ' * 300;
     final html = '<html><body><p>$longText</p></body></html>';
