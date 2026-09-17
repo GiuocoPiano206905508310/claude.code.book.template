@@ -45,6 +45,13 @@ const _genericSummary = 'この記事はタイトルのみ自動取得されて�
 const _genericPracticalImpact = '実務への影響は原文をご確認ください。';
 const _genericTarget = '原文をご確認ください。';
 
+// カテゴリー判定・要約生成のロジックを変更するたびに値を上げる。
+// 過去に生成された記事（このフィールドが無い、または値が古いもの）は、
+// タイトルが変わっていなくてもキャッシュを使わず再生成の対象とする。
+// これにより、一覧ページURL単位の粗い分類しかできなかった過去の記事も、
+// ロジック更新後は次回実行時に新しい判定へ自動的に置き換わる。
+const _schemaVersion = 2;
+
 class _Candidate {
   _Candidate(this.candidate, this.target, {this.pinned});
   final ArticleCandidate candidate;
@@ -126,6 +133,7 @@ Future<void> main(List<String> args) async {
     final canReuse =
         existing != null &&
         existing['title'] == item.candidate.title &&
+        (existing['schemaVersion'] as int? ?? 1) >= _schemaVersion &&
         !_isPlaceholderSummary(existing['summary'] as String?);
     if (canReuse) {
       entries.add(existing);
@@ -261,6 +269,7 @@ Future<_BuildResult> _buildEntry(
       'target': sanitizeScrapedText(pinned.target ?? _genericTarget),
       'importance': 2,
       'isAiGenerated': false,
+      'schemaVersion': _schemaVersion,
     };
     return _BuildResult(entry, calledAi: false, fetchedExcerpt: false, fetchedBody: false);
   }
@@ -342,6 +351,7 @@ Future<_BuildResult> _buildEntry(
     'target': sanitizeScrapedText(targetLabel),
     'importance': 1,
     'isAiGenerated': isAiGenerated,
+    'schemaVersion': _schemaVersion,
   };
   return _BuildResult(
     entry,
