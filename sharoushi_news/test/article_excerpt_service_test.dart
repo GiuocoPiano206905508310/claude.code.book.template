@@ -95,6 +95,43 @@ void main() {
     expect(excerpt, isNull);
   });
 
+  // 実際のGitHub Actions上での取得結果、記事本文の後にある「お問い合わせ先」
+  // ブロック（部署名・電話番号・ページID）を最初の段落として拾ってしまう
+  // ことが分かった。これらは記事内容ではないため除外する。
+  test('お問い合わせ先ブロック（電話番号・ページID）は採用せず本文段落を使う', () async {
+    const html = '''
+<html><body>
+<p>これは実際の記事本文の最初の段落です。テスト用のダミーテキストになります。</p>
+<p>健康・生活衛生局難病対策課 (代表電話) 03(5253)1111 (直通電話) 03(3595)2251</p>
+<p>ページID：150020010-196-269-822</p>
+</body></html>
+''';
+    final client = MockClient(
+      (request) async => http.Response.bytes(utf8.encode(html), 200),
+    );
+
+    final excerpt = await ArticleExcerptService(client: client)
+        .fetchExcerpt('https://example.com/a.html');
+
+    expect(excerpt, 'これは実際の記事本文の最初の段落です。テスト用のダミーテキストになります。');
+  });
+
+  test('Adobe Readerの定型案内文は採用しない', () async {
+    const html = '''
+<html><body>
+<p>PDFファイルを見るためには、Adobe Readerというソフトが必要です。Adobe Readerは無料で配布されていますので、こちらからダウンロードしてください。</p>
+</body></html>
+''';
+    final client = MockClient(
+      (request) async => http.Response.bytes(utf8.encode(html), 200),
+    );
+
+    final excerpt = await ArticleExcerptService(client: client)
+        .fetchExcerpt('https://example.com/a.html');
+
+    expect(excerpt, isNull);
+  });
+
   test('長い抜粋は200文字で切り詰める', () async {
     final longText = 'あ' * 300;
     final html = '<html><body><p>$longText</p></body></html>';
