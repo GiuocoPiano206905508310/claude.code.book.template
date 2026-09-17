@@ -101,4 +101,42 @@ void main() {
 
     expect(candidates.any((c) => c.title == 'くるみんマークについて'), isFalse);
   });
+
+  // 実際のGitHub Actions上での取得結果、新着情報ページ（/stf/new-info/）では
+  // カテゴリーラベル・タイトル・「NEW」バッジが<a>タグ内の別々のテキスト
+  // ノードとして混在しており、素朴にanchor.textを取ると
+  // 「審議会等\n\n第25回...資料\nNEW」のようにタイトルが汚染される不具合があった。
+  const newInfoWithNoiseHtml = '''
+<html><body>
+  <h2>2026年9月16日掲載</h2>
+  <ul>
+    <li>
+      <a href="/stf/newpage_76266.html">
+        <span class="tag">審議会等</span>
+
+        第25回　医薬品等行政評価・監視委員会資料
+        <span class="new">NEW</span>
+      </a>
+    </li>
+    <li>
+      <a href="/stf/newpage_76038.html">
+        <span class="tag">その他</span>
+
+        令和８年民間主要企業夏季一時金妥結状況を公表します
+      </a>
+    </li>
+  </ul>
+</body></html>
+''';
+
+  test('カテゴリーラベルやNEWバッジが混入したタイトルをクリーンアップする', () {
+    final candidates = MhlwParser().parse(
+      newInfoWithNoiseHtml,
+      'https://www.mhlw.go.jp/stf/new-info/',
+    );
+
+    expect(candidates, hasLength(2));
+    expect(candidates[0].title, '第25回　医薬品等行政評価・監視委員会資料');
+    expect(candidates[1].title, '令和８年民間主要企業夏季一時金妥結状況を公表します');
+  });
 }

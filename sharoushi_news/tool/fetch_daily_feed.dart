@@ -4,9 +4,13 @@
 // 同じ通常のHTTP GET+HTMLパースのみを行う
 // （.github/workflows/sharoushi-news-daily-feed.yml から呼び出される）。
 //
-// ここで生成される記事は、タイトル・URL・日付のみが確実な情報であり、
-// 概要・実務影響等はAI要約（Phase 9未実装）ではなく汎用の案内文になる
-// （dummy_seed_data.dart の手動キュレーション記事とは別物として扱われる）。
+// 取得したタイトルのうち、前回のフィードにまだ無い（＝本当に新着の）記事
+// だけを対象に、ANTHROPIC_API_KEY が設定されていればClaude Haiku 4.5で
+// 概要・実務影響・重要ポイント・対象を生成する（記事本文までは取得して
+// いないため、タイトルと一般的な制度知識からの推測になる）。既に前回の
+// フィードに含まれる記事は、AI要約をそのまま引き継ぎ、無駄なAPI呼び出しを
+// しない。ANTHROPIC_API_KEY が未設定、またはAI要約生成に失敗した場合は
+// 汎用の案内文にフォールバックする（ジョブ全体は失敗させない）。
 //
 // 使い方: dart run tool/fetch_daily_feed.dart [出力先パス]
 //   （省略時は ../sharoushi-news-feed/articles.json）
@@ -15,6 +19,7 @@ import 'dart:io';
 
 import 'package:sharoushi_news/core/constants/source_config.dart';
 import 'package:sharoushi_news/models/article_candidate.dart';
+import 'package:sharoushi_news/services/ai/ai_summary_service.dart';
 import 'package:sharoushi_news/services/news/news_fetcher.dart';
 import 'package:sharoushi_news/services/parser/mhlw_parser.dart';
 import 'package:sharoushi_news/services/parser/nenkin_parser.dart';
@@ -24,44 +29,90 @@ const _genericSummary = 'この記事はタイトルのみ自動取得されて�
 const _genericPracticalImpact = '実務への影響は原文をご確認ください。';
 const _genericTarget = '原文をご確認ください。';
 
+class _Candidate {
+  _Candidate(this.candidate, this.target);
+  final ArticleCandidate candidate;
+  final ListingTarget target;
+}
+
 Future<void> main(List<String> args) async {
   final outputPath = args.isNotEmpty
       ? args[0]
       : '../sharoushi-news-feed/articles.json';
 
-  final entries = <Map<String, Object?>>[];
+  final previousById = _readPreviousEntries(outputPath);
+
+  final candidates = <_Candidate>[];
   final seenUrls = <String>{};
 
   await _fetchAll(
     fetcher: NewsFetcher(parser: MhlwParser()),
     targets: mhlwListingTargets,
-    entries: entries,
+    out: candidates,
     seenUrls: seenUrls,
   );
   await _fetchAll(
     fetcher: NewsFetcher(parser: NenkinParser()),
     targets: nenkinListingTargets,
-    entries: entries,
+    out: candidates,
     seenUrls: seenUrls,
   );
 
-  entries.sort(
-    (a, b) =>
-        (b['publishedAt'] as String).compareTo(a['publishedAt'] as String),
+  candidates.sort(
+    (a, b) => (b.candidate.publishedAt ?? DateTime(0)).compareTo(
+      a.candidate.publishedAt ?? DateTime(0),
+    ),
   );
-  final trimmed = entries.take(_maxTotalArticles).toList();
+  final trimmed = candidates.take(_maxTotalArticles).toList();
 
-  final json = const JsonEncoder.withIndent('  ').convert(trimmed);
+  final apiKey = Platform.environment['ANTHROPIC_API_KEY'];
+  final aiService = (apiKey == null || apiKey.isEmpty)
+      ? null
+      : AiSummaryService(apiKey: apiKey);
+  if (aiService == null) {
+    stderr.writeln('ANTHROPIC_API_KEY が未設定のため、新規記事はAI要約なしの汎用文になります。');
+  }
+
+  final entries = <Map<String, Object?>>[];
+  for (var i = 0; i < trimmed.length; i++) {
+    final item = trimmed[i];
+    final existing = previousById[item.candidate.url];
+    if (existing != null && existing['title'] == item.candidate.title) {
+      entries.add(existing);
+      continue;
+    }
+    entries.add(await _buildEntry(item, aiService));
+    if (aiService != null) {
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+  }
+
+  final json = const JsonEncoder.withIndent('  ').convert(entries);
   final file = File(outputPath);
   file.parent.createSync(recursive: true);
   file.writeAsStringSync(json);
-  stderr.writeln('Wrote ${trimmed.length} articles to ${file.path}');
+  stderr.writeln('Wrote ${entries.length} articles to ${file.path}');
+}
+
+Map<String, Map<String, Object?>> _readPreviousEntries(String path) {
+  final file = File(path);
+  if (!file.existsSync()) return {};
+  try {
+    final decoded = jsonDecode(file.readAsStringSync()) as List;
+    return {
+      for (final e in decoded.cast<Map<String, dynamic>>())
+        e['id'] as String: e,
+    };
+  } catch (e) {
+    stderr.writeln('既存フィードの読み込みに失敗したため、全件を再生成します: $e');
+    return {};
+  }
 }
 
 Future<void> _fetchAll({
   required NewsFetcher fetcher,
   required List<ListingTarget> targets,
-  required List<Map<String, Object?>> entries,
+  required List<_Candidate> out,
   required Set<String> seenUrls,
 }) async {
   for (var i = 0; i < targets.length; i++) {
@@ -71,7 +122,7 @@ Future<void> _fetchAll({
       final candidates = await fetcher.fetchListing(target.url);
       for (final c in candidates) {
         if (!seenUrls.add(c.url)) continue;
-        entries.add(_toEntry(c, target));
+        out.add(_Candidate(c, target));
       }
       stderr.writeln('  -> ${candidates.length} candidates');
     } catch (e) {
@@ -83,9 +134,38 @@ Future<void> _fetchAll({
   }
 }
 
-Map<String, Object?> _toEntry(ArticleCandidate c, ListingTarget target) {
+Future<Map<String, Object?>> _buildEntry(
+  _Candidate item,
+  AiSummaryService? aiService,
+) async {
+  final c = item.candidate;
+  final target = item.target;
   final now = DateTime.now();
   final publishedAt = c.publishedAt ?? now;
+
+  var summary = _genericSummary;
+  var practicalImpact = _genericPracticalImpact;
+  var importantPoints = <String>[];
+  var targetLabel = _genericTarget;
+  var isAiGenerated = false;
+
+  if (aiService != null) {
+    try {
+      final ai = await aiService.summarize(
+        title: c.title,
+        sourceName: target.source.name,
+        categoryLabel: target.defaultCategory.label,
+      );
+      summary = ai.summary;
+      practicalImpact = ai.practicalImpact;
+      importantPoints = ai.importantPoints;
+      targetLabel = ai.target;
+      isAiGenerated = true;
+    } catch (e) {
+      stderr.writeln('AI要約生成に失敗したため汎用文を使用します（${c.url}）: $e');
+    }
+  }
+
   return {
     'id': c.url,
     'title': c.title,
@@ -95,9 +175,11 @@ Map<String, Object?> _toEntry(ArticleCandidate c, ListingTarget target) {
     'publishedAt': publishedAt.toIso8601String(),
     'fetchedAt': now.toIso8601String(),
     'category': target.defaultCategory.name,
-    'summary': _genericSummary,
-    'practicalImpact': _genericPracticalImpact,
-    'target': _genericTarget,
+    'summary': summary,
+    'practicalImpact': practicalImpact,
+    'importantPoints': importantPoints,
+    'target': targetLabel,
     'importance': 1,
+    'isAiGenerated': isAiGenerated,
   };
 }

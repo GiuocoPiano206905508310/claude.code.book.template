@@ -40,6 +40,12 @@ class MhlwParser implements NewsSourceParser {
 
   static const _ignoreTitles = {'NEW', '新着', 'もっと見る', '一覧'};
 
+  // 新着情報ページ（/stf/new-info/）のリンクは、カテゴリーラベル（例:「審議会等」
+  // 「報道発表」）・本来のタイトル・末尾の「NEW」バッジが、改行区切りの別々の
+  // テキストノードとして同じ<a>タグ内に混在している。GitHub Actions上の実データで
+  // 確認したところ、タイトルは常に最後の非空行に入っているため、末尾の「NEW」を
+  // 除いた最後の行を実際のタイトルとして採用する。
+
   @override
   List<ArticleCandidate> parse(String html, String pageUrl) {
     final document = html_parser.parse(html);
@@ -99,6 +105,7 @@ class MhlwParser implements NewsSourceParser {
       if (dateMatch != null) publishedAt = _parseDate(dateMatch) ?? publishedAt;
       title = rawText.substring(prefixMatch.end).trim();
     }
+    title = _cleanTitle(title);
 
     if (title.isEmpty || _ignoreTitles.contains(title)) return;
     // 日付を特定できないリンクは、サイドバーの案内リンク等である可能性が高いため除外する。
@@ -114,6 +121,18 @@ class MhlwParser implements NewsSourceParser {
         publishedAt: publishedAt,
       ),
     );
+  }
+
+  String _cleanTitle(String raw) {
+    final lines = raw
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+    if (lines.isNotEmpty && lines.last == 'NEW') {
+      lines.removeLast();
+    }
+    return lines.isEmpty ? '' : lines.last;
   }
 
   DateTime? _parseDate(RegExpMatch match) {

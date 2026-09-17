@@ -47,11 +47,15 @@ class DailyFeedService {
       category: category,
       summary: json['summary'] as String,
       practicalImpact: json['practicalImpact'] as String,
-      importantPoints: const [],
+      importantPoints:
+          (json['importantPoints'] as List?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       target: json['target'] as String,
       importance: json['importance'] as int? ?? 1,
       contentHash: json['id'] as String,
-      isAiGenerated: false,
+      isAiGenerated: json['isAiGenerated'] as bool? ?? false,
     );
   }
 }
