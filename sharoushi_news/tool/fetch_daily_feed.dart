@@ -50,7 +50,7 @@ const _genericTarget = '原文をご確認ください。';
 // タイトルが変わっていなくてもキャッシュを使わず再生成の対象とする。
 // これにより、一覧ページURL単位の粗い分類しかできなかった過去の記事も、
 // ロジック更新後は次回実行時に新しい判定へ自動的に置き換わる。
-const _schemaVersion = 2;
+const _schemaVersion = 3;
 
 class _Candidate {
   _Candidate(this.candidate, this.target, {this.pinned});
