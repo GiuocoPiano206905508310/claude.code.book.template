@@ -98,6 +98,7 @@ enum NewsCategory {
   labor('労働'),
   socialInsurance('社会保険'),
   employmentInsurance('雇用保険'),
+  salaryCalculation('給与計算'),
   subsidy('助成金'),
   pension('年金');
 

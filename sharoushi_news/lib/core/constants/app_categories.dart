@@ -63,6 +63,7 @@ const List<HomeFilterOption> homeFilterOptions = [
   HomeFilterOption.category(NewsCategory.labor),
   HomeFilterOption.category(NewsCategory.socialInsurance),
   HomeFilterOption.category(NewsCategory.employmentInsurance),
+  HomeFilterOption.category(NewsCategory.salaryCalculation),
   HomeFilterOption.category(NewsCategory.subsidy),
   HomeFilterOption.category(NewsCategory.pension),
 ];
