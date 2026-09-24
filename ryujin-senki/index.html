@@ -34,7 +34,7 @@ body{ background:var(--bg); color:var(--text); }
   display:flex; flex-direction:column;
   padding-bottom: env(safe-area-inset-bottom,0px);
 }
-.disp{ font-family:'Shippori Mincho',serif; }
+.disp{ font-family:'Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif; line-height:1.4; }
 h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; letter-spacing:.02em; }
 button{ font-family:inherit; }
 ::selection{ background:var(--gold); color:#1a1300; }
@@ -1213,6 +1213,20 @@ function saveSession(s){
 function b64FromBytes(bytes){ var bin=""; for(var i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]); return btoa(bin); }
 function bytesFromB64(b64){ var bin=atob(b64); var bytes=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i); return bytes; }
 function randomBytes(n){ var b=new Uint8Array(n); crypto.getRandomValues(b); return b; }
+/* パスワードを忘れたときの「復旧コード」。登録直後に1回だけ表示し、
+   本人確認用のハッシュだけをアカウントに残す（パスワードと同じ扱い）。
+   まぎらわしい 0/O・1/I/L は使わない。 */
+var RECOVERY_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+function generateRecoveryCode(){
+  var bytes = randomBytes(16), groups = [];
+  for(var g=0; g<4; g++){
+    var s = "";
+    for(var i=0; i<4; i++) s += RECOVERY_CHARS[bytes[g*4+i] % RECOVERY_CHARS.length];
+    groups.push(s);
+  }
+  return groups.join("-");
+}
+function normalizeRecoveryCode(s){ return String(s||"").toUpperCase().replace(/[^A-Z0-9]/g,""); }
 function importPwKey(password){
   return crypto.subtle.importKey("raw", new TextEncoder().encode(password), {name:"PBKDF2"}, false, ["deriveBits","deriveKey"]);
 }
@@ -1243,7 +1257,8 @@ function gunzipBytes(bytes){
 /* 引き継ぎコードの形式： RJSN1:<gzip有無0/1>:<塩b64>:<ivb64>:<暗号文b64>
    塩・ivは秘密でないので平文のまま、パスワードで暗号化するのは中身のセーブ本体だけ。 */
 function buildTransferCode(account, saveObj, password){
-  var payload = JSON.stringify({ username:account.username, email:account.email, salt:account.salt, hash:account.hash, state:saveObj });
+  var payload = JSON.stringify({ username:account.username, email:account.email, salt:account.salt, hash:account.hash,
+    recoverySalt:account.recoverySalt, recoveryHash:account.recoveryHash, state:saveObj });
   var plainBytes = new TextEncoder().encode(payload);
   var salt = randomBytes(16), iv = randomBytes(12);
   return gzipBytes(plainBytes).then(function(res){
@@ -1304,10 +1319,18 @@ function saveState(){
   if(!session) return; /* 未ログイン中は保存先が無いので何もしない */
   try{ localStorage.setItem(accountSaveKey(session.accountId), JSON.stringify(state)); }catch(e){}
 }
+/* 戦闘中など、その場限りの一時データに依存する画面へそのまま戻すと表示が壊れるため、
+   ログアウト前にいた画面が安全に再開できるものかを見て、危なそうならフィールド／ホームへ逃がす。
+   （firstRunがtrueのときは、render()側のガードが遊び方へ強制的に戻すのでここでは何もしない） */
+var UNSAFE_RESUME_SCREENS = {battle:1, result:1, levelup:1, cardComplete:1, reveal:1, candidate:1};
+/* 復旧コードの控え画面をはさむ間だけ、まだログインしていない状態で保持しておく一時変数 */
+var pendingRecovery = null; /* {accountId, code} */
 function completeLogin(accountId){
   saveSession({accountId:accountId});
   state = loadState();
-  state.screen = "home";
+  if(UNSAFE_RESUME_SCREENS[state.screen]){
+    state.screen = (state.stage && state.stage.current) ? "field" : "home";
+  }
   saveState();
   render();
   window.scrollTo(0,0);
@@ -1434,12 +1457,14 @@ var TOP_TITLES = {
   cardComplete:"完成カード", roster:"獲得キャラ一覧", detail:"キャラクター詳細", party:"パーティー編成",
   stageSelect:"ステージ選択", field:"フィールド", battle:"バトル", result:"バトル結果", levelup:"レベルアップ",
   stageClear:"ステージクリア", settings:"設定・仕様の確認", inventory:"持ち物",
-  authLogin:"ログイン", authRegister:"新規登録", authRestore:"引き継ぎコードで復元", transferIssue:"引き継ぎコードを発行"
+  authLogin:"ログイン", authRegister:"新規登録", authRestore:"引き継ぎコードで復元", transferIssue:"引き継ぎコードを発行",
+  authForgot:"パスワードの再設定", authRecoveryReveal:"復旧コードの控え", accountEdit:"アカウント情報の変更"
 };
 /* 戦闘と、その後の結果・レベルアップは戻るで抜けられないようにする。
    途中で抜けると戦闘が無かったことになり、報酬も失われるため。
    ログイン系の画面も、戻る先が無いためトップバーの←は出さない。 */
-var NO_BACK = {home:1, battle:1, result:1, levelup:1, authLogin:1, authRegister:1, authRestore:1};
+var NO_BACK = {home:1, battle:1, result:1, levelup:1, authLogin:1, authRegister:1, authRestore:1, authForgot:1, authRecoveryReveal:1};
+var AUTH_SCREENS = {authLogin:1, authRegister:1, authRestore:1, authForgot:1, authRecoveryReveal:1};
 function canBack(s){
   /* 新規登録直後の「遊び方」は全ページ見てもらうため、戻る操作では抜けられないようにする */
   if(s==="tutorial" && state.firstRun) return false;
@@ -1458,7 +1483,7 @@ function topbarTitleHtml(){
 
 function render(){
   var app = document.getElementById("app");
-  var isAuthScreen = (state.screen==="authLogin"||state.screen==="authRegister"||state.screen==="authRestore");
+  var isAuthScreen = !!AUTH_SCREENS[state.screen];
   /* 新規登録後は、遊び方(旧チュートリアル)を最後まで見るまで他の画面へ行けないようにする */
   if(!isAuthScreen && state.firstRun && state.screen!=="tutorial"){ state.screen = "tutorial"; }
   app.className = (state.settings && state.settings.reduceMotion) ? "reduce-motion" : "";
@@ -1484,6 +1509,9 @@ function render(){
     case "authLogin": body = renderAuthLogin(); break;
     case "authRegister": body = renderAuthRegister(); break;
     case "authRestore": body = renderAuthRestore(); break;
+    case "authForgot": body = renderAuthForgot(); break;
+    case "authRecoveryReveal": body = renderAuthRecoveryReveal(); break;
+    case "accountEdit": body = renderAccountEdit(); break;
     case "transferIssue": body = renderTransferIssue(); break;
     default: body = renderHome();
   }
@@ -2935,6 +2963,7 @@ function renderAuthLogin(){
     '<div class="notice">保存されるのはパスワードそのものではなく、20万回ハッシュ化した値だけです。ブラウザのデータを消すとこの端末のアカウントは失われるため、ログイン後は「設定」から引き継ぎコードを発行しておくことをおすすめします。</div>'+
     '<button class="btn ghost" data-act="goto" data-screen="authRegister">はじめての方はこちら（新規登録）</button>'+
     '<button class="btn ghost" data-act="goto" data-screen="authRestore">引き継ぎコードで復元</button>'+
+    '<button class="btn ghost small" data-act="goto" data-screen="authForgot">パスワードをお忘れの方</button>'+
   '</div>';
 }
 function renderAuthRegister(){
@@ -2969,6 +2998,60 @@ function renderAuthRestore(){
     '<button class="btn ghost" data-act="goto" data-screen="authLogin">戻る</button>'+
   '</div>';
 }
+function renderAuthForgot(){
+  return '<div class="screen">'+
+    '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ パスワードの再設定</small></div></div>'+
+    '<div class="card">'+
+      '<label class="f">メールアドレス</label><input type="email" id="forgotEmail" placeholder="you@example.com" autocomplete="username">'+
+      '<div class="divider" style="margin:10px 0"></div>'+
+      '<label class="f">復旧コード</label>'+
+      '<input type="text" id="forgotCode" placeholder="XXXX-XXXX-XXXX-XXXX" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;">'+
+      '<div class="divider" style="margin:10px 0"></div>'+
+      '<label class="f">新しいパスワード（4文字以上）</label><input type="password" id="forgotPw" placeholder="新しいパスワード" autocomplete="new-password">'+
+      '<div class="divider" style="margin:10px 0"></div>'+
+      '<label class="f">新しいパスワード（確認）</label><input type="password" id="forgotPw2" placeholder="もう一度入力" autocomplete="new-password">'+
+      '<button class="btn primary" data-act="doForgotReset">パスワードを再設定する</button>'+
+    '</div>'+
+    '<div class="notice">復旧コードは新規登録の直後に1回だけ表示される控えです。お手元に無い場合、このブラウザ内で完結する仕組み上、パスワードを再設定する手段がありません（サーバーが無いため、メールの送信もできません）。</div>'+
+    '<button class="btn ghost" data-act="goto" data-screen="authLogin">戻る</button>'+
+  '</div>';
+}
+function renderAuthRecoveryReveal(){
+  var p = pendingRecovery;
+  var code = p ? p.code : "";
+  return '<div class="screen">'+
+    '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ 復旧コードの控え</small></div></div>'+
+    (p && p.note ? '<div class="notice blue">'+esc(p.note)+'</div>' : '')+
+    '<div class="card">'+
+      '<label class="f">この復旧コードをコピーして、安全な場所に控えてください</label>'+
+      '<textarea id="recoveryCodeBox" readonly style="min-height:64px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;text-align:center;letter-spacing:.05em;">'+esc(code)+'</textarea>'+
+      '<button class="btn primary" data-act="copyRecoveryCode">コピーする</button>'+
+    '</div>'+
+    '<div class="notice" style="border-color:#7a3b44;background:#1a0e12;color:#f0b6bc">'+
+      '<b>このコードは今しか表示されません。</b>パスワードを忘れたときに、これが無いとアカウントを復旧できなくなります。パスワードとは別に、メモや写真など安全な場所に保管してください。'+
+    '</div>'+
+    '<button class="btn ghost" data-act="ackRecovery">控えました。ゲームを始める</button>'+
+  '</div>';
+}
+function renderAccountEdit(){
+  var session = loadSession(), acc = session && findAccountById(session.accountId);
+  if(!acc) return '<div class="screen"><div class="card">アカウント情報が見つかりません。</div></div>';
+  return '<div class="screen">'+
+    '<div class="card">'+
+      '<label class="f">メールアドレス</label><input type="email" id="editEmail" value="'+esc(acc.email)+'" autocomplete="username">'+
+      '<div class="divider" style="margin:10px 0"></div>'+
+      '<label class="f">ユーザー名</label><input type="text" id="editName" value="'+esc(acc.username)+'">'+
+      '<div class="divider" style="margin:10px 0"></div>'+
+      '<label class="f">新しいパスワード（変更する場合のみ・4文字以上）</label><input type="password" id="editPw" placeholder="変更しない場合は空欄" autocomplete="new-password">'+
+      '<div class="divider" style="margin:10px 0"></div>'+
+      '<label class="f">新しいパスワード（確認）</label><input type="password" id="editPw2" placeholder="変更しない場合は空欄" autocomplete="new-password">'+
+      '<div class="divider" style="margin:10px 0"></div>'+
+      '<label class="f">現在のパスワード（確認のため必須）</label><input type="password" id="editCurPw" placeholder="現在のパスワード" autocomplete="current-password">'+
+      '<button class="btn primary" data-act="saveAccountEdit">保存する</button>'+
+    '</div>'+
+    '<div class="notice">メールアドレス・ユーザー名・パスワードを変更できます。パスワードは空欄のままにすると変更されません。</div>'+
+  '</div>';
+}
 function renderTransferIssue(){
   var session = loadSession(), acc = session && findAccountById(session.accountId);
   var codeBlock = state._transferCode ?
@@ -2995,7 +3078,10 @@ function renderSettings(){
     '<div class="card"><label class="f">アカウント</label>'+
       '<div class="muted">'+esc(acc?acc.username:"")+'（'+esc(acc?acc.email:"")+'）としてログイン中</div>'+
       '<div class="row" style="gap:8px;margin-top:10px">'+
+        '<button class="btn ghost small" data-act="goto" data-screen="accountEdit" style="flex:1">アカウント情報を編集</button>'+
         '<button class="btn ghost small" data-act="goto" data-screen="transferIssue" style="flex:1">引き継ぎコードを発行</button>'+
+      '</div>'+
+      '<div class="row" style="gap:8px;margin-top:8px">'+
         '<button class="btn danger small" data-act="doLogout" style="flex:1">ログアウト</button>'+
       '</div></div>'+
     '<div class="card"><label class="f">演出</label>'+
@@ -3048,17 +3134,23 @@ function handleAction(act, el){
       if(findAccountByEmail(email)){ toast("そのメールアドレスは登録済みです"); break; }
       el.disabled = true;
       var regSalt = randomBytes(16);
-      hashPassword(pw, regSalt).then(function(hash){
+      var recoveryCode = generateRecoveryCode();
+      var recoverySalt = randomBytes(16);
+      Promise.all([hashPassword(pw, regSalt), hashPassword(normalizeRecoveryCode(recoveryCode), recoverySalt)]).then(function(results){
+        var hash = results[0], recoveryHash = results[1];
         var accounts = loadAccounts();
         var isFirstEver = accounts.length===0;
         var id = String(Date.now())+"_"+Math.floor(Math.random()*1e6);
-        accounts.push({id:id, username:uname, email:email, salt:b64FromBytes(regSalt), hash:hash, createdAt:Date.now()});
+        accounts.push({id:id, username:uname, email:email, salt:b64FromBytes(regSalt), hash:hash,
+          recoverySalt:b64FromBytes(recoverySalt), recoveryHash:recoveryHash, createdAt:Date.now()});
         saveAccounts(accounts);
         var oldRaw = null;
         if(isFirstEver){ try{ oldRaw = localStorage.getItem(OLD_SAVE_KEY); }catch(e){} }
         if(oldRaw){ try{ localStorage.setItem(accountSaveKey(id), oldRaw); }catch(e){} }
-        completeLogin(id);
-        toast(oldRaw ? "これまでのセーブを引き継ぎました" : "アカウントを作成しました");
+        pendingRecovery = { accountId:id, code:recoveryCode,
+          note: oldRaw ? "これまでのセーブを引き継ぎました。" : "アカウントを作成しました。" };
+        state.screen = "authRecoveryReveal";
+        render();
       }).catch(function(){ el.disabled=false; toast("エラーが発生しました"); });
       break;
     }
@@ -3096,16 +3188,103 @@ function handleAction(act, el){
         if(existing){
           id = existing.id;
           existing.username = payload.username; existing.salt = payload.salt; existing.hash = payload.hash;
+          if(payload.recoverySalt){ existing.recoverySalt = payload.recoverySalt; existing.recoveryHash = payload.recoveryHash; }
           saveAccounts(accounts);
         } else {
           id = String(Date.now())+"_"+Math.floor(Math.random()*1e6);
-          accounts.push({id:id, username:payload.username, email:payload.email, salt:payload.salt, hash:payload.hash, createdAt:Date.now()});
+          accounts.push({id:id, username:payload.username, email:payload.email, salt:payload.salt, hash:payload.hash,
+            recoverySalt:payload.recoverySalt, recoveryHash:payload.recoveryHash, createdAt:Date.now()});
           saveAccounts(accounts);
         }
         try{ localStorage.setItem(accountSaveKey(id), JSON.stringify(payload.state)); }catch(e){}
         completeLogin(id);
         toast("復元しました");
       }).catch(function(){ el.disabled=false; toast("コードまたはパスワードが正しくありません"); });
+      break;
+    }
+    case "doForgotReset": {
+      var fEmail = ((document.getElementById("forgotEmail")||{}).value||"").trim();
+      var fCode = normalizeRecoveryCode((document.getElementById("forgotCode")||{}).value||"");
+      var fPw = (document.getElementById("forgotPw")||{}).value||"";
+      var fPw2 = (document.getElementById("forgotPw2")||{}).value||"";
+      if(fPw.length<4){ toast("パスワードは4文字以上にしてください"); break; }
+      if(fPw!==fPw2){ toast("パスワードが一致しません"); break; }
+      var fAcc = findAccountByEmail(fEmail);
+      if(!fAcc){ toast("メールアドレスまたは復旧コードが正しくありません"); break; }
+      if(!fAcc.recoverySalt || !fAcc.recoveryHash){
+        toast("このアカウントには復旧コードが設定されていません"); break;
+      }
+      el.disabled = true;
+      hashPassword(fCode, bytesFromB64(fAcc.recoverySalt)).then(function(hash){
+        if(hash!==fAcc.recoveryHash){ el.disabled=false; toast("メールアドレスまたは復旧コードが正しくありません"); return null; }
+        /* パスワードと、使い切りの復旧コードを両方作り直す */
+        var newSalt = randomBytes(16), newRecoverySalt = randomBytes(16), newRecoveryCode = generateRecoveryCode();
+        return Promise.all([hashPassword(fPw, newSalt), hashPassword(normalizeRecoveryCode(newRecoveryCode), newRecoverySalt)])
+          .then(function(results){ return {pwHash:results[0], recHash:results[1], newSalt:newSalt, newRecoverySalt:newRecoverySalt, newRecoveryCode:newRecoveryCode}; });
+      }).then(function(r){
+        el.disabled = false;
+        if(!r) return;
+        var accounts = loadAccounts();
+        var target = accounts.filter(function(a){ return a.id===fAcc.id; })[0];
+        if(!target){ toast("エラーが発生しました"); return; }
+        target.salt = b64FromBytes(r.newSalt); target.hash = r.pwHash;
+        target.recoverySalt = b64FromBytes(r.newRecoverySalt); target.recoveryHash = r.recHash;
+        saveAccounts(accounts);
+        pendingRecovery = { accountId: target.id, code: r.newRecoveryCode,
+          note: "パスワードを再設定しました。復旧コードも新しく発行されています。" };
+        state.screen = "authRecoveryReveal";
+        render();
+      }).catch(function(){ el.disabled=false; toast("エラーが発生しました"); });
+      break;
+    }
+    case "ackRecovery": {
+      var pr = pendingRecovery; pendingRecovery = null;
+      if(pr) completeLogin(pr.accountId); else go("authLogin");
+      break;
+    }
+    case "copyRecoveryCode": {
+      var rcode = (pendingRecovery && pendingRecovery.code) || "";
+      if(!rcode) break;
+      var rbox = document.getElementById("recoveryCodeBox"); if(rbox) rbox.select();
+      var rafter = function(ok){ toast(ok ? "コピーしました" : "コピーできませんでした。テキストを選択してコピーしてください"); };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(rcode).then(function(){ rafter(true); }).catch(function(){ fallbackCopy(rcode, rafter); });
+      } else { fallbackCopy(rcode, rafter); }
+      break;
+    }
+    case "saveAccountEdit": {
+      var eEmail = ((document.getElementById("editEmail")||{}).value||"").trim();
+      var eName = ((document.getElementById("editName")||{}).value||"").trim();
+      var ePw = (document.getElementById("editPw")||{}).value||"";
+      var ePw2 = (document.getElementById("editPw2")||{}).value||"";
+      var eCurPw = (document.getElementById("editCurPw")||{}).value||"";
+      var eSess = loadSession(); var eAcc = eSess && findAccountById(eSess.accountId);
+      if(!eAcc){ toast("エラーが発生しました"); break; }
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eEmail)){ toast("メールアドレスの形式が正しくありません"); break; }
+      if(!eName){ toast("ユーザー名を入力してください"); break; }
+      if(ePw && ePw.length<4){ toast("新しいパスワードは4文字以上にしてください"); break; }
+      if(ePw && ePw!==ePw2){ toast("新しいパスワードが一致しません"); break; }
+      var other = findAccountByEmail(eEmail);
+      if(other && other.id!==eAcc.id){ toast("そのメールアドレスは別のアカウントで使われています"); break; }
+      if(!eCurPw){ toast("現在のパスワードを入力してください"); break; }
+      el.disabled = true;
+      hashPassword(eCurPw, bytesFromB64(eAcc.salt)).then(function(hash){
+        if(hash!==eAcc.hash){ el.disabled=false; toast("現在のパスワードが正しくありません"); return null; }
+        if(!ePw) return {};
+        var newSalt = randomBytes(16);
+        return hashPassword(ePw, newSalt).then(function(newHash){ return {salt:b64FromBytes(newSalt), hash:newHash}; });
+      }).then(function(r){
+        el.disabled = false;
+        if(!r) return;
+        var accounts = loadAccounts();
+        var target = accounts.filter(function(a){ return a.id===eAcc.id; })[0];
+        if(!target){ toast("エラーが発生しました"); return; }
+        target.email = eEmail; target.username = eName;
+        if(r.salt){ target.salt = r.salt; target.hash = r.hash; }
+        saveAccounts(accounts);
+        toast("アカウント情報を更新しました");
+        go("settings");
+      }).catch(function(){ el.disabled=false; toast("エラーが発生しました"); });
       break;
     }
     case "issueTransferCode": {
@@ -3433,7 +3612,7 @@ function handleBack(){
   var map = {tutorial:"home", search:"home", candidate:"search", reveal:"candidate", cardComplete:"home",
     roster:"home", detail:"roster", party:"home", inventory:"home", stageSelect:"home", field:"stageSelect",
     battle:"field", result:"field", levelup:"field", stageClear:"stageSelect", settings:"home",
-    transferIssue:"settings"};
+    transferIssue:"settings", accountEdit:"settings"};
   go(map[state.screen]||"home");
 }
 
