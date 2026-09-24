@@ -61,6 +61,10 @@ button{ font-family:inherit; }
 .screen::before, .screen::after{ content:""; flex:1 1 auto; }
 /* フィールド・戦闘は要素が多いため、下の余白を削って1画面に収まりやすくする */
 .screen.screen-tight{ padding-bottom:20px; gap:10px; }
+/* フィールド・バトルは短くても上下中央に寄せず上詰めにする。
+   実機ではブラウザのツールバーの出没で使える高さが変わることがあるため、
+   余白を作らず上に詰めておいた方が下端が隠れにくい。 */
+.screen.screen-tight::before, .screen.screen-tight::after{ content:none; }
 /* バトルは実測して確実に1画面へ収めるため、ページ自体のスクロールを封じる
    （はみ出しが出ないよう auto-fit 側で先にサイズを詰めてから使う） */
 .screen.no-scroll{ overflow:hidden; }
@@ -1490,7 +1494,10 @@ function render(){
     '</div>');
   app.innerHTML = top + body;
   monoIcons(app);
-  if(state.screen==="battle" || state.screen==="field") autoFitScreen(state.screen);
+  if(state.screen==="battle" || state.screen==="field"){
+    autoFitScreen(state.screen);
+    scheduleRefit(350); /* ツールバーの出没が遅れて反映される端末向けの保険（1回だけ） */
+  }
 }
 /* ============ 端末の画面高さに応じた自動縮小 ============
    バトルのキャラ表示（縦横比は維持）／フィールドの十字キーを、
@@ -1537,14 +1544,22 @@ function autoFitScreen(screen){
     if(screenOverflowPx() > 2) shrinkCssVarToFit('--chart-max', 260);
   }
 }
-/* 端末の回転・ウィンドウ幅の変化でも収まりが崩れないよう、リサイズ時にも掛け直す */
+/* 端末の回転・ウィンドウ幅の変化でも収まりが崩れないよう、リサイズ時にも掛け直す。
+   iOS Safariはアドレスバー／ツールバーの出し引きで使える高さが後から変わることがあり、
+   window の resize だけでは拾えない場合があるため visualViewport 側も見る。
+   さらに、描画直後はツールバーの出没が収まりきっていないことがあるため少し遅れてもう一度確認する。 */
+function refitIfNeeded(){
+  if(state.screen==="battle" || state.screen==="field") autoFitScreen(state.screen);
+}
 var _fitResizeTimer = null;
-window.addEventListener('resize', function(){
+function scheduleRefit(delay){
   clearTimeout(_fitResizeTimer);
-  _fitResizeTimer = setTimeout(function(){
-    if(state.screen==="battle" || state.screen==="field") autoFitScreen(state.screen);
-  }, 150);
-});
+  _fitResizeTimer = setTimeout(refitIfNeeded, delay);
+}
+window.addEventListener('resize', function(){ scheduleRefit(150); });
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', function(){ scheduleRefit(120); });
+}
 /* 絵文字アイコンは画面ごとに文字列へ直接書かれているため、描き終えたあとに
    まとめて包んでモノクロにする。★などの記号は対象外。 */
 var EMOJI_RE = /(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)/gu;
