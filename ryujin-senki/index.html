@@ -14,6 +14,9 @@
   --fire:#ff7a4d; --ice:#5fc9f3; --lightning:#ffd94f; --dark:#a07cf0;
   --holy:#f3e6a8; --nature:#7cc98a; --shadow:#8890a8; --tech:#4dd0e1; --wind:#8fe0c0; --earth:#c98f5a; --moon:#a8b8f0;
   color-scheme: dark;
+  /* フィールド・戦闘の画面を1画面に収めるため、JS側で端末ごとに実測して詰める。
+     ここでの値は測定前・失敗時の初期値。 */
+  --bt-unit-max: 150px; --pad-size: 164px; --chart-max: 420px;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){ --bg:#0a0f1c; --panel:#121a2c; }
@@ -185,7 +188,7 @@ button{ font-family:inherit; }
 .partyhp .hpbar i{ display:block; height:100%; background:linear-gradient(90deg,#5fd0a0,#3fa878); }
 .partyhp .hpbar.low i{ background:linear-gradient(90deg,#e2555f,#a8303a); }
 .poison-tag{ font-size:11px; color:#b9a0e0; margin-bottom:7px; }
-.chart{ display:block; width:100%; max-width:420px; height:auto; margin:0 auto;
+.chart{ display:block; width:100%; max-width:var(--chart-max,420px); height:auto; margin:0 auto;
   -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
   border-radius:10px; filter:drop-shadow(0 10px 22px #0009); }
 .chart .pin{ animation:pinBob 1.6s ease-in-out infinite; transform-box:fill-box; transform-origin:50% 100%; }
@@ -195,7 +198,7 @@ button{ font-family:inherit; }
 
 /* 真鍮の航法器（案B）: 地図の外・下部に固定 */
 .padwrap{ display:flex; justify-content:center; margin:8px auto 0; }
-.pad-plate{ position:relative; width:164px; padding:10px; border-radius:14px;
+.pad-plate{ position:relative; width:var(--pad-size); padding:10px; border-radius:14px;
   background:linear-gradient(158deg,#dcbd7c 0%,#c09a55 46%,#a8843f 100%);
   border:2px solid #40301c; box-shadow:inset 0 0 0 2px #6e5628, inset 0 2px 0 #eed9a8, 0 7px 16px -6px #000c; }
 .pad-rivet{ position:absolute; width:8px; height:8px; border-radius:50%;
@@ -226,7 +229,7 @@ button{ font-family:inherit; }
 .bt-unit{ flex:1 1 0; min-width:0; max-width:212px; text-align:center; position:relative; }
 .card.bt-row{ padding:6px; }
 /* 1画面に収めるため、キャラ表示そのものを少し小さくする */
-.bt-row-compact .bt-unit{ max-width:150px; }
+.bt-row-compact .bt-unit{ max-width:var(--bt-unit-max); }
 .bt-unit .art{ border-radius:10px; }
 .bt-unit.down .cardFrame, .bt-unit.down .mob{ filter:grayscale(1) brightness(.4); }
 .stage-band{ display:flex; align-items:center; gap:9px; margin:16px 2px 8px; }
@@ -1475,7 +1478,61 @@ function render(){
     '</div>');
   app.innerHTML = top + body;
   monoIcons(app);
+  if(state.screen==="battle" || state.screen==="field") autoFitScreen(state.screen);
 }
+/* ============ 端末の画面高さに応じた自動縮小 ============
+   バトルのキャラ表示（縦横比は維持）／フィールドの十字キーを、
+   実際にレンダリングされた高さを測って、はみ出さなくなるまで縮める。
+   固定のブレークポイントではなく実測なので、どの端末でも1画面に収まる。 */
+function screenOverflowPx(){
+  var screenEl = document.querySelector('.screen');
+  if(!screenEl) return 0;
+  var rect = screenEl.getBoundingClientRect();
+  var avail = screenEl.clientHeight;
+  var kids = screenEl.children, maxBottom = 0;
+  for(var i=0;i<kids.length;i++){
+    var r = kids[i].getBoundingClientRect();
+    var rel = r.bottom - rect.top;
+    if(rel > maxBottom) maxBottom = rel;
+  }
+  return maxBottom - avail; /* 正の値＝はみ出し量(px) */
+}
+function shrinkCssVarToFit(varName, floorPx){
+  var root = document.documentElement.style;
+  for(var pass=0; pass<4; pass++){
+    var over = screenOverflowPx();
+    if(over <= 2) return;
+    var current = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(varName));
+    if(!current || current <= floorPx) return;
+    /* はみ出し量に応じて比率で縮める。効きすぎ・戻りすぎを避けるため少し控えめにかける */
+    var scale = Math.max(floorPx/current, 1 - (over/current) * 0.6);
+    var next = Math.max(floorPx, Math.floor(current*scale));
+    if(next >= current) next = current - 4;
+    root.setProperty(varName, next+'px');
+  }
+}
+function autoFitScreen(screen){
+  var root = document.documentElement.style;
+  if(screen==="battle"){
+    root.setProperty('--bt-unit-max', '150px');
+    shrinkCssVarToFit('--bt-unit-max', 78);
+  } else if(screen==="field"){
+    /* まず十字キーを縮め、それでも収まらない小さい画面だけ地図の表示幅も縮める
+       （縦横比は.chartがwidth/heightをそのまま保つので崩れない） */
+    root.setProperty('--pad-size', '164px');
+    root.setProperty('--chart-max', '420px');
+    shrinkCssVarToFit('--pad-size', 108);
+    if(screenOverflowPx() > 2) shrinkCssVarToFit('--chart-max', 260);
+  }
+}
+/* 端末の回転・ウィンドウ幅の変化でも収まりが崩れないよう、リサイズ時にも掛け直す */
+var _fitResizeTimer = null;
+window.addEventListener('resize', function(){
+  clearTimeout(_fitResizeTimer);
+  _fitResizeTimer = setTimeout(function(){
+    if(state.screen==="battle" || state.screen==="field") autoFitScreen(state.screen);
+  }, 150);
+});
 /* 絵文字アイコンは画面ごとに文字列へ直接書かれているため、描き終えたあとに
    まとめて包んでモノクロにする。★などの記号は対象外。 */
 var EMOJI_RE = /(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)/gu;
