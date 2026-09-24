@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>龍神戦記デモ</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap">
 <style>
@@ -14,10 +19,12 @@
   :root:not([data-theme="dark"]){ --bg:#0a0f1c; --panel:#121a2c; }
 }
 *{box-sizing:border-box;}
+html,body{ height:100%; margin:0; overflow:hidden; overscroll-behavior:none; }
 body{ background:var(--bg); color:var(--text); }
 #app{
   font-family:'Zen Maru Gothic','Noto Sans JP',sans-serif;
-  max-width:480px; margin:0 auto; min-height:100vh; position:relative;
+  max-width:480px; margin:0 auto; height:100vh; height:100dvh; position:relative;
+  overflow:hidden;
   background:
     radial-gradient(ellipse at 50% -10%, #1c2a4d 0%, transparent 60%),
     linear-gradient(180deg,#0a0f1c 0%,#0a0f1c 100%);
@@ -41,10 +48,14 @@ button{ font-family:inherit; }
 .topbar .ticket{ display:flex; align-items:center; gap:5px; background:var(--panel3); border:1px solid var(--gold-dim); border-radius:999px; padding:5px 10px; font-size:12.5px; color:var(--gold-bright); font-weight:700;}
 .topbar .ticket .n{ font-family:'Shippori Mincho',serif; font-size:14px;}
 
-.screen{ flex:1; display:flex; flex-direction:column; padding:14px 14px 90px; gap:14px; animation:fadeIn .25s ease; }
-/* ログイン・新規登録・復元はトップバーが無く内容も短いため、
-   画面下に大きな空白ができないよう縦方向に中央寄せする */
-.screen.screen-auth{ justify-content:center; padding-bottom:14px; }
+.screen{
+  flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  display:flex; flex-direction:column; padding:14px 14px 90px; gap:14px; animation:fadeIn .25s ease;
+}
+/* 内容が画面より短いときは上下の余白を均等にして中央に寄せ、
+   長い内容のときはこの疑似要素が0に縮んで通常どおり内部スクロールする
+   （justify-content:centerだと一部ブラウザで先頭がスクロールで見えなくなるため使わない） */
+.screen::before, .screen::after{ content:""; flex:1 1 auto; }
 @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
 .reduce-motion .screen{ animation:none; }
 .reduce-motion *{ animation-duration:.001s !important; transition-duration:.001s !important; }
@@ -293,7 +304,8 @@ label.f{ font-size:11.5px; color:var(--muted); font-weight:700; display:block; m
 .tut-cards .cardFrame{ max-width:82px; margin:0 auto; }
 a{ color:var(--ice); }
 </style>
-
+</head>
+<body>
 <div id="app"></div>
 <div id="overlay"></div>
 
@@ -2774,7 +2786,7 @@ function renderStageClear(){
 
 var SPEC_ITEMS = [["ゲーム正式名称","「龍神戦記」。タイトル・ロゴ表記をすべて差し替え済み。"],["☆1/☆2、☆3/☆4の個別確率","☆1=22.5%、☆2=22.5%、☆3=12.5%、☆4=12.5%（合計45%/25%）で確定。"],["レア度別初期値・成長倍率・経験値曲線","初期値=34+レア度×14、成長=3.4+レア度×2.1／レベル、必要EXP=40+Lv×22で確定。戦闘経験値は通常16・中ボス30・ボス60を基準に、ステージごとに15%ずつ増加。"],["基礎ダメージ式・端数処理・防御倍率の重複方法","物理=攻撃力−守備力×0.5、遠距離=思考力×0.6−守備力×0.5、いずれも四捨五入・最低1。被ダメージ軽減は乗算で重畳。"],["逃走率の下限・上限、ボス戦の逃走可否","ボス戦は逃走不可（ボタン自体を押せない）。それ以外は味方と敵の俊敏力合計で勝負し、負け・同値=30%、勝ち=70%。さらに差が25%増えるごとに+5%（上限100%）。"],["敗北時の経験値・アイテム・復帰地点","経験値は通常の5分の1、アイテムは3分の1の確率でドロップ。戦闘前のフィールド座標へ復帰し、パーティーのHPは立て直す。"],["相打ち時の勝敗","俊敏力順に行動するため、先に全滅した側の負け。同ターンに双方全滅した場合も、先にHPが0になった陣営が敗北。"],["レベルアップで最大HP上昇時の現在HP処理","レベルアップ時はHPが全回復し、上昇分も上乗せされる（現在HP=新しい最大HP）。"],["所持済みキャラクターの重複入手可否","同じキャラでもレア度が異なれば入手可能。同じキャラの同じレア度は重複しない（抽選で被った場合は引き直し、それでも被る場合は近いレア度へ寄せる）。"],["罠・回復・ボーナスイベントの具体的効果","トラップは4種：ダメージ（味方全員が最大HPの1/10減）／毒（1マス進むごとに1/20減、次の中ボス・ボス戦まで継続）／モンスター（その場で戦闘）／ワープ（スタート地点へ戻される）。回復マスは70%で1体・30%で全体、回復量は最大HPの1/5・1/4・1/3・1/2・全回復からランダム。ボーナスマスはアイテムか経験値（そのステージのボスの半分を上限）。HPはフィールド上でも保持され、画面上部にパーティーのHPを常時表示。"],["各ステージの正確なグリッド寸法・配置数","ステージ40まで実装。ステージ1は確定済みの13マス手置き、2以降は自動生成し、出口の双方向整合とスタート→ボス→ゴールの到達性を全ステージ検証済み。奥へ進むほどマス数（最大30／エリア）・分岐（最大7）・エリア数（8面以降2面、20面以降3面）が増える。41以降は敵キャラ追加後に作成。"],["AIタグ解析を実API接続にするか","ローカル辞書検索のみで確定（実API接続なし）。"]];
 function renderAuthLogin(){
-  return '<div class="screen screen-auth">'+
+  return '<div class="screen">'+
     '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ ログイン</small></div></div>'+
     '<div class="card">'+
       '<label class="f">メールアドレス</label><input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="username">'+
@@ -2788,7 +2800,7 @@ function renderAuthLogin(){
   '</div>';
 }
 function renderAuthRegister(){
-  return '<div class="screen screen-auth">'+
+  return '<div class="screen">'+
     '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ 新規登録</small></div></div>'+
     '<div class="card">'+
       '<label class="f">メールアドレス</label><input type="email" id="regEmail" placeholder="you@example.com" autocomplete="username">'+
@@ -2806,7 +2818,7 @@ function renderAuthRegister(){
   '</div>';
 }
 function renderAuthRestore(){
-  return '<div class="screen screen-auth">'+
+  return '<div class="screen">'+
     '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ 引き継ぎコードで復元</small></div></div>'+
     '<div class="card">'+
       '<label class="f">引き継ぎコード</label>'+
@@ -3443,3 +3455,5 @@ if(window.claude && window.claude.hot){
 }
 })();
 </script>
+</body>
+</html>
