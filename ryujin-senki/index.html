@@ -16,7 +16,7 @@
   color-scheme: dark;
   /* フィールド・戦闘の画面を1画面に収めるため、JS側で端末ごとに実測して詰める。
      ここでの値は測定前・失敗時の初期値。 */
-  --bt-unit-max: 150px; --pad-size: 164px; --chart-max: 420px;
+  --bt-unit-max: 150px; --pad-size: 164px; --chart-max: 420px; --cmd-h: 245px;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){ --bg:#0a0f1c; --panel:#121a2c; }
@@ -61,6 +61,9 @@ button{ font-family:inherit; }
 .screen::before, .screen::after{ content:""; flex:1 1 auto; }
 /* フィールド・戦闘は要素が多いため、下の余白を削って1画面に収まりやすくする */
 .screen.screen-tight{ padding-bottom:20px; gap:10px; }
+/* バトルは実測して確実に1画面へ収めるため、ページ自体のスクロールを封じる
+   （はみ出しが出ないよう auto-fit 側で先にサイズを詰めてから使う） */
+.screen.no-scroll{ overflow:hidden; }
 @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
 .reduce-motion .screen{ animation:none; }
 .reduce-motion *{ animation-duration:.001s !important; transition-duration:.001s !important; }
@@ -255,6 +258,9 @@ button{ font-family:inherit; }
 .bt-unit .nm rt{ font-size:7px; color:var(--muted2); }
 .bt-unit.target{ outline:2px dashed var(--gold-bright); border-radius:10px; }
 /* 対象を選んでいる間だけ、ユニットを押せるようにする */
+/* 今まさに行動を選んでいる味方を、攻撃対象を選ぶ枠と同じ要領で緑枠にする。
+   対象選択中(赤枠)が同じカードに重なる場合は赤枠を優先させるため、この規則を先に書く。 */
+.bt-unit.acting{ outline:3px solid var(--good); outline-offset:2px; border-radius:12px; }
 .bt-unit.pickable{ cursor:pointer; border-radius:12px; }
 .bt-unit.pickable:active{ transform:scale(.97); }
 .bt-unit.picking{ outline:3px solid #ff5a68; outline-offset:2px; border-radius:12px;
@@ -282,6 +288,12 @@ button{ font-family:inherit; }
 .bt-log{ background:#05080f; border:1px solid var(--line); border-radius:10px; padding:6px 10px; font-size:11.5px; color:var(--muted); height:56px; overflow-y:auto; line-height:1.6; }
 .bt-log b{ color:var(--gold-bright); }
 .cmd-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+/* コマンド欄：オート攻撃／指示／アイテムのどの状態でも同じ高さに揃え、
+   ページ自体はスクロールさせない（アイテム一覧だけ内側でスクロール）。 */
+.cmd-panel{ height:var(--cmd-h,245px); display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.cmdhead{ background:linear-gradient(180deg,var(--panel2),var(--panel)); border:1px solid var(--line);
+  border-radius:14px; padding:10px 12px; font-size:13px; flex:none; }
+.item-scroll{ flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; }
 .mi{ filter:grayscale(1) contrast(1.15); }
 .nm ruby rt, .roster-cell .nm rt{ font-size:.55em; opacity:.8; }
 /* ルビは小さく潰れやすいので、味方・敵とも全画面まとめて太字にする。
@@ -2496,22 +2508,30 @@ function renderBattle(){
       '<div class="hpbar '+(u.hp/u.maxHp<0.3?'low':'')+'"><i style="width:'+(100*u.hp/u.maxHp)+'%"></i></div>'+
       '</div>';
   }).join('');
+  /* 今まさに指示を選んでいる味方には、攻撃対象を選ぶ枠と同じ要領で緑枠を出す。
+     ターン実行待ち・結果待ちのときは「今の担当」がいないので出さない。 */
+  var actingIdx = null;
+  if(b.phase!=="resolve" && b.phase!=="done"){
+    var actors0 = aliveAllies();
+    if(b.cmdIndex < actors0.length) actingIdx = b.allies.indexOf(actors0[b.cmdIndex]);
+  }
   var allyHtml = b.allies.map(function(u,i){
     var a=u.ally;
     var pickA = (b.subPhase === "target-ally") && u.alive;
     var pickedA = pickA && b._pick === i;
-    return '<div class="bt-unit '+(u.alive?'':'down')+(pickA?' pickable':'')+(pickedA?' picking':'')+
+    var acting = (i === actingIdx);
+    return '<div class="bt-unit '+(u.alive?'':'down')+(pickA?' pickable':'')+(pickedA?' picking':'')+(acting?' acting':'')+
         '" data-act="tapUnit" data-ally-idx="'+i+'">'+
       cardFrameHtml(u.inst.rarity, a.id)+
       '<div class="hpbar '+(u.hp/u.maxHp<0.3?'low':'')+'"><i style="width:'+(100*u.hp/u.maxHp)+'%"></i></div>'+
       '<div class="nm">'+nameRubyHtml(a)+'</div></div>';
   }).join('');
   var cmdArea = renderBattleCommand();
-  return '<div class="screen screen-tight">'+
+  return '<div class="screen screen-tight no-scroll">'+
     '<div class="card bt-row bt-row-compact"><div class="bt-side">'+enemyHtml+'</div></div>'+
     '<div class="bt-log" id="btLog">'+b.log.map(function(l){return '<div>'+l+'</div>';}).join('')+'</div>'+
     '<div class="card bt-row bt-row-compact"><div class="bt-side">'+allyHtml+'</div></div>'+
-    cmdArea+
+    '<div class="cmd-panel">'+cmdArea+'</div>'+
   '</div>';
 }
 /* 決定済みの行動を短く言い表す */
@@ -2555,23 +2575,19 @@ function renderBattleCommand(){
       '<button class="btn ghost" data-act="cancelTarget">戻る</button>';
   }
   if(b.subPhase==="item"){
-    return '<div class="card"><b>'+nameRubyHtml(u.ally)+'</b>が使うアイテム</div>'+
-      '<div class="cmd-grid">'+battleItems().map(function(it){
+    return '<div class="cmdhead"><b>'+nameRubyHtml(u.ally)+'</b>が使うアイテム</div>'+
+      /* アイテム数が増えても枠の高さは変えず、この一覧の中だけスクロールする */
+      '<div class="item-scroll"><div class="cmd-grid">'+battleItems().map(function(it){
         var n=itemLeft(b, it.id);
         return '<button class="btn ghost itembtn" data-act="useItem" data-item="'+it.id+'" '+(n<=0?'disabled':'')+'>'+
           '<span class="itemhead">'+it.icon+' '+esc(it.name)+'<span class="sub">　×'+n+'</span></span>'+
           '<span class="itemdesc">'+esc(it.effect)+'</span></button>';
-      }).join('')+'</div>'+
+      }).join('')+'</div></div>'+
       '<button class="btn ghost" data-act="cancelTarget">戻る</button>';
   }
-  /* すでに決めたキャラの行動を一覧にしておくと、戻る判断がしやすい */
-  var decided = actors.slice(0, b.cmdIndex).map(function(a){
-    var act = b.actions[a.instId] || {};
-    return '<span class="dc"><i>'+esc(a.ally.name)+'</i>'+esc(actionLabel(act))+'</span>';
-  }).join('');
-  return '<div class="card"><b>'+nameRubyHtml(u.ally)+'</b>の行動を選択（'+(b.cmdIndex+1)+'/'+actors.length+'）'+
-      (decided ? '<div class="decided">'+decided+'</div>' : '')+'</div>'+
-    (b.cmdIndex > 0 ? '<button class="btn ghost small" data-act="cmdBack">← 前のキャラの行動を選び直す</button>' : '')+
+  /* 「誰の行動を選択中か」は味方カードの緑枠(renderBattle側)で示すため、
+     ここに見出しは出さない。前のキャラの決定は「戻る」で必要なときに辿れる。 */
+  return (b.cmdIndex > 0 ? '<button class="btn ghost small" data-act="cmdBack">← 前のキャラの行動を選び直す</button>' : '')+
     '<div class="cmd-grid">'+
       '<button class="btn ghost" data-act="cmdAuto"><span class="mi">🤖</span> オート攻撃</button>'+
       '<button class="btn ghost" data-act="cmdOrder"><span class="mi">🎯</span> 指示</button>'+
@@ -3411,13 +3427,15 @@ function extendedOrderMenu(){
   var b = state._battle; if(!b || b.subPhase!=="order-menu") return null;
   var u = aliveAllies()[b.cmdIndex];
   var g = allyGuardMul(u);
-  var buttons = '<button class="btn ghost" data-act="chooseOrder" data-kind="physical"><span class="mi">⚔️</span> 単体攻撃（'+singleMul(u).toFixed(2)+'倍）</button>'+
-    '<button class="btn ghost" data-act="chooseOrder" data-kind="ranged"><span class="mi">🏹</span> 全体攻撃（'+wideMul(u).toFixed(2)+'倍）</button>'+
-    '<button class="btn ghost" data-act="chooseOrder" data-kind="guard"><span class="mi">🛡️</span> 防御（'+(g===0?'無効化':'被ダメ'+g+'倍')+'）</button>'+
+  /* 特殊能力2つ持ちだと最大5択になるため、行動選択画面と同じ高さに収まるよう
+     ここだけ小さめのボタンにする */
+  var buttons = '<button class="btn ghost small" data-act="chooseOrder" data-kind="physical"><span class="mi">⚔️</span> 単体攻撃（'+singleMul(u).toFixed(2)+'倍）</button>'+
+    '<button class="btn ghost small" data-act="chooseOrder" data-kind="ranged"><span class="mi">🏹</span> 全体攻撃（'+wideMul(u).toFixed(2)+'倍）</button>'+
+    '<button class="btn ghost small" data-act="chooseOrder" data-kind="guard"><span class="mi">🛡️</span> 防御（'+(g===0?'無効化':'被ダメ'+g+'倍')+'）</button>'+
     (u.abilities.length ? u.abilities.map(function(ab){
-      return '<button class="btn ghost" data-act="chooseOrder" data-kind="ability" data-ab="'+ab.key+'">✨ '+ab.name+'</button>';
+      return '<button class="btn ghost small" data-act="chooseOrder" data-kind="ability" data-ab="'+ab.key+'">✨ '+ab.name+'</button>';
     }).join('') : '');
-  return '<div class="card"><b>'+nameRubyHtml(u.ally)+'</b>の指示</div><div class="cmd-grid">'+buttons+'</div><button class="btn ghost" data-act="cancelTarget">戻る</button>';
+  return '<div class="cmdhead"><b>'+nameRubyHtml(u.ally)+'</b>の指示</div><div class="cmd-grid">'+buttons+'</div><button class="btn ghost" data-act="cancelTarget">戻る</button>';
 }
 var origRenderBattleCommand = renderBattleCommand;
 renderBattleCommand = function(){
