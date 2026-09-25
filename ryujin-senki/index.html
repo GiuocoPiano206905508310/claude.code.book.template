@@ -16,7 +16,7 @@
   color-scheme: dark;
   /* フィールド・戦闘の画面を1画面に収めるため、JS側で端末ごとに実測して詰める。
      ここでの値は測定前・失敗時の初期値。 */
-  --bt-unit-max: 150px; --pad-size: 164px; --chart-max: 420px; --cmd-h: 245px;
+  --bt-unit-max: 150px; --pad-size: 164px; --chart-max: 420px; --cmd-h: 245px; --cmd-scale: 1; --bt-log-h: 56px;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){ --bg:#0a0f1c; --panel:#121a2c; }
@@ -168,11 +168,11 @@ button{ font-family:inherit; }
 
 /* field ― 羊皮紙の踏査図（古地図）とその下に置く真鍮の航法器（十字キー）。
    地図はタイルデータからSVGで描き起こし、現在地はオレンジのピンで示す。 */
-.chart-wrap{ padding:0 2px; position:relative; }
+.chart-wrap{ padding:0 2px; position:relative; flex-shrink:0; }
 /* 常時表示のHPカードの代わりに使う、細い1行のタップ用ボタン */
 .hppeek{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px;
   padding:8px 12px; background:var(--panel2); border:1px solid var(--line); border-radius:10px;
-  color:var(--text); font-size:12px; cursor:pointer; }
+  color:var(--text); font-size:12px; cursor:pointer; flex-shrink:0; }
 .hppeek-lb{ font-weight:700; }
 .hppeek-dots{ display:flex; gap:5px; }
 .hpdot{ width:9px; height:9px; border-radius:50%; display:block; }
@@ -192,6 +192,14 @@ button{ font-family:inherit; }
 .partyhp .php-nm rt{ font-size:.55em; opacity:.8; }
 .partyhp .php-v{ font-size:10px; color:var(--muted2); font-variant-numeric:tabular-nums; margin-top:2px; }
 .partyhp .hpbar{ height:6px; background:#20263c; border-radius:4px; overflow:hidden; margin-top:3px; border:1px solid #000; }
+/* バトル画面左上のリタイアボタンから開く確認ダイアログ。トップバーごと覆うので画面全体固定。 */
+.retreat-overlay{ position:fixed; inset:0; background:#05080fcc; z-index:75;
+  display:flex; align-items:center; justify-content:center; padding:20px; }
+.retreat-card{ background:linear-gradient(180deg,var(--panel2),var(--panel)); border:1px solid var(--line);
+  border-radius:16px; padding:20px 18px; max-width:320px; width:100%; text-align:center; }
+.retreat-card p{ margin:0 0 18px; font-size:14px; line-height:1.6; color:var(--text); }
+.retreat-card .row{ display:flex; gap:10px; }
+.retreat-card .row .btn{ flex:1; }
 .partyhp .hpbar i{ display:block; height:100%; background:linear-gradient(90deg,#5fd0a0,#3fa878); }
 .partyhp .hpbar.low i{ background:linear-gradient(90deg,#e2555f,#a8303a); }
 .poison-tag{ font-size:11px; color:#b9a0e0; margin-bottom:7px; }
@@ -204,7 +212,7 @@ button{ font-family:inherit; }
 @keyframes goalPulse{ 0%,100%{ opacity:.25; } 50%{ opacity:.6; } }
 
 /* 真鍮の航法器（案B）: 地図の外・下部に固定 */
-.padwrap{ display:flex; justify-content:center; margin:8px auto 0; }
+.padwrap{ display:flex; justify-content:center; margin:8px auto 0; flex-shrink:0; }
 .pad-plate{ position:relative; width:var(--pad-size); padding:10px; border-radius:14px;
   background:linear-gradient(158deg,#dcbd7c 0%,#c09a55 46%,#a8843f 100%);
   border:2px solid #40301c; box-shadow:inset 0 0 0 2px #6e5628, inset 0 2px 0 #eed9a8, 0 7px 16px -6px #000c; }
@@ -234,7 +242,12 @@ button{ font-family:inherit; }
 /* 出現数が増えても収まるよう、枠を等分しつつ1体あたりの上限を決める */
 .bt-side{ display:flex; gap:5px; justify-content:center; align-items:flex-start; }
 .bt-unit{ flex:1 1 0; min-width:0; max-width:212px; text-align:center; position:relative; }
-.card.bt-row{ padding:6px; }
+/* .screen は display:flex のため、既定の flex-shrink:1 のままだと
+   はみ出し時にブラウザが「見た目上つぶれる」形で勝手に縮めてしまい
+   （中身が入ったまま高さ0近くまで潰れるなど）、JS側の実測に基づく
+   縮小（--bt-unit-max 等）と競合してどちらつかずの崩れ方になる。
+   ここでは高さを常に自前の値・変数だけで決めたいので縮小を止める。 */
+.card.bt-row{ padding:6px; flex-shrink:0; }
 /* 1画面に収めるため、キャラ表示そのものを少し小さくする */
 .bt-row-compact .bt-unit{ max-width:var(--bt-unit-max); }
 .bt-unit .art{ border-radius:10px; }
@@ -289,12 +302,17 @@ button{ font-family:inherit; }
 .decided .dc{ font-size:10px; color:var(--text); background:#0b1120; border:1px solid var(--line);
   border-radius:99px; padding:2px 9px; }
 .decided .dc i{ font-style:normal; color:var(--muted2); margin-right:5px; }
-.bt-log{ background:#05080f; border:1px solid var(--line); border-radius:10px; padding:6px 10px; font-size:11.5px; color:var(--muted); height:56px; overflow-y:auto; line-height:1.6; }
+.bt-log{ background:#05080f; border:1px solid var(--line); border-radius:10px; padding:6px 10px; font-size:11.5px; color:var(--muted); height:var(--bt-log-h,56px); flex-shrink:0; overflow-y:auto; line-height:1.6; }
 .bt-log b{ color:var(--gold-bright); }
-.cmd-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.cmd-grid{ display:grid; grid-template-columns:1fr 1fr; gap:calc(8px*var(--cmd-scale,1)); }
 /* コマンド欄：オート攻撃／指示／アイテムのどの状態でも同じ高さに揃え、
-   ページ自体はスクロールさせない（アイテム一覧だけ内側でスクロール）。 */
-.cmd-panel{ height:var(--cmd-h,245px); display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+   ページ自体はスクロールさせない（アイテム一覧だけ内側でスクロール）。
+   小さい端末では --cmd-scale を JS 側で縮め、枠の高さとボタンの余白を
+   連動して縮小することで、はみ出しを防ぐ（中身だけ縮めて枠を固定のままにすると
+   逆に隙間ができてはみ出しが解消しないため、両方を同じ係数で連動させている）。 */
+.cmd-panel{ height:var(--cmd-h,245px); flex-shrink:0; display:flex; flex-direction:column; gap:calc(8px*var(--cmd-scale,1)); overflow:hidden; }
+.cmd-panel .btn{ padding:calc(13px*var(--cmd-scale,1)) calc(16px*var(--cmd-scale,1)); font-size:calc(14.5px*var(--cmd-scale,1)); min-height:0; }
+.cmd-panel .btn.small{ padding:calc(8px*var(--cmd-scale,1)) calc(12px*var(--cmd-scale,1)); font-size:calc(12.5px*var(--cmd-scale,1)); min-height:0; }
 .cmdhead{ background:linear-gradient(180deg,var(--panel2),var(--panel)); border:1px solid var(--line);
   border-radius:14px; padding:10px 12px; font-size:13px; flex:none; }
 .item-scroll{ flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; }
@@ -1515,8 +1533,12 @@ function render(){
     case "transferIssue": body = renderTransferIssue(); break;
     default: body = renderHome();
   }
+  /* バトル中は左上を通常の戻るボタンではなく、確認ダイアログ付きのリタイアボタンにする */
+  var topLeft = (state.screen==="battle")
+    ? '<button class="back" data-act="confirmRetreat" title="リタイア">🏳️</button>'
+    : (canBack(state.screen) ? '<button class="back" data-act="back">←</button>' : '<div style="width:36px"></div>');
   var top = isAuthScreen ? '' : ('<div class="topbar">'+
-    (canBack(state.screen) ? '<button class="back" data-act="back">←</button>' : '<div style="width:36px"></div>')+
+    topLeft+
     '<div class="ttl">'+topbarTitleHtml()+'</div>'+
     '<div class="ticket">🎟️ <span class="n">'+state.tickets+'</span></div>'+
     '</div>');
@@ -1562,7 +1584,16 @@ function autoFitScreen(screen){
   var root = document.documentElement.style;
   if(screen==="battle"){
     root.setProperty('--bt-unit-max', '150px');
+    root.setProperty('--cmd-scale', '1');
+    root.setProperty('--cmd-h', '245px');
+    root.setProperty('--bt-log-h', '56px');
     shrinkCssVarToFit('--bt-unit-max', 78);
+    /* キャラ表示を最小まで縮めてもまだ収まらない小さい端末だけ、
+       コマンド欄（枠の高さとボタンの余白）を連動して縮める。 */
+    if(screenOverflowPx() > 2) shrinkCmdPanelToFit();
+    /* それでもまだ収まらない、ごく小さい端末だけ、最後にログ欄を縮める
+       （中は元々スクロールできるので、欄自体が低くなっても閲覧はできる）。 */
+    if(screenOverflowPx() > 2) shrinkCssVarToFit('--bt-log-h', 32);
   } else if(screen==="field"){
     /* まず十字キーを縮め、それでも収まらない小さい画面だけ地図の表示幅も縮める
        （縦横比は.chartがwidth/heightをそのまま保つので崩れない） */
@@ -1570,6 +1601,23 @@ function autoFitScreen(screen){
     root.setProperty('--chart-max', '420px');
     shrinkCssVarToFit('--pad-size', 108);
     if(screenOverflowPx() > 2) shrinkCssVarToFit('--chart-max', 260);
+  }
+}
+/* --cmd-scale（ボタンの余白・文字サイズ）と --cmd-h（コマンド欄の枠の高さ）を
+   同じ比率で一緒に縮める。枠だけ縮めるとボタンが枠からはみ出て見切れ、
+   中身だけ縮めると枠に空白が残っては見出しの分だけはみ出しが解消しないため、
+   両方を連動させて初めてはみ出しなく縮小できる。 */
+function shrinkCmdPanelToFit(){
+  var root = document.documentElement.style;
+  var baseH = 245, floorScale = 0.55;
+  for(var pass=0; pass<6; pass++){
+    var over = screenOverflowPx();
+    if(over <= 2) return;
+    var curScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cmd-scale')) || 1;
+    if(curScale <= floorScale) return;
+    var nextScale = Math.max(floorScale, Math.round((curScale - 0.08) * 100) / 100);
+    root.setProperty('--cmd-scale', String(nextScale));
+    root.setProperty('--cmd-h', Math.max(Math.round(baseH*floorScale), Math.round(baseH*nextScale))+'px');
   }
 }
 /* 端末の回転・ウィンドウ幅の変化でも収まりが崩れないよう、リサイズ時にも掛け直す。
@@ -2575,6 +2623,19 @@ function renderBattle(){
     '<div class="bt-log" id="btLog">'+b.log.map(function(l){return '<div>'+l+'</div>';}).join('')+'</div>'+
     '<div class="card bt-row bt-row-compact"><div class="bt-side">'+allyHtml+'</div></div>'+
     '<div class="cmd-panel">'+cmdArea+'</div>'+
+  '</div>'+
+  (state._confirmRetreat ? retreatConfirmHtml() : '');
+}
+/* 左上のリタイアボタンから開く、戦闘を中断してホームへ戻るための確認ダイアログ */
+function retreatConfirmHtml(){
+  return '<div class="retreat-overlay" data-act="cancelRetreat">'+
+    '<div class="retreat-card" data-act="noop">'+
+      '<p>ホームに戻ります。<br>本当にリタイアしますか？</p>'+
+      '<div class="row">'+
+        '<button class="btn ghost" data-act="doRetreat">はい</button>'+
+        '<button class="btn primary" data-act="cancelRetreat">いいえ</button>'+
+      '</div>'+
+    '</div>'+
   '</div>';
 }
 /* 決定済みの行動を短く言い表す */
@@ -3413,6 +3474,15 @@ function handleAction(act, el){
     }
     case "cmdOrder": { state._battle.subPhase="order-menu"; render(); break; }
     case "cmdItem": { state._battle.subPhase="item"; render(); break; }
+    case "confirmRetreat": { state._confirmRetreat = true; render(); break; }
+    case "cancelRetreat": { state._confirmRetreat = false; render(); break; }
+    case "doRetreat": {
+      state._confirmRetreat = false;
+      state._battle = null;
+      state.screen = "home";
+      saveState(); render(); window.scrollTo(0,0);
+      break;
+    }
     case "cmdFlee": {
       var b2=state._battle;
       b2.held = {};                                        /* 仮押さえしていたアイテムは戻す */
