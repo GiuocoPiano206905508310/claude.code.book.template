@@ -1796,7 +1796,8 @@ function fitBattleHint(){
   if(!hint || !firstUnit) return;
   hint.style.display = '';
   var hintBox = hint.getBoundingClientRect(), unitBox = firstUnit.getBoundingClientRect();
-  if(hintBox.right + 2 > unitBox.left) hint.style.display = 'none';
+  var fits = (hintBox.right + 2 <= unitBox.left) && (hintBox.height <= unitBox.height);
+  if(!fits) hint.style.display = 'none';
 }
 var _fitResizeTimer = null;
 function scheduleRefit(delay){
@@ -2788,7 +2789,7 @@ function renderBattle(){
     '<div class="card bt-row bt-row-compact"><div class="bt-side">'+enemyHtml+'</div></div>'+
     '<div class="bt-log" id="btLog">'+b.log.map(function(l){return '<div>'+l+'</div>';}).join('')+'</div>'+
     '<div class="card bt-row bt-row-compact bt-row-ally">'+
-      '<div class="bt-hint"><div>キャラ長押し</div><div>タップで詳細表示</div></div>'+
+      '<div class="bt-hint"><div>キャラ長押しタップで詳細表示</div></div>'+
       '<div class="bt-side">'+allyHtml+'</div>'+
     '</div>'+
     '<div class="cmd-panel">'+cmdArea+'</div>'+
