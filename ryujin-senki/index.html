@@ -1290,24 +1290,27 @@ function gunzipBytes(bytes){
 }
 /* 引き継ぎコードの形式： RJSN1:<gzip有無0/1>:<塩b64>:<ivb64>:<暗号文b64>
    塩・ivは秘密でないので平文のまま、パスワードで暗号化するのは中身のセーブ本体だけ。 */
-function buildTransferCode(account, saveObj, password){
+/* 引き継ぎコード自体がパスワード相当の長さ・ランダム性を持つため、
+   復元時にさらにパスワードを求めるのはやめ、コード自体に鍵を含める
+   （＝コードさえあれば復元できる。他人に見せない前提のコードとして扱う）。 */
+function buildTransferCode(account, saveObj){
   var payload = JSON.stringify({ username:account.username, email:account.email, salt:account.salt, hash:account.hash,
     recoverySalt:account.recoverySalt, recoveryHash:account.recoveryHash, state:saveObj });
   var plainBytes = new TextEncoder().encode(payload);
-  var salt = randomBytes(16), iv = randomBytes(12);
+  var keyBytes = randomBytes(32), iv = randomBytes(12);
   return gzipBytes(plainBytes).then(function(res){
-    return deriveAesKey(password, salt).then(function(key){
+    return crypto.subtle.importKey("raw", keyBytes, {name:"AES-GCM"}, false, ["encrypt"]).then(function(key){
       return crypto.subtle.encrypt({name:"AES-GCM", iv:iv}, key, res.data).then(function(cipherBuf){
-        return "RJSN1:"+(res.gz?"1":"0")+":"+b64FromBytes(salt)+":"+b64FromBytes(iv)+":"+b64FromBytes(new Uint8Array(cipherBuf));
+        return "RJSN2:"+(res.gz?"1":"0")+":"+b64FromBytes(keyBytes)+":"+b64FromBytes(iv)+":"+b64FromBytes(new Uint8Array(cipherBuf));
       });
     });
   });
 }
-function parseTransferCode(code, password){
+function parseTransferCode(code){
   var parts = String(code||"").trim().split(":");
-  if(parts.length!==5 || parts[0]!=="RJSN1") return Promise.reject(new Error("format"));
-  var gz = parts[1]==="1", salt = bytesFromB64(parts[2]), iv = bytesFromB64(parts[3]), cipher = bytesFromB64(parts[4]);
-  return deriveAesKey(password, salt).then(function(key){
+  if(parts.length!==5 || parts[0]!=="RJSN2") return Promise.reject(new Error("format"));
+  var gz = parts[1]==="1", keyBytes = bytesFromB64(parts[2]), iv = bytesFromB64(parts[3]), cipher = bytesFromB64(parts[4]);
+  return crypto.subtle.importKey("raw", keyBytes, {name:"AES-GCM"}, false, ["decrypt"]).then(function(key){
     return crypto.subtle.decrypt({name:"AES-GCM", iv:iv}, key, cipher);
   }).then(function(plainBuf){
     var bytes = new Uint8Array(plainBuf);
@@ -3133,11 +3136,9 @@ function renderAuthRestore(){
     '<div class="card">'+
       '<label class="f">引き継ぎコード</label>'+
       '<textarea id="restoreCode" placeholder="ここに貼り付け" style="min-height:96px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;word-break:break-all;"></textarea>'+
-      '<div class="divider" style="margin:10px 0"></div>'+
-      '<label class="f">パスワード</label><input type="password" id="restorePw" placeholder="発行時のパスワード" autocomplete="current-password">'+
       '<button class="btn primary" data-act="doRestoreCode">この端末に取り込む</button>'+
     '</div>'+
-    '<div class="notice">コードはパスワードで暗号化されています。発行したときと同じパスワードを入力してください。</div>'+
+    '<div class="notice">このコードを知っている人は誰でも復元できます。他人に見せたり、公開の場に貼ったりしないでください。</div>'+
     '<button class="btn ghost" data-act="goto" data-screen="authLogin">戻る</button>'+
   '</div>';
 }
@@ -3202,7 +3203,7 @@ function renderTransferIssue(){
       '<label class="f">引き継ぎコードをコピーしてください</label>'+
       '<textarea id="transferCodeBox" readonly style="min-height:110px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;word-break:break-all;">'+esc(state._transferCode)+'</textarea>'+
       '<button class="btn primary" data-act="copyTransferCode">コピーする</button>'+
-      '<div class="muted center" style="margin-top:8px">新しい端末で同じURLを開き「引き継ぎコードで復元」から、このコードと今のパスワードを入力してください。</div>'+
+      '<div class="muted center" style="margin-top:8px">新しい端末で同じURLを開き「引き継ぎコードで復元」から、このコードを入力してください。</div>'+
     '</div>' : '';
   return '<div class="screen">'+
     '<div class="card">'+
@@ -3319,10 +3320,9 @@ function handleAction(act, el){
     }
     case "doRestoreCode": {
       var code = ((document.getElementById("restoreCode")||{}).value||"").trim();
-      var rpw = (document.getElementById("restorePw")||{}).value||"";
       if(!code){ toast("引き継ぎコードを入力してください"); break; }
       el.disabled = true;
-      parseTransferCode(code, rpw).then(function(payload){
+      parseTransferCode(code).then(function(payload){
         el.disabled = false;
         if(!payload || !payload.email || !payload.state){ toast("コードの形式が正しくありません"); return; }
         var accounts = loadAccounts();
@@ -3342,7 +3342,7 @@ function handleAction(act, el){
         try{ localStorage.setItem(accountSaveKey(id), JSON.stringify(payload.state)); }catch(e){}
         completeLogin(id);
         toast("復元しました");
-      }).catch(function(){ el.disabled=false; toast("コードまたはパスワードが正しくありません"); });
+      }).catch(function(){ el.disabled=false; toast("コードの形式が正しくありません"); });
       break;
     }
     case "doForgotReset": {
@@ -3438,7 +3438,7 @@ function handleAction(act, el){
       el.disabled = true;
       hashPassword(ipw, bytesFromB64(iacc.salt)).then(function(hash){
         if(hash!==iacc.hash){ el.disabled=false; toast("パスワードが正しくありません"); return null; }
-        return buildTransferCode(iacc, state, ipw);
+        return buildTransferCode(iacc, state);
       }).then(function(code){
         el.disabled = false;
         if(!code) return;
