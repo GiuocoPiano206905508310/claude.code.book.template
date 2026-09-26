@@ -1274,32 +1274,28 @@ function registerAccount(email, uname, pw){
       }
       var user = res.data && res.data.user;
       if(!user) return Promise.reject(new Error("no-user"));
-      return createLocalAccountRecord(user.id, email, uname).then(function(){ return {id:user.id, showRecovery:false}; });
+      return createLocalAccountRecord(user.id, email, uname).then(function(){ return {id:user.id, offline:false}; });
     })
     .catch(function(err){
       if(err && err.message==="duplicate") return Promise.reject(err);
       /* Supabaseに届かない（プレビューのCSPやオフラインなど）: この端末だけで完結する
-         従来方式に自動フォールバックする */
+         従来方式に自動フォールバックする。復旧コードは発行しない（この端末が使えなくなったら
+         パスワード再設定の手段が無い点は、Supabaseに届かない間だけの制約として受け入れる）。 */
       return registerAccountLocal(email, uname, pw);
     });
 }
-/* オフライン・プレビュー環境向けフォールバック。復旧コードのみが再設定手段になる。 */
 function registerAccountLocal(email, uname, pw){
   var regSalt = randomBytes(16);
-  var recoveryCode = generateRecoveryCode();
-  var recoverySalt = randomBytes(16);
-  return Promise.all([hashPassword(pw, regSalt), hashPassword(normalizeRecoveryCode(recoveryCode), recoverySalt)]).then(function(results){
-    var hash = results[0], recoveryHash = results[1];
+  return hashPassword(pw, regSalt).then(function(hash){
     var accounts = loadAccounts();
     var isFirstEver = accounts.length===0;
     var id = String(Date.now())+"_"+Math.floor(Math.random()*1e6);
-    accounts.push({id:id, username:uname, email:email, salt:b64FromBytes(regSalt), hash:hash,
-      recoverySalt:b64FromBytes(recoverySalt), recoveryHash:recoveryHash, createdAt:Date.now()});
+    accounts.push({id:id, username:uname, email:email, salt:b64FromBytes(regSalt), hash:hash, createdAt:Date.now()});
     saveAccounts(accounts);
     var oldRaw = null;
     if(isFirstEver){ try{ oldRaw = localStorage.getItem(OLD_SAVE_KEY); }catch(e){} }
     if(oldRaw){ try{ localStorage.setItem(accountSaveKey(id), oldRaw); }catch(e){} }
-    return {id:id, showRecovery:true, code:recoveryCode};
+    return {id:id, offline:true};
   });
 }
 function loginAccountLocal(email, pw, localAcc){
@@ -1385,20 +1381,6 @@ function saveSession(s){
 function b64FromBytes(bytes){ var bin=""; for(var i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]); return btoa(bin); }
 function bytesFromB64(b64){ var bin=atob(b64); var bytes=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i); return bytes; }
 function randomBytes(n){ var b=new Uint8Array(n); crypto.getRandomValues(b); return b; }
-/* パスワードを忘れたときの「復旧コード」。登録直後に1回だけ表示し、
-   本人確認用のハッシュだけをアカウントに残す（パスワードと同じ扱い）。
-   まぎらわしい 0/O・1/I/L は使わない。 */
-var RECOVERY_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-function generateRecoveryCode(){
-  var bytes = randomBytes(16), groups = [];
-  for(var g=0; g<4; g++){
-    var s = "";
-    for(var i=0; i<4; i++) s += RECOVERY_CHARS[bytes[g*4+i] % RECOVERY_CHARS.length];
-    groups.push(s);
-  }
-  return groups.join("-");
-}
-function normalizeRecoveryCode(s){ return String(s||"").toUpperCase().replace(/[^A-Z0-9]/g,""); }
 function importPwKey(password){
   return crypto.subtle.importKey("raw", new TextEncoder().encode(password), {name:"PBKDF2"}, false, ["deriveBits","deriveKey"]);
 }
@@ -1433,7 +1415,7 @@ function gunzipBytes(bytes){
    （＝コードさえあれば復元できる。他人に見せない前提のコードとして扱う）。 */
 function buildTransferCode(account, saveObj){
   var payload = JSON.stringify({ username:account.username, email:account.email, salt:account.salt, hash:account.hash,
-    recoverySalt:account.recoverySalt, recoveryHash:account.recoveryHash, state:saveObj });
+    state:saveObj });
   var plainBytes = new TextEncoder().encode(payload);
   var keyBytes = randomBytes(32), iv = randomBytes(12);
   return gzipBytes(plainBytes).then(function(res){
@@ -1498,8 +1480,6 @@ function saveState(){
    ログアウト前にいた画面が安全に再開できるものかを見て、危なそうならフィールド／ホームへ逃がす。
    （firstRunがtrueのときは、render()側のガードが遊び方へ強制的に戻すのでここでは何もしない） */
 var UNSAFE_RESUME_SCREENS = {battle:1, result:1, levelup:1, cardComplete:1, reveal:1, candidate:1};
-/* 復旧コードの控え画面をはさむ間だけ、まだログインしていない状態で保持しておく一時変数 */
-var pendingRecovery = null; /* {accountId, code} */
 function completeLogin(accountId){
   saveSession({accountId:accountId});
   state = loadState();
@@ -1633,13 +1613,13 @@ var TOP_TITLES = {
   stageSelect:"ステージ選択", field:"フィールド", battle:"バトル", result:"バトル結果", levelup:"レベルアップ",
   stageClear:"ステージクリア", settings:"設定・仕様の確認", inventory:"持ち物",
   authLogin:"ログイン", authRegister:"新規登録", authRestore:"引き継ぎコードで復元", transferIssue:"引き継ぎコードを発行",
-  authForgot:"パスワードの再設定", authRecoveryReveal:"復旧コードの控え", accountEdit:"アカウント情報の変更"
+  authForgot:"パスワードの再設定", accountEdit:"アカウント情報の変更"
 };
 /* 戦闘と、その後の結果・レベルアップは戻るで抜けられないようにする。
    途中で抜けると戦闘が無かったことになり、報酬も失われるため。
    ログイン系の画面も、戻る先が無いためトップバーの←は出さない。 */
-var NO_BACK = {home:1, battle:1, result:1, levelup:1, authLogin:1, authRegister:1, authRestore:1, authForgot:1, authRecoveryReveal:1};
-var AUTH_SCREENS = {authLogin:1, authRegister:1, authRestore:1, authForgot:1, authForgotLegacy:1, authSetNewPassword:1, authRecoveryReveal:1};
+var NO_BACK = {home:1, battle:1, result:1, levelup:1, authLogin:1, authRegister:1, authRestore:1, authForgot:1};
+var AUTH_SCREENS = {authLogin:1, authRegister:1, authRestore:1, authForgot:1, authSetNewPassword:1};
 function canBack(s){
   /* 新規登録直後の「遊び方」は全ページ見てもらうため、戻る操作では抜けられないようにする */
   if(s==="tutorial" && state.firstRun) return false;
@@ -1685,9 +1665,7 @@ function render(){
     case "authRegister": body = renderAuthRegister(); break;
     case "authRestore": body = renderAuthRestore(); break;
     case "authForgot": body = renderAuthForgot(); break;
-    case "authForgotLegacy": body = renderAuthForgotLegacy(); break;
     case "authSetNewPassword": body = renderAuthSetNewPassword(); break;
-    case "authRecoveryReveal": body = renderAuthRecoveryReveal(); break;
     case "accountEdit": body = renderAccountEdit(); break;
     case "transferIssue": body = renderTransferIssue(); break;
     default: body = renderHome();
@@ -3265,7 +3243,7 @@ function renderAuthRegister(){
       '<label class="f">パスワード（確認）</label><input type="password" id="regPw2" placeholder="もう一度入力" autocomplete="new-password">'+
       '<button class="btn primary" data-act="doRegister">はじめる</button>'+
     '</div>'+
-    '<div class="notice">パスワードは保存されず、アカウントごとの塩を使って20万回ハッシュ化した値だけが残ります。保存データを見てもパスワードは分かりません。ただしこの仕組みはブラウザ内で完結しており、専門的に保存データを覗ける人からの保護までは保証できません。</div>'+
+    '<div class="notice">パスワードは保存されません。パスワードを忘れた場合は、ログイン画面の「パスワードをお忘れの方」から、登録したメールアドレス宛に再設定用のリンクを送信できます。</div>'+
     (hasOldSaveForMigration() ? '<div class="notice blue">このブラウザに保存されていた既存のセーブデータは、ここで作るアカウントへそのまま引き継がれます。</div>' : '')+
     '<button class="btn ghost" data-act="goto" data-screen="authLogin">すでにアカウントをお持ちの方はこちら</button>'+
   '</div>';
@@ -3290,26 +3268,7 @@ function renderAuthForgot(){
       '<button class="btn primary" data-act="doSendResetEmail">再設定用メールを送信する</button>'+
     '</div>'+
     '<div class="notice">入力したメールアドレス宛に、新しいパスワードを設定するためのリンクを送信します。届いたメール内のリンクを開いて、新しいパスワードを設定してください。</div>'+
-    '<button class="btn ghost small" data-act="goto" data-screen="authForgotLegacy">登録直後に控えた復旧コードをお持ちの方はこちら</button>'+
     '<button class="btn ghost" data-act="goto" data-screen="authLogin">戻る</button>'+
-  '</div>';
-}
-function renderAuthForgotLegacy(){
-  return '<div class="screen">'+
-    '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ 復旧コードで再設定</small></div></div>'+
-    '<div class="card">'+
-      '<label class="f">メールアドレス</label><input type="email" id="forgotEmail" placeholder="you@example.com" autocomplete="username">'+
-      '<div class="divider" style="margin:10px 0"></div>'+
-      '<label class="f">復旧コード</label>'+
-      '<input type="text" id="forgotCode" placeholder="XXXX-XXXX-XXXX-XXXX" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;">'+
-      '<div class="divider" style="margin:10px 0"></div>'+
-      '<label class="f">新しいパスワード（4文字以上）</label><input type="password" id="forgotPw" placeholder="新しいパスワード" autocomplete="new-password">'+
-      '<div class="divider" style="margin:10px 0"></div>'+
-      '<label class="f">新しいパスワード（確認）</label><input type="password" id="forgotPw2" placeholder="もう一度入力" autocomplete="new-password">'+
-      '<button class="btn primary" data-act="doForgotReset">パスワードを再設定する</button>'+
-    '</div>'+
-    '<div class="notice">この方法は、メールでの再設定に対応する前に作成されたこの端末限定のアカウント向けです。復旧コードは新規登録の直後に1回だけ表示される控えです。</div>'+
-    '<button class="btn ghost" data-act="goto" data-screen="authForgot">戻る</button>'+
   '</div>';
 }
 function renderAuthSetNewPassword(){
@@ -3321,23 +3280,6 @@ function renderAuthSetNewPassword(){
       '<label class="f">新しいパスワード（確認）</label><input type="password" id="newPw2" placeholder="もう一度入力" autocomplete="new-password">'+
       '<button class="btn primary" data-act="doSetNewPassword">このパスワードに設定する</button>'+
     '</div>'+
-  '</div>';
-}
-function renderAuthRecoveryReveal(){
-  var p = pendingRecovery;
-  var code = p ? p.code : "";
-  return '<div class="screen">'+
-    '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ 復旧コードの控え</small></div></div>'+
-    (p && p.note ? '<div class="notice blue">'+esc(p.note)+'</div>' : '')+
-    '<div class="card">'+
-      '<label class="f">この復旧コードをコピーして、安全な場所に控えてください</label>'+
-      '<textarea id="recoveryCodeBox" readonly style="min-height:64px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;text-align:center;letter-spacing:.05em;">'+esc(code)+'</textarea>'+
-      '<button class="btn primary" data-act="copyRecoveryCode">コピーする</button>'+
-    '</div>'+
-    '<div class="notice" style="border-color:#7a3b44;background:#1a0e12;color:#f0b6bc">'+
-      '<b>このコードは今しか表示されません。</b>パスワードを忘れたときに、これが無いとアカウントを復旧できなくなります。パスワードとは別に、メモや写真など安全な場所に保管してください。'+
-    '</div>'+
-    '<button class="btn ghost" data-act="ackRecovery">控えました。ゲームを始める</button>'+
   '</div>';
 }
 function renderAccountEdit(){
@@ -3442,15 +3384,8 @@ function handleAction(act, el){
       el.disabled = true;
       registerAccount(email, uname, pw).then(function(r){
         el.disabled = false;
-        if(r.showRecovery){
-          pendingRecovery = { accountId:r.id, code:r.code,
-            note:"アカウントを作成しました（現在ネットワークに接続できないため、この端末限定のアカウントです）。" };
-          state.screen = "authRecoveryReveal";
-          render();
-        } else {
-          completeLogin(r.id);
-          toast("アカウントを作成しました");
-        }
+        completeLogin(r.id);
+        toast(r.offline ? "アカウントを作成しました（現在ネットワークに接続できないため、この端末限定のアカウントです）" : "アカウントを作成しました");
       }).catch(function(err){
         el.disabled = false;
         toast(err && err.message==="duplicate" ? "そのメールアドレスは登録済みです" : "エラーが発生しました");
@@ -3491,12 +3426,10 @@ function handleAction(act, el){
         if(existing){
           id = existing.id;
           existing.username = payload.username; existing.salt = payload.salt; existing.hash = payload.hash;
-          if(payload.recoverySalt){ existing.recoverySalt = payload.recoverySalt; existing.recoveryHash = payload.recoveryHash; }
           saveAccounts(accounts);
         } else {
           id = String(Date.now())+"_"+Math.floor(Math.random()*1e6);
-          accounts.push({id:id, username:payload.username, email:payload.email, salt:payload.salt, hash:payload.hash,
-            recoverySalt:payload.recoverySalt, recoveryHash:payload.recoveryHash, createdAt:Date.now()});
+          accounts.push({id:id, username:payload.username, email:payload.email, salt:payload.salt, hash:payload.hash, createdAt:Date.now()});
           saveAccounts(accounts);
         }
         try{ localStorage.setItem(accountSaveKey(id), JSON.stringify(payload.state)); }catch(e){}
@@ -3510,13 +3443,13 @@ function handleAction(act, el){
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rEmail)){ toast("メールアドレスの形式が正しくありません"); break; }
       /* このメールアドレスがSupabase移行前のこの端末限定アカウントの場合、Supabase側には
          ユーザーが存在しないため、resetPasswordForEmailは（なりすまし対策で）エラーを返さず
-         成功したように見えつつ実際にはメールが送られない。ログインできる状態なら次回ログイン時に
-         自動移行されるが、パスワードを忘れている今はそれもできないため、Supabaseに問い合わせる前に
-         ここで確実に気づけるよう復旧コード方式へ案内する。 */
+         成功したように見えつつ実際にはメールが送られない。このアカウントは一度ログインに
+         成功した時点で自動的にSupabase側へ登録される（loginAccountの移行処理）ため、
+         パスワードを覚えているならまずログインしてもらうよう案内する。 */
       var rLocalAcc = findAccountByEmail(rEmail);
       if(rLocalAcc && !rLocalAcc.supabase){
-        toast("このアカウントはメールでの再設定にまだ対応していません。復旧コードをお使いください");
-        go("authForgotLegacy");
+        toast("このアカウントはメールでの再設定にまだ対応していません。一度ログインしてから、もう一度お試しください");
+        go("authLogin");
         break;
       }
       if(!sb){ toast("現在この機能を利用できません。ネットワーク接続をご確認いただくか、時間をおいて再度お試しください"); break; }
@@ -3550,56 +3483,6 @@ function handleAction(act, el){
           toast("パスワードを再設定しました");
         });
       }).catch(function(){ el.disabled=false; toast("エラーが発生しました"); });
-      break;
-    }
-    case "doForgotReset": {
-      var fEmail = ((document.getElementById("forgotEmail")||{}).value||"").trim();
-      var fCode = normalizeRecoveryCode((document.getElementById("forgotCode")||{}).value||"");
-      var fPw = (document.getElementById("forgotPw")||{}).value||"";
-      var fPw2 = (document.getElementById("forgotPw2")||{}).value||"";
-      if(fPw.length<4){ toast("パスワードは4文字以上にしてください"); break; }
-      if(fPw!==fPw2){ toast("パスワードが一致しません"); break; }
-      var fAcc = findAccountByEmail(fEmail);
-      if(!fAcc){ toast("メールアドレスまたは復旧コードが正しくありません"); break; }
-      if(!fAcc.recoverySalt || !fAcc.recoveryHash){
-        toast("このアカウントには復旧コードが設定されていません"); break;
-      }
-      el.disabled = true;
-      hashPassword(fCode, bytesFromB64(fAcc.recoverySalt)).then(function(hash){
-        if(hash!==fAcc.recoveryHash){ el.disabled=false; toast("メールアドレスまたは復旧コードが正しくありません"); return null; }
-        /* パスワードと、使い切りの復旧コードを両方作り直す */
-        var newSalt = randomBytes(16), newRecoverySalt = randomBytes(16), newRecoveryCode = generateRecoveryCode();
-        return Promise.all([hashPassword(fPw, newSalt), hashPassword(normalizeRecoveryCode(newRecoveryCode), newRecoverySalt)])
-          .then(function(results){ return {pwHash:results[0], recHash:results[1], newSalt:newSalt, newRecoverySalt:newRecoverySalt, newRecoveryCode:newRecoveryCode}; });
-      }).then(function(r){
-        el.disabled = false;
-        if(!r) return;
-        var accounts = loadAccounts();
-        var target = accounts.filter(function(a){ return a.id===fAcc.id; })[0];
-        if(!target){ toast("エラーが発生しました"); return; }
-        target.salt = b64FromBytes(r.newSalt); target.hash = r.pwHash;
-        target.recoverySalt = b64FromBytes(r.newRecoverySalt); target.recoveryHash = r.recHash;
-        saveAccounts(accounts);
-        pendingRecovery = { accountId: target.id, code: r.newRecoveryCode,
-          note: "パスワードを再設定しました。復旧コードも新しく発行されています。" };
-        state.screen = "authRecoveryReveal";
-        render();
-      }).catch(function(){ el.disabled=false; toast("エラーが発生しました"); });
-      break;
-    }
-    case "ackRecovery": {
-      var pr = pendingRecovery; pendingRecovery = null;
-      if(pr) completeLogin(pr.accountId); else go("authLogin");
-      break;
-    }
-    case "copyRecoveryCode": {
-      var rcode = (pendingRecovery && pendingRecovery.code) || "";
-      if(!rcode) break;
-      var rbox = document.getElementById("recoveryCodeBox"); if(rbox) rbox.select();
-      var rafter = function(ok){ toast(ok ? "コピーしました" : "コピーできませんでした。テキストを選択してコピーしてください"); };
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(rcode).then(function(){ rafter(true); }).catch(function(){ fallbackCopy(rcode, rafter); });
-      } else { fallbackCopy(rcode, rafter); }
       break;
     }
     case "saveAccountEdit": {
