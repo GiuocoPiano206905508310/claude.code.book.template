@@ -3508,12 +3508,23 @@ function handleAction(act, el){
     case "doSendResetEmail": {
       var rEmail = ((document.getElementById("resetEmail")||{}).value||"").trim();
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rEmail)){ toast("メールアドレスの形式が正しくありません"); break; }
+      /* このメールアドレスがSupabase移行前のこの端末限定アカウントの場合、Supabase側には
+         ユーザーが存在しないため、resetPasswordForEmailは（なりすまし対策で）エラーを返さず
+         成功したように見えつつ実際にはメールが送られない。ログインできる状態なら次回ログイン時に
+         自動移行されるが、パスワードを忘れている今はそれもできないため、Supabaseに問い合わせる前に
+         ここで確実に気づけるよう復旧コード方式へ案内する。 */
+      var rLocalAcc = findAccountByEmail(rEmail);
+      if(rLocalAcc && !rLocalAcc.supabase){
+        toast("このアカウントはメールでの再設定にまだ対応していません。復旧コードをお使いください");
+        go("authForgotLegacy");
+        break;
+      }
       if(!sb){ toast("現在この機能を利用できません。ネットワーク接続をご確認いただくか、時間をおいて再度お試しください"); break; }
       el.disabled = true;
       sbCall(function(){ return sb.auth.resetPasswordForEmail(rEmail, {redirectTo:REDIRECT_URL}); }).then(function(res){
         el.disabled = false;
         if(res.error){ toast("送信できませんでした"); return; }
-        toast("再設定用のメールを送信しました");
+        toast("再設定用のメールを送信しました（届かない場合は迷惑メールフォルダもご確認ください）");
         go("authLogin");
       }).catch(function(){ el.disabled=false; toast("送信できませんでした。ネットワーク接続をご確認ください"); });
       break;
