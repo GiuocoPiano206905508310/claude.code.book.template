@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>龍神戦記デモ</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
   --bg:#0a0f1c; --panel:#121a2c; --panel2:#1a2440; --panel3:#212d4d;
@@ -1221,6 +1222,143 @@ function loadAccounts(){
   return [];
 }
 function saveAccounts(list){ try{ localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list)); }catch(e){} }
+/* ---- Supabase Auth（本物のメール送信によるパスワード再設定のため） ----
+   静的サイトのためAPIキーはpublishable（旧anon public相当）のみを埋め込む。
+   Claude Artifactのプレビュー内はCSPでsupabase.co宛の通信がブロックされるため、
+   その場合は各呼び出しがエラーになり、以下のフォールバックで従来のローカル完結
+   ログイン方式（この端末のPBKDF2ハッシュのみで判定）へ自動的に切り替わる。 */
+var SUPABASE_URL = "https://uydsuboajluarpivzgeo.supabase.co";
+var SUPABASE_KEY = "sb_publishable_vrIh0Veh9FsnjUiMBazE2w_HFR_NiGS";
+var REDIRECT_URL = "https://giuocopiano206905508310.github.io/claude.code.book.template/ryujin-senki/";
+var sb = null;
+try{
+  if(window.supabase && window.supabase.createClient){
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{detectSessionInUrl:true, persistSession:true, autoRefreshToken:true}});
+  }
+}catch(e){ sb = null; }
+/* メール内の再設定リンクを開いて戻ってきたときに発火する。まだ他のコードの定義前だが
+   関数宣言はホイスト、実際にこのイベントが飛ぶのはページ読み込み完了後なので問題ない。 */
+if(sb){
+  try{
+    sb.auth.onAuthStateChange(function(event){
+      if(event === "PASSWORD_RECOVERY"){ state.screen = "authSetNewPassword"; render(); }
+    });
+  }catch(e){}
+}
+function sbCall(fn, timeoutMs){
+  if(!sb) return Promise.reject(new Error("no-supabase"));
+  return Promise.race([
+    fn(),
+    new Promise(function(_, rej){ setTimeout(function(){ rej(new Error("timeout")); }, timeoutMs||6000); })
+  ]);
+}
+/* Supabase側にユーザーが作られた後、この端末のセーブ領域と紐付けるための最小限のローカル記録。
+   supabase:true のアカウントはパスワードハッシュを持たない（Supabase側が唯一の判定元）。 */
+function createLocalAccountRecord(id, email, uname){
+  var accounts = loadAccounts();
+  var isFirstEver = accounts.length===0;
+  accounts.push({id:id, username:uname, email:email, supabase:true, createdAt:Date.now()});
+  saveAccounts(accounts);
+  var oldRaw = null;
+  if(isFirstEver){ try{ oldRaw = localStorage.getItem(OLD_SAVE_KEY); }catch(e){} }
+  if(oldRaw){ try{ localStorage.setItem(accountSaveKey(id), oldRaw); }catch(e){} }
+  return Promise.resolve(id);
+}
+function registerAccount(email, uname, pw){
+  if(!sb) return registerAccountLocal(email, uname, pw);
+  return sbCall(function(){ return sb.auth.signUp({email:email, password:pw, options:{data:{username:uname}}}); })
+    .then(function(res){
+      if(res.error){
+        if(/registered|already|exists/i.test(res.error.message||"")) return Promise.reject(new Error("duplicate"));
+        return Promise.reject(res.error);
+      }
+      var user = res.data && res.data.user;
+      if(!user) return Promise.reject(new Error("no-user"));
+      return createLocalAccountRecord(user.id, email, uname).then(function(){ return {id:user.id, showRecovery:false}; });
+    })
+    .catch(function(err){
+      if(err && err.message==="duplicate") return Promise.reject(err);
+      /* Supabaseに届かない（プレビューのCSPやオフラインなど）: この端末だけで完結する
+         従来方式に自動フォールバックする */
+      return registerAccountLocal(email, uname, pw);
+    });
+}
+/* オフライン・プレビュー環境向けフォールバック。復旧コードのみが再設定手段になる。 */
+function registerAccountLocal(email, uname, pw){
+  var regSalt = randomBytes(16);
+  var recoveryCode = generateRecoveryCode();
+  var recoverySalt = randomBytes(16);
+  return Promise.all([hashPassword(pw, regSalt), hashPassword(normalizeRecoveryCode(recoveryCode), recoverySalt)]).then(function(results){
+    var hash = results[0], recoveryHash = results[1];
+    var accounts = loadAccounts();
+    var isFirstEver = accounts.length===0;
+    var id = String(Date.now())+"_"+Math.floor(Math.random()*1e6);
+    accounts.push({id:id, username:uname, email:email, salt:b64FromBytes(regSalt), hash:hash,
+      recoverySalt:b64FromBytes(recoverySalt), recoveryHash:recoveryHash, createdAt:Date.now()});
+    saveAccounts(accounts);
+    var oldRaw = null;
+    if(isFirstEver){ try{ oldRaw = localStorage.getItem(OLD_SAVE_KEY); }catch(e){} }
+    if(oldRaw){ try{ localStorage.setItem(accountSaveKey(id), oldRaw); }catch(e){} }
+    return {id:id, showRecovery:true, code:recoveryCode};
+  });
+}
+function loginAccountLocal(email, pw, localAcc){
+  var acc = localAcc || findAccountByEmail(email);
+  if(!acc || !acc.salt) return Promise.reject(new Error("bad-credentials"));
+  return hashPassword(pw, bytesFromB64(acc.salt)).then(function(hash){
+    if(hash!==acc.hash) return Promise.reject(new Error("bad-credentials"));
+    return acc.id;
+  });
+}
+/* 既存のローカル完結アカウントで初めてログインに成功した瞬間、裏でSupabase側にも
+   同じメール・パスワードのユーザーを作り、以後はSupabase判定に一本化する（移行）。
+   セーブデータは新しいIDのキーへコピーする。 */
+function migrateLocalAccountToSupabase(localAcc, pw){
+  if(!sb) return Promise.resolve(localAcc.id);
+  return sbCall(function(){ return sb.auth.signUp({email:localAcc.email, password:pw, options:{data:{username:localAcc.username}}}); })
+    .then(function(res){
+      if(res.error || !res.data || !res.data.user) return localAcc.id;
+      var newId = res.data.user.id;
+      try{
+        var saveRaw = localStorage.getItem(accountSaveKey(localAcc.id));
+        if(saveRaw) localStorage.setItem(accountSaveKey(newId), saveRaw);
+      }catch(e){}
+      var accounts = loadAccounts().filter(function(a){ return a.id!==localAcc.id; });
+      accounts.push({id:newId, username:localAcc.username, email:localAcc.email, supabase:true, createdAt:localAcc.createdAt||Date.now()});
+      saveAccounts(accounts);
+      return newId;
+    })
+    .catch(function(){ return localAcc.id; });
+}
+function loginAccount(email, pw){
+  var localAcc = findAccountByEmail(email);
+  if(!sb) return loginAccountLocal(email, pw, localAcc);
+  return sbCall(function(){ return sb.auth.signInWithPassword({email:email, password:pw}); })
+    .then(function(res){
+      if(res.error){
+        /* Supabase未登録のまま残っている旧方式アカウントなら、この場でSupabaseへ移行する */
+        if(localAcc && !localAcc.supabase && localAcc.salt){
+          return hashPassword(pw, bytesFromB64(localAcc.salt)).then(function(hash){
+            if(hash!==localAcc.hash) return Promise.reject(new Error("bad-credentials"));
+            return migrateLocalAccountToSupabase(localAcc, pw);
+          });
+        }
+        return Promise.reject(new Error("bad-credentials"));
+      }
+      var user = res.data && res.data.user;
+      if(!user) return Promise.reject(new Error("no-user"));
+      if(!findAccountById(user.id)){
+        var uname = (user.user_metadata && user.user_metadata.username) || email;
+        return createLocalAccountRecord(user.id, email, uname).then(function(){ return user.id; });
+      }
+      return user.id;
+    })
+    .catch(function(err){
+      if(err && err.message==="bad-credentials") return Promise.reject(err);
+      /* Supabaseに届かない: この端末のローカル判定にフォールバック */
+      return loginAccountLocal(email, pw, localAcc);
+    });
+}
 function findAccountById(id){
   var list = loadAccounts();
   for(var i=0;i<list.length;i++){ if(list[i].id===id) return list[i]; }
@@ -1501,7 +1639,7 @@ var TOP_TITLES = {
    途中で抜けると戦闘が無かったことになり、報酬も失われるため。
    ログイン系の画面も、戻る先が無いためトップバーの←は出さない。 */
 var NO_BACK = {home:1, battle:1, result:1, levelup:1, authLogin:1, authRegister:1, authRestore:1, authForgot:1, authRecoveryReveal:1};
-var AUTH_SCREENS = {authLogin:1, authRegister:1, authRestore:1, authForgot:1, authRecoveryReveal:1};
+var AUTH_SCREENS = {authLogin:1, authRegister:1, authRestore:1, authForgot:1, authForgotLegacy:1, authSetNewPassword:1, authRecoveryReveal:1};
 function canBack(s){
   /* 新規登録直後の「遊び方」は全ページ見てもらうため、戻る操作では抜けられないようにする */
   if(s==="tutorial" && state.firstRun) return false;
@@ -1547,6 +1685,8 @@ function render(){
     case "authRegister": body = renderAuthRegister(); break;
     case "authRestore": body = renderAuthRestore(); break;
     case "authForgot": body = renderAuthForgot(); break;
+    case "authForgotLegacy": body = renderAuthForgotLegacy(); break;
+    case "authSetNewPassword": body = renderAuthSetNewPassword(); break;
     case "authRecoveryReveal": body = renderAuthRecoveryReveal(); break;
     case "accountEdit": body = renderAccountEdit(); break;
     case "transferIssue": body = renderTransferIssue(); break;
@@ -3146,6 +3286,18 @@ function renderAuthForgot(){
   return '<div class="screen">'+
     '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ パスワードの再設定</small></div></div>'+
     '<div class="card">'+
+      '<label class="f">登録したメールアドレス</label><input type="email" id="resetEmail" placeholder="you@example.com" autocomplete="username">'+
+      '<button class="btn primary" data-act="doSendResetEmail">再設定用メールを送信する</button>'+
+    '</div>'+
+    '<div class="notice">入力したメールアドレス宛に、新しいパスワードを設定するためのリンクを送信します。届いたメール内のリンクを開いて、新しいパスワードを設定してください。</div>'+
+    '<button class="btn ghost small" data-act="goto" data-screen="authForgotLegacy">登録直後に控えた復旧コードをお持ちの方はこちら</button>'+
+    '<button class="btn ghost" data-act="goto" data-screen="authLogin">戻る</button>'+
+  '</div>';
+}
+function renderAuthForgotLegacy(){
+  return '<div class="screen">'+
+    '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ 復旧コードで再設定</small></div></div>'+
+    '<div class="card">'+
       '<label class="f">メールアドレス</label><input type="email" id="forgotEmail" placeholder="you@example.com" autocomplete="username">'+
       '<div class="divider" style="margin:10px 0"></div>'+
       '<label class="f">復旧コード</label>'+
@@ -3156,8 +3308,19 @@ function renderAuthForgot(){
       '<label class="f">新しいパスワード（確認）</label><input type="password" id="forgotPw2" placeholder="もう一度入力" autocomplete="new-password">'+
       '<button class="btn primary" data-act="doForgotReset">パスワードを再設定する</button>'+
     '</div>'+
-    '<div class="notice">復旧コードは新規登録の直後に1回だけ表示される控えです。お手元に無い場合、このブラウザ内で完結する仕組み上、パスワードを再設定する手段がありません（サーバーが無いため、メールの送信もできません）。</div>'+
-    '<button class="btn ghost" data-act="goto" data-screen="authLogin">戻る</button>'+
+    '<div class="notice">この方法は、メールでの再設定に対応する前に作成されたこの端末限定のアカウント向けです。復旧コードは新規登録の直後に1回だけ表示される控えです。</div>'+
+    '<button class="btn ghost" data-act="goto" data-screen="authForgot">戻る</button>'+
+  '</div>';
+}
+function renderAuthSetNewPassword(){
+  return '<div class="screen">'+
+    '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ 新しいパスワードの設定</small></div></div>'+
+    '<div class="card">'+
+      '<label class="f">新しいパスワード（4文字以上）</label><input type="password" id="newPw" placeholder="新しいパスワード" autocomplete="new-password">'+
+      '<div class="divider" style="margin:10px 0"></div>'+
+      '<label class="f">新しいパスワード（確認）</label><input type="password" id="newPw2" placeholder="もう一度入力" autocomplete="new-password">'+
+      '<button class="btn primary" data-act="doSetNewPassword">このパスワードに設定する</button>'+
+    '</div>'+
   '</div>';
 }
 function renderAuthRecoveryReveal(){
@@ -3277,42 +3440,39 @@ function handleAction(act, el){
       if(pw!==pw2){ toast("パスワードが一致しません"); break; }
       if(findAccountByEmail(email)){ toast("そのメールアドレスは登録済みです"); break; }
       el.disabled = true;
-      var regSalt = randomBytes(16);
-      var recoveryCode = generateRecoveryCode();
-      var recoverySalt = randomBytes(16);
-      Promise.all([hashPassword(pw, regSalt), hashPassword(normalizeRecoveryCode(recoveryCode), recoverySalt)]).then(function(results){
-        var hash = results[0], recoveryHash = results[1];
-        var accounts = loadAccounts();
-        var isFirstEver = accounts.length===0;
-        var id = String(Date.now())+"_"+Math.floor(Math.random()*1e6);
-        accounts.push({id:id, username:uname, email:email, salt:b64FromBytes(regSalt), hash:hash,
-          recoverySalt:b64FromBytes(recoverySalt), recoveryHash:recoveryHash, createdAt:Date.now()});
-        saveAccounts(accounts);
-        var oldRaw = null;
-        if(isFirstEver){ try{ oldRaw = localStorage.getItem(OLD_SAVE_KEY); }catch(e){} }
-        if(oldRaw){ try{ localStorage.setItem(accountSaveKey(id), oldRaw); }catch(e){} }
-        pendingRecovery = { accountId:id, code:recoveryCode,
-          note: oldRaw ? "これまでのセーブを引き継ぎました。" : "アカウントを作成しました。" };
-        state.screen = "authRecoveryReveal";
-        render();
-      }).catch(function(){ el.disabled=false; toast("エラーが発生しました"); });
+      registerAccount(email, uname, pw).then(function(r){
+        el.disabled = false;
+        if(r.showRecovery){
+          pendingRecovery = { accountId:r.id, code:r.code,
+            note:"アカウントを作成しました（現在ネットワークに接続できないため、この端末限定のアカウントです）。" };
+          state.screen = "authRecoveryReveal";
+          render();
+        } else {
+          completeLogin(r.id);
+          toast("アカウントを作成しました");
+        }
+      }).catch(function(err){
+        el.disabled = false;
+        toast(err && err.message==="duplicate" ? "そのメールアドレスは登録済みです" : "エラーが発生しました");
+      });
       break;
     }
     case "doLogin": {
       var lemail = ((document.getElementById("loginEmail")||{}).value||"").trim();
       var lpw = (document.getElementById("loginPw")||{}).value||"";
-      var lacc = findAccountByEmail(lemail);
-      if(!lacc){ toast("メールアドレスまたはパスワードが正しくありません"); break; }
       el.disabled = true;
-      hashPassword(lpw, bytesFromB64(lacc.salt)).then(function(hash){
+      loginAccount(lemail, lpw).then(function(id){
         el.disabled = false;
-        if(hash!==lacc.hash){ toast("メールアドレスまたはパスワードが正しくありません"); return; }
-        completeLogin(lacc.id);
+        completeLogin(id);
         toast("ログインしました");
-      }).catch(function(){ el.disabled=false; toast("エラーが発生しました"); });
+      }).catch(function(){
+        el.disabled = false;
+        toast("メールアドレスまたはパスワードが正しくありません");
+      });
       break;
     }
     case "doLogout": {
+      if(sb){ try{ sb.auth.signOut(); }catch(e){} }
       saveSession(null);
       state = loadState();
       render();
@@ -3343,6 +3503,42 @@ function handleAction(act, el){
         completeLogin(id);
         toast("復元しました");
       }).catch(function(){ el.disabled=false; toast("コードの形式が正しくありません"); });
+      break;
+    }
+    case "doSendResetEmail": {
+      var rEmail = ((document.getElementById("resetEmail")||{}).value||"").trim();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rEmail)){ toast("メールアドレスの形式が正しくありません"); break; }
+      if(!sb){ toast("現在この機能を利用できません。ネットワーク接続をご確認いただくか、時間をおいて再度お試しください"); break; }
+      el.disabled = true;
+      sbCall(function(){ return sb.auth.resetPasswordForEmail(rEmail, {redirectTo:REDIRECT_URL}); }).then(function(res){
+        el.disabled = false;
+        if(res.error){ toast("送信できませんでした"); return; }
+        toast("再設定用のメールを送信しました");
+        go("authLogin");
+      }).catch(function(){ el.disabled=false; toast("送信できませんでした。ネットワーク接続をご確認ください"); });
+      break;
+    }
+    case "doSetNewPassword": {
+      var npw = (document.getElementById("newPw")||{}).value||"";
+      var npw2 = (document.getElementById("newPw2")||{}).value||"";
+      if(npw.length<4){ toast("パスワードは4文字以上にしてください"); break; }
+      if(npw!==npw2){ toast("パスワードが一致しません"); break; }
+      if(!sb){ toast("エラーが発生しました"); break; }
+      el.disabled = true;
+      sbCall(function(){ return sb.auth.updateUser({password:npw}); }).then(function(res){
+        if(res.error) return Promise.reject(res.error);
+        return sb.auth.getUser();
+      }).then(function(ures){
+        el.disabled = false;
+        var user = ures.data && ures.data.user;
+        if(!user){ toast("エラーが発生しました"); return; }
+        var uname = (user.user_metadata && user.user_metadata.username) || user.email;
+        var p = findAccountById(user.id) ? Promise.resolve() : createLocalAccountRecord(user.id, user.email, uname);
+        p.then(function(){
+          completeLogin(user.id);
+          toast("パスワードを再設定しました");
+        });
+      }).catch(function(){ el.disabled=false; toast("エラーが発生しました"); });
       break;
     }
     case "doForgotReset": {
