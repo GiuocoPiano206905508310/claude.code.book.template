@@ -2876,10 +2876,10 @@ function allyDetailHtml(u){
           '<div class="ad-name">'+nameRubyHtml(a)+'<span class="ruby">'+esc(ROLE_LABEL[a.role]||'')+'</span></div>'+
           '<div class="ad-tags"><span class="tag gold">★'+inst.rarity+'</span><span class="tag">Lv.'+inst.level+'</span></div>'+
           '<div class="ad-stats">'+
-            '<div class="ad-stat"><span class="k">攻撃</span><span class="v">'+u.atk+'</span></div>'+
-            '<div class="ad-stat"><span class="k">防御</span><span class="v">'+u.def+'</span></div>'+
-            '<div class="ad-stat"><span class="k">素早さ</span><span class="v">'+u.agi+'</span></div>'+
-            '<div class="ad-stat"><span class="k">魔力</span><span class="v">'+u.int+'</span></div>'+
+            '<div class="ad-stat"><span class="k">'+STAT_LABEL.atk+'</span><span class="v">'+u.atk+'</span></div>'+
+            '<div class="ad-stat"><span class="k">'+STAT_LABEL.def+'</span><span class="v">'+u.def+'</span></div>'+
+            '<div class="ad-stat"><span class="k">'+STAT_LABEL.agi+'</span><span class="v">'+u.agi+'</span></div>'+
+            '<div class="ad-stat"><span class="k">'+STAT_LABEL.int+'</span><span class="v">'+u.int+'</span></div>'+
           '</div>'+
         '</div>'+
       '</div>'+
