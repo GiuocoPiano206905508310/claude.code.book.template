@@ -22,7 +22,7 @@
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){ --bg:#0a0f1c; --panel:#121a2c; }
 }
-*{box-sizing:border-box;}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{ height:100%; margin:0; overflow:hidden; overscroll-behavior:none; }
 body{ background:var(--bg); color:var(--text); }
 #app{
@@ -34,7 +34,9 @@ body{ background:var(--bg); color:var(--text); }
     linear-gradient(180deg,#0a0f1c 0%,#0a0f1c 100%);
   display:flex; flex-direction:column;
   padding-bottom: env(safe-area-inset-bottom,0px);
+  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
 }
+#app input, #app textarea{ -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
 .disp{ font-family:'Shippori Mincho','Hiragino Mincho ProN','Yu Mincho',serif; line-height:1.4; }
 h1,h2,h3{ font-family:'Shippori Mincho',serif; margin:0; letter-spacing:.02em; }
 button{ font-family:inherit; }
@@ -251,6 +253,16 @@ button{ font-family:inherit; }
 .card.bt-row{ padding:6px; flex-shrink:0; }
 /* 1画面に収めるため、キャラ表示そのものを少し小さくする */
 .bt-row-compact .bt-unit{ max-width:var(--bt-unit-max); }
+/* 味方カード行の左に余白ができる端末向けに、長押しで詳細が見られることを
+   縦書きの短い案内として添える（横に並べると余白の幅に収まらないため）。
+   余白が無い端末では単にカードの下に隠れて見えなくなるだけで実害はない。 */
+.bt-row-ally{ position:relative; }
+.bt-hint{
+  position:absolute; left:1px; top:50%; transform:translateY(-50%);
+  writing-mode:vertical-rl; text-orientation:upright;
+  font-size:8.5px; line-height:1.4; letter-spacing:.01em;
+  color:var(--muted2); white-space:nowrap; pointer-events:none; z-index:1;
+}
 .bt-unit .art{ border-radius:10px; }
 .bt-unit.down .cardFrame, .bt-unit.down .mob{ filter:grayscale(1) brightness(.4); }
 .stage-band{ display:flex; align-items:center; gap:9px; margin:16px 2px 8px; }
@@ -1687,6 +1699,7 @@ function render(){
   monoIcons(app);
   if(state.screen==="battle" || state.screen==="field"){
     autoFitScreen(state.screen);
+    if(state.screen==="battle") fitBattleHint();
     scheduleRefit(350); /* ツールバーの出没が遅れて反映される端末向けの保険（1回だけ） */
   }
   /* ダメージ演出は、直前の行動でキューに積まれたぶんを、
@@ -1772,6 +1785,19 @@ function shrinkCmdPanelToFit(){
    さらに、描画直後はツールバーの出没が収まりきっていないことがあるため少し遅れてもう一度確認する。 */
 function refitIfNeeded(){
   if(state.screen==="battle" || state.screen==="field") autoFitScreen(state.screen);
+  if(state.screen==="battle") fitBattleHint();
+}
+/* 味方カード行の左に出す縦書きの案内は、端末やパーティー構成によっては
+   カードがほぼ横幅いっぱいまで広がって余白がほとんど残らないことがある。
+   その場合は文字がカードに重なってしまうため、実測して収まらなければ隠す。 */
+function fitBattleHint(){
+  var hint = document.querySelector('.bt-hint');
+  var firstUnit = document.querySelector('.bt-row-ally [data-ally-idx="0"]');
+  if(!hint || !firstUnit) return;
+  hint.style.display = '';
+  var hintBox = hint.getBoundingClientRect(), unitBox = firstUnit.getBoundingClientRect();
+  var fits = (hintBox.right + 2 <= unitBox.left) && (hintBox.height <= unitBox.height);
+  if(!fits) hint.style.display = 'none';
 }
 var _fitResizeTimer = null;
 function scheduleRefit(delay){
@@ -2762,7 +2788,10 @@ function renderBattle(){
   return '<div class="screen screen-tight no-scroll">'+
     '<div class="card bt-row bt-row-compact"><div class="bt-side">'+enemyHtml+'</div></div>'+
     '<div class="bt-log" id="btLog">'+b.log.map(function(l){return '<div>'+l+'</div>';}).join('')+'</div>'+
-    '<div class="card bt-row bt-row-compact"><div class="bt-side">'+allyHtml+'</div></div>'+
+    '<div class="card bt-row bt-row-compact bt-row-ally">'+
+      '<div class="bt-hint"><div>キャラ長押しタップで詳細表示</div></div>'+
+      '<div class="bt-side">'+allyHtml+'</div>'+
+    '</div>'+
     '<div class="cmd-panel">'+cmdArea+'</div>'+
   '</div>';
 }
@@ -4024,6 +4053,11 @@ var revealLock = false;
   document.addEventListener("click", function(e){
     if(fired){ fired = false; e.stopPropagation(); e.preventDefault(); }
   }, true);
+  /* 長押し用のコールアウト（テキスト選択・共有メニュー）が出て、カードや他のボタンに
+     選択枠が残ってしまうのを防ぐ */
+  document.addEventListener("contextmenu", function(e){
+    if(e.target.closest && e.target.closest("[data-ally-idx]")) e.preventDefault();
+  });
 })();
 
 document.getElementById("app").addEventListener("click", function(e){
