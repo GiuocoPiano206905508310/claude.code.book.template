@@ -113,13 +113,16 @@ button{ font-family:inherit; }
 .ph-badge{ position:absolute; top:6px; right:6px; background:#5a2020; color:#ffd0d0; font-size:9px; padding:2px 6px; border-radius:6px; border:1px solid #a04040; z-index:3; font-weight:700; letter-spacing:.05em;}
 
 /* home */
-.hero{ position:relative; border-radius:18px; overflow:hidden; border:1px solid var(--line); padding:22px 16px 18px; text-align:center;
+/* Shippori Minchoは行送り（特にbold）が大きめのフォントで、タイトなoverflow:hiddenの
+   箱に入れると上端が欠けて見えることがあるため、overflowはvisibleにし、上の余白も
+   多めに確保しておく（背景の角丸自体はborder-radiusでそのまま効く）。 */
+.hero{ position:relative; border-radius:18px; overflow:visible; border:1px solid var(--line); padding:30px 16px 18px; text-align:center;
   background:
    radial-gradient(circle at 30% 0%, #3a2f6a55, transparent 55%),
    radial-gradient(circle at 80% 100%, #4a2a1a55, transparent 55%),
    linear-gradient(180deg,#141c34,#0d1424);
 }
-.hero .logo{ font-size:26px; font-weight:700; color:var(--gold-bright); text-shadow:0 0 18px #f3d48866; }
+.hero .logo{ font-size:26px; font-weight:700; color:var(--gold-bright); text-shadow:0 0 18px #f3d48866; line-height:1.3; }
 .hero .logo small{ display:block; font-size:11px; color:var(--muted); font-weight:500; margin-top:4px; letter-spacing:.1em;}
 .menu-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .menu-item{ background:var(--panel2); border:1px solid var(--line); border-radius:14px; padding:14px 10px; text-align:center; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px;}
@@ -362,6 +365,7 @@ rt{ font-family:'Zen Maru Gothic','Noto Sans JP',sans-serif; font-weight:700; le
 textarea, select, input[type=text], input[type=email], input[type=password]{ width:100%; background:var(--panel); border:1px solid var(--line); border-radius:10px; color:var(--text); padding:10px 12px; font-size:14px; font-family:inherit; }
 textarea{ resize:vertical; min-height:56px; }
 label.f{ font-size:11.5px; color:var(--muted); font-weight:700; display:block; margin-bottom:5px; letter-spacing:.03em;}
+.f-hint{ float:right; color:var(--muted2); font-weight:500; font-size:10px; letter-spacing:0; }
 .starburst{ position:fixed; inset:0; pointer-events:none; z-index:50; display:flex; align-items:center; justify-content:center; }
 /* 地図の枠や周辺光が上に乗っていてマスに触れないので、マスだけ触れるようにする */
 .chart *{ pointer-events:none; }
@@ -1540,8 +1544,15 @@ function cardFrameHtml(rarity, id){
   '</div>';
 }
 /* 敵はレア度枠を使わず、白背景を抜いた1枚絵をそのまま戦闘画面に置く */
+/* 提供イラストは胴体を切らない方針でそのまま等倍表示するため、キャラ本体が
+   画像内で上寄り・小さめに描かれている個体は、object-fit:containで中央寄せしても
+   枠の下側だけ空いて「浮いて」見える。該当キャラだけ見た目の重心を枠に合わせて
+   縦にずらす（画像そのものは切り抜かない）。単位は枠の高さに対する%。 */
+var MOB_ART_OFFSET = { "おびえキノコ": 12 };
 function enemyArtHtml(art, name){
-  return '<div class="mob"><img src="'+art+'" alt="'+esc(name)+'"></div>';
+  var off = MOB_ART_OFFSET[name];
+  var style = off ? ' style="transform:translateY('+off+'%)"' : '';
+  return '<div class="mob"><img src="'+art+'" alt="'+esc(name)+'"'+style+'></div>';
 }
 /* 敵名のルビ。名前を「漢字のかたまり」と「かなのかたまり」に分け、
    読みの中からかな部分を順に見つけることで、漢字のかたまりごとに読みを割り当てる。
@@ -1620,7 +1631,7 @@ function runSearch(){
 
 /* ============ RENDER: SCREENS ============ */
 var TOP_TITLES = {
-  home:"ホーム", tutorial:"遊び方", search:"キャラクター検索", candidate:"候補確認", reveal:"レア度抽選",
+  home:"ホーム", tutorial:"遊び方", search:"キャラクター検索", charGallery:"全キャラを見る", candidate:"候補確認", reveal:"レア度抽選",
   cardComplete:"完成カード", roster:"獲得キャラ一覧", detail:"キャラクター詳細", party:"パーティー編成",
   stageSelect:"ステージ選択", field:"フィールド", battle:"バトル", result:"バトル結果", levelup:"レベルアップ",
   stageClear:"ステージクリア", settings:"設定・仕様の確認", inventory:"持ち物",
@@ -1659,6 +1670,7 @@ function render(){
     case "home": body = renderHome(); break;
     case "tutorial": body = renderTutorial(); break;
     case "search": body = renderSearch(); break;
+    case "charGallery": body = renderCharGallery(); break;
     case "candidate": body = renderCandidate(); break;
     case "reveal": body = renderReveal(); break;
     case "cardComplete": body = renderCardComplete(); break;
@@ -1686,14 +1698,19 @@ function render(){
   var topLeft = (state.screen==="battle" || state.screen==="field")
     ? '<button class="back" data-act="confirmRetreat" title="リタイア">🏳️</button>'
     : (canBack(state.screen) ? '<button class="back" data-act="back">←</button>' : '<div style="width:36px"></div>');
+  var ticketClickable = state.screen!=="battle" && state.screen!=="search" && state.screen!=="candidate";
   var top = isAuthScreen ? '' : ('<div class="topbar">'+
     topLeft+
     '<div class="ttl">'+topbarTitleHtml()+'</div>'+
-    '<div class="ticket">🎟️ <span class="n">'+state.tickets+'</span></div>'+
+    '<div class="ticket"'+(ticketClickable?' data-act="goto" data-screen="search" style="cursor:pointer"':'')+'>🎟️ <span class="n">'+state.tickets+'</span></div>'+
     '</div>');
   body += (state._confirmRetreat ? retreatConfirmHtml() : '');
   if(state.screen==="battle" && state._allyDetailIdx!=null && state._battle && state._battle.allies[state._allyDetailIdx]){
     body += allyDetailHtml(state._battle.allies[state._allyDetailIdx]);
+  }
+  if(state.screen==="party" && state._rosterDetailInstId!=null){
+    var rdInst = state.owned.filter(function(o){ return o.id===state._rosterDetailInstId; })[0];
+    if(rdInst) body += allyDetailHtml(rosterUnitLike(rdInst));
   }
   app.innerHTML = top + body;
   monoIcons(app);
@@ -1982,16 +1999,17 @@ function renderTutorial(){
   '</div>';
 }
 
+var ROLE_OPTS = ["","sword","shield","heavy","katana","spear","fist","bow","xbow","gun","dagger","staff","staffbook","staffbell","swordlyre","potion","whip"];
+var ELEM_OPTS = ["","fire","ice","lightning","dark","holy","nature","shadow","tech","wind","earth","moon","water","star"];
 function renderSearch(){
   var s = state.search;
   if(!s.active){
     return '<div class="screen"><div class="card center"><p class="muted">生成権が必要です（現在 '+state.tickets+' 回分）。</p>'+
       (state.tickets>0 ? '<button class="btn primary" data-act="startSearch">生成セッションを開始（生成権-1）</button>'
                         : '<button class="btn ghost" disabled>生成権がありません</button>')+
+      '<button class="btn ghost" data-act="goto" data-screen="charGallery">全キャラを見る</button>'+
       '</div></div>';
   }
-  var roleOpts = ["","sword","shield","heavy","katana","spear","fist","bow","xbow","gun","dagger","staff","staffbook","staffbell","swordlyre","potion","whip"];
-  var elemOpts = ["","fire","ice","lightning","dark","holy","nature","shadow","tech","wind","earth","moon","water","star"];
   return '<div class="screen">'+
     '<div class="card">'+
       '<label class="f">自由文で希望を伝える（例：黒髪・弓使い・森の雰囲気）</label>'+
@@ -2002,19 +2020,51 @@ function renderSearch(){
         pill('gender','','指定なし')+pill('gender','m','男性')+pill('gender','f','女性')+'</div>'+
       '<div class="divider"></div>'+
       '<label class="f">職業・武器</label><div class="pill-select">'+
-        roleOpts.map(function(r){ return pill('role',r, r?ROLE_LABEL[r]:'指定なし'); }).join('')+'</div>'+
+        ROLE_OPTS.map(function(r){ return pill('role',r, r?ROLE_LABEL[r]:'指定なし'); }).join('')+'</div>'+
       '<div class="divider"></div>'+
       '<label class="f">属性</label><div class="pill-select">'+
-        elemOpts.map(function(e){ return pill('element',e, e?ELEM_LABEL[e]+'属性':'指定なし'); }).join('')+'</div>'+
+        ELEM_OPTS.map(function(e){ return pill('element',e, e?ELEM_LABEL[e]+'属性':'指定なし'); }).join('')+'</div>'+
     '</div>'+
     '<div class="muted center">残り変更回数の目安：この検索で最大4候補（初回+3回）まで確認できます。</div>'+
     '<button class="btn primary" data-act="doSearch">この条件で検索する</button>'+
-    '<button class="btn ghost" data-act="cancelSearch">生成セッションを中止</button>'+
+    '<button class="btn ghost" data-act="goto" data-screen="charGallery">全キャラを見る</button>'+
   '</div>';
 }
 function pill(field,val,label){
   var on = state.search[field]===val;
   return '<div class="pill '+(on?'on':'')+'" data-act="setSearchField" data-field="'+field+'" data-val="'+esc(val)+'">'+esc(label)+'</div>';
+}
+/* 生成権の有無に関わらず、全300体の見た目を性別・職業・武器・属性で絞り込んで
+   眺められる図鑑。所持しているかどうかは問わないため、レア度枠は付けない
+   （候補確認などと同じ、枠なしのプレーン表示）。 */
+function galleryPill(field,val,label){
+  var f = state._galleryFilter || DEFAULT_GALLERY_FILTER;
+  var on = f[field]===val;
+  return '<div class="pill '+(on?'on':'')+'" data-act="setGalleryField" data-field="'+field+'" data-val="'+esc(val)+'">'+esc(label)+'</div>';
+}
+var DEFAULT_GALLERY_FILTER = {gender:'', role:'', element:''};
+function renderCharGallery(){
+  var f = state._galleryFilter || DEFAULT_GALLERY_FILTER;
+  var list = ALLY.filter(function(a){
+    return (!f.gender || a.gender===f.gender) && (!f.role || a.role===f.role) && (!f.element || a.element===f.element);
+  });
+  var cells = list.map(function(a){
+    return '<div class="roster-cell"><div class="art" style="'+artStyle(a.id)+'"></div><div class="nm">'+nameRubyHtml(a)+'</div></div>';
+  }).join('');
+  return '<div class="screen">'+
+    '<div class="card">'+
+      '<label class="f">性別</label><div class="pill-select">'+
+        galleryPill('gender','','指定なし')+galleryPill('gender','m','男性')+galleryPill('gender','f','女性')+'</div>'+
+      '<div class="divider"></div>'+
+      '<label class="f">職業・武器</label><div class="pill-select">'+
+        ROLE_OPTS.map(function(r){ return galleryPill('role',r, r?ROLE_LABEL[r]:'指定なし'); }).join('')+'</div>'+
+      '<div class="divider"></div>'+
+      '<label class="f">属性</label><div class="pill-select">'+
+        ELEM_OPTS.map(function(e){ return galleryPill('element',e, e?ELEM_LABEL[e]+'属性':'指定なし'); }).join('')+'</div>'+
+    '</div>'+
+    '<div class="muted center">'+list.length+'体を表示中（全'+ALLY.length+'体）</div>'+
+    (list.length ? '<div class="roster-grid">'+cells+'</div>' : '<div class="notice">条件に一致するキャラクターがいません。</div>')+
+  '</div>';
 }
 
 function renderCandidate(){
@@ -2186,15 +2236,15 @@ function renderParty(){
     if(!instId) return '<div class="roster-cell empty" data-act="goto" data-screen="roster">＋</div>';
     var inst = state.owned.filter(function(o){return o.id===instId;})[0];
     var a = allyById(inst.allyId);
-    return '<div class="roster-cell" data-act="removeFromParty" data-inst="'+inst.id+'">'+
+    return '<div class="roster-cell" data-act="removeFromParty" data-inst="'+inst.id+'" data-roster-inst="'+inst.id+'">'+
       cardFrameHtml(inst.rarity, a.id)+'<div class="lv">Lv'+inst.level+'</div><div class="star">☆'+inst.rarity+'</div><div class="nm">'+nameRubyHtml(a)+'</div></div>';
   }).join('');
   return '<div class="screen">'+
     '<div class="card"><label class="f">出撃パーティー（最大3体・タップで解除）</label><div class="roster-grid" style="grid-template-columns:repeat(3,1fr)">'+slots+'</div></div>'+
-    '<div class="card"><label class="f">所持キャラクターから選ぶ</label>'+
+    '<div class="card"><label class="f">所持キャラクターから選ぶ<span class="f-hint">キャラ長押しタップで詳細表示</span></label>'+
       '<div class="roster-grid">'+state.owned.map(function(inst){
         var a=allyById(inst.allyId); var inParty=state.party.indexOf(inst.id)!==-1;
-        return '<div class="roster-cell" style="'+(inParty?'opacity:.35':'')+'" data-act="'+(inParty?'':'addToParty')+'" data-inst="'+inst.id+'">'+
+        return '<div class="roster-cell" style="'+(inParty?'opacity:.35':'')+'" data-act="'+(inParty?'':'addToParty')+'" data-inst="'+inst.id+'" data-roster-inst="'+inst.id+'">'+
           cardFrameHtml(inst.rarity, a.id)+'<div class="lv">Lv'+inst.level+'</div><div class="star">☆'+inst.rarity+'</div><div class="nm">'+nameRubyHtml(a)+'</div></div>';
       }).join('')+'</div>'+
     '</div>'+
@@ -2806,6 +2856,13 @@ function retreatConfirmHtml(){
       '</div>'+
     '</div>'+
   '</div>';
+}
+/* パーティー編成画面など、戦闘中の実体(unit)が無い場面でも同じ詳細ポップアップを
+   出せるよう、所持キャラのインスタンスから見た目だけ揃えた最小限の代用オブジェクトを作る。
+   現在HPという概念がその場に無いので、最大HP＝現在HPとして満タン表示する。 */
+function rosterUnitLike(inst){
+  var a = allyById(inst.allyId), stats = instStats(inst);
+  return {ally:a, inst:inst, hp:stats.hp, maxHp:stats.hp, atk:stats.atk, def:stats.def, agi:stats.agi, int:stats.int};
 }
 /* バトル中、味方カードの長押しで開くステータス詳細ポップアップ */
 function allyDetailHtml(u){
@@ -3589,6 +3646,10 @@ function handleAction(act, el){
       state.search.active=false; saveState(); go("home"); break;
     case "setSearchField":
       state.search[el.dataset.field] = el.dataset.val; render(); break;
+    case "setGalleryField":
+      state._galleryFilter = Object.assign({}, state._galleryFilter || DEFAULT_GALLERY_FILTER);
+      state._galleryFilter[el.dataset.field] = el.dataset.val;
+      render(); break;
     case "doSearch": {
       var ta = document.getElementById("freeText"); if(ta) state.search.text = ta.value;
       var res = runSearch();
@@ -3677,7 +3738,7 @@ function handleAction(act, el){
     case "cmdItem": { state._battle.subPhase="item"; render(); break; }
     case "confirmRetreat": { state._confirmRetreat = true; render(); break; }
     case "cancelRetreat": { state._confirmRetreat = false; render(); break; }
-    case "closeAllyDetail": { state._allyDetailIdx = null; render(); break; }
+    case "closeAllyDetail": { state._allyDetailIdx = null; state._rosterDetailInstId = null; render(); break; }
     case "doRetreat": {
       state._confirmRetreat = false;
       state._battle = null;
@@ -3780,8 +3841,9 @@ function handleTileEnter(tile, vk){
         state._bossStage = state.stage.current;
         saveState(); startEncounter('boss'); return; }
       break;
-    case "item":
-      /* ボーナスマス：アイテムか、そのステージのボスの半分までの経験値 */
+    case "item": case "goldenTreasure":
+      /* ボーナスマス：アイテムか、そのステージのボスの半分までの経験値
+         （金の宝箱もアイテムマスと同じ抽選を使う。まれに生成権が出るのはこの中で判定済み） */
       if(!state.stage.consumed[doneKey]){
         state.stage.consumed[doneKey]=true;
         toast(applyBonusTile(state.stage.current||1));
@@ -4057,6 +4119,38 @@ var revealLock = false;
      選択枠が残ってしまうのを防ぐ */
   document.addEventListener("contextmenu", function(e){
     if(e.target.closest && e.target.closest("[data-ally-idx]")) e.preventDefault();
+  });
+})();
+
+/* パーティー編成画面でも、バトル同様にカードを長押しするとステータス詳細を表示する */
+(function(){
+  var timer = null, from = null, fired = false;
+  function start(e){
+    if(state.screen !== "party") return;
+    var cell = e.target.closest ? e.target.closest("[data-roster-inst]") : null;
+    if(!cell) return;
+    from = cell; fired = false;
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      fired = true;
+      state._rosterDetailInstId = +cell.dataset.rosterInst;
+      render();
+      if(navigator.vibrate) try{ navigator.vibrate(12); }catch(e){}
+      setTimeout(function(){ fired = false; }, 400);
+    }, 450);
+  }
+  function stop(){ clearTimeout(timer); timer = null; }
+  document.addEventListener("pointerdown", start, true);
+  document.addEventListener("pointerup", stop, true);
+  document.addEventListener("pointercancel", stop, true);
+  document.addEventListener("pointermove", function(e){
+    if(timer && from && (!e.target.closest || e.target.closest("[data-roster-inst]") !== from)) stop();
+  }, true);
+  document.addEventListener("click", function(e){
+    if(fired){ fired = false; e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  document.addEventListener("contextmenu", function(e){
+    if(e.target.closest && e.target.closest("[data-roster-inst]")) e.preventDefault();
   });
 })();
 
