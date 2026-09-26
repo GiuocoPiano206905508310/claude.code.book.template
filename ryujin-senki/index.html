@@ -50,6 +50,7 @@ button{ font-family:inherit; }
   border-bottom:1px solid var(--line); backdrop-filter:blur(6px);
 }
 .topbar .back{ width:36px;height:36px; border-radius:10px; border:1px solid var(--line); background:var(--panel2); color:var(--gold-bright); font-size:18px; display:flex;align-items:center;justify-content:center; flex:none; cursor:pointer;}
+.topbar .help-btn{ width:26px;height:26px; border-radius:50%; border:1px solid var(--line); background:var(--panel2); color:var(--muted); font-size:13px; font-weight:700; display:flex;align-items:center;justify-content:center; flex:none; cursor:pointer; padding:0; margin-right:6px; }
 .topbar .ttl{ flex:1; font-size:16px; font-weight:700; color:var(--gold-bright); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .topbar .ticket{ display:flex; align-items:center; gap:5px; background:var(--panel3); border:1px solid var(--gold-dim); border-radius:999px; padding:5px 10px; font-size:12.5px; color:var(--gold-bright); font-weight:700;}
 .topbar .ticket .n{ font-family:'Shippori Mincho',serif; font-size:14px;}
@@ -278,6 +279,7 @@ button{ font-family:inherit; }
   background-repeat:no-repeat; background-color:#0b1120;
   border:1px solid var(--line); image-rendering:pixelated; }
 .stage-thumb.veiled{ filter:grayscale(1) brightness(.34) contrast(1.5); }
+.mob.veiled{ filter:grayscale(1) brightness(.34) contrast(1.5); }
 .stage-thumb-wrap .qm{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   color:var(--gold-bright); font-size:20px; font-weight:700; text-shadow:0 1px 3px #000; }
 .bt-unit.down .art{ filter:grayscale(1) brightness(.4); }
@@ -644,8 +646,8 @@ var ABILITY_DEFS = [
                         hi:{key:"kinjoteppeki", name:"金城鉄壁", tier:2, desc:"味方全員の被ダメージ0.7倍"}},
   {pair:["hp","int"],  lo:{key:"healing", name:"ヒーリング", tier:1, desc:"攻撃の代わりに味方1体の最大HP1/3回復"},
                         hi:{key:"divineheal", name:"ディバイン・ヒーリング", tier:2, desc:"攻撃の代わりに味方全員の最大HP1/4回復"}},
-  {pair:["int","agi"], lo:{key:"shadowneedle", name:"シャドウ・ニードル", tier:1, desc:"0.8倍で敵全体へ攻撃"},
-                        hi:{key:"abyssgate", name:"アビス・ゲート", tier:2, desc:"先制度+1、0.9倍で敵全体へ攻撃"}},
+  {pair:["int","agi"], lo:{key:"shadowneedle", name:"シャドウ・ニードル", tier:1, desc:"0.8倍でモンスター全体へ攻撃"},
+                        hi:{key:"abyssgate", name:"アビス・ゲート", tier:2, desc:"先制度+1、0.9倍でモンスター全体へ攻撃"}},
 ];
 function abilitiesFor(stats){
   var out=[];
@@ -1205,14 +1207,14 @@ var STAGE_DEFS = STAGE_PLAN.map(function(plan){
 
 var TILE_ICON = {normal:"",enemy:"⚔️",strongEnemy:"🗡️",boss:"👑",item:"🎁",heal:"➕",trap:"⚡",branch:"◆",
   goldenTreasure:"💰",goal:"🚩",start:"🏳️",warp:"🌀"};
-var TILE_LABEL_JA = {normal:"通常",enemy:"敵",strongEnemy:"中ボス",boss:"最終ボス",item:"アイテム",heal:"回復",trap:"トラップ",
+var TILE_LABEL_JA = {normal:"通常",enemy:"モンスター",strongEnemy:"中ボス",boss:"最終ボス",item:"アイテム",heal:"回復",trap:"トラップ",
   branch:"分岐",goldenTreasure:"金の宝箱",goal:"ゴール",start:"スタート",warp:"ワープ"};
 /* 長押しで出すマスの説明 */
 var TILE_DESC = {
   normal:"何も起きない通常のマス。安全に通り抜けられます。",
   start:"このエリアの開始地点。ここから出発します。",
-  enemy:"道中の敵との戦闘が起きます。倒すと経験値とアイテムが手に入ります。",
-  strongEnemy:"中ボス戦。道中の敵より手強く、護衛を連れています。このマスを通らないと先へ進めません。",
+  enemy:"道中のモンスターとの戦闘が起きます。倒すと経験値とアイテムが手に入ります。",
+  strongEnemy:"中ボス戦。道中のモンスターより手強く、護衛を連れています。このマスを通らないと先へ進めません。",
   boss:"最終ボス戦。ゴールへの道はここ1本だけなので、必ず戦うことになります。",
   item:"アイテムを1つ拾えます。一度取ると消えます。",
   heal:"味方のHPが回復します。1つのマップに1か所だけ、ボスの手前に置かれています。",
@@ -1370,6 +1372,20 @@ function loginAccount(email, pw){
       /* Supabaseに届かない: この端末のローカル判定にフォールバック */
       return loginAccountLocal(email, pw, localAcc);
     });
+}
+/* 「現在のパスワードを確認」系の操作（引き継ぎコード発行・アカウント編集）向け。
+   Supabase移行済みのアカウントはローカルにパスワードハッシュを持たないため、
+   ローカルのPBKDF2比較では常に不一致になってしまう（該当アカウントで
+   引き継ぎコードが発行できない不具合の原因だった）。Supabase側へのログイン
+   試行そのものを、現在のパスワードの確認手段として使う。 */
+function verifyCurrentPassword(acc, pw){
+  if(acc.supabase){
+    if(!sb) return Promise.resolve(false);
+    return sbCall(function(){ return sb.auth.signInWithPassword({email:acc.email, password:pw}); })
+      .then(function(res){ return !res.error; })
+      .catch(function(){ return false; });
+  }
+  return hashPassword(pw, bytesFromB64(acc.salt)).then(function(hash){ return hash===acc.hash; });
 }
 function findAccountById(id){
   var list = loadAccounts();
@@ -1634,7 +1650,7 @@ var TOP_TITLES = {
   home:"ホーム", tutorial:"遊び方", search:"キャラクター検索", charGallery:"全キャラを見る", candidate:"候補確認", reveal:"レア度抽選",
   cardComplete:"完成カード", roster:"獲得キャラ一覧", detail:"キャラクター詳細", party:"パーティー編成",
   stageSelect:"ステージ選択", field:"フィールド", battle:"バトル", result:"バトル結果", levelup:"レベルアップ",
-  stageClear:"ステージクリア", settings:"設定・仕様の確認", inventory:"持ち物",
+  stageClear:"ステージクリア", settings:"設定・仕様の確認", inventory:"所持アイテム", monsterGallery:"モンスター図鑑",
   authLogin:"ログイン", authRegister:"新規登録", authRestore:"引き継ぎコードで復元", transferIssue:"引き継ぎコードを発行",
   authForgot:"パスワードの再設定", accountEdit:"アカウント情報の変更"
 };
@@ -1678,6 +1694,7 @@ function render(){
     case "detail": body = renderDetail(); break;
     case "party": body = renderParty(); break;
     case "inventory": body = renderInventory(); break;
+    case "monsterGallery": body = renderMonsterGallery(); break;
     case "stageSelect": body = renderStageSelect(); break;
     case "field": body = renderField(); break;
     case "battle": body = renderBattle(); break;
@@ -1702,6 +1719,7 @@ function render(){
   var top = isAuthScreen ? '' : ('<div class="topbar">'+
     topLeft+
     '<div class="ttl">'+topbarTitleHtml()+'</div>'+
+    (state.screen!=="tutorial" ? '<button class="help-btn" data-act="openTutorial" title="遊び方">？</button>' : '')+
     '<div class="ticket"'+(ticketClickable?' data-act="goto" data-screen="search" style="cursor:pointer"':'')+'>🎟️ <span class="n">'+state.tickets+'</span></div>'+
     '</div>');
   body += (state._confirmRetreat ? retreatConfirmHtml() : '');
@@ -1711,6 +1729,9 @@ function render(){
   if(state.screen==="party" && state._rosterDetailInstId!=null){
     var rdInst = state.owned.filter(function(o){ return o.id===state._rosterDetailInstId; })[0];
     if(rdInst) body += allyDetailHtml(rosterUnitLike(rdInst));
+  }
+  if(state.screen==="monsterGallery" && state._monsterDetailId!=null){
+    body += monsterDetailHtml(state._monsterDetailId);
   }
   app.innerHTML = top + body;
   monoIcons(app);
@@ -1865,16 +1886,17 @@ function renderHome(){
       '</div>'+
     '</div>';
   }
+  var clearedCount = STAGE_PLAN.filter(function(p){ var pr=state.stage.progress[p.id]; return pr && pr.cleared; }).length;
+  var itemCount = state._inv ? Object.keys(state._inv).reduce(function(sum,k){ return sum+(state._inv[k]||0); },0) : 0;
   return '<div class="screen">'+
-    '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ ブラウザRPGデモ（ステージ1〜5）</small></div></div>'+
-    '<div class="notice blue">これは<b>実装前レビュー用プロトタイプ</b>です。仮素材・仮数値には基準に「仮」と表示しています。確定した仕様は「設定・仕様の確認」から確認できます。</div>'+
+    '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI</small></div></div>'+
     '<div class="menu-grid">'+
-      menuItem('tutorial','📖','遊び方','ゲームの説明を見る')+
+      menuItem('stageSelect','🗺️','ステージ選択','現在'+clearedCount+'/'+STAGE_PLAN.length+'クリア済み')+
       menuItem('search','🔍','キャラ検索・生成','所持:'+state.owned.length+'体')+
-      menuItem('roster','🗂️','獲得キャラ一覧','詳細・検索')+
       menuItem('party','🛡️','パーティー編成','現在'+state.party.length+'/3')+
-      menuItem('stageSelect','🗺️','ステージ選択','ステージ1〜5')+
-      menuItem('inventory','🎒','持ち物','アイテム(仮)')+
+      menuItem('inventory','🎒','所持アイテム','所持アイテム数：'+itemCount)+
+      menuItem('roster','🗂️','獲得キャラ一覧','詳細・検索')+
+      menuItem('monsterGallery','👹','モンスター図鑑','図鑑を見る')+
     '</div>'+
     '<button class="btn ghost" data-act="goto" data-screen="settings">⚙️ 設定・仕様の確認</button>'+
   '</div>';
@@ -1901,7 +1923,7 @@ var TUT_BATTLE_LEGEND = [
   ["🤖","オート攻撃","味方全員の行動をおまかせで自動選択します（防御は選ばれません）。"],
   ["🎯","指示","単体攻撃・全体攻撃・防御・特殊能力から選んで指示します。"],
   ["⚔️","単体攻撃","攻撃力の高さに応じて1.0〜2.0倍のダメージを1体に与えます。"],
-  ["🏹","全体攻撃","思考力の高さに応じて0.6〜1.5倍のダメージを敵全体に与えます。"],
+  ["🏹","全体攻撃","思考力の高さに応じて0.6〜1.5倍のダメージをモンスター全体に与えます。"],
   ["🛡️","防御","守備力とレベルに応じて被ダメージを0.7倍〜無効化します（HP500・守備力500・Lv50以上で完全無効）。"],
   ["🎒","アイテム","使うとそのキャラはそのターン他の行動ができなくなります（他の味方には影響しません）。"],
   ["🏃","にげる","戦闘から離脱します。"]
@@ -1915,7 +1937,7 @@ var TUTORIAL_PAGES = [
   { title:"ようこそ、旅の始まりです", body:function(){
     return '<p class="muted">このデモでは、文章やカテゴリで希望の外見・職業を伝えると、あらかじめ用意された300体の中から近いキャラクターを提案します。見た目確定後にレア度（☆1〜☆10）を1回だけ抽選し、そのキャラクターでフィールドを進み、最大3対3のカードバトルに挑みます。</p>'+
       '<div class="divider"></div>'+
-      '<p class="muted"><b>大まかな流れ</b><br>①キャラクターを生成する　②パーティーを編成する（最大3体）　③ステージに挑み、道中の敵や中ボス・最終ボスと戦う　④経験値やアイテムで強くなり、次のステージへ</p>'+
+      '<p class="muted"><b>大まかな流れ</b><br>①キャラクターを生成する　②パーティーを編成する（最大3体）　③ステージに挑み、道中のモンスターや中ボス・最終ボスと戦う　④経験値やアイテムで強くなり、次のステージへ</p>'+
       '<div class="divider"></div>'+
       '<p class="muted">この後、生成・レア度・パラメータ・マップ・戦闘・アイテム・経験値・パーティー編成について順番に説明します。最後まで確認すると、<b style="color:var(--gold-bright)">キャラクター生成権を3回</b>お渡しします。</p>';
   }},
@@ -1955,7 +1977,7 @@ var TUTORIAL_PAGES = [
       '<p class="muted">戦闘マスは1マップにつき3〜4か所、回復マスは1つだけで必ずボスの手前にあります。中ボス・最終ボスのマスは必ず通ることになります。分岐に出会ったら地図の記号を見て進む先を選び、マスを長押しすると説明が表示されます。</p>';
   }},
   { title:"バトルの流れ", body:function(){
-    return '<p class="muted">最大3体対数体で戦います。攻撃相手を選ぶときは、敵アイコンをタップして選択（赤枠）し、もう一度タップで確定します。各キャラの行動は次の中から選びます。</p>'+
+    return '<p class="muted">最大3体対数体で戦います。攻撃相手を選ぶときは、モンスターアイコンをタップして選択（赤枠）し、もう一度タップで確定します。各キャラの行動は次の中から選びます。</p>'+
       tutBattleLegendHtml()+
       '<div class="divider"></div>'+
       '<p class="muted">指示を出すキャラを間違えたら「前のキャラの行動を選び直す」でやり直せます。中ボス・最終ボスは複数回行動し、単体攻撃・全体攻撃・防御・ためるをランダムに使ってきます。</p>';
@@ -1972,7 +1994,7 @@ var TUTORIAL_PAGES = [
       '<p class="muted">「経験値の種」を使うと、戦わずにキャラの実数値を直接+1〜+3伸ばすこともできます（+1が最も出やすく、数字が大きいほど貴重です）。どの能力を伸ばすかで、そのキャラの得意分野（単体攻撃寄り／全体攻撃寄り／守り寄りなど）を自分で決められます。</p>';
   }},
   { title:"パーティー編成、そしてアカウントについて", body:function(){
-    return '<p class="muted"><b>パーティー編成のコツ</b><br>最大3体で編成します。守備力の高いキャラを1体入れて壁役にする、思考力の高いキャラを1体入れて全体攻撃で複数の敵に対応できるようにする、といった役割のバランスを意識すると戦いやすくなります。</p>'+
+    return '<p class="muted"><b>パーティー編成のコツ</b><br>最大3体で編成します。守備力の高いキャラを1体入れて壁役にする、思考力の高いキャラを1体入れて全体攻撃で複数のモンスターに対応できるようにする、といった役割のバランスを意識すると戦いやすくなります。</p>'+
       '<div class="divider"></div>'+
       '<p class="muted"><b>アカウントについて</b><br>このゲームのセーブデータは、ログインしているこの端末のブラウザに保存されます。機種変更やブラウザデータの消去に備えて、「設定」画面から<b>引き継ぎコード</b>を発行し、控えておくことをおすすめします。</p>'+
       '<div class="divider"></div>'+
@@ -2259,6 +2281,48 @@ function renderInventory(){
       var n = (state._inv&&state._inv[it.id])||0;
       return '<div class="card row" style="align-items:center"><div class="enemy-ph">'+it.icon+'</div><div class="grow"><b>'+it.name+'</b><div class="muted">'+it.effect+'</div></div><div class="tag gold">×'+n+'</div></div>';
     }).join('')+
+  '</div>';
+}
+
+/* 倒したことのあるモンスターだけ実データを見せ、未撃破はシルエット表示にする図鑑。 */
+function renderMonsterGallery(){
+  var defeated = state._defeatedMonsters || {};
+  var knownCount = Object.keys(defeated).length;
+  var cells = ENEMY_ROSTER.map(function(e){
+    var known = !!defeated[e.id];
+    return '<div class="roster-cell" data-act="'+(known?'viewMonsterDetail':'noop')+'" data-monster="'+e.id+'">'+
+      '<div class="mob'+(known?'':' veiled')+'"><img src="'+e.art+'" alt=""></div>'+
+      '<div class="nm">'+(known ? enemyNameHtml(e.name, e.ruby) : '？？？')+'</div>'+
+    '</div>';
+  }).join('');
+  return '<div class="screen">'+
+    '<div class="muted center">討伐済み '+knownCount+' / '+ENEMY_ROSTER.length+' 体</div>'+
+    '<div class="roster-grid">'+cells+'</div>'+
+  '</div>';
+}
+/* モンスター詳細ポップアップ。強さはステージごとに変わる仕組みのため固定値が無く、
+   そのモンスターが最初に登場するステージ・役割を基準にした参考値を表示する。 */
+function monsterDetailHtml(id){
+  var e = enemyById(id);
+  var info = monsterAppearanceInfo(id);
+  var stats = info.firstStageId ? enemyStatsForStage(id, info.firstRole, info.firstStageId) : null;
+  return '<div class="ad-overlay" data-act="closeMonsterDetail">'+
+    '<div class="ad-card" data-act="noop">'+
+      '<div class="ad-top">'+
+        '<div class="ad-thumb"><div class="mob"><img src="'+e.art+'" alt=""></div></div>'+
+        '<div style="flex:1;min-width:0;">'+
+          '<div class="ad-name">'+enemyNameHtml(e.name, e.ruby)+'</div>'+
+          '<div class="ad-tags"><span class="tag gold">出現ステージ数：'+info.count+'</span></div>'+
+          (stats ? '<div class="ad-stats">'+
+            '<div class="ad-stat"><span class="k">'+STAT_LABEL.atk+'</span><span class="v">'+stats.atk+'</span></div>'+
+            '<div class="ad-stat"><span class="k">'+STAT_LABEL.def+'</span><span class="v">'+stats.def+'</span></div>'+
+            '<div class="ad-stat"><span class="k">'+STAT_LABEL.agi+'</span><span class="v">'+stats.agi+'</span></div>'+
+          '</div>' : '')+
+        '</div>'+
+      '</div>'+
+      (stats ? '<div class="ad-hprow"><span class="ad-hplabel">HP</span><div class="ad-hpbar"><i style="width:100%"></i></div><span class="ad-hpv">'+stats.maxHp+'</span></div>' : '')+
+      (info.firstStageId ? '<div class="muted" style="margin-top:8px;font-size:11px">初登場：ステージ'+info.firstStageId+'</div>' : '')+
+    '</div>'+
   '</div>';
 }
 
@@ -2746,6 +2810,45 @@ function makeEnemyUnit(def, m, role){
     agi:Math.max(2, Math.round(10 * m.agi)), int:Math.max(2, Math.round(8 * m.atk)),
     priority:0, isEnemy:true, alive:true, role:role||'normal', guardMul:1, chargeMul:1};
 }
+/* 体力と攻撃力は別々に効かせる。ボスは打たれ強いが、一撃で味方が落ちないようにする。
+   ボスは1体で立つぶん厚くする。厚みも奥のステージほど増していく。
+   奥のステージほど手強くなる。味方はレア度とレベルの両方で伸びるため、
+   直線だけだと40以降で追い抜かれてしまう。15以降はゆるやかな二次の上乗せで追従させる。
+   startEncounter()とモンスター図鑑の参考ステータス表示の両方から呼ぶ共通処理。 */
+function enemyStatsForStage(id, role, stageId){
+  var bt = bossPower(stageId);
+  var TIER = { normal:{hp:1.15, atk:1.00, def:1.05, agi:1},
+               strong:{hp:1.70, atk:1.10, def:1.25, agi:1.1},
+               mid:   {hp:2.4 + 1.0*bt, atk:0.95 + 0.08*bt, def:1.20 + 0.10*bt, agi:1.10},
+               boss:  {hp:3.2 + 1.0*bt + (stageId >= 91 ? 1.9 : 0),
+                       atk:1.00 + 0.10*bt,
+                       def:1.15 + 0.10*bt,
+                       agi:1.20 + (stageId >= 91 ? 0.55 : 0)} };
+  var deep = Math.max(0, stageId - 15);
+  var grow = 1 + (stageId-1)*0.11 + deep*deep*0.00108;
+  var pw = encPower(stageId);
+  var t = TIER[role] || TIER.normal;
+  var hpMul = (role === 'boss' || role === 'mid') ? BOSS_HP_MUL : 1;
+  return makeEnemyUnit(enemyById(id),
+    { hp:t.hp*grow*hpMul, atk:t.atk*grow*pw*ENEMY_ATK_SCALE, def:t.def*grow*pw, agi:t.agi*grow }, role);
+}
+/* そのモンスターが（道中・中ボス・ボスとして）登場しうるステージの一覧。
+   道中の抽選には乱数が絡むため厳密な出現ステージではなく「登場しうる」対象だが、
+   図鑑の目安としては十分。中ボス・ボスは各ステージにつき固定で1体なので確定値。 */
+function monsterAppearanceInfo(id){
+  var stages = [], firstStageId = null, firstRole = null;
+  for(var s=1; s<=STAGE_PLAN.length; s++){
+    var role = null;
+    if(bossIdFor(s)===id) role = 'boss';
+    else if(midBossIdFor(s)===id) role = 'mid';
+    else if(roamPoolFor(s).indexOf(id)!==-1) role = 'normal';
+    if(role){
+      stages.push(s);
+      if(firstStageId===null){ firstStageId = s; firstRole = role; }
+    }
+  }
+  return {count:stages.length, firstStageId:firstStageId, firstRole:firstRole};
+}
 function startEncounter(kind){
   var stageId = state.stage.current || 1;
   var seed = stageId*1013 + (state.stage.pos ? state.stage.pos.x*31 + state.stage.pos.y*17 : 0) +
@@ -2767,27 +2870,7 @@ function startEncounter(kind){
     var n = 2 + (stageId >= 6 ? 1 : 0) + (rand() < 0.5 ? 1 : 0);   /* 2〜4体 */
     for(var q=0;q<n;q++) plan.push({id:pickRoamEnemy(stageId, rand), tier:'normal'});
   }
-  /* 体力と攻撃力は別々に効かせる。ボスは打たれ強いが、一撃で味方が落ちないようにする */
-  /* ボスは1体で立つぶん厚くする。厚みも奥のステージほど増していく */
-  var bt = bossPower(stageId);
-  var TIER = { normal:{hp:1.15, atk:1.00, def:1.05, agi:1},
-               strong:{hp:1.70, atk:1.10, def:1.25, agi:1.1},
-               mid:   {hp:2.4 + 1.0*bt, atk:0.95 + 0.08*bt, def:1.20 + 0.10*bt, agi:1.10},
-               boss:  {hp:3.2 + 1.0*bt + (stageId >= 91 ? 1.9 : 0),
-                       atk:1.00 + 0.10*bt,
-                       def:1.15 + 0.10*bt,
-                       agi:1.20 + (stageId >= 91 ? 0.55 : 0)} };
-  /* 奥のステージほど手強くなる。味方はレア度とレベルの両方で伸びるため、
-     直線だけだと40以降で追い抜かれてしまう。15以降はゆるやかな二次の上乗せで追従させる。 */
-  var deep = Math.max(0, stageId - 15);
-  var grow = 1 + (stageId-1)*0.11 + deep*deep*0.00108;
-  var pw = encPower(stageId);
-  var enemies = plan.map(function(p){
-    var t = TIER[p.tier] || TIER.normal;
-    var hpMul = (p.tier === 'boss' || p.tier === 'mid') ? BOSS_HP_MUL : 1;
-    return makeEnemyUnit(enemyById(p.id),
-      { hp:t.hp*grow*hpMul, atk:t.atk*grow*pw*ENEMY_ATK_SCALE, def:t.def*grow*pw, agi:t.agi*grow }, p.tier);
-  });
+  var enemies = plan.map(function(p){ return enemyStatsForStage(p.id, p.tier, stageId); });
   var allies = state.party.map(function(instId){
     var inst = state.owned.filter(function(o){return o.id===instId;})[0];
     var a = allyById(inst.allyId);
@@ -2928,7 +3011,7 @@ function renderBattleCommand(){
     return '<div class="card"><b>'+nameRubyHtml(u.ally)+'</b>の'+(toAlly?'回復':'攻撃')+'対象を選ぶ'+
         '<div class="pickhint">'+(who
           ? esc(who)+' を選択中。<b>もう一度タップで決定</b>'
-          : (toAlly?'味方':'敵')+'のイラストをタップしてください')+'</div></div>'+
+          : (toAlly?'味方':'モンスター')+'のイラストをタップしてください')+'</div></div>'+
       '<button class="btn ghost" data-act="cancelTarget">戻る</button>';
   }
   if(b.subPhase==="item"){
@@ -3237,7 +3320,7 @@ function resolveFlee(b){
   var rate = fleeRate(b);
   var success = b._fleeGuaranteed || Math.random()<rate;
   if(success){ pushLog(b, "逃走に成功した！（成功率"+Math.round(rate*100)+"%）"); b.fled=true; b.phase="done"; }
-  else { pushLog(b, "逃走に失敗した…（成功率"+Math.round(rate*100)+"%）敵の攻撃が続く"); }
+  else { pushLog(b, "逃走に失敗した…（成功率"+Math.round(rate*100)+"%）モンスターの攻撃が続く"); }
 }
 function checkBattleEnd(){
   var b = state._battle;
@@ -3300,7 +3383,6 @@ function renderStageClear(){
   '</div>';
 }
 
-var SPEC_ITEMS = [["ゲーム正式名称","「龍神戦記」。タイトル・ロゴ表記をすべて差し替え済み。"],["☆1/☆2、☆3/☆4の個別確率","☆1=22.5%、☆2=22.5%、☆3=12.5%、☆4=12.5%（合計45%/25%）で確定。"],["レア度別初期値・成長倍率・経験値曲線","初期値=34+レア度×14、成長=3.4+レア度×2.1／レベル、必要EXP=40+Lv×22で確定。戦闘経験値は通常16・中ボス30・ボス60を基準に、ステージごとに15%ずつ増加。"],["基礎ダメージ式・端数処理・防御倍率の重複方法","物理=攻撃力−守備力×0.5、遠距離=思考力×0.6−守備力×0.5、いずれも四捨五入・最低1。被ダメージ軽減は乗算で重畳。"],["逃走率の下限・上限、ボス戦の逃走可否","ボス戦は逃走不可（ボタン自体を押せない）。それ以外は味方と敵の俊敏力合計で勝負し、負け・同値=30%、勝ち=70%。さらに差が25%増えるごとに+5%（上限100%）。"],["敗北時の経験値・アイテム・復帰地点","経験値は通常の5分の1、アイテムは3分の1の確率でドロップ。戦闘前のフィールド座標へ復帰し、パーティーのHPは立て直す。"],["相打ち時の勝敗","俊敏力順に行動するため、先に全滅した側の負け。同ターンに双方全滅した場合も、先にHPが0になった陣営が敗北。"],["レベルアップで最大HP上昇時の現在HP処理","レベルアップ時はHPが全回復し、上昇分も上乗せされる（現在HP=新しい最大HP）。"],["所持済みキャラクターの重複入手可否","同じキャラでもレア度が異なれば入手可能。同じキャラの同じレア度は重複しない（抽選で被った場合は引き直し、それでも被る場合は近いレア度へ寄せる）。"],["罠・回復・ボーナスイベントの具体的効果","トラップは4種：ダメージ（味方全員が最大HPの1/10減）／毒（1マス進むごとに1/20減、次の中ボス・ボス戦まで継続）／モンスター（その場で戦闘）／ワープ（スタート地点へ戻される）。回復マスは70%で1体・30%で全体、回復量は最大HPの1/5・1/4・1/3・1/2・全回復からランダム。ボーナスマスはアイテムか経験値（そのステージのボスの半分を上限）。HPはフィールド上でも保持され、画面上部にパーティーのHPを常時表示。"],["各ステージの正確なグリッド寸法・配置数","ステージ40まで実装。ステージ1は確定済みの13マス手置き、2以降は自動生成し、出口の双方向整合とスタート→ボス→ゴールの到達性を全ステージ検証済み。奥へ進むほどマス数（最大30／エリア）・分岐（最大7）・エリア数（8面以降2面、20面以降3面）が増える。41以降は敵キャラ追加後に作成。"],["AIタグ解析を実API接続にするか","ローカル辞書検索のみで確定（実API接続なし）。"]];
 function renderAuthLogin(){
   return '<div class="screen">'+
     '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ ログイン</small></div></div>'+
@@ -3424,15 +3506,11 @@ function renderSettings(){
         '<div>点滅・演出を軽減する</div>'+
         '<button class="btn small '+(state.settings.reduceMotion?'primary':'ghost')+'" data-act="toggleReduceMotion">'+(state.settings.reduceMotion?'ON':'OFF')+'</button>'+
       '</div></div>'+
-    '<div class="card"><h3 style="margin-bottom:6px">確定仕様（19章）</h3>'+
-      '<p class="muted">以下の内容で実装済みです。</p>'+
-      SPEC_ITEMS.map(function(it,i){ return '<div class="qa-item"><div class="q">'+(i+1)+'. '+esc(it[0])+'</div><div class="a">'+esc(it[1])+'</div></div>'; }).join('')+
-    '</div>'+
     '<div class="card"><h3 style="margin-bottom:6px">素材の反映状況</h3>'+
       '<div class="a muted">'+
         '・味方300体：「カード対応済み」形式（384×576・透過背景・全身プリコンポーズ済み）の正式素材に差し替え済みです。以前の自動クロップ方式（元シートからの切り出し）は廃止しました。<br>'+
         '・味方カードのレア度枠画像（☆1〜☆10）：ご提供いただいた正式素材を反映し、抽選結果に応じてキャラクターの配置基準（characterTargetMaxSize/bodyAxisX/feetBaselineY）に沿って枠を嵌め込んでいます。枠画像は外周の透明な余白を全枠共通（294×454）で切り落とし、同じ場所取りのままカードが1.31倍に見えるようにしています（配置基準はそのまま座標変換しているため合成結果は不変）<br>'+
-        '・敵50体の画像：受領済み。名前帯ごと1枚絵のまま使用し、胴体が切れないようにしています<br>・敵の割り当て：ステージ1–10は道中1–10／ボス11–20、11–20は道中11–20／ボス21–30、21–30は道中21–30／ボス31–40、31–40は道中31–40／ボス41–50。ボスは各ステージの地名と紙色に合わせて選定<br>・出現数：道中は2〜4体（6面以降は3体以上）、中ボスは護衛付きで2〜3体、ボス戦は護衛＋ボス＋護衛の3体編成（15面以降はボス2体）<br>・ステージ：40まで作成済み（10ごとに紙色を変更）。41以降は敵キャラ追加後に作成<br>'+
+        '・モンスター50体の画像：受領済み。名前帯ごと1枚絵のまま使用し、胴体が切れないようにしています<br>・モンスターの割り当て：ステージ1–10は道中1–10／ボス11–20、11–20は道中11–20／ボス21–30、21–30は道中21–30／ボス31–40、31–40は道中31–40／ボス41–50。ボスは各ステージの地名と紙色に合わせて選定<br>・出現数：道中は2〜4体（6面以降は3体以上）、中ボスは護衛付きで2〜3体、ボス戦は護衛＋ボス＋護衛の3体編成（15面以降はボス2体）<br>・ステージ：40まで作成済み（10ごとに紙色を変更）。41以降はモンスター追加後に作成<br>'+
         '・アイテム20種の画像：未受領のため絵文字3種の仮アイテムで代用<br>'+
         '・フィールドマス10種の画像：未受領のためアイコン簡略表示で代用<br>'+
         '・ステージ：1〜40を実装済み（10ステージごとに紙の色を変更）<br>'+
@@ -3450,6 +3528,13 @@ function handleAction(act, el){
     case "goto":
       if(el.dataset.screen==="tutorial") state._tutStep = 0;
       go(el.dataset.screen);
+      break;
+    case "openTutorial":
+      /* どの画面からでも遊び方を開けるようにする。バトル・フィールド中でも見られるが、
+         戻ったときは（固定の遷移先ではなく）実際に開いていた画面へ戻したい */
+      state._tutStep = 0;
+      state._tutorialReturnScreen = state.screen;
+      go("tutorial");
       break;
     case "tutNext":
       state._tutStep = Math.min(TUTORIAL_PAGES.length-1, (state._tutStep||0)+1);
@@ -3587,9 +3672,16 @@ function handleAction(act, el){
       if(other && other.id!==eAcc.id){ toast("そのメールアドレスは別のアカウントで使われています"); break; }
       if(!eCurPw){ toast("現在のパスワードを入力してください"); break; }
       el.disabled = true;
-      hashPassword(eCurPw, bytesFromB64(eAcc.salt)).then(function(hash){
-        if(hash!==eAcc.hash){ el.disabled=false; toast("現在のパスワードが正しくありません"); return null; }
+      verifyCurrentPassword(eAcc, eCurPw).then(function(ok){
+        if(!ok){ el.disabled=false; toast("現在のパスワードが正しくありません"); return null; }
         if(!ePw) return {};
+        if(eAcc.supabase){
+          if(!sb) return Promise.reject(new Error("no-supabase"));
+          return sbCall(function(){ return sb.auth.updateUser({password:ePw}); }).then(function(res){
+            if(res.error) return Promise.reject(res.error);
+            return {};
+          });
+        }
         var newSalt = randomBytes(16);
         return hashPassword(ePw, newSalt).then(function(newHash){ return {salt:b64FromBytes(newSalt), hash:newHash}; });
       }).then(function(r){
@@ -3612,8 +3704,8 @@ function handleAction(act, el){
       if(!iacc){ toast("エラーが発生しました"); break; }
       if(!ipw){ toast("パスワードを入力してください"); break; }
       el.disabled = true;
-      hashPassword(ipw, bytesFromB64(iacc.salt)).then(function(hash){
-        if(hash!==iacc.hash){ el.disabled=false; toast("パスワードが正しくありません"); return null; }
+      verifyCurrentPassword(iacc, ipw).then(function(ok){
+        if(!ok){ el.disabled=false; toast("パスワードが正しくありません"); return null; }
         return buildTransferCode(iacc, state);
       }).then(function(code){
         el.disabled = false;
@@ -3739,6 +3831,8 @@ function handleAction(act, el){
     case "confirmRetreat": { state._confirmRetreat = true; render(); break; }
     case "cancelRetreat": { state._confirmRetreat = false; render(); break; }
     case "closeAllyDetail": { state._allyDetailIdx = null; state._rosterDetailInstId = null; render(); break; }
+    case "viewMonsterDetail": { state._monsterDetailId = +el.dataset.monster; render(); break; }
+    case "closeMonsterDetail": { state._monsterDetailId = null; render(); break; }
     case "doRetreat": {
       state._confirmRetreat = false;
       state._battle = null;
@@ -3868,7 +3962,7 @@ function handleTileEnter(tile, vk){
           toast("毒トラップ！1マス進むごとにHPが減る（次の中ボス・ボス戦まで）");
         } else if(kind==="monster"){
           state.stage.returnPos = Object.assign({}, state.stage.pos);
-          saveState(); toast("モンスタートラップ！敵が現れた");
+          saveState(); toast("モンスタートラップ！モンスターが現れた");
           startEncounter('normal'); return;
         } else {
           var tiles0 = currentTiles();
@@ -3901,6 +3995,11 @@ function applyBattleResult(){
     var inst = state.owned.filter(function(o){return o.id===u.instId;})[0];
     if(inst) setInstHp(inst, u.hp);
   });
+  /* 勝利した戦闘に出てきたモンスターは、モンスター図鑑で見られるようにする */
+  if(b.result==="win"){
+    if(!state._defeatedMonsters) state._defeatedMonsters = {};
+    b.enemies.forEach(function(e){ state._defeatedMonsters[e.id] = true; });
+  }
   /* 毒は中ボス戦・ボス戦で解ける */
   if(b.kind==='strong' || b.kind==='boss') state.stage.poison = false;
   if(b.result==="win" || b.result==="lose"){
@@ -3943,10 +4042,16 @@ function afterLevelUps(){
   go("field");
 }
 function handleBack(){
+  if(state.screen==="tutorial" && state._tutorialReturnScreen){
+    var back = state._tutorialReturnScreen;
+    state._tutorialReturnScreen = null;
+    go(back);
+    return;
+  }
   var map = {tutorial:"home", search:"home", candidate:"search", reveal:"candidate", cardComplete:"home",
     roster:"home", detail:"roster", party:"home", inventory:"home", stageSelect:"home", field:"stageSelect",
     battle:"field", result:"field", levelup:"field", stageClear:"stageSelect", settings:"home",
-    transferIssue:"settings", accountEdit:"settings"};
+    transferIssue:"settings", accountEdit:"settings", monsterGallery:"home"};
   go(map[state.screen]||"home");
 }
 
