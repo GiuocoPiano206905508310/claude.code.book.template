@@ -75,8 +75,11 @@ button{ font-family:inherit; }
    余白を作らず上に詰めておいた方が下端が隠れにくい。 */
 .screen.screen-tight::before, .screen.screen-tight::after{ content:none; }
 /* バトルは実測して確実に1画面へ収めるため、ページ自体のスクロールを封じる
-   （はみ出しが出ないよう auto-fit 側で先にサイズを詰めてから使う） */
-.screen.no-scroll{ overflow:hidden; }
+   （はみ出しが出ないよう auto-fit 側で先にサイズを詰めてから使う）。
+   また、コマンドボタンを連打することがあり、iOSのダブルタップ拡大ジェスチャーと
+   誤認識されて画面が拡大されてしまうことがあるため、この画面に限りダブルタップ・
+   ピンチによる拡大縮小も無効化する（他の画面には影響させない）。 */
+.screen.no-scroll{ overflow:hidden; touch-action: manipulation; }
 @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
 .reduce-motion .screen{ animation:none; }
 .reduce-motion *{ animation-duration:.001s !important; transition-duration:.001s !important; }
@@ -2086,7 +2089,7 @@ function renderSearch(){
   var s = state.search;
   if(!s.active){
     return '<div class="screen"><div class="card center"><p class="muted">生成権が必要です（現在 '+state.tickets+' 回分）。</p>'+
-      (state.tickets>0 ? '<button class="btn primary" data-act="startSearch">生成セッションを開始（生成権-1）</button>'
+      (state.tickets>0 ? '<button class="btn primary" data-act="startSearch">生成セッションを開始</button>'
                         : '<button class="btn ghost" disabled>生成権がありません</button>')+
       '<button class="btn ghost" data-act="goto" data-screen="charGallery">全キャラを見る</button>'+
       '</div></div>';
@@ -2209,7 +2212,7 @@ function renderCardComplete(){
     '<div class="notice">獲得しました！「獲得キャラ一覧」からいつでも確認できます。</div>'+
     /* ホームへ戻らずに続けて生成できるようにする */
     (state.tickets>0
-      ? '<button class="btn primary" data-act="startSearch">続けて生成する（生成権-1／残り'+state.tickets+'）</button>'
+      ? '<button class="btn primary" data-act="startSearch">続けて生成する（残り'+state.tickets+'）</button>'
       : '<div class="notice">生成権がありません。ステージの宝箱などで手に入ります。</div>')+
     '<button class="btn ghost" data-act="goto" data-screen="party">パーティー編成へ</button>'+
     '<button class="btn ghost" data-act="goto" data-screen="roster">獲得キャラ一覧へ</button>'+
@@ -3890,8 +3893,12 @@ function handleAction(act, el){
     case "finishOnboarding":
       state._onboarding=false; saveState(); go("party"); break;
     case "startSearch":
+      /* 生成権はこの時点では消費しない。「この子にする」で確定し、抽選演出まで
+         完了して初めて実際にキャラが増えるため、消費もそのタイミング(doReveal)に
+         合わせる。ここで先に引いてしまうと、生成が完了する前に画面を離れた場合
+         (戻るボタンなど)に生成権だけが失われてしまう。 */
       if(state.tickets<=0){ toast("生成権がありません"); break; }
-      state.tickets--; state.search = Object.assign({}, DEFAULT_STATE.search, {active:true, shown:[]});
+      state.search = Object.assign({}, DEFAULT_STATE.search, {active:true, shown:[]});
       saveState(); go("search"); break;
     case "cancelSearch":
       state.search.active=false; saveState(); go("home"); break;
@@ -3940,6 +3947,7 @@ function handleAction(act, el){
       var inst = {id: state.nextInstId++, allyId: pending.ally.id, rarity: star, level:1, exp:0};
       inst.hp = statsFor(inst.id, pending.ally.id, star, 1).hp;
       state.owned.push(inst); state._lastInst = inst;
+      state.tickets = Math.max(0, state.tickets-1);
       state.search = JSON.parse(JSON.stringify(DEFAULT_STATE.search));
       saveState();
       var starEl = document.getElementById("revealStar");
