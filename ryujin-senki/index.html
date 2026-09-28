@@ -1708,7 +1708,7 @@ var TOP_TITLES = {
   stageSelect:"ステージ選択", field:"フィールド", battle:"バトル", result:"バトル結果", levelup:"レベルアップ",
   stageClear:"ステージクリア", settings:"設定・仕様の確認", inventory:"所持アイテム", monsterGallery:"モンスター図鑑",
   authLogin:"ログイン", authRegister:"新規登録", authRestore:"引き継ぎコードで復元", transferIssue:"引き継ぎコードを発行",
-  authForgot:"パスワードの再設定", accountEdit:"アカウント情報の変更"
+  authForgot:"パスワードの再設定", accountEdit:"アカウント情報の変更", dataRecovery:"セーブデータの確認・復元"
 };
 /* 戦闘と、その後の結果・レベルアップは戻るで抜けられないようにする。
    途中で抜けると戦闘が無かったことになり、報酬も失われるため。
@@ -1758,6 +1758,7 @@ function render(){
     case "levelup": body = renderLevelUp(); break;
     case "stageClear": body = renderStageClear(); break;
     case "settings": body = renderSettings(); break;
+    case "dataRecovery": body = renderDataRecovery(); break;
     case "authLogin": body = renderAuthLogin(); break;
     case "authRegister": body = renderAuthRegister(); break;
     case "authRestore": body = renderAuthRestore(); break;
@@ -3566,6 +3567,9 @@ function renderSettings(){
         '<button class="btn ghost small" data-act="goto" data-screen="transferIssue" style="flex:1">引き継ぎコードを発行</button>'+
       '</div>'+
       '<div class="row" style="gap:8px;margin-top:8px">'+
+        '<button class="btn ghost small" data-act="goto" data-screen="dataRecovery" style="flex:1">この端末のセーブデータを確認・復元</button>'+
+      '</div>'+
+      '<div class="row" style="gap:8px;margin-top:8px">'+
         '<button class="btn danger small" data-act="doLogout" style="flex:1">ログアウト</button>'+
       '</div></div>'+
     '<div class="card"><label class="f">演出</label>'+
@@ -3584,6 +3588,68 @@ function renderSettings(){
         '・カタログCSV（検索タグの正式データ）：未受領のため、画像内の名前表記とシリーズの規則性から職業・属性タグを暫定生成（性別タグは特に精度が低く、プレースホルダーに近い扱いです）'+
       '</div></div>'+
   '</div>';
+}
+
+/* セーブは常にこの端末のlocalStorageにしか無く、サーバー側には一切同期されない
+   （メール・パスワードのログインは本人確認のみで、進行データは運ばない）。そのため、
+   何らかの理由でこのアカウントIDに対する保存先が見つからなくなった場合（別のアカウント
+   記録を誤って作ってしまった、端末側のアカウント一覧だけ失われた、など）でも、実際の
+   セーブ本体がこの端末に残っていることがある。ここではそれを見つけて拾えるようにする。
+   ステージ・所持キャラともに空（一度も遊んでいない初期状態）のものは対象から除く。 */
+function scanOrphanSaves(excludeId){
+  var out = [];
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(!k || k.indexOf("ryuto_rpg_save_")!==0) continue;
+      if(k === accountSaveKey(excludeId)) continue;
+      var raw = localStorage.getItem(k), s = null;
+      try{ s = JSON.parse(raw); }catch(e){ continue; }
+      if(!s || typeof s!=="object") continue;
+      var ownedCount = (s.owned||[]).length;
+      var highestStage = 0;
+      if(s.stage && s.stage.progress){
+        Object.keys(s.stage.progress).forEach(function(sid){
+          if(s.stage.progress[sid] && s.stage.progress[sid].cleared) highestStage = Math.max(highestStage, parseInt(sid,10)||0);
+        });
+      }
+      if(ownedCount>0 || highestStage>0) out.push({key:k, ownedCount:ownedCount, highestStage:highestStage});
+    }
+  }catch(e){}
+  return out;
+}
+function renderDataRecovery(){
+  var session = loadSession();
+  var orphans = scanOrphanSaves(session && session.accountId);
+  var curOwned = (state.owned||[]).length, curStage = 0;
+  if(state.stage && state.stage.progress){
+    Object.keys(state.stage.progress).forEach(function(sid){
+      if(state.stage.progress[sid] && state.stage.progress[sid].cleared) curStage = Math.max(curStage, parseInt(sid,10)||0);
+    });
+  }
+  var confirmKey = state._recoveryConfirmKey;
+  var body = '<div class="screen">'+
+    '<div class="notice">セーブデータはこの端末（このブラウザ）だけに保存されており、サーバーには保存されていません。'+
+      '同じメールアドレス・パスワードでログインしても、別のブラウザ・別の端末・別のサイト（Web版とプレビュー版など）のデータは表示されません。'+
+      'このページには、今のアカウントとは別の場所に残っている、この端末上のセーブデータの候補を表示します。</div>'+
+    '<div class="card"><label class="f">現在ログイン中のデータ</label>'+
+      '<div class="muted">所持キャラ '+curOwned+' 体／最高到達ステージ '+(curStage||'―')+'</div>'+
+    '</div>'+
+    (orphans.length ? orphans.map(function(o){
+      var isConfirm = confirmKey===o.key;
+      return '<div class="card">'+
+        '<div class="muted">所持キャラ '+o.ownedCount+' 体／最高到達ステージ '+(o.highestStage||'―')+'</div>'+
+        (isConfirm
+          ? ('<div class="notice" style="margin-top:8px">現在ログイン中のデータの代わりにこちらを使います。今のデータは上書きされて消えます。よろしいですか？</div>'+
+             '<div class="row" style="gap:8px;margin-top:8px">'+
+               '<button class="btn danger small" data-act="adoptOrphanSave" data-key="'+esc(o.key)+'" style="flex:1">はい、これに復元する</button>'+
+               '<button class="btn ghost small" data-act="cancelAdoptOrphan" style="flex:1">キャンセル</button>'+
+             '</div>')
+          : '<button class="btn ghost small" data-act="confirmAdoptOrphan" data-key="'+esc(o.key)+'" style="margin-top:8px">このデータを復元する</button>')+
+      '</div>';
+    }).join('') : '<div class="notice">現在ログイン中のデータ以外に、この端末上でセーブデータは見つかりませんでした。</div>')+
+  '</div>';
+  return body;
 }
 
 /* ============ ACTIONS ============ */
@@ -3649,6 +3715,23 @@ function handleAction(act, el){
       saveSession(null);
       state = loadState();
       render();
+      break;
+    }
+    case "confirmAdoptOrphan": state._recoveryConfirmKey = el.dataset.key; render(); break;
+    case "cancelAdoptOrphan": state._recoveryConfirmKey = null; render(); break;
+    case "adoptOrphanSave": {
+      var recSession = loadSession();
+      if(!recSession){ toast("エラーが発生しました"); break; }
+      var recRaw = null;
+      try{ recRaw = localStorage.getItem(el.dataset.key); }catch(e){}
+      if(!recRaw){ toast("データが見つかりませんでした"); break; }
+      try{ localStorage.setItem(accountSaveKey(recSession.accountId), recRaw); }catch(e){ toast("復元できませんでした"); break; }
+      state = loadState();
+      state._recoveryConfirmKey = null;
+      state.screen = "home";
+      saveState();
+      render();
+      toast("復元しました");
       break;
     }
     case "doRestoreCode": {
@@ -4154,7 +4237,7 @@ function handleBack(){
   var map = {tutorial:"home", search:"home", candidate:"search", reveal:"candidate", cardComplete:"home",
     roster:"home", detail:"roster", party:"home", inventory:"home", stageSelect:"home", field:"stageSelect",
     battle:"field", result:"field", levelup:"field", stageClear:"stageSelect", settings:"home",
-    transferIssue:"settings", accountEdit:"settings", monsterGallery:"home"};
+    transferIssue:"settings", accountEdit:"settings", monsterGallery:"home", dataRecovery:"settings"};
   go(map[state.screen]||"home");
 }
 
