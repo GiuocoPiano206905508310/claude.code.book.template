@@ -51,6 +51,11 @@ button{ font-family:inherit; }
 }
 .topbar .back{ width:36px;height:36px; border-radius:10px; border:1px solid var(--line); background:var(--panel2); color:var(--gold-bright); font-size:18px; display:flex;align-items:center;justify-content:center; flex:none; cursor:pointer;}
 .topbar .help-btn{ width:26px;height:26px; border-radius:50%; border:1px solid var(--line); background:var(--panel2); color:var(--muted); font-size:13px; font-weight:700; display:flex;align-items:center;justify-content:center; flex:none; cursor:pointer; padding:0; margin-right:6px; }
+/* タイトルを見た目どおり中央に置くため、左右の中身の幅が違っても
+   左右の「翼」を同じflex幅にして、タイトルをその真ん中に挟む。 */
+.topbar-side{ flex:1; min-width:0; display:flex; align-items:center; }
+.topbar-side.left{ justify-content:flex-start; }
+.topbar-side.right{ justify-content:flex-end; }
 .topbar .ttl{ flex:1; font-size:16px; font-weight:700; color:var(--gold-bright); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .topbar .ticket{ display:flex; align-items:center; gap:5px; background:var(--panel3); border:1px solid var(--gold-dim); border-radius:999px; padding:5px 10px; font-size:12.5px; color:var(--gold-bright); font-weight:700;}
 .topbar .ticket .n{ font-family:'Shippori Mincho',serif; font-size:14px;}
@@ -212,7 +217,8 @@ button{ font-family:inherit; }
 .ad-overlay{ position:fixed; inset:0; background:#05080fcc; z-index:74;
   display:flex; align-items:center; justify-content:center; padding:20px; }
 .ad-card{ background:linear-gradient(180deg,var(--panel2),var(--panel)); border:1px solid var(--line);
-  border-radius:16px; padding:16px; width:100%; max-width:340px; }
+  border-radius:16px; padding:16px; width:100%; max-width:340px; max-height:calc(100dvh - 40px); overflow-y:auto; }
+.ad-card .card{ padding:0; background:none; border:none; margin-top:14px; }
 .ad-top{ display:flex; gap:14px; }
 .ad-thumb{ width:84px; flex:none; }
 .ad-name{ font-size:14.5px; font-weight:700; }
@@ -279,7 +285,7 @@ button{ font-family:inherit; }
   background-repeat:no-repeat; background-color:#0b1120;
   border:1px solid var(--line); image-rendering:pixelated; }
 .stage-thumb.veiled{ filter:grayscale(1) brightness(.34) contrast(1.5); }
-.mob.veiled{ filter:grayscale(1) brightness(.34) contrast(1.5); }
+.mob.veiled{ filter:brightness(0); opacity:.88; }
 .stage-thumb-wrap .qm{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   color:var(--gold-bright); font-size:20px; font-weight:700; text-shadow:0 1px 3px #000; }
 .bt-unit.down .art{ filter:grayscale(1) brightness(.4); }
@@ -1440,12 +1446,12 @@ function gunzipBytes(bytes){
   var w = ds.writable.getWriter(); w.write(bytes); w.close();
   return new Response(ds.readable).arrayBuffer().then(function(buf){ return new Uint8Array(buf); });
 }
-/* 引き継ぎコードの形式： RJSN1:<gzip有無0/1>:<塩b64>:<ivb64>:<暗号文b64>
-   塩・ivは秘密でないので平文のまま、パスワードで暗号化するのは中身のセーブ本体だけ。 */
-/* 引き継ぎコード自体がパスワード相当の長さ・ランダム性を持つため、
-   復元時にさらにパスワードを求めるのはやめ、コード自体に鍵を含める
-   （＝コードさえあれば復元できる。他人に見せない前提のコードとして扱う）。 */
-function buildTransferCode(account, saveObj){
+/* 暗号化されたセーブ本体（RJSN2:<gzip有無0/1>:<鍵b64>:<ivb64>:<暗号文b64>）そのものは
+   数百文字になり、手入力はおろかコピーもしづらい長さになる。これは端末間でやり取りする
+   「中身」であって、ユーザーに見せる「引き継ぎコード」そのものではない。
+   引き継ぎコードは、この中身をSupabaseのテーブルに預けて発行する短いランダム文字列（30文字）
+   にし、ユーザーはその短いコードだけを控える／貼り付ければよいようにする。 */
+function encryptTransferPayload(account, saveObj){
   var payload = JSON.stringify({ username:account.username, email:account.email, salt:account.salt, hash:account.hash,
     state:saveObj });
   var plainBytes = new TextEncoder().encode(payload);
@@ -1458,8 +1464,8 @@ function buildTransferCode(account, saveObj){
     });
   });
 }
-function parseTransferCode(code){
-  var parts = String(code||"").trim().split(":");
+function decryptTransferPayload(blob){
+  var parts = String(blob||"").trim().split(":");
   if(parts.length!==5 || parts[0]!=="RJSN2") return Promise.reject(new Error("format"));
   var gz = parts[1]==="1", keyBytes = bytesFromB64(parts[2]), iv = bytesFromB64(parts[3]), cipher = bytesFromB64(parts[4]);
   return crypto.subtle.importKey("raw", keyBytes, {name:"AES-GCM"}, false, ["decrypt"]).then(function(key){
@@ -1468,6 +1474,40 @@ function parseTransferCode(code){
     var bytes = new Uint8Array(plainBuf);
     return gz ? gunzipBytes(bytes) : Promise.resolve(bytes);
   }).then(function(bytes){ return JSON.parse(new TextDecoder().decode(bytes)); });
+}
+/* 短い引き継ぎコード用の文字セット。紛らわしい 0/O・1/I/L は使わない。 */
+var TRANSFER_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+var TRANSFER_CODE_LEN = 30;
+function generateTransferCodeToken(){
+  var bytes = randomBytes(TRANSFER_CODE_LEN), out = "";
+  for(var i=0;i<TRANSFER_CODE_LEN;i++) out += TRANSFER_CHARS[bytes[i] % TRANSFER_CHARS.length];
+  return out;
+}
+/* 発行：中身を暗号化し、Supabaseのテーブルへ保存して、短いコードだけを返す。
+   サーバー保存が前提のため、Supabaseに繋がらない環境（Artifactプレビュー等）では発行できない。 */
+function buildTransferCode(account, saveObj){
+  if(!sb) return Promise.reject(new Error("no-supabase"));
+  return encryptTransferPayload(account, saveObj).then(function(blob){
+    var code = generateTransferCodeToken();
+    return sbCall(function(){ return sb.from("transfer_codes").insert({code:code, payload:blob}); })
+      .then(function(res){
+        if(res.error) return Promise.reject(res.error);
+        return code;
+      });
+  });
+}
+/* 復元：短いコードでSupabaseから中身を引き、復号する。使い終わったコードは削除する
+   （＝一度しか使えない。同じ端末で再発行すれば新しいコードを何度でも作れる）。 */
+function parseTransferCode(code){
+  if(!sb) return Promise.reject(new Error("no-supabase"));
+  var cleanCode = String(code||"").trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
+  if(!cleanCode) return Promise.reject(new Error("format"));
+  return sbCall(function(){ return sb.from("transfer_codes").select("payload").eq("code", cleanCode).maybeSingle(); })
+    .then(function(res){
+      if(res.error || !res.data) return Promise.reject(new Error("not-found"));
+      sbCall(function(){ return sb.from("transfer_codes").delete().eq("code", cleanCode); }).catch(function(){});
+      return decryptTransferPayload(res.data.payload);
+    });
 }
 function fallbackCopy(text, cb){
   try{
@@ -1492,14 +1532,30 @@ var DEFAULT_STATE = {
 var state = null;
 /* ログイン中はアカウントごとの保存領域(ryuto_rpg_save_<id>)を、
    未ログインならログイン画面を表す最小限のstateを返す。 */
+/* モンスター図鑑がこの更新より前に倒したモンスターまで捕捉できるよう、
+   既にクリア済みのステージがあれば、そこに出現しうるモンスター（道中・中ボス・ボス）を
+   まとめて「見たことがある」扱いにする。毎回計算し直しても副作用が無い（足すだけ）ので、
+   バージョンフラグ等は使わず読み込みのたびに実行する。 */
+function backfillDefeatedMonsters(s){
+  if(!s._defeatedMonsters) s._defeatedMonsters = {};
+  if(!s.stage || !s.stage.progress) return s;
+  for(var st=1; st<=STAGE_PLAN.length; st++){
+    var prog = s.stage.progress[st];
+    if(!prog || !prog.cleared) continue;
+    roamPoolFor(st).forEach(function(id){ s._defeatedMonsters[id] = true; });
+    s._defeatedMonsters[midBossIdFor(st)] = true;
+    s._defeatedMonsters[bossIdFor(st)] = true;
+  }
+  return s;
+}
 function loadState(){
   var session = loadSession();
   if(session && findAccountById(session.accountId)){
     try{
       var raw = localStorage.getItem(accountSaveKey(session.accountId));
-      if(raw){ var s=JSON.parse(raw); return Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), s); }
+      if(raw){ var s=JSON.parse(raw); return backfillDefeatedMonsters(Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), s)); }
     }catch(e){}
-    return JSON.parse(JSON.stringify(DEFAULT_STATE));
+    return backfillDefeatedMonsters(JSON.parse(JSON.stringify(DEFAULT_STATE)));
   }
   return { screen:"authLogin" };
 }
@@ -1717,10 +1773,12 @@ function render(){
     : (canBack(state.screen) ? '<button class="back" data-act="back">←</button>' : '<div style="width:36px"></div>');
   var ticketClickable = state.screen!=="battle" && state.screen!=="search" && state.screen!=="candidate";
   var top = isAuthScreen ? '' : ('<div class="topbar">'+
-    topLeft+
+    '<div class="topbar-side left">'+topLeft+'</div>'+
     '<div class="ttl">'+topbarTitleHtml()+'</div>'+
-    (state.screen!=="tutorial" ? '<button class="help-btn" data-act="openTutorial" title="遊び方">？</button>' : '')+
-    '<div class="ticket"'+(ticketClickable?' data-act="goto" data-screen="search" style="cursor:pointer"':'')+'>🎟️ <span class="n">'+state.tickets+'</span></div>'+
+    '<div class="topbar-side right">'+
+      (state.screen!=="tutorial" ? '<button class="help-btn" data-act="openTutorial" title="遊び方">？</button>' : '')+
+      '<div class="ticket"'+(ticketClickable?' data-act="goto" data-screen="search" style="cursor:pointer"':'')+'>🎟️ <span class="n">'+state.tickets+'</span></div>'+
+    '</div>'+
     '</div>');
   body += (state._confirmRetreat ? retreatConfirmHtml() : '');
   if(state.screen==="battle" && state._allyDetailIdx!=null && state._battle && state._battle.allies[state._allyDetailIdx]){
@@ -1728,7 +1786,7 @@ function render(){
   }
   if(state.screen==="party" && state._rosterDetailInstId!=null){
     var rdInst = state.owned.filter(function(o){ return o.id===state._rosterDetailInstId; })[0];
-    if(rdInst) body += allyDetailHtml(rosterUnitLike(rdInst));
+    if(rdInst) body += allyDetailHtml(rosterUnitLike(rdInst), true);
   }
   if(state.screen==="monsterGallery" && state._monsterDetailId!=null){
     body += monsterDetailHtml(state._monsterDetailId);
@@ -2198,15 +2256,20 @@ function pentagon(stats){
 
 function renderRoster(){
   var sel = state._rosterSelect;
+  var pendingSeedId = state._pendingSeedItem;
+  var pendingSeed = pendingSeedId ? ITEMS_MOCK.filter(function(i){ return i.id===pendingSeedId; })[0] : null;
   var cells = state.owned.map(function(inst){
     var a = allyById(inst.allyId);
-    return '<div class="roster-cell" data-act="viewDetail" data-inst="'+inst.id+'">'+
+    var act = pendingSeed ? 'applyPendingSeed' : 'viewDetail';
+    return '<div class="roster-cell" data-act="'+act+'" data-inst="'+inst.id+'">'+
       cardFrameHtml(inst.rarity, a.id)+
       '<div class="lv">Lv'+inst.level+'</div>'+
       '<div class="nm">'+nameRubyHtml(a)+'</div>'+
     '</div>';
   }).join('');
   return '<div class="screen">'+
+    (pendingSeed ? '<div class="notice blue">'+esc(pendingSeed.name)+'を使うキャラクターをタップしてください　'+
+      '<button class="btn ghost small" data-act="cancelPendingSeed" style="margin-top:8px">キャンセル</button></div>' : '')+
     (state.owned.length ? '<div class="roster-grid">'+cells+'</div>' :
       '<div class="notice">まだキャラクターがいません。「キャラ検索・生成」から仲間を迎えましょう。</div>')+
   '</div>';
@@ -2276,10 +2339,12 @@ function renderParty(){
 
 function renderInventory(){
   return '<div class="screen">'+
-    '<div class="notice">アイテム20種の実素材は未受領のため、暫定アイテム6種で代替しています（section 3-2/11-2 に基づく仮対応）。経験値の種は「獲得キャラ一覧」からキャラを選んで使います。</div>'+
+    '<div class="notice">アイテム20種の実素材は未受領のため、暫定アイテム6種で代替しています（section 3-2/11-2 に基づく仮対応）。経験値の種はアイコンをタップすると、使うキャラクターを選べます。</div>'+
     ITEMS_MOCK.map(function(it){
       var n = (state._inv&&state._inv[it.id])||0;
-      return '<div class="card row" style="align-items:center"><div class="enemy-ph">'+it.icon+'</div><div class="grow"><b>'+it.name+'</b><div class="muted">'+it.effect+'</div></div><div class="tag gold">×'+n+'</div></div>';
+      var usable = it.seed && n > 0;
+      return '<div class="card row" style="align-items:center'+(usable?';cursor:pointer':'')+'"'+(usable?' data-act="useSeedFromInventory" data-item="'+it.id+'"':'')+'>'+
+        '<div class="enemy-ph">'+it.icon+'</div><div class="grow"><b>'+it.name+'</b><div class="muted">'+it.effect+'</div></div><div class="tag gold">×'+n+'</div></div>';
     }).join('')+
   '</div>';
 }
@@ -2948,7 +3013,7 @@ function rosterUnitLike(inst){
   return {ally:a, inst:inst, hp:stats.hp, maxHp:stats.hp, atk:stats.atk, def:stats.def, agi:stats.agi, int:stats.int};
 }
 /* バトル中、味方カードの長押しで開くステータス詳細ポップアップ */
-function allyDetailHtml(u){
+function allyDetailHtml(u, showAlloc){
   var a = u.ally, inst = u.inst;
   var pct = Math.max(0, Math.round(100*u.hp/u.maxHp));
   return '<div class="ad-overlay" data-act="closeAllyDetail">'+
@@ -2971,6 +3036,7 @@ function allyDetailHtml(u){
         '<div class="ad-hpbar'+(pct<30?' low':'')+'"><i style="width:'+pct+'%"></i></div>'+
         '<span class="ad-hpv">'+u.hp+' / '+u.maxHp+'</span>'+
       '</div>'+
+      (showAlloc ? allocPanel(inst) : '')+
     '</div>'+
   '</div>';
 }
@@ -3367,6 +3433,7 @@ function renderLevelUp(){
     '</div>'+
     '<div class="card">'+pentagon(after)+'</div>'+
     (newAb.length ? '<div class="notice">新しい特殊能力を習得！ '+newAb.map(function(x){return x.name;}).join('、')+'</div>' : '')+
+    ((inst.pts||0) > 0 ? allocPanel(inst) : '')+
     '<button class="btn primary" data-act="nextLevelUp">'+(state._levelUpQueue.length>1?'次のキャラへ':'続ける')+'</button>'+
   '</div>';
 }
@@ -3420,8 +3487,8 @@ function renderAuthRestore(){
   return '<div class="screen">'+
     '<div class="hero"><div class="logo disp">龍神戦記<small>RYUJIN SENKI ｜ 引き継ぎコードで復元</small></div></div>'+
     '<div class="card">'+
-      '<label class="f">引き継ぎコード</label>'+
-      '<textarea id="restoreCode" placeholder="ここに貼り付け" style="min-height:96px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;word-break:break-all;"></textarea>'+
+      '<label class="f">引き継ぎコード（30文字）</label>'+
+      '<input type="text" id="restoreCode" placeholder="ここに貼り付け" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.03em;">'+
       '<button class="btn primary" data-act="doRestoreCode">この端末に取り込む</button>'+
     '</div>'+
     '<div class="notice">このコードを知っている人は誰でも復元できます。他人に見せたり、公開の場に貼ったりしないでください。</div>'+
@@ -3474,9 +3541,9 @@ function renderTransferIssue(){
   var codeBlock = state._transferCode ?
     '<div class="card">'+
       '<label class="f">引き継ぎコードをコピーしてください</label>'+
-      '<textarea id="transferCodeBox" readonly style="min-height:110px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;word-break:break-all;">'+esc(state._transferCode)+'</textarea>'+
+      '<input id="transferCodeBox" readonly style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;letter-spacing:.03em;text-align:center;" value="'+esc(state._transferCode)+'">'+
       '<button class="btn primary" data-act="copyTransferCode">コピーする</button>'+
-      '<div class="muted center" style="margin-top:8px">新しい端末で同じURLを開き「引き継ぎコードで復元」から、このコードを入力してください。</div>'+
+      '<div class="muted center" style="margin-top:8px">新しい端末で同じURLを開き「引き継ぎコードで復元」から、このコードを入力してください。このコードは一度使うと無効になります。</div>'+
     '</div>' : '';
   return '<div class="screen">'+
     '<div class="card">'+
@@ -3606,7 +3673,12 @@ function handleAction(act, el){
         try{ localStorage.setItem(accountSaveKey(id), JSON.stringify(payload.state)); }catch(e){}
         completeLogin(id);
         toast("復元しました");
-      }).catch(function(){ el.disabled=false; toast("コードの形式が正しくありません"); });
+      }).catch(function(err){
+        el.disabled=false;
+        if(err && err.message==="no-supabase"){ toast("現在この機能を利用できません。ネットワーク接続をご確認いただくか、時間をおいて再度お試しください"); return; }
+        if(err && err.message==="not-found"){ toast("コードが見つかりません。入力ミスがないか確認するか、もう一度発行し直してください"); return; }
+        toast("コードの形式が正しくありません");
+      });
       break;
     }
     case "doSendResetEmail": {
@@ -3712,7 +3784,11 @@ function handleAction(act, el){
         if(!code) return;
         state._transferCode = code;
         render();
-      }).catch(function(){ el.disabled=false; toast("エラーが発生しました"); });
+      }).catch(function(err){
+        el.disabled=false;
+        if(err && err.message==="no-supabase"){ toast("現在この機能を利用できません。ネットワーク接続をご確認いただくか、時間をおいて再度お試しください"); return; }
+        toast("エラーが発生しました");
+      });
       break;
     }
     case "copyTransferCode": {
@@ -3874,7 +3950,7 @@ function handleAction(act, el){
       break;
     }
     case "allocStat": {
-      var inst = state.owned.filter(function(o){ return o.id === el.dataset.inst; })[0];
+      var inst = state.owned.filter(function(o){ return o.id === parseInt(el.dataset.inst,10); })[0];
       var key = el.dataset.stat, n = parseInt(el.dataset.n, 10) || 1;
       if(inst && (inst.pts||0) >= n && STAT_KEYS.indexOf(key) !== -1){
         inst.pts -= n;
@@ -3886,7 +3962,7 @@ function handleAction(act, el){
       render(); break;
     }
     case "useSeed": {
-      var inst2 = state.owned.filter(function(o){ return o.id === el.dataset.inst; })[0];
+      var inst2 = state.owned.filter(function(o){ return o.id === parseInt(el.dataset.inst,10); })[0];
       var sid = el.dataset.item;
       var seed = ITEMS_MOCK.filter(function(i){ return i.id === sid; })[0];
       var have = (state._inv && state._inv[sid]) || 0;
@@ -3896,6 +3972,33 @@ function handleAction(act, el){
         saveState(); toast(seed.name+"を使った！実数値を+"+seed.seed+"振り分けられます");
       }
       render(); break;
+    }
+    case "useSeedFromInventory": {
+      var sidInv = el.dataset.item;
+      var haveInv = (state._inv && state._inv[sidInv]) || 0;
+      if(haveInv <= 0){ toast("この種を持っていません"); break; }
+      state._pendingSeedItem = sidInv;
+      go("roster");
+      break;
+    }
+    case "cancelPendingSeed": state._pendingSeedItem = null; render(); break;
+    case "applyPendingSeed": {
+      var sidPend = state._pendingSeedItem;
+      state._pendingSeedItem = null;
+      var seedPend = ITEMS_MOCK.filter(function(i){ return i.id === sidPend; })[0];
+      var instPend = state.owned.filter(function(o){ return o.id === parseInt(el.dataset.inst,10); })[0];
+      var havePend = (state._inv && state._inv[sidPend]) || 0;
+      if(instPend && seedPend && seedPend.seed && havePend > 0){
+        state._inv[sidPend] = havePend - 1;
+        instPend.pts = (instPend.pts||0) + seedPend.seed;
+        saveState();
+        var a3 = allyById(instPend.allyId);
+        toast(seedPend.name+"を使った！"+a3.name+"に実数値を+"+seedPend.seed+"振り分けられます");
+        go("inventory");
+      } else {
+        toast("エラーが発生しました"); render();
+      }
+      break;
     }
     case "toggleReduceMotion": state.settings.reduceMotion=!state.settings.reduceMotion; saveState(); render(); break;
   }
@@ -4193,9 +4296,13 @@ var revealLock = false;
   var timer = null, from = null, fired = false;
   function start(e){
     if(state.screen !== "battle") return;
+    /* 長押し対象の外を新たに押した時点で、前回長押し分の「次のクリックを1回だけ無視する」
+       フラグを必ず解除する。ここでreturnする前に解除しないと、ポップアップを開いた直後に
+       別のボタン（能力振り分けなど）を素早くタップした際、そのタップまで誤って飲み込まれる。 */
+    fired = false;
     var unit = e.target.closest ? e.target.closest("[data-ally-idx]") : null;
     if(!unit) return;
-    from = unit; fired = false;
+    from = unit;
     clearTimeout(timer);
     timer = setTimeout(function(){
       fired = true;
@@ -4232,9 +4339,11 @@ var revealLock = false;
   var timer = null, from = null, fired = false;
   function start(e){
     if(state.screen !== "party") return;
+    /* バトル側と同様、長押し対象の外を新たに押した時点で必ずフラグを解除する（理由は同上）。 */
+    fired = false;
     var cell = e.target.closest ? e.target.closest("[data-roster-inst]") : null;
     if(!cell) return;
-    from = cell; fired = false;
+    from = cell;
     clearTimeout(timer);
     timer = setTimeout(function(){
       fired = true;
