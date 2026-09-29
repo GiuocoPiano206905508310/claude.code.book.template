@@ -3096,15 +3096,17 @@ function renderBattleCommand(){
       '<button class="btn ghost" data-act="cancelTarget">戻る</button>';
   }
   /* 「誰の行動を選択中か」は味方カードの緑枠(renderBattle側)で示すため、
-     ここに見出しは出さない。前のキャラの決定は「戻る」で必要なときに辿れる。 */
-  return '<div class="cmd-grid">'+
+     ここに見出しは出さない。前のキャラの決定は「戻る」で必要なときに辿れる。
+     グリッドを.item-scroll(flex:1)で包み、指示メニュー側の「戻る」と同じく
+     コマンド欄の残り空間を吸収させることで、選び直すボタンを欄の一番下に揃える。 */
+  return '<div class="item-scroll"><div class="cmd-grid">'+
       '<button class="btn ghost" data-act="cmdAuto"><span class="mi">🤖</span> オート攻撃</button>'+
       '<button class="btn ghost" data-act="cmdOrder"><span class="mi">🎯</span> 指示</button>'+
       '<button class="btn ghost" data-act="cmdItem"><span class="mi">🎒</span> アイテム</button>'+
       (b.kind==='boss'
         ? '<button class="btn ghost" disabled title="ボス戦からは逃げられません"><span class="mi">🏃</span> にげる（不可）</button>'
         : '<button class="btn danger" data-act="cmdFlee"><span class="mi">🏃</span> にげる</button>')+
-    '</div>'+
+    '</div></div>'+
     (b.cmdIndex > 0 ? '<button class="btn ghost small" data-act="cmdBack">← 前のキャラの行動を選び直す</button>' : '');
 }
 
