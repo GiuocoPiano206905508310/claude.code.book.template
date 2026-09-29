@@ -3097,15 +3097,15 @@ function renderBattleCommand(){
   }
   /* 「誰の行動を選択中か」は味方カードの緑枠(renderBattle側)で示すため、
      ここに見出しは出さない。前のキャラの決定は「戻る」で必要なときに辿れる。 */
-  return (b.cmdIndex > 0 ? '<button class="btn ghost small" data-act="cmdBack">← 前のキャラの行動を選び直す</button>' : '')+
-    '<div class="cmd-grid">'+
+  return '<div class="cmd-grid">'+
       '<button class="btn ghost" data-act="cmdAuto"><span class="mi">🤖</span> オート攻撃</button>'+
       '<button class="btn ghost" data-act="cmdOrder"><span class="mi">🎯</span> 指示</button>'+
       '<button class="btn ghost" data-act="cmdItem"><span class="mi">🎒</span> アイテム</button>'+
       (b.kind==='boss'
         ? '<button class="btn ghost" disabled title="ボス戦からは逃げられません"><span class="mi">🏃</span> にげる（不可）</button>'
         : '<button class="btn danger" data-act="cmdFlee"><span class="mi">🏃</span> にげる</button>')+
-    '</div>';
+    '</div>'+
+    (b.cmdIndex > 0 ? '<button class="btn ghost small" data-act="cmdBack">← 前のキャラの行動を選び直す</button>' : '');
 }
 
 function pushLog(b, msg){ b.log.unshift(msg); if(b.log.length>40) b.log.pop(); }
@@ -4254,15 +4254,16 @@ function extendedOrderMenu(){
   var b = state._battle; if(!b || b.subPhase!=="order-menu") return null;
   var u = aliveAllies()[b.cmdIndex];
   var g = allyGuardMul(u);
-  /* 特殊能力2つ持ちだと最大5択になるため、行動選択画面と同じ高さに収まるよう
-     ここだけ小さめのボタンにする */
-  var buttons = '<button class="btn ghost small" data-act="chooseOrder" data-kind="physical"><span class="mi">⚔️</span> 単体攻撃（'+singleMul(u).toFixed(2)+'倍）</button>'+
-    '<button class="btn ghost small" data-act="chooseOrder" data-kind="ranged"><span class="mi">🏹</span> 全体攻撃（'+wideMul(u).toFixed(2)+'倍）</button>'+
-    '<button class="btn ghost small" data-act="chooseOrder" data-kind="guard"><span class="mi">🛡️</span> 防御（'+(g===0?'無効化':'被ダメ'+g+'倍')+'）</button>'+
+  /* 誰の指示中かは味方カードの緑枠(renderBattle側)で示しているため、ここに見出しは
+     出さない。ボタンの大きさも行動選択画面(オート攻撃・指示・アイテム・にげる)と
+     揃え、特殊能力ぶんで縦に増えても戻るボタンが隠れないようスクロール領域にする。 */
+  var buttons = '<button class="btn ghost" data-act="chooseOrder" data-kind="physical"><span class="mi">⚔️</span> 単体攻撃（'+singleMul(u).toFixed(2)+'倍）</button>'+
+    '<button class="btn ghost" data-act="chooseOrder" data-kind="ranged"><span class="mi">🏹</span> 全体攻撃（'+wideMul(u).toFixed(2)+'倍）</button>'+
+    '<button class="btn ghost" data-act="chooseOrder" data-kind="guard"><span class="mi">🛡️</span> 防御（'+(g===0?'無効化':'被ダメ'+g+'倍')+'）</button>'+
     (u.abilities.length ? u.abilities.map(function(ab){
-      return '<button class="btn ghost small" data-act="chooseOrder" data-kind="ability" data-ab="'+ab.key+'">✨ '+ab.name+'</button>';
+      return '<button class="btn ghost" data-act="chooseOrder" data-kind="ability" data-ab="'+ab.key+'">✨ '+ab.name+'</button>';
     }).join('') : '');
-  return '<div class="cmdhead"><b>'+nameRubyHtml(u.ally)+'</b>の指示</div><div class="cmd-grid">'+buttons+'</div><button class="btn ghost" data-act="cancelTarget">戻る</button>';
+  return '<div class="item-scroll"><div class="cmd-grid">'+buttons+'</div></div><button class="btn ghost" data-act="cancelTarget">戻る</button>';
 }
 var origRenderBattleCommand = renderBattleCommand;
 renderBattleCommand = function(){
