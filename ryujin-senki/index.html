@@ -294,6 +294,7 @@ button{ font-family:inherit; }
 .bt-unit.down .art{ filter:grayscale(1) brightness(.4); }
 .bt-unit .hpbar{ height:6px; background:#20263c; border-radius:4px; overflow:hidden; margin-top:4px; border:1px solid #000; }
 .bt-unit .hpbar i{ display:block; height:100%; background:linear-gradient(90deg,#5fd0a0,#3fa878); }
+.chargebar{ font-size:8.5px; letter-spacing:1px; color:var(--gold-dim); text-align:center; margin-top:2px; line-height:1; }
 .bt-unit .hpbar.low i{ background:linear-gradient(90deg,#e2555f,#a8303a); }
 .bt-unit .nm{ font-size:9.5px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .bt-unit .nm.top{ margin-top:0; margin-bottom:3px;
@@ -665,6 +666,198 @@ function abilitiesFor(stats){
     if(a>=999 && b>=999) out.push(d.hi);
     else if(a>=500 && b>=500) out.push(d.lo);
   });
+  return out;
+}
+
+/* ============ 属性ごとの特殊効果（通常攻撃・全体攻撃・特殊能力・必殺技、全ての攻撃で発動） ============
+   味方側の属性(element)にのみ紐づく。モンスター側は属性データを持たないため対象外。
+   対象に何かを付与するもの(火傷・氷結・麻痺など)はapplyElementOnHit、
+   自分自身や味方全体に効くもの(回復・自己バフ・吸収)はapplyElementSelfAfterAttackで扱う。
+   機械だけは対象の守備力そのものを書き換える特殊枠のためelementDamageOverrideで別扱い。 */
+function applyElementOnHit(b, actor, t){
+  var el = actor.ally && actor.ally.element;
+  if(!el || el==="none" || !t.alive) return;
+  var tname = t.ally ? t.ally.name : t.name;
+  if(el==="fire"){
+    addStatus(t, {type:"dot", pct:0.05, turnsLeft:2, label:"火傷"});
+    pushLog(b, tname+"は火傷を負った！");
+  } else if(el==="ice"){
+    addStatus(t, {type:"statMul", stat:"agi", mul:0.7, turnsLeft:2, label:"氷結"});
+    pushLog(b, tname+"の俊敏力が下がった！");
+  } else if(el==="lightning"){
+    if(Math.random()<0.25){ addStatus(t, {type:"stun", turnsLeft:1, label:"麻痺"}); pushLog(b, tname+"は麻痺してしまった！"); }
+  } else if(el==="shadow"){
+    if(Math.random()<0.30){ addStatus(t, {type:"darkness", missChance:0.3, turnsLeft:2, label:"暗闇"}); pushLog(b, tname+"は暗闇状態になった！"); }
+  } else if(el==="moon"){
+    if(Math.random()<0.25){ addStatus(t, {type:"sleep", turnsLeft:1, label:"眠り"}); pushLog(b, tname+"は眠ってしまった！"); }
+  } else if(el==="water"){
+    addStatus(t, {type:"statMul", stat:"atk", mul:0.8, turnsLeft:2, label:"潮"});
+    pushLog(b, tname+"の攻撃力が下がった！");
+  }
+}
+function applyElementSelfAfterAttack(b, actor, totalDmg){
+  var el = actor.ally && actor.ally.element;
+  if(!el || el==="none") return;
+  if(el==="holy"){
+    aliveAllies().forEach(function(u){ var heal=Math.round(u.maxHp*0.05); u.hp=Math.min(u.maxHp, u.hp+heal); });
+    pushLog(b, actor.ally.name+"の加護で味方全員のHPが少し回復した！");
+  } else if(el==="dark"){
+    if(totalDmg>0){ var heal=Math.max(1, Math.round(totalDmg*0.05)); actor.hp=Math.min(actor.maxHp, actor.hp+heal); pushLog(b, actor.ally.name+"はHPを"+heal+"吸収した！"); }
+  } else if(el==="nature"){
+    if(totalDmg>0){ var heal2=Math.max(1, Math.round(totalDmg*0.08)); actor.hp=Math.min(actor.maxHp, actor.hp+heal2); pushLog(b, actor.ally.name+"はHPを"+heal2+"吸収した！"); }
+  } else if(el==="wind"){
+    addStatus(actor, {type:"statMul", stat:"agi", mul:1.2, turnsLeft:2, label:"疾風"});
+    pushLog(b, actor.ally.name+"の俊敏力が上がった！");
+  } else if(el==="earth"){
+    addStatus(actor, {type:"dmgReduceSelf", mul:0.85, turnsLeft:2, label:"土の守り"});
+    pushLog(b, actor.ally.name+"の身が引き締まった！被ダメージが下がる");
+  } else if(el==="star"){
+    addStatus(actor, {type:"critUp", chance:0.3, turnsLeft:2, label:"星の加護"});
+    pushLog(b, actor.ally.name+"の会心率が上がった！");
+  }
+}
+function elementDamageOverride(actor){
+  var el = actor.ally && actor.ally.element;
+  if(el==="tech") return {ignoreDef:true, bonusPct:0.2};
+  return null;
+}
+
+/* ============ 必殺技（職業・武器種ごと、チャージ満タンで「指示」から選べる） ============
+   targeting: "single"=敵1体を選ぶ／"aoe"=敵全体（選択不要）／"party"=味方全体対象で攻撃なし */
+var ROLE_ULTIMATE = {
+  sword:     {key:"sword_ult",     name:"双撃・裂空斬",       targeting:"single", desc:"単体に1.6倍を2回(計3.2倍)"},
+  shield:    {key:"shield_ult",    name:"シールドバッシュ",     targeting:"single", desc:"単体に2.0倍＋1ターン行動不能"},
+  heavy:     {key:"heavy_ult",     name:"地響き",             targeting:"aoe",    desc:"敵全体に1.8倍＋2ターン守備力20%低下"},
+  katana:    {key:"katana_ult",    name:"無双乱舞",           targeting:"single", desc:"単体に1.2倍を3回(計3.6倍)"},
+  spear:     {key:"spear_ult",     name:"刺突・竜牙",         targeting:"single", desc:"単体に3.2倍＋必ず先制", alwaysFirst:true},
+  fist:      {key:"fist_ult",      name:"闘気開放",           targeting:"single", desc:"単体に2.0倍＋自身の攻撃力が2ターン40%上昇"},
+  bow:       {key:"bow_ult",       name:"一射抜刀",           targeting:"single", desc:"単体に3.8倍＋必ず弱点命中"},
+  xbow:      {key:"xbow_ult",      name:"トリプルボルト",       targeting:"single", desc:"単体に1.3倍を3回(計3.9倍)"},
+  gun:       {key:"gun_ult",       name:"掃射一斉射撃",        targeting:"aoe",    desc:"敵全体に1.7倍(守備力無視)"},
+  dagger:    {key:"dagger_ult",    name:"毒刃乱舞",           targeting:"single", desc:"単体に2.2倍＋2ターン毒(毎ターン最大HP5%)"},
+  staff:     {key:"staff_ult",     name:"エレメンタルバースト", targeting:"aoe",    desc:"敵全体に1.9倍(魔法)"},
+  staffbook: {key:"staffbook_ult", name:"封印の書",           targeting:"single", desc:"単体に2.0倍＋2ターン沈黙"},
+  staffbell: {key:"staffbell_ult", name:"守護霊の加護",        targeting:"single", desc:"単体に1.5倍＋味方全体HP20%回復"},
+  swordlyre: {key:"swordlyre_ult", name:"勇気の歌",           targeting:"single", desc:"単体に1.8倍＋味方全体の攻撃力が2ターン25%上昇"},
+  potion:    {key:"potion_ult",    name:"万能霊薬",           targeting:"party",  desc:"味方全体HP35%回復"},
+  whip:      {key:"whip_ult",      name:"調教の鞭",           targeting:"single", desc:"単体に2.0倍＋対象を2ターン行動不能"}
+};
+function applyUltimate(b, actor, def, targetIdx){
+  var tgt = (targetIdx!=null) ? b.enemies[targetIdx] : null;
+  if(def.key==="sword_ult"){
+    doAttack(b,actor,[tgt],"physical",1.6,def.name+"(1)");
+    doAttack(b,actor,[tgt],"physical",1.6,def.name+"(2)");
+  } else if(def.key==="shield_ult"){
+    doAttack(b,actor,[tgt],"physical",2.0,def.name);
+    if(tgt.alive) addStatus(tgt, {type:"stun", turnsLeft:1, label:"スタン"});
+  } else if(def.key==="heavy_ult"){
+    var hTargets = aliveEnemies();
+    doAttack(b,actor,hTargets,"physical",1.8,def.name);
+    hTargets.forEach(function(e){ if(e.alive) addStatus(e, {type:"statMul", stat:"def", mul:0.8, turnsLeft:2, label:def.name}); });
+  } else if(def.key==="katana_ult"){
+    doAttack(b,actor,[tgt],"physical",1.2,def.name+"(1)");
+    doAttack(b,actor,[tgt],"physical",1.2,def.name+"(2)");
+    doAttack(b,actor,[tgt],"physical",1.2,def.name+"(3)");
+  } else if(def.key==="spear_ult"){
+    doAttack(b,actor,[tgt],"physical",3.2,def.name);
+  } else if(def.key==="fist_ult"){
+    doAttack(b,actor,[tgt],"physical",2.0,def.name);
+    addStatus(actor, {type:"statMul", stat:"atk", mul:1.4, turnsLeft:2, label:def.name});
+  } else if(def.key==="bow_ult"){
+    doAttack(b,actor,[tgt],"physical",3.8,def.name,{guaranteedHit:true});
+  } else if(def.key==="xbow_ult"){
+    doAttack(b,actor,[tgt],"physical",1.3,def.name+"(1)");
+    doAttack(b,actor,[tgt],"physical",1.3,def.name+"(2)");
+    doAttack(b,actor,[tgt],"physical",1.3,def.name+"(3)");
+  } else if(def.key==="gun_ult"){
+    doAttack(b,actor,aliveEnemies(),"physical",1.7,def.name,{ignoreDef:true});
+  } else if(def.key==="dagger_ult"){
+    doAttack(b,actor,[tgt],"physical",2.2,def.name);
+    if(tgt.alive) addStatus(tgt, {type:"dot", pct:0.05, turnsLeft:2, label:"毒"});
+  } else if(def.key==="staff_ult"){
+    doAttack(b,actor,aliveEnemies(),"ranged",1.9,def.name);
+  } else if(def.key==="staffbook_ult"){
+    doAttack(b,actor,[tgt],"ranged",2.0,def.name);
+    if(tgt.alive) addStatus(tgt, {type:"silence", turnsLeft:2, label:"沈黙"});
+  } else if(def.key==="staffbell_ult"){
+    doAttack(b,actor,[tgt],"physical",1.5,def.name);
+    aliveAllies().forEach(function(u){ var heal=Math.round(u.maxHp*0.2); u.hp=Math.min(u.maxHp, u.hp+heal); });
+    pushLog(b, actor.ally.name+"の"+def.name+"！味方全員のHPが20%回復した");
+  } else if(def.key==="swordlyre_ult"){
+    doAttack(b,actor,[tgt],"physical",1.8,def.name);
+    aliveAllies().forEach(function(u){ addStatus(u, {type:"statMul", stat:"atk", mul:1.25, turnsLeft:2, label:def.name}); });
+    pushLog(b, actor.ally.name+"の"+def.name+"！味方全員の攻撃力が2ターン上昇した");
+  } else if(def.key==="potion_ult"){
+    aliveAllies().forEach(function(u){ var heal=Math.round(u.maxHp*0.35); u.hp=Math.min(u.maxHp, u.hp+heal); });
+    pushLog(b, actor.ally.name+"の"+def.name+"！味方全員のHPが35%回復した");
+  } else if(def.key==="whip_ult"){
+    doAttack(b,actor,[tgt],"physical",2.0,def.name);
+    if(tgt.alive) addStatus(tgt, {type:"stun", turnsLeft:2, label:"束縛"});
+  }
+}
+
+/* ============ 必殺技チャージ（○表記） ============
+   実数値合計で満タンに必要な数が変わる。戦闘開始時に0からで、戦闘をまたいで持ち越さない。 */
+function chargeMaxForStats(stats){
+  var sum = stats.hp+stats.atk+stats.def+stats.agi+stats.int;
+  if(sum<200) return 5;
+  if(sum<350) return 4;
+  if(sum<600) return 3;
+  return 2;
+}
+function chargeDots(u){
+  var max=u.skillChargeMax||0, cur=Math.min(max, u.skillCharge||0), s="";
+  for(var i=0;i<max;i++) s += i<cur ? "●" : "○";
+  return s;
+}
+
+/* ============ 状態異常・一時バフ（持続ターン付き汎用ステータス） ============
+   味方・敵どちらのユニットにも同じ形(status配列)で乗る。1種類のtypeにつき
+   {stat,mul}などパラメータは効果ごとに異なるので、判定側(statMulOf等)で読み分ける。 */
+function addStatus(u, s){ if(!u.status) u.status=[]; u.status.push(s); }
+function hasStatus(u, type){ return !!(u.status||[]).some(function(s){ return s.type===type; }); }
+function statMulOf(u, stat){
+  var m=1; (u.status||[]).forEach(function(s){ if(s.type==="statMul" && s.stat===stat) m*=s.mul; });
+  return m;
+}
+function dmgReduceMulOf(u){
+  var m=1; (u.status||[]).forEach(function(s){ if(s.type==="dmgReduceSelf") m*=s.mul; });
+  return m;
+}
+function critInfoOf(u){
+  var found=null; (u.status||[]).forEach(function(s){ if(s.type==="critUp") found=s; });
+  return found;
+}
+function effAtk(u){ return u.atk*statMulOf(u,"atk"); }
+function effDef(u){ return u.def*statMulOf(u,"def"); }
+function effAgi(u){ return u.agi*statMulOf(u,"agi"); }
+function effInt(u){ return u.int*statMulOf(u,"int"); }
+/* そのユニットの手番が来た時点で処理する：継続ダメージ・持続時間の消化・行動不能判定。
+   1体の状態異常は「その対象自身の手番が来るたび」に1ターン分減る扱いにしており、
+   1戦闘＝全員がちょうど1回ずつ手番を得る1周、という既存の進行と自然に対応する。 */
+function tickUnitStatuses(b, u){
+  var out = {skip:false, skipReason:null};
+  if(!u.status) u.status = [];
+  var keep = [];
+  u.status.forEach(function(s){
+    if(s.type==="dot" && u.alive){
+      var dmg = Math.max(1, Math.round(u.maxHp*s.pct));
+      u.hp = Math.max(0, u.hp-dmg);
+      pushLog(b, (u.ally?u.ally.name:u.name)+"は"+s.label+"のダメージ！"+dmg+"ダメージ");
+      if(u.hp<=0){
+        u.alive=false;
+        pushLog(b, (u.ally?u.ally.name:u.name)+"は倒れた…");
+        if(!b._wipeOrder) b._wipeOrder=[];
+        var side = u.isEnemy?"enemy":"ally";
+        var rest = (u.isEnemy?b.enemies:b.allies).filter(function(x){ return x.alive; });
+        if(!rest.length && b._wipeOrder.indexOf(side)===-1) b._wipeOrder.push(side);
+      }
+    }
+    if((s.type==="stun"||s.type==="sleep") && u.alive){ out.skip=true; out.skipReason=s.label; }
+    s.turnsLeft = s.turnsLeft-1;
+    if(s.turnsLeft>0) keep.push(s);
+  });
+  u.status = keep;
   return out;
 }
 
@@ -2877,7 +3070,7 @@ function makeEnemyUnit(def, m, role){
     hp:hp, maxHp:hp,
     atk:Math.max(2, Math.round(9 * m.atk)), def:Math.max(1, Math.round(7 * m.def)),
     agi:Math.max(2, Math.round(10 * m.agi)), int:Math.max(2, Math.round(8 * m.atk)),
-    priority:0, isEnemy:true, alive:true, role:role||'normal', guardMul:1, chargeMul:1};
+    priority:0, isEnemy:true, alive:true, role:role||'normal', guardMul:1, chargeMul:1, status:[]};
 }
 /* 体力と攻撃力は別々に効かせる。ボスは打たれ強いが、一撃で味方が落ちないようにする。
    ボスは1体で立つぶん厚くする。厚みも奥のステージほど増していく。
@@ -2946,7 +3139,8 @@ function startEncounter(kind){
     var stats = instStats(inst);
     var abilities = abilitiesFor(stats);
     return {instId:inst.id, ally:a, inst:inst, hp:Math.max(1, instHp(inst)), maxHp:stats.hp, atk:stats.atk, def:stats.def, agi:stats.agi, int:stats.int,
-      abilities:abilities, priority:abilities.some(function(ab){return ab.key==='abyssgate';})?1:0, isEnemy:false, alive:true, guardMul:1};
+      abilities:abilities, priority:abilities.some(function(ab){return ab.key==='abyssgate';})?1:0, isEnemy:false, alive:true, guardMul:1,
+      status:[], skillCharge:0, skillChargeMax:chargeMaxForStats(stats)};
   });
   state._battle = {kind:kind, allies:allies, enemies:enemies, log:["戦闘開始！"], turn:1, phase:"command", cmdIndex:0, held:{},
     actions:{}, fled:false, tiebreak:allies.concat(enemies).map(function(u,i){return i;}).sort(function(){return Math.random()-0.5;})};
@@ -2984,6 +3178,7 @@ function renderBattle(){
         '" data-act="tapUnit" data-ally-idx="'+i+'">'+
       cardFrameHtml(u.inst.rarity, a.id)+
       '<div class="hpbar '+(u.hp/u.maxHp<0.3?'low':'')+'"><i style="width:'+(100*u.hp/u.maxHp)+'%"></i></div>'+
+      (u.skillChargeMax ? '<div class="chargebar">'+chargeDots(u)+'</div>' : '')+
       '<div class="nm">'+nameRubyHtml(a)+'</div></div>';
   }).join('');
   var cmdArea = renderBattleCommand();
@@ -3112,12 +3307,22 @@ function renderBattleCommand(){
 
 function pushLog(b, msg){ b.log.unshift(msg); if(b.log.length>40) b.log.pop(); }
 
+/* 必殺技の中には「必ず先制」を持つものがあり、その回だけ最優先にする。
+   uの固定priority(アビスゲート等)とは別に、その場で選んだ行動を見て判定する。 */
+function effPriority(b, u){
+  if(!u.isEnemy){
+    var act = b.actions[u.instId];
+    if(act && act.type==='ultimate' && act.ultimate && act.ultimate.alwaysFirst) return 2;
+  }
+  return u.priority||0;
+}
 function computePriorityOrder(b){
   var units = aliveAllies().concat(aliveEnemies());
   return units.slice().sort(function(x,y){
-    var px = x.priority||0, py=y.priority||0;
+    var px = effPriority(b,x), py = effPriority(b,y);
     if(px!==py) return py-px;
-    if(x.agi!==y.agi) return y.agi-x.agi;
+    var agx = effAgi(x), agy = effAgi(y);
+    if(agx!==agy) return agy-agx;
     var ix = b.tiebreak.indexOf(b.allies.indexOf(x)>=0?b.allies.indexOf(x):(100+b.enemies.indexOf(x)));
     var iy = b.tiebreak.indexOf(b.allies.indexOf(y)>=0?b.allies.indexOf(y):(100+b.enemies.indexOf(y)));
     return ix-iy;
@@ -3131,32 +3336,53 @@ function allyGuardMul(u){
   return Math.round((0.7 - 0.6*t)*100)/100;              /* Lv1:0.70 → Lv50以上:0.10 */
 }
 /* 攻撃力が高いほど単体攻撃が伸びる（1.0〜2.0倍） */
-function singleMul(u){ return 1 + Math.max(0, Math.min(1, u.atk/999)); }
+function singleMul(u){ return 1 + Math.max(0, Math.min(1, effAtk(u)/999)); }
 /* 思考力が高いほど全体攻撃が伸びる（0.6〜1.5倍） */
-function wideMul(u){ return 0.6 + 0.9 * Math.max(0, Math.min(1, u.int/999)); }
+function wideMul(u){ return 0.6 + 0.9 * Math.max(0, Math.min(1, effInt(u)/999)); }
 /* ダメージは引き算ではなく比率で出す。
    引き算式だと守備力が攻撃力に追いついた瞬間にダメージが1へ崩れ、
    数値を少し動かすだけで勝率が100%から0%へ飛んでしまい、難易度を調整できない。 */
 function physicalDamage(atk,def_){ return Math.max(1, Math.round(atk*atk/(atk+Math.max(1,def_)))); }
 function rangedDamage(intv,def_){ var r = intv*0.6; return Math.max(1, Math.round(r*r/(r+Math.max(1,def_)))); }
 
-function doAttack(b, actor, targets, kind, mul, label){
-  mul = mul||1;
+function doAttack(b, actor, targets, kind, mul, label, opts){
+  mul = mul||1; opts = opts||{};
   b._fxQueue = b._fxQueue || [];
+  /* 影属性で付与される「暗闇」：この攻撃そのものが外れる。必殺技側でguaranteedHitを
+     渡せば(例：弓使いの必殺技「必ず弱点命中」)、この判定を無視して必ず当たる。 */
+  var darkS = null; (actor.status||[]).forEach(function(s){ if(s.type==="darkness") darkS=s; });
+  if(!opts.guaranteedHit && darkS && Math.random() < darkS.missChance){
+    pushLog(b, (actor.ally?actor.ally.name:actor.name)+"の攻撃は外れた！");
+    return;
+  }
+  /* 星属性の「会心率上昇」：発動していればこの行動全体に1回だけ会心をのせる */
+  var critS = critInfoOf(actor);
+  var isCrit = !!(critS && Math.random() < critS.chance);
+  if(isCrit) mul = mul * 1.3;
+  var elemOverride = elementDamageOverride(actor);
   /* 同時に何体へ当たったかで演出を分ける（複数同時＝全体攻撃の光の柱、単体＝ひび割れ）。
      全体攻撃の技でも、残り1体しかいなければ見た目は単体攻撃と変わらないため、
      ダメージ種別ではなく実際の着弾数で判定する。 */
   var isAoe = targets.filter(function(t){ return t.alive; }).length > 1;
+  var totalDmg = 0;
   targets.forEach(function(t){
     if(!t.alive) return;
-    var base = kind==='ranged' ? rangedDamage(actor.int, t.def) : physicalDamage(actor.atk, t.def);
+    var atkV = effAtk(actor), intV = effInt(actor);
+    var useIgnoreDef = opts.ignoreDef || (elemOverride && elemOverride.ignoreDef);
+    var defV = useIgnoreDef ? 0 : effDef(t);
+    var base = kind==='ranged' ? rangedDamage(intV, defV) : physicalDamage(atkV, defV);
+    if(elemOverride && elemOverride.bonusPct) base = Math.round(base * (1+elemOverride.bonusPct));
     /* 完全無効のときだけ0。それ以外は端数で0にならないよう最低1は通す */
     var gm = (t.guardMul == null) ? 1 : t.guardMul;
+    gm = gm * dmgReduceMulOf(t);
     var dmg = (gm === 0) ? 0 : Math.max(1, Math.round(base * mul * gm));
     t.hp = Math.max(0, t.hp-dmg);
+    totalDmg += dmg;
+    /* 眠り状態は被弾で解除される */
+    if(t.status && t.status.length) t.status = t.status.filter(function(s){ return s.type!=="sleep"; });
     /* 単体攻撃はひび割れ、全体攻撃は光の柱の演出を、次の描画の直後に再生する */
     b._fxQueue.push({side: t.isEnemy?'enemy':'ally', idx: (t.isEnemy?b.enemies:b.allies).indexOf(t), kind: isAoe?'magic':'wound'});
-    pushLog(b, (actor.ally?actor.ally.name:actor.name)+" の"+label+"！ "+(t.ally?t.ally.name:t.name)+"に"+dmg+"ダメージ");
+    pushLog(b, (actor.ally?actor.ally.name:actor.name)+" の"+label+(isCrit?"（会心）":"")+"！ "+(t.ally?t.ally.name:t.name)+"に"+dmg+"ダメージ");
     if(t.hp<=0){
       t.alive=false;
       pushLog(b, (t.ally?t.ally.name:t.name)+"は倒れた…");
@@ -3165,8 +3391,11 @@ function doAttack(b, actor, targets, kind, mul, label){
       var side = t.isEnemy ? "enemy" : "ally";
       var rest = (t.isEnemy ? b.enemies : b.allies).filter(function(u){ return u.alive; });
       if(!rest.length && b._wipeOrder.indexOf(side)===-1) b._wipeOrder.push(side);
+    } else {
+      applyElementOnHit(b, actor, t);
     }
   });
+  applyElementSelfAfterAttack(b, actor, totalDmg);
 }
 var FX_CRACK_SVG = '<svg viewBox="0 0 100 140" preserveAspectRatio="none">'+
   '<path d="M50 0 L44 30 L58 42 L38 60 L52 78 L30 100 L46 140" fill="none" stroke="#fff" stroke-width="2.4" opacity=".92"/>'+
@@ -3320,7 +3549,14 @@ function battleTick(){
   }
   var actor = b._queue.shift();
   if(!actor.alive){ render(); return battleTick(); }
-  if(actor.isEnemy){
+  /* このユニットの手番が来た時点で、継続ダメージ・持続効果の消化・行動不能判定を行う。
+     必殺技チャージは行動できたかどうかに関わらず、この手番ぶんとして必ず溜まる。 */
+  var tick = tickUnitStatuses(b, actor);
+  if(!actor.isEnemy) actor.skillCharge = Math.min(actor.skillChargeMax||0, (actor.skillCharge||0)+1);
+  if(!actor.alive){ checkBattleEnd(); render(); return; }
+  if(tick.skip){
+    pushLog(b, (actor.ally?actor.ally.name:actor.name)+"は"+(tick.skipReason||"状態異常")+"で動けない！");
+  } else if(actor.isEnemy){
     if(actor.role === 'boss' || actor.role === 'mid'){
       bossTurn(b, actor);
     } else {
@@ -3333,7 +3569,11 @@ function battleTick(){
   } else {
     var act = b.actions[actor.instId];
     if(actor.guardMul !== 1 && (!act || act.type !== 'guard')) actor.guardMul = 1;  /* 前の防御はここで切れる */
-    if(!act || act.type==='auto'){
+    if(act && (act.type==='ability'||act.type==='ultimate') && hasStatus(actor,'silence')){
+      pushLog(b, '<b>'+esc(actor.ally.name)+'</b>は沈黙していて技が使えない！代わりに通常攻撃した');
+      var esSil = aliveEnemies();
+      if(esSil.length) doAttack(b, actor, [esSil[Math.floor(Math.random()*esSil.length)]], 'physical', singleMul(actor), '攻撃');
+    } else if(!act || act.type==='auto'){
       var es = aliveEnemies();
       if(es.length) doAttack(b, actor, [es[Math.floor(Math.random()*es.length)]], 'physical', singleMul(actor), 'オート攻撃');
     } else if(act.type==='physical'){
@@ -3346,6 +3586,9 @@ function battleTick(){
       doAttack(b, actor, aliveEnemies(), 'ranged', wideMul(actor), '全体攻撃');
     } else if(act.type==='ability'){
       applyAbility(b, actor, act.ability, act.targetIdx);
+    } else if(act.type==='ultimate'){
+      applyUltimate(b, actor, act.ultimate, act.targetIdx);
+      actor.skillCharge = 0;
     } else if(act.type==='item'){
       var it = ITEMS_MOCK.filter(function(i){return i.id===act.itemId;})[0];
       state._inv[act.itemId] = Math.max(0,(state._inv[act.itemId]||0)-1);
@@ -4259,12 +4502,16 @@ function extendedOrderMenu(){
   /* 誰の指示中かは味方カードの緑枠(renderBattle側)で示しているため、ここに見出しは
      出さない。ボタンの大きさも行動選択画面(オート攻撃・指示・アイテム・にげる)と
      揃え、特殊能力ぶんで縦に増えても戻るボタンが隠れないようスクロール領域にする。 */
+  var ult = u.ally && ROLE_ULTIMATE[u.ally.role];
+  var ultReady = !!(ult && (u.skillCharge||0) >= (u.skillChargeMax||99));
   var buttons = '<button class="btn ghost" data-act="chooseOrder" data-kind="physical"><span class="mi">⚔️</span> 単体攻撃（'+singleMul(u).toFixed(2)+'倍）</button>'+
     '<button class="btn ghost" data-act="chooseOrder" data-kind="ranged"><span class="mi">🏹</span> 全体攻撃（'+wideMul(u).toFixed(2)+'倍）</button>'+
     '<button class="btn ghost" data-act="chooseOrder" data-kind="guard"><span class="mi">🛡️</span> 防御（'+(g===0?'無効化':'被ダメ'+g+'倍')+'）</button>'+
     (u.abilities.length ? u.abilities.map(function(ab){
       return '<button class="btn ghost" data-act="chooseOrder" data-kind="ability" data-ab="'+ab.key+'">✨ '+ab.name+'</button>';
-    }).join('') : '');
+    }).join('') : '')+
+    (ult ? ('<button class="btn '+(ultReady?'primary':'ghost')+'" data-act="chooseOrder" data-kind="ultimate"'+(ultReady?'':' disabled')+'>'+
+      '💥 '+(ultReady?esc(ult.name):'必殺技')+'　'+chargeDots(u)+'</button>') : '');
   return '<div class="item-scroll"><div class="cmd-grid">'+buttons+'</div></div><button class="btn ghost" data-act="cancelTarget">戻る</button>';
 }
 var origRenderBattleCommand = renderBattleCommand;
@@ -4298,6 +4545,20 @@ function handleExtendedAction(act, el){
         b.actions[u.instId] = {type:'ability', ability:ab, targetIdx:0};
         b.subPhase=null; b.cmdIndex++; render();
       }
+    } else if(kind==="ultimate"){
+      var ult = u.ally && ROLE_ULTIMATE[u.ally.role];
+      if(!ult || (u.skillCharge||0) < (u.skillChargeMax||99)){ render(); return true; } /* まだ満タンでないなら何もしない */
+      if(ult.targeting === 'aoe' || ult.targeting === 'party'){
+        clearAction(b, u);
+        b.actions[u.instId] = {type:'ultimate', ultimate: ult};
+        b.subPhase=null; b.cmdIndex++;
+      } else if(aliveEnemies().length<=1){
+        b.actions[u.instId] = {type:'ultimate', ultimate: ult, targetIdx: b.enemies.indexOf(aliveEnemies()[0])};
+        b.subPhase=null; b.cmdIndex++;
+      } else {
+        b._pendingKind = 'ultimate'; b._pendingUltimate = ult; b.subPhase = "target";
+      }
+      render();
     }
     return true;
   }
@@ -4318,6 +4579,7 @@ function handleExtendedAction(act, el){
       bt._pendingAbility = null;
     } else {
       bt.actions[actor.instId] = {type: bt._pendingKind, targetIdx:i};
+      if(bt._pendingKind==='ultimate'){ bt.actions[actor.instId].ultimate = bt._pendingUltimate; bt._pendingUltimate = null; }
     }
     bt.subPhase = null; bt.cmdIndex++; render();
     return true;
@@ -4330,6 +4592,7 @@ function handleExtendedAction(act, el){
       b2._pendingAbility=null;
     } else {
       b2.actions[u2.instId] = {type: b2._pendingKind, targetIdx: idx};
+      if(b2._pendingKind==='ultimate'){ b2.actions[u2.instId].ultimate = b2._pendingUltimate; b2._pendingUltimate = null; }
     }
     b2.subPhase=null; b2.cmdIndex++; render();
     return true;
