@@ -3070,7 +3070,7 @@ function makeEnemyUnit(def, m, role){
     hp:hp, maxHp:hp,
     atk:Math.max(2, Math.round(9 * m.atk)), def:Math.max(1, Math.round(7 * m.def)),
     agi:Math.max(2, Math.round(10 * m.agi)), int:Math.max(2, Math.round(8 * m.atk)),
-    priority:0, isEnemy:true, alive:true, role:role||'normal', guardMul:1, chargeMul:1, status:[]};
+    priority:0, isEnemy:true, alive:true, role:role||'normal', guardMul:1, chargeMul:1, status:[], bossUltCharge:0};
 }
 /* 体力と攻撃力は別々に効かせる。ボスは打たれ強いが、一撃で味方が落ちないようにする。
    ボスは1体で立つぶん厚くする。厚みも奥のステージほど増していく。
@@ -3396,6 +3396,7 @@ function doAttack(b, actor, targets, kind, mul, label, opts){
     }
   });
   applyElementSelfAfterAttack(b, actor, totalDmg);
+  return totalDmg;
 }
 var FX_CRACK_SVG = '<svg viewBox="0 0 100 140" preserveAspectRatio="none">'+
   '<path d="M50 0 L44 30 L58 42 L38 60 L52 78 L30 100 L46 140" fill="none" stroke="#fff" stroke-width="2.4" opacity=".92"/>'+
@@ -3473,6 +3474,68 @@ function bossPatternFor(u, stageId){
   if(u.role !== 'boss' || stageId < 91) return null;
   return BOSS_PATTERNS[Math.floor(Math.random()*BOSS_PATTERNS.length)];
 }
+/* ============ 最終ボスの必殺技（ボスの図鑑IDごとに固定で割り当て） ============
+   同じモンスターは常に同じ必殺技を使う（違う個体を別ステージで再登場させても手筋が変わらない
+   ようにするため）。効果は味方側の属性・必殺技システムと全く同じstatus配列を再利用する。
+   通常の「ためる」とは別枠の独立ゲージで、自分の行動が一定回数たまると次の1回が必ずこれになる。 */
+var BOSS_ULT_CHARGE_MAX = 3;
+var BOSS_ULTIMATES = [
+  {name:"業火の咆哮", kind:"single", mulBase:1.8, mulScale:1.0,
+    effect:function(tgt){ addStatus(tgt, {type:"dot", pct:0.06, turnsLeft:2, label:"火傷"}); }},
+  {name:"氷結の吐息", kind:"aoe", mulBase:1.0, mulScale:0.6,
+    effect:function(tgt){ addStatus(tgt, {type:"statMul", stat:"agi", mul:0.7, turnsLeft:2, label:"氷結"}); }},
+  {name:"猛毒の牙", kind:"single", mulBase:1.6, mulScale:0.8,
+    effect:function(tgt){ addStatus(tgt, {type:"dot", pct:0.06, turnsLeft:3, label:"猛毒"}); }},
+  {name:"雷霆の顎", kind:"single", mulBase:1.7, mulScale:0.9,
+    effect:function(tgt){ if(Math.random()<0.3) addStatus(tgt, {type:"stun", turnsLeft:1, label:"感電"}); }},
+  {name:"暗黒波動", kind:"aoe", mulBase:0.9, mulScale:0.5, drain:0.08},
+  {name:"聖なる裁き", kind:"single", mulBase:2.0, mulScale:1.0, ignoreDef:true},
+  {name:"大地砕き", kind:"aoe", mulBase:1.0, mulScale:0.6,
+    effect:function(tgt){ addStatus(tgt, {type:"statMul", stat:"def", mul:0.8, turnsLeft:2, label:"地割れ"}); }},
+  {name:"疾風連撃", kind:"single", mulBase:1.3, mulScale:0, hits:3},
+  {name:"暗闇の霧", kind:"single", mulBase:1.5, mulScale:0.7,
+    effect:function(tgt){ addStatus(tgt, {type:"darkness", missChance:0.3, turnsLeft:2, label:"暗闇"}); }},
+  {name:"眠りの子守歌", kind:"single", mulBase:1.2, mulScale:0.6,
+    effect:function(tgt){ if(Math.random()<0.3) addStatus(tgt, {type:"sleep", turnsLeft:1, label:"眠り"}); }},
+  {name:"束縛の鎖", kind:"single", mulBase:1.8, mulScale:0.9,
+    effect:function(tgt){ addStatus(tgt, {type:"stun", turnsLeft:2, label:"束縛"}); }},
+  {name:"沈黙の呪詛", kind:"single", mulBase:1.6, mulScale:0.8,
+    effect:function(tgt){ addStatus(tgt, {type:"silence", turnsLeft:2, label:"沈黙"}); }},
+  {name:"猛攻の型", kind:"single", mulBase:2.2, mulScale:1.2},
+  {name:"全体崩し", kind:"aoe", mulBase:1.1, mulScale:0.7,
+    effect:function(tgt){ addStatus(tgt, {type:"statMul", stat:"atk", mul:0.8, turnsLeft:2, label:"崩し"}); }},
+  {name:"再生の咆哮", kind:"single", mulBase:1.5, mulScale:0.7, selfHealPct:0.15},
+  {name:"侵食の瘴気", kind:"aoe", mulBase:0.8, mulScale:0.4,
+    effect:function(tgt){ addStatus(tgt, {type:"dot", pct:0.05, turnsLeft:2, label:"瘴気"}); }}
+];
+function bossUltimateFor(u){ return BOSS_ULTIMATES[(u.id-1) % BOSS_ULTIMATES.length]; }
+function bossUltimateAct(b, u, stageId){
+  var kit = bossUltimateFor(u);
+  var t = bossPower(stageId);
+  var mul = kit.mulBase + kit.mulScale*t;
+  var targets = kit.kind==="aoe" ? aliveAllies() : [aliveAllies()[Math.floor(Math.random()*aliveAllies().length)]];
+  if(!targets.length || !targets[0]) return;
+  pushLog(b, "<b>"+esc(u.name)+"</b>の必殺技！「"+kit.name+"」");
+  var opts = kit.ignoreDef ? {ignoreDef:true} : null;
+  var totalDealt = 0;
+  if(kit.hits){
+    for(var i=0;i<kit.hits;i++) totalDealt += (doAttack(b, u, targets, "physical", mul, kit.name+"("+(i+1)+")", opts) || 0);
+  } else {
+    totalDealt = doAttack(b, u, targets, "physical", mul, kit.name, opts) || 0;
+  }
+  if(kit.selfHealPct){
+    var heal = Math.round(u.maxHp*kit.selfHealPct);
+    u.hp = Math.min(u.maxHp, u.hp+heal);
+    pushLog(b, esc(u.name)+"は"+heal+"回復した！");
+  }
+  if(kit.drain && totalDealt>0){
+    var heal2 = Math.max(1, Math.round(totalDealt*kit.drain));
+    u.hp = Math.min(u.maxHp, u.hp+heal2);
+    pushLog(b, esc(u.name)+"はHPを"+heal2+"吸収した！");
+  }
+  if(kit.effect) targets.forEach(function(tg){ if(tg.alive) kit.effect(tg); });
+  u.chargeMul = 1;
+}
 /* 1ターンに何回動くか。奥のステージほど手数が増える */
 function bossActCount(u, stageId){
   if(u.role === 'boss') return stageId >= 60 ? 3 : (stageId >= 10 ? 2 : 1);
@@ -3493,6 +3556,16 @@ function bossAct(b, u, forced){
   var stageId = state.stage.current || 1, t = bossPower(stageId);
   var targets = aliveAllies();
   if(!targets.length) return;
+  /* 最終ボス（role==='boss'）は、自分の行動が一定回数たまると通常の手筋より優先して
+     必殺技を放つ。中ボスはこのゲージを持たない。 */
+  if(u.role === 'boss'){
+    u.bossUltCharge = (u.bossUltCharge||0) + 1;
+    if(u.bossUltCharge >= BOSS_ULT_CHARGE_MAX){
+      u.bossUltCharge = 0;
+      bossUltimateAct(b, u, stageId);
+      return;
+    }
+  }
   var move = forced || bossMoveSet(stageId)[Math.floor(Math.random()*bossMoveSet(stageId).length)];
   var charged = u.chargeMul || 1;
 
