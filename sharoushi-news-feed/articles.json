@@ -20,28 +20,6 @@
     "schemaVersion": 5
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/anzen/newpage_00015.html",
-    "title": "「化学物質による健康障害防止のための濃度の基準の適用等に関する技術上の指針」について（公示）（令和８年10月１日技術上の指針公示第30号）",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/anzen/newpage_00015.html",
-    "publishedAt": "2026-10-01T00:00:00.000",
-    "fetchedAt": "2026-10-01T05:25:59.830816",
-    "category": "lawChange",
-    "summary": "本公示は、労働安全衛生法第28条第1項に基づき、化学物質による健康障害防止のための濃度基準の適用等に関する技術上の指針を公表したものです。国内で使用されている数万種類の化学物質のうち、危険性や有害性が不明な物質が多く存在し、化学物質による労働災害が発生していることから、技術的な指針を示すことで事業主の化学物質管理を支援し、労働者の健康障害防止を図ることを趣旨としています。本指針は令和8年10月1日より公示されました。",
-    "practicalImpact": "社労士は、顧客企業の化学物質管理体制の整備支援において、本技術上の指針の内容を踏まえた濃度基準の適用方法や健康診断等の実施方法に関するアドバイスを提供する際の参考資料として活用できます。化学物質の有害性評価と労働安全衛生管理全般における相談対応が強化されます。",
-    "importantPoints": [
-      "労働安全衛生法第28条第1項に基づく技術上の指針の公示（令和8年10月1日公示第30号）",
-      "化学物質による健康障害防止のための濃度の基準の適用等に関する指針内容を示したもの",
-      "国内で使用されている数万種類の化学物質のうち危険性・有害性が不明な物質が多く存在することに対応",
-      "事業主による化学物質管理の適切な実施と労働者の健康障害防止が目的"
-    ],
-    "target": "化学物質を製造・輸入・使用する全ての事業主および従業員",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 5
-  },
-  {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0930.html",
     "title": "「障害年金の認定状況について」ページを更新しました",
     "sourceName": "日本年金機構",
