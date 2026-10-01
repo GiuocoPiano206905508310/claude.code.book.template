@@ -50,7 +50,11 @@ const _genericTarget = '原文をご確認ください。';
 // タイトルが変わっていなくてもキャッシュを使わず再生成の対象とする。
 // これにより、一覧ページURL単位の粗い分類しかできなかった過去の記事も、
 // ロジック更新後は次回実行時に新しい判定へ自動的に置き換わる。
-const _schemaVersion = 3;
+const _schemaVersion = 5;
+
+// AIがcategoryとして返す、社労士実務と無関係な記事を示す特別な値。
+// NewsCategoryには存在しない値のため、この記事はフィードから除外する。
+const _irrelevantCategory = 'irrelevant';
 
 class _Candidate {
   _Candidate(this.candidate, this.target, {this.pinned});
@@ -140,7 +144,9 @@ Future<void> main(List<String> args) async {
       continue;
     }
     final result = await _buildEntry(item, aiService, excerptService);
-    entries.add(result.entry);
+    if (result.entry != null) {
+      entries.add(result.entry!);
+    }
     if (result.fetchedBody) {
       await Future.delayed(const Duration(milliseconds: 1500));
     }
@@ -188,12 +194,38 @@ Map<String, Map<String, Object?>> _readPreviousEntries(String path) {
 // なっていた。これらは会議の存在を知らせるだけで内容の実質を伴わない
 // ため、フィードから除外し、実務に関わる記事の割合を上げる。
 final _lowValueTitlePattern = RegExp(
-  r'審議会|分科会|部会|専門委員会|検討会|ワーキング・グループ|連絡協議会|作業班'
+  r'審議会|分科会|部会|委員会|検討会|ワーキング・グループ|連絡協議会|作業班'
   r'|記者会見|大臣会見|議事録|議事要旨|傍聴'
   r'|開催(案内|について|します)$',
 );
 
 bool _isLowValueTitle(String title) => _lowValueTitlePattern.hasMatch(title);
+
+// ユーザーからの指摘（「石綿対策に係る全国一斉パトロールを実施します」
+// 「おたふくかぜワクチンについての議論のまとめ」等）を踏まえ、社労士実務
+// （労働法令・社会保険・雇用保険・年金・給与計算・助成金・ハラスメント
+// 対策等）とは無関係な、一般向けの公衆衛生・医療・国際イベント等の案内を
+// タイトルの時点で除外する。AI側のirrelevant判定（_irrelevantCategory）
+// はこのパターンに当てはまらない記事を拾うための二重のチェックとなる。
+final _offTopicPattern = RegExp(
+  r'ワクチン|食中毒|食品衛生|食品安全|放射性物質|石綿|アスベスト'
+  r'|危険ドラッグ|指定薬物|医薬品.*(承認|審査)|PMDA|Project Orbis'
+  r'|臓器移植|造血幹細胞|さい帯血|骨髄バンク|献血'
+  r'|ハンセン病|残留邦人|技能五輪|国民大会|タイアップ|医療安全推進週間'
+  r'|(インフルエンザ|新型コロナウイルス).*(報道発表資料|発生状況|報告数).*(更新|推移)',
+);
+
+bool _isOffTopicTitle(String title) => _offTopicPattern.hasMatch(title);
+
+// AIのirrelevant判定は便利だが完璧ではない（実例: 本文が十分に取得でき
+// なかった際に「業種別カスタマーハラスメント対策マニュアルについて」を
+// 無関係と誤判定した）。社労士実務の中核分野を示す強いキーワードを含む
+// 場合は、AIがirrelevantと判定してもフィードから除外しない安全策。
+final _alwaysRelevantPattern = RegExp(
+  r'ハラスメント|労災保険|雇用保険|社会保険|厚生年金|国民年金|健康保険'
+  r'|給与|賃金|最低賃金|労働基準|労働安全衛生|育児休業|介護休業'
+  r'|社会保険労務士|助成金|給付金|労働者派遣|職業紹介',
+);
 
 Future<void> _fetchAll({
   required NewsFetcher fetcher,
@@ -209,7 +241,7 @@ Future<void> _fetchAll({
       var kept = 0;
       for (final c in candidates) {
         if (!seenUrls.add(c.url)) continue;
-        if (_isLowValueTitle(c.title)) continue;
+        if (_isLowValueTitle(c.title) || _isOffTopicTitle(c.title)) continue;
         out.add(_Candidate(c, target));
         kept++;
       }
@@ -230,7 +262,10 @@ class _BuildResult {
     required this.fetchedExcerpt,
     required this.fetchedBody,
   });
-  final Map<String, Object?> entry;
+
+  /// nullの場合、社労士実務と無関係とAIが判定した記事のため、
+  /// フィードに含めない（main()側でentriesに追加しない）。
+  final Map<String, Object?>? entry;
   final bool calledAi;
   final bool fetchedExcerpt;
   final bool fetchedBody;
@@ -309,6 +344,22 @@ Future<_BuildResult> _buildEntry(
         categoryLabel: category.label,
         bodyText: bodyText,
       );
+      // pinnedArticles（人手で重要と判断した記事）でない限り、AIが
+      // 社労士実務と無関係と判定した記事はフィードから除外する。ただし
+      // 明らかに社労士実務の中核に関わるキーワードを含む場合は、AIの
+      // irrelevant誤判定（実例:「業種別カスタマーハラスメント対策
+      // マニュアルについて」）を防ぐため除外しない。
+      if (!item.isPinned &&
+          ai.category == _irrelevantCategory &&
+          !_alwaysRelevantPattern.hasMatch(c.title)) {
+        stderr.writeln('社労士実務と無関係と判定されたため除外します（${c.url}）: ${c.title}');
+        return _BuildResult(
+          null,
+          calledAi: calledAi,
+          fetchedExcerpt: false,
+          fetchedBody: fetchedBody,
+        );
+      }
       summary = ai.summary;
       practicalImpact = ai.practicalImpact;
       importantPoints = ai.importantPoints;
