@@ -7,13 +7,15 @@ import '../../repositories/article_repository.dart';
 import 'auth_models.dart';
 import 'auth_service.dart';
 
-/// アカウント状態と、おすすめトピック・既読状態の端末間同期をまとめて扱う。
+/// アカウント状態と、おすすめトピック・既読状態・お気に入り状態の端末間
+/// 同期をまとめて扱う。
 ///
 /// ログインしていない間は、おすすめトピックの選択状態をこの端末
-/// （[SharedPreferences]）にだけ保存する（[ArticleRepository]の既読状態は
-/// 元々ローカルDB/インメモリに保存されている）。ログインすると、クラウド
-/// （Supabaseの`sharoushi_news_progress`テーブル）上の内容とこの端末の内容を
-/// 両方取り入れ（和集合でマージ）、以後の変更はクラウドへも都度反映する。
+/// （[SharedPreferences]）にだけ保存する（[ArticleRepository]の既読・
+/// お気に入り状態は元々ローカルDB/インメモリに保存されている）。ログイン
+/// すると、クラウド（Supabaseの`sharoushi_news_progress`テーブル）上の内容と
+/// この端末の内容を両方取り入れ（和集合でマージ）、以後の変更はクラウドへも
+/// 都度反映する。
 class AccountController extends ChangeNotifier {
   AccountController({required AuthService authService, required ArticleRepository repository})
     : _auth = authService,
@@ -27,6 +29,7 @@ class AccountController extends ChangeNotifier {
 
   Set<String> _selectedTopicIds = {};
   Set<String> _pendingRemoteReadIds = {};
+  Set<String> _pendingRemoteFavoriteIds = {};
   bool _suppressPush = false;
   AuthRedirectResult? _pendingRedirect;
 
@@ -83,12 +86,15 @@ class AccountController extends ChangeNotifier {
 
   void _onRepositoryChanged() {
     if (_suppressPush) return;
-    unawaited(_applyPendingRemoteReadIds());
+    unawaited(_applyPendingRemoteIds());
     if (_auth.signedIn) unawaited(_pushToCloud());
   }
 
   Set<String> get _localReadIds =>
       _repository.articles.where((a) => a.isRead).map((a) => a.id).toSet();
+
+  Set<String> get _localFavoriteIds =>
+      _repository.articles.where((a) => a.isFavorite).map((a) => a.id).toSet();
 
   Future<void> _persistLocalTopics() async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -98,6 +104,7 @@ class AccountController extends ChangeNotifier {
   Map<String, dynamic> _buildProgress() => {
     'selectedTopicIds': _selectedTopicIds.toList(),
     'readArticleIds': _localReadIds.toList(),
+    'favoriteArticleIds': _localFavoriteIds.toList(),
   };
 
   Future<void> _pushToCloud() async {
@@ -123,12 +130,16 @@ class AccountController extends ChangeNotifier {
       final remoteReadIds = ((remote['readArticleIds'] as List?) ?? const [])
           .cast<String>()
           .toSet();
+      final remoteFavoriteIds = ((remote['favoriteArticleIds'] as List?) ?? const [])
+          .cast<String>()
+          .toSet();
 
       _selectedTopicIds = _selectedTopicIds.union(remoteTopics);
       await _persistLocalTopics();
 
       _pendingRemoteReadIds = remoteReadIds.difference(_localReadIds);
-      await _applyPendingRemoteReadIds();
+      _pendingRemoteFavoriteIds = remoteFavoriteIds.difference(_localFavoriteIds);
+      await _applyPendingRemoteIds();
 
       notifyListeners();
       // マージ結果（この端末にしか無かった分を含む）をクラウドへ書き戻す。
@@ -138,19 +149,29 @@ class AccountController extends ChangeNotifier {
     }
   }
 
-  /// クラウドから受け取った既読記事IDのうち、まだローカルの一覧に無い
-  /// （日次フィードの読み込み待ち等の）ものは、一覧に現れた時点で改めて
-  /// 既読にする。
-  Future<void> _applyPendingRemoteReadIds() async {
-    if (_pendingRemoteReadIds.isEmpty) return;
-    final existingIds = _repository.articles.map((a) => a.id).toSet();
-    final applicable = _pendingRemoteReadIds.intersection(existingIds);
-    if (applicable.isEmpty) return;
-    _pendingRemoteReadIds = _pendingRemoteReadIds.difference(applicable);
+  /// クラウドから受け取った既読・お気に入り記事IDのうち、まだローカルの
+  /// 一覧に無い（日次フィードの読み込み待ち等の）ものは、一覧に現れた時点で
+  /// 改めて反映する。
+  Future<void> _applyPendingRemoteIds() async {
+    if (_pendingRemoteReadIds.isEmpty && _pendingRemoteFavoriteIds.isEmpty) return;
+    final byId = {for (final a in _repository.articles) a.id: a};
+
+    final readApplicable = _pendingRemoteReadIds.where(byId.containsKey).toSet();
+    final favoriteApplicable = _pendingRemoteFavoriteIds.where(byId.containsKey).toSet();
+    if (readApplicable.isEmpty && favoriteApplicable.isEmpty) return;
+
+    _pendingRemoteReadIds = _pendingRemoteReadIds.difference(readApplicable);
+    _pendingRemoteFavoriteIds = _pendingRemoteFavoriteIds.difference(favoriteApplicable);
+
     _suppressPush = true;
     try {
-      for (final id in applicable) {
+      for (final id in readApplicable) {
         await _repository.markAsRead(id);
+      }
+      for (final id in favoriteApplicable) {
+        if (!byId[id]!.isFavorite) {
+          await _repository.toggleFavorite(id);
+        }
       }
     } finally {
       _suppressPush = false;

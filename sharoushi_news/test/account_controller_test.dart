@@ -50,12 +50,13 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('ログイン時、クラウドのおすすめトピック・既読記事をこの端末に取り込む', () async {
+  test('ログイン時、クラウドのおすすめトピック・既読・お気に入りをこの端末に取り込む', () async {
     final savedRows = <Map<String, Object?>>[];
     final client = buildClient(
       progress: {
         'selectedTopicIds': ['social_insurance'],
         'readArticleIds': ['a1'],
+        'favoriteArticleIds': ['a2'],
       },
       savedRows: savedRows,
     );
@@ -73,11 +74,14 @@ void main() {
     expect(controller.signedIn, isTrue);
     expect(controller.selectedTopicIds, contains('social_insurance'));
     expect(repository.articles.firstWhere((a) => a.id == 'a1').isRead, isTrue);
+    expect(repository.articles.firstWhere((a) => a.id == 'a2').isFavorite, isTrue);
 
     // マージ結果がクラウドへ書き戻されている。
     expect(savedRows, isNotEmpty);
     final lastSaved = savedRows.last;
     expect(lastSaved['user_id'], userId);
+    final savedProgress = lastSaved['progress'] as Map;
+    expect(savedProgress['favoriteArticleIds'], contains('a2'));
   });
 
   test('ログインしていない間は、おすすめトピックの選択をこの端末にだけ保存する', () async {

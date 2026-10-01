@@ -44,7 +44,7 @@ class _AccountAuthScreenState extends State<AccountAuthScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'アカウントを作ると、おすすめトピックの設定や既読状態が、どの端末からでも続けられます。',
+                'アカウントを作ると、おすすめトピックの設定・既読状態・お気に入りが、どの端末からでも続けられます。',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.6,

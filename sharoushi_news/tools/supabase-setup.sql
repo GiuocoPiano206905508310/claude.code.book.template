@@ -1,4 +1,4 @@
--- 社労士NEWS — アカウントと進行状況（おすすめトピック・既読状態）のクラウド保存。
+-- 社労士NEWS — アカウントと進行状況（おすすめトピック・既読状態・お気に入り）のクラウド保存。
 -- ラインパズル等、このリポジトリの他アプリと同じSupabaseプロジェクト
 -- （bvokxhtmgfeevfpfafqk）を使う。auth.users は全アプリ共通のため、
 -- このアプリ専用のテーブルだけを追加すればよい。
@@ -30,7 +30,8 @@ create policy "own progress: update" on public.sharoushi_news_progress
 -- progress カラムに入れる内容（アプリ側で自由に決めるJSON）:
 --   {
 --     "selectedTopicIds": ["social_insurance", "harassment", ...],
---     "readArticleIds": ["https://www.mhlw.go.jp/...html", ...]
+--     "readArticleIds": ["https://www.mhlw.go.jp/...html", ...],
+--     "favoriteArticleIds": ["https://www.mhlw.go.jp/...html", ...]
 --   }
 
 -- ============================================================

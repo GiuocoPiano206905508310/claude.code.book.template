@@ -221,7 +221,7 @@ class _AccountSection extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             user != null
-                ? 'おすすめトピックの設定や既読状態は、このアカウントに保存され、ほかの端末でも続きから使えます。'
+                ? 'おすすめトピックの設定・既読状態・お気に入りは、このアカウントに保存され、ほかの端末でも続きから使えます。'
                 : 'いまの設定はこの端末にだけ保存されています。ログインすると、ほかの端末にも引き継げます。',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
