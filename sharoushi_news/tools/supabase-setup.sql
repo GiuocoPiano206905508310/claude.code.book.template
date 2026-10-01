@@ -1,9 +1,12 @@
 -- 社労士NEWS — アカウントと進行状況（おすすめトピック・既読状態・お気に入り）のクラウド保存。
--- ラインパズル等、このリポジトリの他アプリと同じSupabaseプロジェクト
--- （bvokxhtmgfeevfpfafqk）を使う。auth.users は全アプリ共通のため、
--- このアプリ専用のテーブルだけを追加すればよい。
+-- 当初はline-puzzle等このリポジトリの他アプリと同じSupabaseプロジェクトを
+-- 共有していたが、auth.users がプロジェクト単位で共有されるため、他アプリで
+-- 登録済みのメールアドレスが「登録済み」扱いになってしまう問題があった。
+-- そのため、このアプリ専用のSupabaseプロジェクトに分離している
+-- （lhmbhdfqpocuuqifyrjs）。
 --
--- line-puzzle/tools/supabase-setup.sql と同じ構成。詳しくはそちらも参照。
+-- テーブル構成自体はline-puzzle/tools/supabase-setup.sqlと同じ。詳しくは
+-- そちらも参照。
 
 create table if not exists public.sharoushi_news_progress (
   user_id    uuid primary key references auth.users (id) on delete cascade,
@@ -35,8 +38,7 @@ create policy "own progress: update" on public.sharoushi_news_progress
 --   }
 
 -- ============================================================
--- Supabaseダッシュボードで必要な設定（line-puzzleと共通のプロジェクトに
--- 以下が既に設定済みなら、このアプリ分のリダイレクトURLを追加するだけでよい）
+-- Supabaseダッシュボードで必要な設定（このアプリ専用プロジェクト側で設定）
 -- ============================================================
 --
 -- Authentication → Sign In / Providers → Email
