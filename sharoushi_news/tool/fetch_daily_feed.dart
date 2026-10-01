@@ -50,7 +50,7 @@ const _genericTarget = '原文をご確認ください。';
 // タイトルが変わっていなくてもキャッシュを使わず再生成の対象とする。
 // これにより、一覧ページURL単位の粗い分類しかできなかった過去の記事も、
 // ロジック更新後は次回実行時に新しい判定へ自動的に置き換わる。
-const _schemaVersion = 4;
+const _schemaVersion = 5;
 
 // AIがcategoryとして返す、社労士実務と無関係な記事を示す特別な値。
 // NewsCategoryには存在しない値のため、この記事はフィードから除外する。
@@ -217,6 +217,16 @@ final _offTopicPattern = RegExp(
 
 bool _isOffTopicTitle(String title) => _offTopicPattern.hasMatch(title);
 
+// AIのirrelevant判定は便利だが完璧ではない（実例: 本文が十分に取得でき
+// なかった際に「業種別カスタマーハラスメント対策マニュアルについて」を
+// 無関係と誤判定した）。社労士実務の中核分野を示す強いキーワードを含む
+// 場合は、AIがirrelevantと判定してもフィードから除外しない安全策。
+final _alwaysRelevantPattern = RegExp(
+  r'ハラスメント|労災保険|雇用保険|社会保険|厚生年金|国民年金|健康保険'
+  r'|給与|賃金|最低賃金|労働基準|労働安全衛生|育児休業|介護休業'
+  r'|社会保険労務士|助成金|給付金|労働者派遣|職業紹介',
+);
+
 Future<void> _fetchAll({
   required NewsFetcher fetcher,
   required List<ListingTarget> targets,
@@ -335,8 +345,13 @@ Future<_BuildResult> _buildEntry(
         bodyText: bodyText,
       );
       // pinnedArticles（人手で重要と判断した記事）でない限り、AIが
-      // 社労士実務と無関係と判定した記事はフィードから除外する。
-      if (!item.isPinned && ai.category == _irrelevantCategory) {
+      // 社労士実務と無関係と判定した記事はフィードから除外する。ただし
+      // 明らかに社労士実務の中核に関わるキーワードを含む場合は、AIの
+      // irrelevant誤判定（実例:「業種別カスタマーハラスメント対策
+      // マニュアルについて」）を防ぐため除外しない。
+      if (!item.isPinned &&
+          ai.category == _irrelevantCategory &&
+          !_alwaysRelevantPattern.hasMatch(c.title)) {
         stderr.writeln('社労士実務と無関係と判定されたため除外します（${c.url}）: ${c.title}');
         return _BuildResult(
           null,
