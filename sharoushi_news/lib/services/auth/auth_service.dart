@@ -7,19 +7,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_models.dart';
 import 'url_fragment.dart';
 
-/// アカウント・進行状況のクラウド保存（line-puzzleと同じSupabaseプロジェクト
+/// アカウント・進行状況のクラウド保存（このアプリ専用のSupabaseプロジェクト
 /// を使い、raw HTTPでREST APIを直接叩く）。
 ///
 /// supabase-js等の公式SDKは使わない。このアプリで必要なのは「登録・
 /// ログイン・トークン更新・1行の読み書き」だけであり、他のサービス
 /// （[AiSummaryService]等）と同様にhttpパッケージで直接REST APIを呼ぶ方針に
 /// 合わせる。
+///
+/// 当初はline-puzzle等このリポジトリの他アプリと同じSupabaseプロジェクトを
+/// 共有していたが、アカウントがアプリ間で共通になってしまう（同じ
+/// メールアドレスで登録済み扱いになる）ことが判明したため、このアプリ専用の
+/// プロジェクトに分離した。
 class AuthService extends ChangeNotifier {
   AuthService({http.Client? client}) : _client = client ?? http.Client();
 
-  static const _urlBase = 'https://bvokxhtmgfeevfpfafqk.supabase.co';
+  static const _urlBase = 'https://lhmbhdfqpocuuqifyrjs.supabase.co';
   static const _anonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2b2t4aHRtZ2ZlZXZmcGZhZnFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1MTcxNzUsImV4cCI6MjEwMDA5MzE3NX0.qI5hA2ZV85ZpxFVCqZ5J46PciYa8udCRev3RQcJfWTM';
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxobWJoZGZxcG9jdXVxaWZ5cmpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4OTUyNTQsImV4cCI6MjEwNjQ3MTI1NH0.MoupD26_pqVPC-HBSKiLe5Iyyq1lLF9Pq-ZOGnTCvVk';
   static const _table = 'sharoushi_news_progress';
   static const _sessionKey = 'sharoushiNews.session.v1';
 
