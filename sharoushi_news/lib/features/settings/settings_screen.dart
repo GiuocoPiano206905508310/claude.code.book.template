@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/recommended_topics.dart';
+import '../../services/auth/account_controller.dart';
 import '../../services/news/news_sync_service.dart';
+import '../account/account_auth_screen.dart';
+import '../account/account_form_screen.dart';
 
 /// 設定画面（仕様セクション20・21）。
 class SettingsScreen extends StatefulWidget {
@@ -11,6 +14,7 @@ class SettingsScreen extends StatefulWidget {
     required this.onThemeModeChanged,
     required this.selectedTopicIds,
     required this.onSelectedTopicIdsChanged,
+    required this.accountController,
     this.newsSyncService,
   });
 
@@ -18,6 +22,7 @@ class SettingsScreen extends StatefulWidget {
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final Set<String> selectedTopicIds;
   final ValueChanged<Set<String>> onSelectedTopicIdsChanged;
+  final AccountController accountController;
 
   /// Web版では常にnull（ローカルDBを使わないため）。
   final NewsSyncService? newsSyncService;
@@ -50,6 +55,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 18),
+          AnimatedBuilder(
+            animation: widget.accountController,
+            builder: (context, _) => _AccountSection(controller: widget.accountController),
+          ),
+          const SizedBox(height: 16),
           _SectionCard(
             title: '外観',
             child: Column(
@@ -183,6 +193,106 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
+  }
+}
+
+/// アカウント欄。ログイン済みなら登録内容の変更・ログアウト、未ログインなら
+/// ログイン/新規登録への導線を出す。
+class _AccountSection extends StatelessWidget {
+  const _AccountSection({required this.controller});
+
+  final AccountController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final user = controller.user;
+    return _SectionCard(
+      title: 'アカウント',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            user != null
+                ? '${user.username}（${user.email}）'
+                : 'ログインしていません。',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            user != null
+                ? 'おすすめトピックの設定や既読状態は、このアカウントに保存され、ほかの端末でも続きから使えます。'
+                : 'いまの設定はこの端末にだけ保存されています。ログインすると、ほかの端末にも引き継げます。',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (user != null) ...[
+            _AccountMenuButton(
+              label: 'ユーザー名を変更',
+              onTap: () => _openForm(context, AccountFormMode.name),
+            ),
+            _AccountMenuButton(
+              label: 'メールアドレスを変更',
+              onTap: () => _openForm(context, AccountFormMode.email),
+            ),
+            _AccountMenuButton(
+              label: 'パスワードを変更',
+              onTap: () => _openForm(context, AccountFormMode.password),
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => controller.signOut(),
+                child: const Text('ログアウト'),
+              ),
+            ),
+          ] else
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => AccountAuthScreen(controller: controller),
+                  ),
+                ),
+                child: const Text('ログイン / 新規登録'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _openForm(BuildContext context, AccountFormMode mode) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => AccountFormScreen(controller: controller, mode: mode)),
+    );
+  }
+}
+
+class _AccountMenuButton extends StatelessWidget {
+  const _AccountMenuButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          style: TextButton.styleFrom(padding: EdgeInsets.zero, alignment: Alignment.centerLeft),
+          onPressed: onTap,
+          child: Text(label),
+        ),
+      ),
+    );
   }
 }
 
