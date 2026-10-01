@@ -4,6 +4,11 @@ name: Sharoushi News daily feed
 # 通常のHTTP GET+HTMLパースのみ）、結果をsharoushi-news-feed/articles.json
 # としてmainへコミットする。
 #
+# 1日5回（JST 6:00・9:00・12:00・15:00・18:00）実行する。公開リポジトリの
+# ためActionsの実行自体は無料であり、Claude API（Haiku 4.5）の呼び出しは
+# 新規記事の件数に応じて発生する仕組み（tool/fetch_daily_feed.dartの
+# canReuse判定）のため、回数を増やしても費用はほぼ増加しない。
+#
 # 注意: デフォルトのGITHUB_TOKENでのpushは、ループ防止のためGitHub側で
 # 他のworkflowのpushトリガーを起動しない仕様になっている。そのため、
 # deploy-sharoushi-news-pages.yml（GitHub Pagesへの公開）は自動連鎖せず、
@@ -15,8 +20,11 @@ name: Sharoushi News daily feed
 
 on:
   schedule:
-    # 21:00 UTC = 06:00 JST
-    - cron: '0 21 * * *'
+    - cron: '0 21 * * *' # 06:00 JST
+    - cron: '0 0 * * *'  # 09:00 JST
+    - cron: '0 3 * * *'  # 12:00 JST
+    - cron: '0 6 * * *'  # 15:00 JST
+    - cron: '0 9 * * *'  # 18:00 JST
   workflow_dispatch: {}
 
 permissions:
