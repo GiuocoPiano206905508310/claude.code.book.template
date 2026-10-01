@@ -8,8 +8,8 @@ import 'dummy_seed_data.dart';
 ///
 /// 初回起動時はテーブルが空のため、Phase 1〜2と同じダミーデータ15件を
 /// シードする。以降はDBの内容が唯一の情報源となり、お気に入り・既読状態は
-/// アプリを再起動しても保持される。Phase 4以降で実データ取得を実装する際は、
-/// このリポジトリの [_db] へ upsert するだけで置き換えられる想定。
+/// アプリを再起動しても保持される。[refreshFromDailyFeed] を実行すると、
+/// ダミーデータを含め日次フィードに無い記事はDBから削除される。
 class LocalArticleRepository extends ArticleRepository {
   LocalArticleRepository._(this._db, this._articles, this._feedService);
 
@@ -78,11 +78,18 @@ class LocalArticleRepository extends ArticleRepository {
     return merged.where((a) => !existingById.containsKey(a.id)).length;
   }
 
+  /// 日次フィードを取得し、ローカルDBをその内容に完全に合わせる
+  /// （新規記事の追加・既存記事の更新に加えて、フィードから外れた記事
+  /// ――社労士実務と無関係と判定され除外された記事や、ダミーの初期
+  /// シードデータ等――をローカルDBからも削除する）。
   @override
   Future<void> refreshFromDailyFeed() async {
     try {
       final fetched = await _feedService.fetchDailyFeed();
       await upsertFetched(fetched);
+      await _db.deleteArticlesNotIn(fetched.map((a) => a.id).toList());
+      _articles = await _db.getAllArticles();
+      notifyListeners();
     } catch (_) {
       // オフライン等で取得できない場合は既存の表示を維持する。
     }

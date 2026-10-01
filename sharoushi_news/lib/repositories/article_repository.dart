@@ -16,13 +16,14 @@ abstract class ArticleRepository extends ChangeNotifier {
   Future<void> markAsRead(String id);
 
   /// GitHub Actions上で1日1回更新される記事一覧（[DailyFeedService]）を
-  /// 取得し、まだ保持していない記事があれば追加する。オフライン等で取得に
-  /// 失敗した場合は何もせず、既存の表示をそのまま維持する。
+  /// 取得し、表示中の一覧をその内容に合わせる（新規記事の追加・更新に加え、
+  /// フィードから外れた記事は削除する）。オフライン等で取得に失敗した場合は
+  /// 何もせず、既存の表示をそのまま維持する。
   Future<void> refreshFromDailyFeed();
 }
 
-/// Web向けのインメモリ実装。ダミーデータ15件を保持しつつ、
-/// [refreshFromDailyFeed] で日次フィードの新着記事を追加できる。
+/// Web向けのインメモリ実装。起動直後はダミーデータ15件を保持し、
+/// [refreshFromDailyFeed] で日次フィードの内容に置き換わる。
 /// お気に入り・既読状態は永続化されない。
 class DummyArticleRepository extends ArticleRepository {
   DummyArticleRepository({DailyFeedService? feedService})
@@ -55,19 +56,25 @@ class DummyArticleRepository extends ArticleRepository {
     notifyListeners();
   }
 
+  /// 日次フィードの内容で表示中の一覧を完全に置き換える（お気に入り・
+  /// 既読状態は同一idの記事があれば引き継ぐ）。これにより、初期シード
+  /// データやフィードから外れた記事（社労士実務と無関係と判定され
+  /// 除外された記事等）は自動的に表示されなくなる。
   @override
   Future<void> refreshFromDailyFeed() async {
     try {
       final fetched = await _feedService.fetchDailyFeed();
-      final existingUrls = _articles.map((a) => a.canonicalUrl).toSet();
-      final newOnes = fetched.where(
-        (a) => !existingUrls.contains(a.canonicalUrl),
-      );
-      if (newOnes.isEmpty) return;
-      _articles = [..._articles, ...newOnes];
+      final existingById = {for (final a in _articles) a.id: a};
+      _articles = [
+        for (final a in fetched)
+          if (existingById[a.id] case final existing?)
+            a.copyWith(isFavorite: existing.isFavorite, isRead: existing.isRead)
+          else
+            a,
+      ];
       notifyListeners();
     } catch (_) {
-      // オフライン等で取得できない場合は既存の表示を維持する。
+      // オフライン等で取得できない場合は既存の表示をそのまま維持する。
     }
   }
 }

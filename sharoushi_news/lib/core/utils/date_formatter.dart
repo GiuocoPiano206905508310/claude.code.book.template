@@ -13,3 +13,11 @@ String formatArticleDate(DateTime date, {DateTime? now}) {
   if (diff == 1) return '昨日';
   return formatYmd(date);
 }
+
+/// 「NEW」表示の対象とするかどうかの判定（仕様: 公開日・更新日のいずれか
+/// から1ヶ月以内の記事のみを「新着」とみなす）。未読であっても、1ヶ月より
+/// 前に公開・更新された記事は対象外とする。
+bool isWithinNewWindow(DateTime publishedOrUpdatedAt, {DateTime? now}) {
+  final today = now ?? DateTime.now();
+  return today.difference(publishedOrUpdatedAt).inDays <= 30;
+}

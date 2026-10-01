@@ -20,6 +20,9 @@ class NewsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final showNewBadge =
+        !article.isRead &&
+        isWithinNewWindow(article.updatedAt ?? article.publishedAt);
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -32,7 +35,7 @@ class NewsCard extends StatelessWidget {
               Row(
                 children: [
                   ImportanceBadge(importance: article.importance, dense: true),
-                  if (!article.isRead) ...[
+                  if (showNewBadge) ...[
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
