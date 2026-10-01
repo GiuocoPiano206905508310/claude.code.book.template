@@ -77,6 +77,23 @@ class AppDatabase {
     await batch.commit(noResult: true);
   }
 
+  /// [keepIds]に含まれないidの記事をすべて削除する。日次フィードから
+  /// 外れた記事（社労士実務と無関係と判定され除外された記事や、配信元
+  /// ページから無くなった記事等）を、ローカルDBからも追従して削除する
+  /// ために使う。
+  Future<void> deleteArticlesNotIn(List<String> keepIds) async {
+    if (keepIds.isEmpty) {
+      await _db.delete(_tableArticles);
+      return;
+    }
+    final placeholders = List.filled(keepIds.length, '?').join(',');
+    await _db.delete(
+      _tableArticles,
+      where: 'id NOT IN ($placeholders)',
+      whereArgs: keepIds,
+    );
+  }
+
   Future<void> setFavorite(String id, bool value) async {
     await _db.update(
       _tableArticles,
