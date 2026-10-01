@@ -3,14 +3,25 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sharoushi_news/main.dart';
 import 'package:sharoushi_news/repositories/article_repository.dart';
+import 'package:sharoushi_news/services/auth/account_controller.dart';
+import 'package:sharoushi_news/services/auth/auth_service.dart';
 
 void main() {
   testWidgets('ホーム画面が起動し、タイトルと記事一覧が表示される', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = DummyArticleRepository();
+    final accountController = AccountController(
+      authService: AuthService(),
+      repository: repository,
+    );
+    await accountController.init();
+
     await tester.pumpWidget(
-      SharoushiNewsApp(repository: DummyArticleRepository()),
+      SharoushiNewsApp(repository: repository, accountController: accountController),
     );
     await tester.pumpAndSettle();
 
