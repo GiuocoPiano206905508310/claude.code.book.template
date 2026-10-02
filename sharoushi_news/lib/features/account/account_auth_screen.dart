@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/terms_of_service.dart';
 import '../../services/auth/account_controller.dart';
+import '../../widgets/terms_article_view.dart';
 
 /// ログイン・新規登録画面。
 class AccountAuthScreen extends StatefulWidget {
@@ -22,6 +24,9 @@ class _AccountAuthScreenState extends State<AccountAuthScreen> {
   final _signUpUsernameController = TextEditingController();
   final _signUpEmailController = TextEditingController();
   final _signUpPasswordController = TextEditingController();
+  final List<bool> _termsChecked = List.filled(termsOfService.length, false);
+
+  bool get _allTermsChecked => _termsChecked.every((c) => c);
 
   @override
   void dispose() {
@@ -156,18 +161,69 @@ class _AccountAuthScreenState extends State<AccountAuthScreen> {
           autofillHints: const [AutofillHints.newPassword],
           decoration: const InputDecoration(labelText: 'パスワード', hintText: '6文字以上'),
         ),
-        const SizedBox(height: 16),
-        FilledButton(
-          onPressed: _busy ? null : _submitSignUp,
-          child: _busy
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('登録して始める'),
+        const SizedBox(height: 28),
+        Text(
+          '利用規約',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '各条をお読みいただき、すべてにチェックを入れたうえで「同意する」を押すと登録できます。',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            height: 1.6,
+          ),
+        ),
+        const SizedBox(height: 12),
+        for (var i = 0; i < termsOfService.length; i++) ...[
+          TermsArticleView(
+            article: termsOfService[i],
+            checked: _termsChecked[i],
+            onChanged: _busy ? null : (v) => setState(() => _termsChecked[i] = v),
+          ),
+          const SizedBox(height: 8),
+        ],
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            termsEnactedLabel,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.outline),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _busy ? null : _declineTerms,
+                child: const Text('同意しない'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                onPressed: _busy || !_allTermsChecked ? null : _submitSignUp,
+                child: _busy
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('同意する'),
+              ),
+            ),
+          ],
         ),
       ],
+    );
+  }
+
+  void _declineTerms() {
+    setState(() => _errorMessage = null);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('利用規約に同意いただけない場合、新規登録はできません。')),
     );
   }
 
@@ -203,12 +259,21 @@ class _AccountAuthScreenState extends State<AccountAuthScreen> {
       setState(() => _errorMessage = 'すべての欄を入れてください。');
       return;
     }
+    if (!_allTermsChecked) return;
     setState(() {
       _busy = true;
       _errorMessage = null;
     });
     try {
-      final result = await widget.controller.auth.signUp(username, email, password);
+      final result = await widget.controller.auth.signUp(
+        username,
+        email,
+        password,
+        metadata: {
+          'terms_version': termsVersion,
+          'terms_agreed_at': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
       if (result.needsConfirm) {
         if (!mounted) return;
         setState(() {

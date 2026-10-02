@@ -250,6 +250,15 @@ class _AccountSection extends StatelessWidget {
                 child: const Text('ログアウト'),
               ),
             ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+                onPressed: () => _openForm(context, AccountFormMode.delete),
+                child: const Text('アカウントを削除'),
+              ),
+            ),
           ] else
             SizedBox(
               width: double.infinity,

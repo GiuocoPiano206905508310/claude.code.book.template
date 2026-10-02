@@ -13,6 +13,8 @@ class CategoryChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  static const double height = 36;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -28,14 +30,22 @@ class CategoryChip extends StatelessWidget {
         child: InkWell(
           customBorder: const StadiumBorder(),
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Container(
+            height: height,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            alignment: Alignment.center,
             child: Text(
               label,
               softWrap: false,
-              overflow: TextOverflow.visible,
+              textAlign: TextAlign.center,
+              // 日本語フォントはアセント・ディセントが非対称なため、行間を
+              // 上下均等に割り振って視覚的に中央へ揃える。
+              textHeightBehavior: const TextHeightBehavior(
+                leadingDistribution: TextLeadingDistribution.even,
+              ),
               style: TextStyle(
                 fontSize: 13,
+                height: 1.2,
                 fontWeight: FontWeight.w600,
                 color: selected ? Colors.white : scheme.onSurfaceVariant,
               ),

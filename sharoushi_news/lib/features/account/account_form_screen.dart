@@ -6,7 +6,7 @@ import '../../services/auth/account_controller.dart';
 /// ユーザー名はその場で変わる。メールアドレスとパスワードは、本人のメールに
 /// 届くリンクを開いて初めて変わる（[AccountFormMode.password]は例外で、
 /// ログイン中に今のパスワードを確認した上でその場で変える）。
-enum AccountFormMode { name, email, password, newPassword }
+enum AccountFormMode { name, email, password, newPassword, delete }
 
 /// 「パスワードを忘れた」のメールのリンクから開いた場合に表示する画面。
 /// 今のパスワードは聞けないので、新しいパスワードだけを決めてもらう。
@@ -51,6 +51,7 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
     AccountFormMode.email => 'メールアドレスを変更',
     AccountFormMode.password => 'パスワードを変更',
     AccountFormMode.newPassword => '新しいパスワード',
+    AccountFormMode.delete => 'アカウントを削除',
   };
 
   String? get _lede => switch (widget.mode) {
@@ -58,6 +59,9 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
     AccountFormMode.email => '新しいアドレスに確認のリンクをお送りします。そのリンクを開くまで、ログインは今のアドレスのままです。',
     AccountFormMode.password => null,
     AccountFormMode.newPassword => 'メールのリンクから開きました。新しいパスワードを決めてください。',
+    AccountFormMode.delete =>
+      'アカウントと、クラウドに保存されているおすすめトピック・既読・お気に入りの記録が削除されます。'
+          '削除すると元に戻せません。\n\nこの端末に保存されている設定はそのまま残ります。',
   };
 
   @override
@@ -99,6 +103,12 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
                 ..._buildFields(),
                 const SizedBox(height: 16),
                 FilledButton(
+                  style: widget.mode == AccountFormMode.delete
+                      ? FilledButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                          foregroundColor: Theme.of(context).colorScheme.onError,
+                        )
+                      : null,
                   onPressed: _busy ? null : _submit,
                   child: _busy
                       ? const SizedBox(
@@ -121,6 +131,7 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
     AccountFormMode.email => '確認メールを送る',
     AccountFormMode.password => 'パスワードを変更する',
     AccountFormMode.newPassword => 'このパスワードにする',
+    AccountFormMode.delete => 'アカウントを削除する',
   };
 
   List<Widget> _buildFields() {
@@ -191,6 +202,16 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
             decoration: const InputDecoration(labelText: '新しいパスワード（確認）'),
           ),
         ];
+      case AccountFormMode.delete:
+        return [
+          TextField(
+            controller: _currentPasswordController,
+            enabled: !_busy,
+            obscureText: true,
+            autofillHints: const [AutofillHints.password],
+            decoration: const InputDecoration(labelText: '現在のパスワード'),
+          ),
+        ];
     }
   }
 
@@ -233,6 +254,37 @@ class _AccountFormScreenState extends State<AccountFormScreen> {
         await _run(() async {
           await widget.controller.auth.setPassword(next);
           return 'パスワードを変更しました';
+        });
+      case AccountFormMode.delete:
+        final current = _currentPasswordController.text;
+        if (current.isEmpty) {
+          setState(() => _errorMessage = '現在のパスワードを入れてください。');
+          return;
+        }
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('本当に削除しますか？'),
+            content: const Text('アカウントとクラウド上の記録は元に戻せません。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('キャンセル'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                child: const Text('削除する'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !mounted) return;
+        await _run(() async {
+          await widget.controller.auth.deleteAccount(current);
+          return 'アカウントを削除しました';
         });
     }
   }
