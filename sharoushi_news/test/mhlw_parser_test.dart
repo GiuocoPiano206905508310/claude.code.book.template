@@ -93,6 +93,20 @@ void main() {
     expect(candidates[0].publishedAt, DateTime(2012, 5, 9));
   });
 
+  test('和暦（令和）の日付を西暦に正しく変換する', () {
+    final candidates = MhlwParser().parse(
+      '''
+<html><body>
+  <h2>令和8年10月1日掲載</h2>
+  <ul><li><a href="/stf/newpage_76324.html">厚生労働省関係の主な制度変更（令和８年10月）について</a></li></ul>
+</body></html>
+''',
+      'https://www.mhlw.go.jp/stf/new-info/',
+    );
+
+    expect(candidates.single.publishedAt, DateTime(2026, 10, 1));
+  });
+
   test('日付が特定できない案内リンクは除外する', () {
     final candidates = MhlwParser().parse(
       bunyaHtml,

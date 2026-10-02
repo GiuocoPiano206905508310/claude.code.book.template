@@ -139,7 +139,7 @@ class MhlwParser implements NewsSourceParser {
   DateTime? _parseDate(RegExpMatch match) {
     final year = match.group(2) != null
         ? int.parse(match.group(2)!) +
-              1988 // 令和N年 → 西暦
+              2018 // 令和N年 → 西暦（令和元年＝2019年）
         : int.parse(match.group(3)!);
     final month = int.parse(match.group(4)!);
     final day = int.parse(match.group(5)!);

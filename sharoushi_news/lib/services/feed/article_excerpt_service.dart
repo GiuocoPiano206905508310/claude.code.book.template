@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
 
+import '../../core/utils/official_date.dart';
 import '../../core/utils/text_sanitizer.dart';
 
 /// 個別記事ページ本文を、AIを使わず単純なHTML解析だけで取得するサービス。
@@ -103,6 +104,22 @@ class ArticleExcerptService {
     if (buffer.isEmpty) return null;
     final result = buffer.toString();
     return result.length > maxLength ? result.substring(0, maxLength) : result;
+  }
+
+  /// 記事ページに記載された公表日（「公表日」「掲載日」「更新日」等の表記）を
+  /// 読み取る。PDFや、該当する表記が無いページ・取得失敗時はnullを返す。
+  Future<DateTime?> fetchOfficialDate(String url) async {
+    if (Uri.parse(url).path.toLowerCase().endsWith('.pdf')) return null;
+    final http.Response response;
+    try {
+      response = await _client
+          .get(Uri.parse(url), headers: const {'User-Agent': _userAgent})
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return null;
+    }
+    if (response.statusCode != 200) return null;
+    return extractOfficialDate(utf8.decode(response.bodyBytes, allowMalformed: true));
   }
 
   /// [text]が、記事内容と無関係なサイト共通の定型文・案内文、または
