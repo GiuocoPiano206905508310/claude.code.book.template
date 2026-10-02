@@ -30,6 +30,26 @@ create policy "own progress: update" on public.sharoushi_news_progress
 
 -- 削除は使わないので許可しない（アカウントを消せば on delete cascade で消える）
 
+-- 設定画面の「アカウントを削除」から呼ばれる。ログイン中の本人の行だけを
+-- auth.users から消す（sharoushi_news_progress は on delete cascade で消える）。
+-- service_role キーをアプリに置かずに済むよう、security definer で実行する。
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;
+
 -- progress カラムに入れる内容（アプリ側で自由に決めるJSON）:
 --   {
 --     "selectedTopicIds": ["social_insurance", "harassment", ...],

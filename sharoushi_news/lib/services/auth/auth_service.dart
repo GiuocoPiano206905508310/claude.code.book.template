@@ -133,12 +133,14 @@ class AuthService extends ChangeNotifier {
       msg = 'メールアドレスの形式が正しくありません。';
     } else if (low.contains('for security purposes') || status == 429) {
       msg = '短い間に何度も試されました。少し待ってからお試しください。';
+    } else if (low.contains('delete_my_account')) {
+      msg = 'アカウント削除の仕組みがサーバーに設定されていません。管理者に連絡してください。';
     } else if (status == 404 || low.contains('does not exist') || low.contains('schema cache')) {
       msg = '保存用のテーブルが見つかりません。管理者に連絡してください。';
     } else {
       msg = raw.isNotEmpty ? raw : 'エラーが発生しました（$status）';
     }
-    return Exception(msg);
+    return _ApiException(status, msg);
   }
 
   // 期限が切れていればトークンを更新してから使う。
@@ -332,23 +334,41 @@ class AuthService extends ChangeNotifier {
     if (next.length < 6) {
       throw Exception('新しいパスワードは6文字以上にしてください。');
     }
+    await _reauthenticate(current);
+    await setPassword(next);
+  }
+
+  /// アカウントと、それに紐づくクラウド上の同期データを削除する。
+  /// 端末を横取りされても消されないよう、今のパスワードで入り直して確かめる。
+  /// 削除はSupabase側の`delete_my_account`関数（ログイン中の本人の行だけを
+  /// 消す）で行う。service_roleキーをアプリに置かずに済ませるため。
+  Future<void> deleteAccount(String currentPassword) async {
+    await _reauthenticate(currentPassword);
+    final token = await _withToken();
+    await _request('/rest/v1/rpc/delete_my_account', method: 'POST', token: token, body: const {});
+    // ユーザー自体が消えたので、サーバー側のログアウトは不要。
+    await _storeSession(null);
+  }
+
+  Future<void> _reauthenticate(String password) async {
     final u = _session?.user;
     if (u == null) throw Exception('ログインしていません');
+    if (password.isEmpty) throw Exception('現在のパスワードを入れてください。');
     try {
       final data =
           await _request(
                 '/auth/v1/token?grant_type=password',
                 method: 'POST',
-                body: {'email': u.email, 'password': current},
+                body: {'email': u.email, 'password': password},
               )
               as Map<String, dynamic>;
       final s = _shapeSession(data, fallbackUser: u);
       if (s != null) await _storeSession(s);
-    } catch (e) {
+    } on _ApiException catch (e) {
       // 合っているかどうかの話なのか、通信の失敗なのかを混ぜない。
-      throw Exception('現在のパスワードが違います。');
+      if (e.status == 400) throw Exception('現在のパスワードが違います。');
+      rethrow;
     }
-    await setPassword(next);
   }
 
   /* ---------- メールのリンクから戻ってきたとき ----------
@@ -459,6 +479,18 @@ class AuthService extends ChangeNotifier {
       ],
     );
   }
+}
+
+/// HTTPステータスを保持するAPIエラー。toString()は通常のExceptionと同じ
+/// 「Exception: メッセージ」形式にして、画面側の表示処理を共通にする。
+class _ApiException implements Exception {
+  _ApiException(this.status, this.message);
+
+  final int status;
+  final String message;
+
+  @override
+  String toString() => 'Exception: $message';
 }
 
 class _Session {
