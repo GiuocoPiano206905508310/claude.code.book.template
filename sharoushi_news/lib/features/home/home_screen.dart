@@ -8,6 +8,7 @@ import '../../widgets/category_chip.dart';
 import '../../widgets/news_card.dart';
 import '../article/article_detail_screen.dart';
 import '../search/search_screen.dart';
+import '../terms/terms_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -25,6 +26,8 @@ class HomeScreen extends StatefulWidget {
 
 enum _SortOrder { newest, oldest, importance }
 
+enum _ReadFilter { all, unread, read }
+
 extension on _SortOrder {
   String get label {
     switch (this) {
@@ -41,8 +44,13 @@ extension on _SortOrder {
 class _HomeScreenState extends State<HomeScreen> {
   HomeFilterOption _filter = const HomeFilterOption.all();
   _SortOrder _sortOrder = _SortOrder.newest;
-  bool _unreadOnly = false;
-  bool _favoritesOnly = false;
+  _ReadFilter _readFilter = _ReadFilter.all;
+
+  void _toggleReadFilter(_ReadFilter value) {
+    setState(() {
+      _readFilter = _readFilter == value ? _ReadFilter.all : value;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,11 +59,23 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Text(
-              '社労士NEWS',
-              style: Theme.of(context).textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+            child: Row(
+              children: [
+                Text(
+                  '社労士NEWS',
+                  style: Theme.of(context).textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TermsScreen()),
+                  ),
+                  icon: const Icon(Icons.description_outlined, size: 18),
+                  label: const Text('利用規約'),
+                ),
+              ],
             ),
           ),
           Padding(
@@ -68,10 +88,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 44,
+            height: CategoryChip.height,
             child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
               itemCount: homeFilterOptions.length,
               itemBuilder: (context, index) {
@@ -92,14 +113,13 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 CategoryChip(
                   label: '未読のみ',
-                  selected: _unreadOnly,
-                  onTap: () => setState(() => _unreadOnly = !_unreadOnly),
+                  selected: _readFilter == _ReadFilter.unread,
+                  onTap: () => _toggleReadFilter(_ReadFilter.unread),
                 ),
                 CategoryChip(
-                  label: 'お気に入りのみ',
-                  selected: _favoritesOnly,
-                  onTap: () =>
-                      setState(() => _favoritesOnly = !_favoritesOnly),
+                  label: '既読のみ',
+                  selected: _readFilter == _ReadFilter.read,
+                  onTap: () => _toggleReadFilter(_ReadFilter.read),
                 ),
                 const Spacer(),
                 PopupMenuButton<_SortOrder>(
@@ -152,8 +172,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 )
                               : _filter.matches,
                         )
-                        .where((a) => !_unreadOnly || !a.isRead)
-                        .where((a) => !_favoritesOnly || a.isFavorite)
+                        .where(
+                          (a) => switch (_readFilter) {
+                            _ReadFilter.all => true,
+                            _ReadFilter.unread => !a.isRead,
+                            _ReadFilter.read => a.isRead,
+                          },
+                        )
                         .toList()
                       ..sort(_sortComparator);
                 if (items.isEmpty) {

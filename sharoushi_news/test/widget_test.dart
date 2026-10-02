@@ -27,6 +27,16 @@ void main() {
 
     expect(find.text('社労士NEWS'), findsOneWidget);
     expect(find.byIcon(Icons.newspaper_rounded), findsOneWidget);
+    expect(find.text('未読のみ'), findsOneWidget);
+    expect(find.text('既読のみ'), findsOneWidget);
+    expect(find.text('お気に入りのみ'), findsNothing);
+
+    // 右上の「利用規約」から規約画面を開ける。
+    await tester.tap(find.text('利用規約'));
+    await tester.pumpAndSettle();
+    expect(find.text('第1条（本ツールの位置付け）'), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
 
     // お気に入りタブへ切り替え
     await tester.tap(find.byIcon(Icons.star_rounded).first);

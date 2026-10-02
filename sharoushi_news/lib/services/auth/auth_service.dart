@@ -208,7 +208,14 @@ class AuthService extends ChangeNotifier {
     return trimmed;
   }
 
-  Future<SignUpResult> signUp(String username, String email, String password) async {
+  /// [metadata]はユーザー名とあわせてuser_metadataに保存される
+  /// （利用規約への同意記録等）。
+  Future<SignUpResult> signUp(
+    String username,
+    String email,
+    String password, {
+    Map<String, Object?> metadata = const {},
+  }) async {
     final name = _checkName(username);
     final data =
         await _request(
@@ -217,7 +224,7 @@ class AuthService extends ChangeNotifier {
               body: {
                 'email': email.trim(),
                 'password': password,
-                'data': {'username': name},
+                'data': {...metadata, 'username': name},
               },
             )
             as Map<String, dynamic>;
