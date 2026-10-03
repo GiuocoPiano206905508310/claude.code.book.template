@@ -1,5 +1,27 @@
 [
   {
+    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai/rezeptsystem/index.html",
+    "title": "労災レセプト電算処理システム　マスタコード",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai/rezeptsystem/index.html",
+    "publishedAt": "2026-10-02T00:00:00.000",
+    "fetchedAt": "2026-10-03T04:10:21.868916",
+    "category": "socialInsurance",
+    "summary": "厚生労働省が労災レセプト電算処理システムのマスタコード情報を定期的に更新・改定しています。令和8年6月改定版では、医科診療行為労災補助マスタ、特定器材労災補助マスタ、労災コメント関連テーブルなどが段階的に更新されており、2026年10月2日時点での最新版が公表されています。これらのマスタコードは、労災保険給付に関するレセプト電算処理の正確な処理に必要な基礎情報であり、システム利用者は常に最新版を参照する必要があります。",
+    "practicalImpact": "労災関連の電子レセプト処理を行う社労士・医療機関・保険薬局等は、最新のマスタコード情報を確認し、システムの運用に反映させることが重要です。定期的な更新に対応することで、労災レセプト処理の精度を維持できます。",
+    "importantPoints": [
+      "医科診療行為労災補助マスタが2026年8月4日と10月2日に更新",
+      "特定器材労災補助マスタが2026年10月2日に更新",
+      "労災コメント関連テーブルが2026年9月18日に更新",
+      "受付前点検チェック条件表を含む参考資料も随時更新されている"
+    ],
+    "target": "労災保険給付に関するレセプト電算処理を行う事業主、医療機関、保険薬局、社会保険労務士等の関係者",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 5
+  },
+  {
     "id": "https://www.mhlw.go.jp/stf/newpage_76397.html",
     "title": "一般職業紹介状況(令和8年8月分)について",
     "sourceName": "厚生労働省",
@@ -425,7 +447,7 @@
     "sourceName": "日本年金機構",
     "sourceUrl": "https://www.nenkin.go.jp",
     "canonicalUrl": "https://www.nenkin.go.jp/tokusetsu/hokenryochosei.html",
-    "publishedAt": "2026-10-01T05:25:11.839550",
+    "publishedAt": "2026-09-11T00:00:00.000",
     "fetchedAt": "2026-10-01T05:29:54.450817",
     "category": "socialInsurance",
     "summary": "2026年10月から開始する保険料調整制度は、新たに健康保険・厚生年金保険の加入対象となる短時間労働者が就業調整を行わずに働けるよう支援する制度です。対象は標準報酬月額12.6万円以下の短時間労働者で、事業主が被保険者の保険料を一時的に負担することで、通算3年間の保険料負担を軽減できます。事業主の追加負担分は一定期間経過後に調整される仕組みで、最終的に事業主の保険料負担は増えず、被保険者の年金額にも影響はありません。",
@@ -441,7 +463,8 @@
     "target": "短時間労働者を雇用する事業所の事業主、標準報酬月額12.6万円以下の新規加入短時間労働者",
     "importance": 1,
     "isAiGenerated": true,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": true
   },
   {
     "id": "https://www.mhlw.go.jp/content/12508000/001749239.pdf",
@@ -462,7 +485,8 @@
     "target": "全業種の事業主・人事労務担当者、特に社会保険料削減サービス利用の検討企業",
     "importance": 1,
     "isAiGenerated": true,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/anzen/an-eihou/index_00001.html",
@@ -484,7 +508,8 @@
     "target": "個人事業者と同一の場所で作業を発注する事業者、化学物質を取り扱う事業場、高年齢労働者を雇用する事業場など",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html",
@@ -506,7 +531,8 @@
     "target": "常時雇用する労働者数101人以上の事業主",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.gov-online.go.jp/tokusyu/roureinenkin/",
@@ -527,7 +553,8 @@
     "target": "60歳以降も就労し老齢厚生年金を受給する従業員、およびその雇用主",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.mhlw.go.jp/web_magazine/series/20260820.html",
@@ -549,7 +576,8 @@
     "target": "すべての事業主（業種・規模を問わず対象）",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.cfa.go.jp/policies/kodomokosodateshienkinseido",
@@ -557,7 +585,7 @@
     "sourceName": "こども家庭庁",
     "sourceUrl": "https://www.cfa.go.jp",
     "canonicalUrl": "https://www.cfa.go.jp/policies/kodomokosodateshienkinseido",
-    "publishedAt": "2026-10-01T05:25:11.839692",
+    "publishedAt": "2026-02-06T00:00:00.000",
     "fetchedAt": "2026-10-01T05:30:07.800444",
     "category": "lawChange",
     "summary": "こども家庭庁の少子化対策強化の財源として「子ども・子育て支援金制度」が創設され、2026年度から医療保険料とあわせて徴収が始まります。被用者保険については2026年4月分保険料（5月納付分）から、健康保険料・介護保険料とあわせて徴収され、令和8年度の支援金率は一律0.23%です（事業主負担あり）。",
@@ -571,7 +599,8 @@
     "target": "全事業主および被用者保険（健康保険等）の被保険者",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": true
   },
   {
     "id": "https://www.mhlw.go.jp/content/001677803.pdf",
@@ -593,7 +622,8 @@
     "target": "食事・社宅等の現物給与を提供している事業主、給与計算・社会保険手続き担当者",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.kyoukaikenpo.or.jp/lp/2026hokenryou/",
@@ -615,7 +645,8 @@
     "target": "協会けんぽに加入する事業主、給与計算担当者",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.mhlw.go.jp/content/001692566.pdf",
@@ -637,7 +668,8 @@
     "target": "雇用保険適用事業所の事業主、給与計算担当者",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.nta.go.jp/users/gensen/2026kiso/index.htm",
@@ -659,7 +691,8 @@
     "target": "給与支払事業者、年末調整・源泉徴収事務を担当する給与計算担当者、社労士・税理士",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.nenkin.go.jp/tokusetsu/santei.html",
@@ -667,7 +700,7 @@
     "sourceName": "日本年金機構",
     "sourceUrl": "https://www.nenkin.go.jp",
     "canonicalUrl": "https://www.nenkin.go.jp/tokusetsu/santei.html",
-    "publishedAt": "2026-10-01T05:25:11.839695",
+    "publishedAt": "2026-06-26T00:00:00.000",
     "fetchedAt": "2026-10-01T05:30:07.800553",
     "category": "salaryCalculation",
     "summary": "社会保険の標準報酬月額を見直す定時決定（算定基礎届）について、令和8年度は7月1日から7月10日までの間に提出する必要があります。6月中旬以降、日本年金機構から対象事業所へ算定基礎届の用紙等が順次送付されます。提出方法は電子申請（e-Gov・GビズID）、郵送、窓口持参から選択できますが、特定の法人には電子申請が義務付けられています。",
@@ -681,7 +714,8 @@
     "target": "社会保険適用事業所の事業主、給与計算・社会保険手続き担当者、社労士",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": true
   },
   {
     "id": "https://www.nenkin.go.jp/service/kokunen/menjo/ikujimenjo.html",
@@ -689,7 +723,7 @@
     "sourceName": "日本年金機構",
     "sourceUrl": "https://www.nenkin.go.jp",
     "canonicalUrl": "https://www.nenkin.go.jp/service/kokunen/menjo/ikujimenjo.html",
-    "publishedAt": "2026-10-02T00:24:23.973215",
+    "publishedAt": "2026-10-01T00:00:00.000",
     "fetchedAt": "2026-10-02T00:28:01.499082",
     "category": "lawChange",
     "summary": "2026（令和8）年10月から、国民年金第1号被保険者（20歳以上60歳未満の自営業者・農業者・学生・無職の方等）を対象に、子を養育する実父母・養父母について、国民年金保険料の納付が免除される「育児免除制度」が新たに始まりました。所得要件はなく、届出により免除されます。免除された期間は保険料を納付したものとして老齢基礎年金の受給額に反映されます。実母で産前産後免除期間がある場合はその期間に引き続く9カ月間、実父・養父母（産前産後免除のない実母を含む）は子を養育することとなった月から1歳の誕生日の前月までの最大12カ月間が対象です（いずれも令和8年10月1日以降の月分に限る）。制度施行前から1歳未満の子を養育していた場合の経過措置もあり、基礎年金番号とマイナンバーの紐付け等により親子関係・同一世帯が日本年金機構で確認できる実母（産前産後免除届出済み）は届出不要で、それ以外（実父・養父母、産前産後免除未届出の実母）は届出が必要です。",
@@ -708,7 +742,8 @@
     "target": "国民年金第1号被保険者として子を養育する実父母・養父母（自営業者・フリーランス・農業者・学生・無職の方等）",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": true
   },
   {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202610/100102.html",
@@ -716,7 +751,7 @@
     "sourceName": "日本年金機構",
     "sourceUrl": "https://www.nenkin.go.jp",
     "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202610/100102.html",
-    "publishedAt": "2026-10-02T00:24:23.973216",
+    "publishedAt": "2026-10-01T00:00:00.000",
     "fetchedAt": "2026-10-02T00:28:01.499681",
     "category": "socialInsurance",
     "summary": "日本年金機構は令和8年10月から、健康保険・厚生年金保険に関する一部の届書のレイアウト（様式）を変更しました。対象は、被保険者資格取得届／厚生年金保険70歳以上被用者該当届、健康保険被保険者適用除外承認申請書（国民健康保険組合被保険者）、被保険者資格喪失届／70歳以上被用者不該当届、被保険者区分変更届／70歳以上被用者区分変更届、特定適用事業所該当・不該当届、任意特定適用事業所申出書・取消申出書など。特に被保険者区分変更届では、新たに「特定減額特例対象者」の区分が追加されています。",
@@ -730,7 +765,8 @@
     "target": "社会保険適用事業所の事業主、社会保険手続き担当者、社労士",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": true
   },
   {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202610/100104.html",
@@ -738,7 +774,7 @@
     "sourceName": "日本年金機構",
     "sourceUrl": "https://www.nenkin.go.jp",
     "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202610/100104.html",
-    "publishedAt": "2026-10-02T00:24:23.973216",
+    "publishedAt": "2026-10-01T00:00:00.000",
     "fetchedAt": "2026-10-02T00:28:01.499753",
     "category": "lawChange",
     "summary": "令和7年年金制度改正法（令和7年法律第74号）に基づき、短時間労働者が社会保険（健康保険・厚生年金保険）に加入する要件のうち、賃金要件（所定内賃金が月額8.8万円以上であること）が2026年10月1日に撤廃されました。これまでの加入要件は①賃金要件②労働時間要件（週の所定労働時間20時間以上）③企業規模要件（勤め先が従業員数51人以上の企業）④学生でないこと、の4つでしたが、①が撤廃され②〜④を満たす短時間労働者は社会保険の加入対象となります。なお、2027年10月以降は企業規模要件の対象事業所範囲が段階的に拡大される予定です（従業員数50人以下の事業所でも労使合意に基づく申出により加入させることが可能）。",
@@ -752,7 +788,8 @@
     "target": "短時間労働者を雇用する事業主、社会保険手続き担当者、社労士",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": true
   },
   {
     "id": "https://www.nenkin.go.jp/oshirase/topics/2021/0219.files/tirashi_gengaku.pdf",
@@ -775,7 +812,8 @@
     "target": "最低賃金の減額特例許可を受けている労働者を雇用する事業主、社会保険手続き担当者、社労士",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.nta.go.jp/users/gensen/nencho/index.htm",
@@ -797,7 +835,8 @@
     "target": "給与支払事業者、年末調整・源泉徴収事務を担当する給与計算担当者、社労士・税理士",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000144972.html",
@@ -819,7 +858,8 @@
     "target": "短時間労働者・有期雇用労働者・派遣労働者を雇用する事業主、派遣元・派遣先事業主、社労士",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   },
   {
     "id": "https://www.mhlw.go.jp/stf/newpage_74920.html",
@@ -841,6 +881,7 @@
     "target": "全ての事業主（業種・規模を問わず対象）、給与計算担当者、社労士",
     "importance": 2,
     "isAiGenerated": false,
-    "schemaVersion": 5
+    "schemaVersion": 5,
+    "publishedAtVerified": false
   }
 ]
