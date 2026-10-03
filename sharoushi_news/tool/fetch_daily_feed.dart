@@ -131,6 +131,7 @@ Future<void> main(List<String> args) async {
   final excerptService = ArticleExcerptService();
 
   final entries = <Map<String, Object?>>[];
+  final undatedPinned = <String>[];
   for (var i = 0; i < trimmed.length; i++) {
     final item = trimmed[i];
     final existing = previousById[item.candidate.url];
@@ -139,22 +140,35 @@ Future<void> main(List<String> args) async {
         existing['title'] == item.candidate.title &&
         (existing['schemaVersion'] as int? ?? 1) >= _schemaVersion &&
         !_isPlaceholderSummary(existing['summary'] as String?);
+
+    Map<String, Object?>? entry;
     if (canReuse) {
-      entries.add(existing);
-      continue;
+      entry = existing;
+    } else {
+      final result = await _buildEntry(item, aiService, excerptService);
+      entry = result.entry;
+      if (result.fetchedBody) {
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+      if (result.calledAi) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      } else if (result.fetchedExcerpt) {
+        await Future.delayed(const Duration(seconds: 2));
+      }
     }
-    final result = await _buildEntry(item, aiService, excerptService);
-    if (result.entry != null) {
-      entries.add(result.entry!);
+    if (entry == null) continue;
+
+    if (item.isPinned) {
+      entry = await _withOfficialDate(entry, item.pinned!, excerptService);
+      if (entry['publishedAtVerified'] != true) undatedPinned.add(item.pinned!.url);
     }
-    if (result.fetchedBody) {
-      await Future.delayed(const Duration(milliseconds: 1500));
-    }
-    if (result.calledAi) {
-      await Future.delayed(const Duration(milliseconds: 500));
-    } else if (result.fetchedExcerpt) {
-      await Future.delayed(const Duration(seconds: 2));
-    }
+    entries.add(entry);
+  }
+  if (undatedPinned.isNotEmpty) {
+    stderr.writeln(
+      '公式サイトの公表日を特定できなかったpinned記事（source_config.dartの'
+      'publishedOnで指定してください）:\n  ${undatedPinned.join('\n  ')}',
+    );
   }
 
   final json = const JsonEncoder.withIndent('  ').convert(entries);
@@ -162,6 +176,34 @@ Future<void> main(List<String> args) async {
   file.parent.createSync(recursive: true);
   file.writeAsStringSync(json);
   stderr.writeln('Wrote ${entries.length} articles to ${file.path}');
+}
+
+/// pinned記事の日付を、社労士NEWSでの初回取得日ではなく公式サイトでの公表日に
+/// そろえる。優先順位は (1) source_config.dartのpublishedOn、(2) 前回までに
+/// 確定済みの日付、(3) 公式ページの「公表日」「掲載日」「更新日」表記。
+/// いずれも無ければ現在の日付のまま`publishedAtVerified: false`とし、次回の
+/// 実行で再び読み取りを試みる。
+Future<Map<String, Object?>> _withOfficialDate(
+  Map<String, Object?> entry,
+  PinnedArticle pinned,
+  ArticleExcerptService excerptService,
+) async {
+  Map<String, Object?> verified(DateTime date) => {
+    ...entry,
+    'publishedAt': date.toIso8601String(),
+    'publishedAtVerified': true,
+  };
+
+  final configured = pinned.publishedDate;
+  if (configured != null) return verified(configured);
+  if (entry['publishedAtVerified'] == true) return entry;
+
+  final found = await excerptService.fetchOfficialDate(pinned.url);
+  if (found != null) {
+    stderr.writeln('公表日を読み取りました（${pinned.url}）: ${found.toIso8601String()}');
+    return verified(found);
+  }
+  return {...entry, 'publishedAtVerified': false};
 }
 
 /// 前回の概要が「まだ本物の内容を得られていない」状態（汎用の案内文、

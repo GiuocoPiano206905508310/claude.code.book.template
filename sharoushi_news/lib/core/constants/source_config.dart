@@ -145,6 +145,7 @@ class PinnedArticle {
     required this.url,
     required this.source,
     required this.category,
+    this.publishedOn,
     this.summary,
     this.practicalImpact,
     this.importantPoints,
@@ -155,12 +156,21 @@ class PinnedArticle {
   final String url;
   final SourceConfig source;
   final NewsCategory category;
+
+  /// 公式サイトでの公表日（'YYYY-MM-DD'）。指定しない場合は、日次フィード
+  /// 生成時に公式ページの「公表日」「掲載日」「更新日」表記から読み取る
+  /// （PDF等で読み取れない場合はここで指定する）。
+  final String? publishedOn;
+
   final String? summary;
   final String? practicalImpact;
   final List<String>? importantPoints;
   final String? target;
 
   bool get hasCuratedContent => summary != null;
+
+  DateTime? get publishedDate =>
+      publishedOn == null ? null : DateTime.parse(publishedOn!);
 }
 
 const pinnedArticles = [
@@ -386,6 +396,7 @@ const pinnedArticles = [
     title: '国民年金保険料の育児免除制度',
     url: 'https://www.nenkin.go.jp/service/kokunen/menjo/ikujimenjo.html',
     source: nenkinSource,
+    publishedOn: '2026-10-01',
     category: NewsCategory.lawChange,
     summary:
         '2026（令和8）年10月から、国民年金第1号被保険者（20歳以上60歳未満の自営業者・農業者・学生・無職の方等）'
@@ -426,6 +437,7 @@ const pinnedArticles = [
     title: '【事業主の皆さまへ】令和8年10月から一部の届書レイアウトを変更しました',
     url: 'https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202610/100102.html',
     source: nenkinSource,
+    publishedOn: '2026-10-01',
     category: NewsCategory.socialInsurance,
     summary:
         '日本年金機構は令和8年10月から、健康保険・厚生年金保険に関する一部の届書のレイアウト（様式）を変更しました。'
@@ -453,6 +465,7 @@ const pinnedArticles = [
     title: '2026（令和8）年10月に社会保険の短時間労働者に係る賃金要件が撤廃されました',
     url: 'https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202610/100104.html',
     source: nenkinSource,
+    publishedOn: '2026-10-01',
     category: NewsCategory.lawChange,
     summary:
         '令和7年年金制度改正法（令和7年法律第74号）に基づき、短時間労働者が社会保険（健康保険・厚生年金保険）に'
