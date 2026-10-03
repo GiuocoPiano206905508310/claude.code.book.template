@@ -44,6 +44,28 @@
     "schemaVersion": 5
   },
   {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1001.html",
+    "title": "上野年金事務所は令和9年1月12日（火曜）に移転します",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1001.html",
+    "publishedAt": "2026-10-01T00:00:00.000",
+    "fetchedAt": "2026-10-03T00:07:15.251236",
+    "category": "socialInsurance",
+    "summary": "日本年金機構の上野年金事務所が令和9年1月12日（火曜）に移転し、同日から移転先での業務を開始することが公表されました。移転先の詳細な所在地等については、日本年金機構の公式ページ掲載のPDFファイル（560KB）で確認できます。社労士や事業主、および上野年金事務所の管轄地域の被保険者・受給者に関わる手続きについて、移転後の新しい所在地への対応が必要となります。",
+    "practicalImpact": "上野年金事務所の管轄地域で年金手続きを行う社労士事務所は、令和9年1月12日以降、新しい所在地を把握して各種届出や相談を行う必要があります。事業所にも移転情報を周知し、手続き先の変更に対応することが重要です。",
+    "importantPoints": [
+      "移転実施日：令和9年1月12日（火曜）",
+      "移転先の所在地等の詳細はPDFファイルで確認が必須",
+      "移転日から移転先での業務開始となる",
+      "上野年金事務所管轄地域の関係者は新しい所在地を把握する必要あり"
+    ],
+    "target": "上野年金事務所管轄地域の事業主、社労士、被保険者、年金受給者",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 5
+  },
+  {
     "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/jinzaikaihatsu/career_consultant01.html",
     "title": "キャリアコンサルタントになりたい方へ（キャリアコンサルタント試験結果概要を更新しました）",
     "sourceName": "厚生労働省",
