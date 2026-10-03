@@ -1,12 +1,10 @@
 name: Nenkin fetch preview (manual, diagnostic only)
 
-# TEMPORARY: 労働局サイトの構造診断に一時的に流用中。PR作成前に元に戻す。
-
 on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   fetch:
@@ -22,14 +20,12 @@ jobs:
         working-directory: sharoushi_news
         run: flutter pub get
 
-      - name: Run roudoukyoku diagnostic
+      - name: Run Nenkin fetch/parse preview
         working-directory: sharoushi_news
-        run: dart run tool/roudoukyoku_diag.dart
+        run: dart run tool/fetch_nenkin_preview.dart
 
-      - name: Commit diagnostic result
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f sharoushi_news/diag/roudoukyoku.md
-          git commit -m "diag: roudoukyoku page structure (temporary)"
-          git push
+      - name: Upload result as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nenkin-fetch-preview-result
+          path: sharoushi_news/fetch-preview-result.json
