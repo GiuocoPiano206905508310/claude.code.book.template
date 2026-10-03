@@ -28,8 +28,30 @@ const _subsidyPage = '''
 </body></html>
 ''';
 
+// 実サイトの診断で見つかった誤検出パターン（佐賀・岡山・北海道・奈良・山形）。
+const _pitfalls = '''
+<html><body>
+  <table>
+    <tr><td><a href="/saga-roudoukyoku/a.html">働き方改革推進支援助成金（団体推進コース）</a></td><td>2026年11月30日</td></tr>
+  </table>
+  <ul>
+    <li><a href="/okayama-roudoukyoku/b.html">令和8年6月29日（月）から岡山労働局助成金センターを開設します！</a></li>
+    <li><a href="/hokkaido-roudoukyoku/c.html">令和8年5月1日以降の紹介より、特定求職者雇用開発助成金の要件が見直されます</a></li>
+    <li><a href="/okayama-roudoukyoku/d.html">2026年01月20日 詳細はこちら</a></li>
+    <li><a href="/okayama-roudoukyoku/e.html">2026年10月02日 最低賃金の詳細</a></li>
+  </ul>
+  <p>令和8年10月1日更新<br>
+    <a href="/yamagata-roudoukyoku/f.html">キャリアアップ助成金チェックリストを更新しました</a><br>
+    <a href="/yamagata-roudoukyoku/g.html">雇用関係助成金を電子申請すると審査期間の短縮につながります</a><br>
+    <a href="/yamagata-roudoukyoku/h.html">人材開発支援助成金資料を追加しました</a>
+  </p>
+  <ul><li><a href="/hokkaido-roudoukyoku/i.html">2026年10月03日 業務改善助成金の受付を延長します</a></li></ul>
+</body></html>
+''';
+
 void main() {
-  final parser = RoudoukyokuParser();
+  // テストの基準日は日本時間の2026年10月3日。
+  final parser = RoudoukyokuParser(now: () => DateTime.utc(2026, 10, 2, 22));
 
   test('トップページ: リンク先頭の日付を公表日として切り出し、末尾のNEWを除く', () {
     final c = parser.parse(_topPage, 'https://jsite.mhlw.go.jp/hokkaido-roudoukyoku/');
@@ -67,5 +89,13 @@ void main() {
     expect(urls.any((u) => u.contains('soumu.go.jp')), isFalse);
     expect(urls.any((u) => u.endsWith('.docx')), isFalse);
     expect(urls.any((u) => u.endsWith('_120626.html')), isFalse);
+  });
+
+  test('未来の日付・文中の日付・内容の分からないリンク・まとめ段落の日付は除外', () {
+    final c = parser.parse(_pitfalls, 'https://jsite.mhlw.go.jp/x-roudoukyoku/');
+
+    // 日本時間の今日（UTCでは前日）の記事だけが残る。
+    expect(c.map((e) => e.title), ['業務改善助成金の受付を延長します']);
+    expect(c.single.publishedAt, DateTime(2026, 10, 3));
   });
 }

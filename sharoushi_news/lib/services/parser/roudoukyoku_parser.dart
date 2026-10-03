@@ -18,11 +18,31 @@ import 'news_source_parser.dart';
 /// 日付を優先し、無ければリンク先頭の日付を使う。タイトル中の日付
 /// （「令和8年10月1日より…」等）は公表日として扱わない。日付が取れない
 /// リンク（メニュー・バナー等）は対象外とする。
+///
+/// 実サイトでの確認結果から、次のものも除外する。
+///   - 今日（日本時間）より後の日付: 申請期限・施行日等であり公表日ではない
+///     （例: 助成金コース一覧の行にある「2026年11月30日」締切）
+///   - 「詳細はこちら」「最低賃金の詳細」等、リンク文字列だけでは内容が
+///     分からないもの
+///   - 多数のリンクをまとめた段落・項目の日付: 個々の記事の公表日ではなく
+///     ページ全体の更新日であることが多い
 class RoudoukyokuParser implements NewsSourceParser {
+  RoudoukyokuParser({DateTime Function()? now}) : _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
+
   static const _rowTags = {'tr', 'li', 'dd', 'dt', 'p'};
   static const _chromeClassHints = ['m-header', 'm-nav', 'm-footer', 'Breadcrumb', 'm-listBanner'];
+  static const _maxAnchorsPerRow = 2;
   static final _allowedPath = RegExp(r'(\.html?|\.pdf|/)$', caseSensitive: false);
   static final _trailingNew = RegExp(r'\s*NEW\s*$');
+  // 先頭の日付の直後がこれらで始まる場合、その日付は文の一部
+  // （「令和8年5月1日以降の紹介より…」「6月29日（月）から…」）であり
+  // 公表日ではない。
+  static final _sentenceContinuation = RegExp(r'^(?:[（(〜～~\-－]|から|より|以降|以後|まで|の|に|を|付け?|現在|時点)');
+  static final _genericTitle = RegExp(
+    r'^(?:詳細|詳しく|こちら|特設ページ|リンク|ダウンロード)|(?:の詳細|はこちら|をクリック)$',
+  );
 
   @override
   List<ArticleCandidate> parse(String html, String pageUrl) {
@@ -30,6 +50,9 @@ class RoudoukyokuParser implements NewsSourceParser {
     final base = Uri.parse(pageUrl);
     final seen = <String>{};
     final candidates = <ArticleCandidate>[];
+    // 実行環境（GitHub ActionsはUTC）によらず、日本時間の今日を基準にする。
+    final jst = _now().toUtc().add(const Duration(hours: 9));
+    final today = DateTime(jst.year, jst.month, jst.day);
 
     for (final anchor in document.querySelectorAll('a')) {
       final href = anchor.attributes['href']?.trim();
@@ -53,13 +76,14 @@ class RoudoukyokuParser implements NewsSourceParser {
       var date = _dateOutsideAnchor(anchor, anchorText);
       if (date == null) {
         final leading = leadingJapaneseDate(anchorText);
-        if (leading != null) {
+        if (leading != null && !_sentenceContinuation.hasMatch(leading.rest)) {
           date = leading.date;
           title = leading.rest;
         }
       }
       title = sanitizeScrapedText(title.replaceFirst(_trailingNew, '').trim());
       if (date == null || title.isEmpty) continue;
+      if (date.isAfter(today) || _genericTitle.hasMatch(title)) continue;
 
       final absolute = url.toString();
       if (!seen.add(absolute)) continue;
@@ -77,6 +101,7 @@ class RoudoukyokuParser implements NewsSourceParser {
       row = row.parent;
     }
     if (row == null) return null;
+    if (row.querySelectorAll('a').length > _maxAnchorsPerRow) return null;
     final rest = _collapse(row.text).replaceFirst(anchorText, ' ');
     final inRow = firstJapaneseDate(rest);
     if (inRow != null) return inRow;

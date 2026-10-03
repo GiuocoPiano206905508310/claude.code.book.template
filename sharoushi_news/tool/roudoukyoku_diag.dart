@@ -24,7 +24,7 @@ Future<void> main() async {
     try {
       final cands = await fetcher.fetchListing(t.url);
       final kept = cands.where(
-        (c) => _subsidy.hasMatch(c.title) && c.publishedAt!.isAfter(cutoff),
+        (c) => _subsidy.hasMatch(c.title) && !c.title.contains('要請') && c.publishedAt!.isAfter(cutoff),
       );
       out.writeln('parsed=${cands.length} subsidyRecent=${kept.length}');
       for (final c in cands.take(12)) {

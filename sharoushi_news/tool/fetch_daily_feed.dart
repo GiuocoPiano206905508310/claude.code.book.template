@@ -363,6 +363,7 @@ Future<List<_Candidate>> _fetchBureauSubsidyNews(Set<String> seenUrls) async {
     seenUrls: seenUrls,
     keep: (c) =>
         _subsidyTitlePattern.hasMatch(c.title) &&
+        !_bureauExcludedPattern.hasMatch(c.title) &&
         c.publishedAt != null &&
         c.publishedAt!.isAfter(cutoff),
     delay: const Duration(seconds: 1),
@@ -376,6 +377,10 @@ Future<List<_Candidate>> _fetchBureauSubsidyNews(Set<String> seenUrls) async {
   stderr.writeln('労働局の助成金記事: ${fetched.length}件（重複除外後${unique.length}件）');
   return unique.take(_maxBureauArticles).toList();
 }
+
+// 労働局長が使用者団体等へ周知を「要請」した旨の報道発表は、助成金に
+// 触れていても局の活動報告であり、事業主・社労士が使う情報ではないため除く。
+final _bureauExcludedPattern = RegExp(r'要請');
 
 String _titleKey(String title) =>
     title.replaceAll(RegExp(r'[\s。．、，・「」『』（）()【】［］\[\]]'), '');
