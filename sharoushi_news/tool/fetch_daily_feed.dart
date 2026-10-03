@@ -39,8 +39,11 @@ import 'package:sharoushi_news/services/feed/article_excerpt_service.dart';
 import 'package:sharoushi_news/services/news/news_fetcher.dart';
 import 'package:sharoushi_news/services/parser/mhlw_parser.dart';
 import 'package:sharoushi_news/services/parser/nenkin_parser.dart';
+import 'package:sharoushi_news/services/parser/roudoukyoku_parser.dart';
 
 const _maxTotalArticles = 40;
+const _maxBureauArticles = 15;
+const _bureauWindow = Duration(days: 180);
 const _genericSummary = 'この記事はタイトルのみ自動取得されています。詳細は「公式サイトで原文を見る」からご確認ください。';
 const _genericPracticalImpact = '実務への影響は原文をご確認ください。';
 const _genericTarget = '原文をご確認ください。';
@@ -111,6 +114,9 @@ Future<void> main(List<String> args) async {
   final byUrl = <String, _Candidate>{
     for (final c in candidates.take(_maxTotalArticles)) c.candidate.url: c,
   };
+  for (final c in await _fetchBureauSubsidyNews(seenUrls)) {
+    byUrl[c.candidate.url] = c;
+  }
   for (final p in pinnedArticles) {
     byUrl[p.url] = _Candidate(
       ArticleCandidate(title: p.title, url: p.url, publishedAt: DateTime.now()),
@@ -161,6 +167,9 @@ Future<void> main(List<String> args) async {
     if (item.isPinned) {
       entry = await _withOfficialDate(entry, item.pinned!, excerptService);
       if (entry['publishedAtVerified'] != true) undatedPinned.add(item.pinned!.url);
+    } else {
+      // 再利用する過去の記事にも適用し、分類の誤りをAIの再要約なしで直す。
+      entry = _normalizeCategory(entry);
     }
     entries.add(entry);
   }
@@ -276,8 +285,26 @@ final _offTopicPattern = RegExp(
   r'|ハンセン病|残留邦人|技能五輪|国民大会|タイアップ|医療安全推進週間'
   r'|(インフルエンザ|新型コロナウイルス).*(報道発表資料|発生状況|報告数).*(更新|推移)'
   r'|ハタラクエール|老人保健事業|国民健康保険実態調査'
-  r'|資質の向上に係る研修事業',
+  r'|資質の向上に係る研修事業'
+  // 国から都道府県への基金・補助金の配分通知（社労士実務とは無関係）。
+  r'|地域医療介護総合確保基金|内示（[0-9０-９]+回目）',
 );
+
+// 「助成金」カテゴリーは、事業主が申請する雇用関係助成金・奨励金に限る。
+// AIが中退共（中小企業退職金共済）の加入促進月間などを助成金と分類した
+// 実例があったため、タイトルにこれらの語を含まない記事は「労働」に寄せる。
+final _subsidyTitlePattern = RegExp(
+  r'助成金|奨励金|支給要領|正社員化コース|キャリアアップ|両立支援等|人材開発支援'
+  r'|雇用調整|特定求職者雇用開発|トライアル雇用|業務改善|働き方改革推進支援',
+);
+
+Map<String, Object?> _normalizeCategory(Map<String, Object?> entry) {
+  final title = entry['title'] as String? ?? '';
+  if (entry['category'] == NewsCategory.subsidy.name && !_subsidyTitlePattern.hasMatch(title)) {
+    return {...entry, 'category': NewsCategory.labor.name};
+  }
+  return entry;
+}
 
 bool _isOffTopicTitle(String title) => _offTopicPattern.hasMatch(title);
 
@@ -296,6 +323,8 @@ Future<void> _fetchAll({
   required List<ListingTarget> targets,
   required List<_Candidate> out,
   required Set<String> seenUrls,
+  bool Function(ArticleCandidate)? keep,
+  Duration delay = const Duration(seconds: 2),
 }) async {
   for (var i = 0; i < targets.length; i++) {
     final target = targets[i];
@@ -304,8 +333,9 @@ Future<void> _fetchAll({
       final candidates = await fetcher.fetchListing(target.url);
       var kept = 0;
       for (final c in candidates) {
-        if (!seenUrls.add(c.url)) continue;
+        if (keep != null && !keep(c)) continue;
         if (_isLowValueTitle(c.title) || _isOffTopicTitle(c.title)) continue;
+        if (!seenUrls.add(c.url)) continue;
         out.add(_Candidate(c, target));
         kept++;
       }
@@ -314,10 +344,41 @@ Future<void> _fetchAll({
       stderr.writeln('  -> ERROR: $e');
     }
     if (i != targets.length - 1) {
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(delay);
     }
   }
 }
+
+/// 労働局の記事は、助成金関連で直近[_bureauWindow]以内のものに限り、
+/// 同じ告知が複数の局に載る場合はタイトルで重複を除いて最新
+/// [_maxBureauArticles]件までにする（全国共通の変更が47局分並ぶのを防ぎ、
+/// 厚労省・年金機構の記事の枠も圧迫しない）。
+Future<List<_Candidate>> _fetchBureauSubsidyNews(Set<String> seenUrls) async {
+  final cutoff = DateTime.now().subtract(_bureauWindow);
+  final fetched = <_Candidate>[];
+  await _fetchAll(
+    fetcher: NewsFetcher(parser: RoudoukyokuParser()),
+    targets: roudoukyokuListingTargets,
+    out: fetched,
+    seenUrls: seenUrls,
+    keep: (c) =>
+        _subsidyTitlePattern.hasMatch(c.title) &&
+        c.publishedAt != null &&
+        c.publishedAt!.isAfter(cutoff),
+    delay: const Duration(seconds: 1),
+  );
+  fetched.sort((a, b) => b.candidate.publishedAt!.compareTo(a.candidate.publishedAt!));
+  final seenTitles = <String>{};
+  final unique = [
+    for (final c in fetched)
+      if (seenTitles.add(_titleKey(c.candidate.title))) c,
+  ];
+  stderr.writeln('労働局の助成金記事: ${fetched.length}件（重複除外後${unique.length}件）');
+  return unique.take(_maxBureauArticles).toList();
+}
+
+String _titleKey(String title) =>
+    title.replaceAll(RegExp(r'[\s。．、，・「」『』（）()【】［］\[\]]'), '');
 
 class _BuildResult {
   _BuildResult(
@@ -377,7 +438,8 @@ Future<_BuildResult> _buildEntry(
   // defaultCategoryに関わらずパンフレットに分類する。ただし人手で
   // 指定したpinnedArticlesのカテゴリーは常にこの判定より優先する。
   final isPdf = c.url.toLowerCase().endsWith('.pdf');
-  var category = item.isPinned
+  final fixedCategory = item.isPinned || target.lockCategory;
+  var category = fixedCategory
       ? target.defaultCategory
       : (isPdf ? NewsCategory.pamphlet : target.defaultCategory);
 
@@ -431,7 +493,7 @@ Future<_BuildResult> _buildEntry(
       isAiGenerated = true;
       // 一覧ページのURL単位の分類は粗いため、PDF・pinnedでない限りは
       // AIが本文（または一般知識）にもとづいて判定したカテゴリーを優先する。
-      if (!item.isPinned && !isPdf) {
+      if (!fixedCategory && !isPdf) {
         category = _parseCategory(ai.category) ?? category;
       }
     } catch (e) {

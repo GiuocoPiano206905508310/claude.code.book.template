@@ -21,11 +21,15 @@ class ListingTarget {
     required this.source,
     required this.url,
     required this.defaultCategory,
+    this.lockCategory = false,
   });
 
   final SourceConfig source;
   final String url;
   final NewsCategory defaultCategory;
+
+  /// trueの場合、AIやPDF判定でカテゴリーを変えず[defaultCategory]に固定する。
+  final bool lockCategory;
 }
 
 const mhlwSource = SourceConfig(
@@ -127,6 +131,86 @@ final List<ListingTarget> nenkinListingTargets = [
     url: 'https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/index.html',
     defaultCategory: NewsCategory.pension,
   ),
+];
+
+/// 都道府県労働局（jsite.mhlw.go.jp）。助成金の取扱い変更・様式公表などは
+/// 各労働局が独自に告知することがあるため、トップページの新着一覧と
+/// 助成金ページの新着情報を巡回し、助成金関連の記事だけを取り込む
+/// （絞り込みは tool/fetch_daily_feed.dart 側で行う）。
+///
+/// 助成金ページのURLは局ごとに異なるため、GitHub Actions上で各局トップ
+/// ページのメニューから「各種助成金制度」等のリンク先を確認して設定した。
+/// 福岡は確認できなかったためトップページのみ。
+const _roudoukyoku = <(String, String, String?)>[
+  ('hokkaido', '北海道', 'hourei_seido_tetsuzuki/joseikin.html'),
+  ('aomori', '青森', 'newpage_00310.html'),
+  ('iwate', '岩手', 'hourei_seido_tetsuzuki/joseikin.html'),
+  ('miyagi', '宮城', '1/180/181.html'),
+  ('akita', '秋田', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('yamagata', '山形', 'newpage_00437.html'),
+  ('fukushima', '福島', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('ibaraki', '茨城', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('tochigi', '栃木', 'hourei_seido_tetsuzuki/_79457.html'),
+  ('gunma', '群馬', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('saitama', '埼玉', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('chiba', '千葉', 'riyousha_mokuteki_menu/jigyounushi/jigyounushi_jouhou/_120069.html'),
+  ('tokyo', '東京', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('kanagawa', '神奈川', 'home/_20190509_00001.html'),
+  ('niigata', '新潟', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('toyama', '富山', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('ishikawa', '石川', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('fukui', '福井', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('yamanashi', '山梨', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('nagano', '長野', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('gifu', '岐阜', 'riyousha_mokuteki_menu/mokuteki_naiyou/joseikin.html'),
+  ('shizuoka', '静岡', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('aichi', '愛知', 'hourei_seido_tetsuzuki/_121796.html'),
+  ('mie', '三重', 'riyousha_mokuteki_menu/joseikin_seido.html'),
+  ('shiga', '滋賀', 'news_topics/hr_osirase/jyoseikin_001.html'),
+  ('kyoto', '京都', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('osaka', '大阪', 'mokuteki_naiyou/jyosei.html'),
+  ('hyogo', '兵庫', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('nara', '奈良', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('wakayama', '和歌山', 'hourei_seido_tetsuzuki/kakushu_joseikin/hourei_seido.html'),
+  ('tottori', '鳥取', 'hourei_seido_tetsuzuki/joseikin.html'),
+  ('shimane', '島根', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('okayama', '岡山', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('hiroshima', '広島', 'hourei_seido_tetsuzuki/kakusyujoseikinseido.html'),
+  ('yamaguchi', '山口', 'kigyou/joseikin_1.html'),
+  ('tokushima', '徳島', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('kagawa', '香川', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('ehime', '愛媛', 'hourei_seido_tetsuzuki/kakushu_joseikin/jigyounusi_2021.html'),
+  ('kochi', '高知', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('fukuoka', '福岡', null),
+  ('saga', '佐賀', 'newpage_00166.html'),
+  ('nagasaki', '長崎', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('kumamoto', '熊本', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('oita', '大分', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+  ('miyazaki', '宮崎', 'riyousha_mokuteki_menu/mokuteki_naiyou/_119916.html'),
+  ('kagoshima', '鹿児島', 'hourei_seido_tetsuzuki/jyoseikin.html'),
+  ('okinawa', '沖縄', 'hourei_seido_tetsuzuki/kakushu_joseikin.html'),
+];
+
+final List<ListingTarget> roudoukyokuListingTargets = [
+  for (final (slug, name, subsidyPath) in _roudoukyoku) ...() {
+    final base = 'https://jsite.mhlw.go.jp/$slug-roudoukyoku/';
+    final source = SourceConfig(id: 'roudoukyoku-$slug', name: '$name労働局', baseUrl: base);
+    return [
+      ListingTarget(
+        source: source,
+        url: base,
+        defaultCategory: NewsCategory.subsidy,
+        lockCategory: true,
+      ),
+      if (subsidyPath != null)
+        ListingTarget(
+          source: source,
+          url: '$base$subsidyPath',
+          defaultCategory: NewsCategory.subsidy,
+          lockCategory: true,
+        ),
+    ];
+  }(),
 ];
 
 /// 一覧ページの巡回だけでは拾えない、実務上重要な個別ページ・PDFを
