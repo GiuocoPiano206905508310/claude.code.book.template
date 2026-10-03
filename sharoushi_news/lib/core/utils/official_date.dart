@@ -62,13 +62,34 @@ DateTime? extractOfficialDate(String html, {DateTime? now}) {
   return firstLabeled([_updatedLabelBefore, _updatedLabelAfter]);
 }
 
+final _anyYmd = RegExp(_ymd);
+
+/// [text]中で最初に現れる「YYYY年M月D日」「令和N年M月D日」形式の日付。
+DateTime? firstJapaneseDate(String text) {
+  for (final match in _anyYmd.allMatches(normalizeDigits(text))) {
+    final date = _fromYmdMatch(match);
+    if (date != null) return date;
+  }
+  return null;
+}
+
+/// [text]が日付で始まる場合、その日付と、日付を除いた残りの文字列を返す。
+({DateTime date, String rest})? leadingJapaneseDate(String text) {
+  final normalized = normalizeDigits(text.trimLeft());
+  final match = _anyYmd.matchAsPrefix(normalized);
+  if (match == null) return null;
+  final date = _fromYmdMatch(match);
+  if (date == null) return null;
+  return (date: date, rest: normalized.substring(match.end).trim());
+}
+
 /// 全角数字（０〜９）を半角に変換する。
 String normalizeDigits(String text) => text.replaceAllMapped(
   RegExp('[０-９]'),
   (m) => String.fromCharCode(m[0]!.codeUnitAt(0) - 0xFF10 + 0x30),
 );
 
-DateTime? _fromYmdMatch(RegExpMatch match) {
+DateTime? _fromYmdMatch(Match match) {
   final reiwa = match.group(1);
   final year = reiwa != null
       ? (reiwa == '元' ? 1 : int.parse(reiwa)) + 2018
