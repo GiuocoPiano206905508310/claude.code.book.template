@@ -1,5 +1,27 @@
 [
   {
+    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryou/saisei_iryou/index_00019.html",
+    "title": "ヒトゲノム編集胚等の取扱いの規制について",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryou/saisei_iryou/index_00019.html",
+    "publishedAt": "2026-10-05T00:00:00.000",
+    "fetchedAt": "2026-10-05T10:09:33.270186",
+    "category": "lawChange",
+    "summary": "令和8年7月に「ヒトゲノム編集胚等の取扱いの規制に関する法律」が成立しました。本法律は、ゲノム編集技術を用いて加工されたヒト胚やヒト生殖細胞を人や動物の胎内に移植することを原則禁止し、その作成・譲受け・輸入・使用を規制するものです。取扱い者は取扱計画書の届出が必要であり、主務大臣が定める指針に基づく遵守が求められます。厚生労働省は関係省庁と連携し、報告徴収・立入検査・改善措置命令等の監督措置を実施する予定です。",
+    "practicalImpact": "社労士の直接的な実務影響は限定的ですが、生命科学・医療研究機関に従事する労働者の雇用管理に関連する可能性があります。該当研究機関等の事業主は法令遵守体制の整備が必要となります。",
+    "importantPoints": [
+      "ヒトゲノム編集胚等を人や動物の胎内に移植することは原則禁止",
+      "取扱計画書の届出義務が発生",
+      "主務大臣が定める指針に基づく取扱い遵守が必要",
+      "報告徴収、立入検査、改善措置命令等の監督措置が設けられている"
+    ],
+    "target": "生命科学・医療研究に従事し、ゲノム編集胚等を取り扱う研究機関・企業等",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 5
+  },
+  {
     "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai/rezeptsystem/index.html",
     "title": "労災レセプト電算処理システム　マスタコード",
     "sourceName": "厚生労働省",
@@ -66,28 +88,6 @@
     "schemaVersion": 5
   },
   {
-    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1001.html",
-    "title": "上野年金事務所は令和9年1月12日（火曜）に移転します",
-    "sourceName": "日本年金機構",
-    "sourceUrl": "https://www.nenkin.go.jp",
-    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1001.html",
-    "publishedAt": "2026-10-01T00:00:00.000",
-    "fetchedAt": "2026-10-03T00:07:15.251236",
-    "category": "socialInsurance",
-    "summary": "日本年金機構の上野年金事務所が令和9年1月12日（火曜）に移転し、同日から移転先での業務を開始することが公表されました。移転先の詳細な所在地等については、日本年金機構の公式ページ掲載のPDFファイル（560KB）で確認できます。社労士や事業主、および上野年金事務所の管轄地域の被保険者・受給者に関わる手続きについて、移転後の新しい所在地への対応が必要となります。",
-    "practicalImpact": "上野年金事務所の管轄地域で年金手続きを行う社労士事務所は、令和9年1月12日以降、新しい所在地を把握して各種届出や相談を行う必要があります。事業所にも移転情報を周知し、手続き先の変更に対応することが重要です。",
-    "importantPoints": [
-      "移転実施日：令和9年1月12日（火曜）",
-      "移転先の所在地等の詳細はPDFファイルで確認が必須",
-      "移転日から移転先での業務開始となる",
-      "上野年金事務所管轄地域の関係者は新しい所在地を把握する必要あり"
-    ],
-    "target": "上野年金事務所管轄地域の事業主、社労士、被保険者、年金受給者",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 5
-  },
-  {
     "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/jinzaikaihatsu/career_consultant01.html",
     "title": "キャリアコンサルタントになりたい方へ（キャリアコンサルタント試験結果概要を更新しました）",
     "sourceName": "厚生労働省",
@@ -148,6 +148,28 @@
       "労働基準局監督課社会保険労務士係および年金局事業企画課情報公開・社会保険労務士係が担当"
     ],
     "target": "社会保険労務士試験の受験者・合格者",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 5
+  },
+  {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1001.html",
+    "title": "上野年金事務所は令和9年1月12日（火曜）に移転します",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1001.html",
+    "publishedAt": "2026-10-01T00:00:00.000",
+    "fetchedAt": "2026-10-03T00:07:15.251236",
+    "category": "socialInsurance",
+    "summary": "日本年金機構の上野年金事務所が令和9年1月12日（火曜）に移転し、同日から移転先での業務を開始することが公表されました。移転先の詳細な所在地等については、日本年金機構の公式ページ掲載のPDFファイル（560KB）で確認できます。社労士や事業主、および上野年金事務所の管轄地域の被保険者・受給者に関わる手続きについて、移転後の新しい所在地への対応が必要となります。",
+    "practicalImpact": "上野年金事務所の管轄地域で年金手続きを行う社労士事務所は、令和9年1月12日以降、新しい所在地を把握して各種届出や相談を行う必要があります。事業所にも移転情報を周知し、手続き先の変更に対応することが重要です。",
+    "importantPoints": [
+      "移転実施日：令和9年1月12日（火曜）",
+      "移転先の所在地等の詳細はPDFファイルで確認が必須",
+      "移転日から移転先での業務開始となる",
+      "上野年金事務所管轄地域の関係者は新しい所在地を把握する必要あり"
+    ],
+    "target": "上野年金事務所管轄地域の事業主、社労士、被保険者、年金受給者",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 5
@@ -354,28 +376,6 @@
     "schemaVersion": 5
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00013.html",
-    "title": "労災保険柔道整復師施術料金算定基準について（令和８年度）",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00013.html",
-    "publishedAt": "2026-09-18T00:00:00.000",
-    "fetchedAt": "2026-10-01T05:29:19.237835",
-    "category": "salaryCalculation",
-    "summary": "労災保険の柔道整復師施術料金算定基準が令和８年９月17日に改定されました。この改定は令和８年10月１日以降の施術分に適用されます。厚生労働省は基発0917第１号で改定内容を通知し、新しい算定基準を公表しています。柔道整復師による労災保険給付の対象施術の料金基準が変更されるため、労災保険関係の実務において確認が必要です。",
-    "practicalImpact": "労災保険の施術料金基準の改定により、柔道整復師との費用算定や給付額の計算が変わります。企業が労災請求時に新基準を参照する必要があり、特に令和８年10月１日以降の施術分について適正な理解が求められます。",
-    "importantPoints": [
-      "改定日は令和８年９月17日（基発0917第１号で通知）",
-      "適用開始日は令和８年10月１日以降の施術分から",
-      "新しい算定基準は厚生労働省から公表済み（313KB）",
-      "柔道整復師施術に関わる労災保険給付の料金基準が変更される"
-    ],
-    "target": "労災保険に関わる事業主、柔道整復師、労災保険給付の対象者",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 5
-  },
-  {
     "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00014.html",
     "title": "労災保険あん摩マッサージ指圧師、はり師及びきゅう師施術料金算定基準について（令和８年度）",
     "sourceName": "厚生労働省",
@@ -398,23 +398,45 @@
     "schemaVersion": 5
   },
   {
-    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0918.html",
-    "title": "マイナポータルの計画停止に伴う「ねんきんネット」の一部機能制限のお知らせ",
-    "sourceName": "日本年金機構",
-    "sourceUrl": "https://www.nenkin.go.jp",
-    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0918.html",
+    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00013.html",
+    "title": "労災保険柔道整復師施術料金算定基準について（令和８年度）",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00013.html",
     "publishedAt": "2026-09-18T00:00:00.000",
-    "fetchedAt": "2026-10-05T02:43:42.137239",
-    "category": "pension",
-    "summary": "日本年金機構は、マイナポータルの計画停止に伴い、2026年9月20日（日曜）午前0時00分～午前3時30分の間、ねんきんネットの電子申請機能を制限することを発表しました。制限対象は、国民年金保険料の口座振替納付変更申出、国民年金被保険者の資格取得届、付加保険料納付申出、年金請求書、年金生活者支援給付金請求書、年金受取機関変更届、扶養親族等申告書など、計9つの電子申請機能です。メンテナンス期間中は利用者が電子申請手続きを行うことができないため、別途対応が必要となります。",
-    "practicalImpact": "年金関連手続きをねんきんネットの電子申請で行う利用者は、該当日時の利用不可を認識し、別の手段での申請や日程調整が必要です。社労士は顧客に対してこのメンテナンス情報を事前告知し、手続きスケジュール調整の支援が求められます。",
+    "fetchedAt": "2026-10-01T05:29:19.237835",
+    "category": "salaryCalculation",
+    "summary": "労災保険の柔道整復師施術料金算定基準が令和８年９月17日に改定されました。この改定は令和８年10月１日以降の施術分に適用されます。厚生労働省は基発0917第１号で改定内容を通知し、新しい算定基準を公表しています。柔道整復師による労災保険給付の対象施術の料金基準が変更されるため、労災保険関係の実務において確認が必要です。",
+    "practicalImpact": "労災保険の施術料金基準の改定により、柔道整復師との費用算定や給付額の計算が変わります。企業が労災請求時に新基準を参照する必要があり、特に令和８年10月１日以降の施術分について適正な理解が求められます。",
     "importantPoints": [
-      "メンテナンス期間：2026年9月20日（日曜）午前0時00分～午前3時30分（予定）",
-      "制限される電子申請機能は9種類（国民年金保険料口座振替納付変更申出、資格取得届、付加保険料納付申出、年金請求書、年金生活者支援給付金請求書、年金受取機関変更届、扶養親族等申告書など）",
-      "メンテナンス期間中はマイナポータルを経由する電子申請がご利用いただけない状況",
-      "時間延長の可能性があるため、マイナポータルTOPページで詳細確認が必要"
+      "改定日は令和８年９月17日（基発0917第１号で通知）",
+      "適用開始日は令和８年10月１日以降の施術分から",
+      "新しい算定基準は厚生労働省から公表済み（313KB）",
+      "柔道整復師施術に関わる労災保険給付の料金基準が変更される"
     ],
-    "target": "ねんきんネットで電子申請手続きを行う個人（被保険者・年金受給者）",
+    "target": "労災保険に関わる事業主、柔道整復師、労災保険給付の対象者",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 5
+  },
+  {
+    "id": "https://www.mhlw.go.jp/stf/newpage_76152.html",
+    "title": "毎年10月は中小企業退職金共済制度の「加入促進強化月間」です",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76152.html",
+    "publishedAt": "2026-09-18T00:00:00.000",
+    "fetchedAt": "2026-10-05T10:11:49.234277",
+    "category": "labor",
+    "summary": "厚生労働省所管の勤労者退職金共済機構は、毎年10月を中小企業退職金共済制度の「加入促進強化月間」と位置づけ、加入促進・広報活動を実施します。同制度は退職金制度を単独で構築することが難しい中小企業向けの国の退職金制度で、掛金の一部を国が助成し、管理が簡単で税制優遇措置が受けられるメリットがあります。令和8年6月末時点で約55万の中小企業が加入しており、機構は強化月間中に個別相談や説明会を実施するとともに、厚生労働省は都道府県労働局を通じた周知・広報を行います。",
+    "practicalImpact": "社労士は、顧客である中小企業事業主に対して中小企業退職金共済制度の加入促進の機会が増加します。本月間の周知活動により制度への相談が増える可能性があり、制度の内容・要件・手続きについて正確に説明できる体制の整備が求められます。",
+    "importantPoints": [
+      "毎年10月が中小企業退職金共済制度の加入促進強化月間に位置づけられている",
+      "制度のメリット：掛金の一部を国が助成、管理が簡単、税制優遇措置がある",
+      "令和8年6月末時点で約55万の中小企業が加入（加入促進の拡大余地あり）",
+      "勤労者退職金共済機構が個別相談・説明会を実施、厚生労働省が周知・広報を実施"
+    ],
+    "target": "退職金制度を単独で構築することが難しい中小企業の事業主",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 5
