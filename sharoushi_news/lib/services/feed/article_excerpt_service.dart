@@ -82,6 +82,9 @@ class ArticleExcerptService {
   /// 返す（[fetchExcerpt]と違い先頭1件だけでなく、定型文を除いた段落を
   /// [maxLength]文字に達するまで集める）。取得できない場合はnullを返す。
   Future<String?> fetchBodyText(String url, {int maxLength = 3000}) async {
+    // PDFのバイナリをHTMLとして解析すると意味のない文字列になるため、
+    // 本文なし（タイトルのみ）として扱う。
+    if (Uri.parse(url).path.toLowerCase().endsWith('.pdf')) return null;
     final http.Response response;
     try {
       response = await _client

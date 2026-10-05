@@ -22,6 +22,7 @@ class ListingTarget {
     required this.url,
     required this.defaultCategory,
     this.lockCategory = false,
+    this.ministryWide = false,
   });
 
   final SourceConfig source;
@@ -30,6 +31,10 @@ class ListingTarget {
 
   /// trueの場合、AIやPDF判定でカテゴリーを変えず[defaultCategory]に固定する。
   final bool lockCategory;
+
+  /// 医療・医薬品・福祉等を含む省全体の新着一覧の場合true。タイトルが
+  /// 社労士実務の分野の語（isPracticeRelatedTitle）を含む記事だけを取り込む。
+  final bool ministryWide;
 }
 
 const mhlwSource = SourceConfig(
@@ -39,18 +44,20 @@ const mhlwSource = SourceConfig(
 );
 
 /// ユーザーから提供された、実際にアクセス可能な一覧ページ。
-/// 「新着情報」はジャンル横断のため、暫定的に法改正カテゴリーへ寄せている
-/// （個別記事のカテゴリー分類はPhase 9のAI要約実装時に精緻化する想定）。
+/// 「新着情報」は省全体の一覧のため[ListingTarget.ministryWide]とし、
+/// 社労士実務の分野の記事だけを取り込む（カテゴリーはAIが判定する）。
 final List<ListingTarget> mhlwListingTargets = [
   const ListingTarget(
     source: mhlwSource,
     url: 'https://www.mhlw.go.jp/stf/new-info/',
     defaultCategory: NewsCategory.lawChange,
+    ministryWide: true,
   ),
   const ListingTarget(
     source: mhlwSource,
     url: 'https://www.mhlw.go.jp/stf/new-info/shingi.html',
     defaultCategory: NewsCategory.lawChange,
+    ministryWide: true,
   ),
   const ListingTarget(
     source: mhlwSource,
@@ -82,6 +89,35 @@ final List<ListingTarget> mhlwListingTargets = [
     url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/topics_150867_1154_170.html',
     defaultCategory: NewsCategory.pension,
   ),
+];
+
+/// 新しい資料が追加されても新着一覧には載らないことがある、厚生労働省の
+/// 制度別ページ。日次フィード生成時に前回からのリンクの増加を調べ、増えた
+/// リンクを記事として取り込む（WatchedPageTracker）。実例として「『シフト制』
+/// で働く場合の年次有給休暇について」のリーフレットは、新着一覧に載らず
+/// 「いわゆる『シフト制』について」のページにリンクが追加されただけだった。
+/// いずれもGitHub Actions上で実際に取得できることを確認済み。
+const watchedPages = [
+  'https://www.mhlw.go.jp/stf/newpage_22954.html', // シフト制
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000056460.html', // 労働基準関係リーフレット
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/index.html', // 労働基準
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/roukikaitei/index.html', // 労働基準法改正
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/index.html', // 事業主の方へ（労働基準）
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/anzen/index.html', // 安全・衛生
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/minimumichiran/index.html', // 最低賃金
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/index.html', // 雇用環境・均等
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/seisaku06/index.html', // ハラスメント
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/ryouritsu/index.html', // 仕事と介護の両立
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000130583.html', // 育児・介護休業法
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html', // 女性活躍推進法
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000144972.html', // 同一労働同一賃金
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/part_haken/index.html', // 有期・パート・派遣
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/haken-shoukai/index.html', // 派遣・職業紹介
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/koureisha/index.html', // 高年齢者雇用
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/shougaishakoyou/index.html', // 障害者雇用
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/index.html', // 雇用関係助成金
+  'https://www.mhlw.go.jp/tekiyoukakudai/', // 社会保険適用拡大
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/index.html', // 年金
 ];
 
 const nenkinSource = SourceConfig(

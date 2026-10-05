@@ -20,14 +20,14 @@ class NewsFetcher {
 
   /// 取得元に「個人利用の非公式アプリからのアクセスである」ことが分かるように
   /// 名乗るUser-Agent。RSSは一切使用せず、通常のWebページを都度HTTP GETする。
-  static const _userAgent =
+  static const userAgent =
       'SharoushiNewsApp-Prototype/0.1 (individual use; not for redistribution)';
 
   Future<List<ArticleCandidate>> fetchListing(String url) async {
     final http.Response response;
     try {
       response = await _client
-          .get(Uri.parse(url), headers: const {'User-Agent': _userAgent})
+          .get(Uri.parse(url), headers: const {'User-Agent': userAgent})
           .timeout(const Duration(seconds: 15));
     } catch (e) {
       throw NewsFetchException('$url の取得に失敗しました: $e');

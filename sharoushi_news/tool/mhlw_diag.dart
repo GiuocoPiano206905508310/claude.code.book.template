@@ -1,105 +1,24 @@
-// 一時的な診断用スクリプト（PR作成前に削除）。厚労省の一覧ページの実際の
-// 中身と、「シフト制」リーフレット（001756191.pdf）の掲載場所を確認する。
+// 一時的な診断用スクリプト（PR作成前に削除）。監視対象ページから実際に
+// 抜き出されるリンクを確認する。
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
 import 'package:sharoushi_news/core/constants/source_config.dart';
-import 'package:sharoushi_news/services/parser/mhlw_parser.dart';
-
-const _ua = 'SharoushiNewsApp-Prototype/0.1 (individual use; not for redistribution)';
-const _needle = '001756191';
-
-final _watchPages = [
-  'https://www.mhlw.go.jp/stf/newpage_22954.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000056460.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000130583.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/seisaku06/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000144972.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/roukikaitei/index.html',
-  'https://www.mhlw.go.jp/hatarakikata/overtime.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/koyouhoken/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/index.html',
-  'https://www.mhlw.go.jp/tekiyoukakudai/',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/minimumichiran/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/koureisha/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/shougaishakoyou/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/haken-shoukai/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/part_haken/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/anzen/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/ryouritsu/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/index.html',
-];
-
-Future<String> _get(String url) async {
-  final r = await http.get(Uri.parse(url), headers: {'User-Agent': _ua});
-  return utf8.decode(r.bodyBytes, allowMalformed: true);
-}
-
-String _collapse(String s) => s.replaceAll(RegExp(r'\s+'), ' ').trim();
-
-void _needleContext(StringBuffer out, String html) {
-  final doc = html_parser.parse(html);
-  for (final a in doc.querySelectorAll('a')) {
-    if (!(a.attributes['href'] ?? '').contains(_needle)) continue;
-    var row = a.parent;
-    for (var i = 0; i < 3 && row?.parent != null; i++) {
-      row = row!.parent;
-    }
-    out.writeln('  NEEDLE anchor="${_collapse(a.text)}" href=${a.attributes['href']}');
-    out.writeln('  NEEDLE context: ${_collapse(row?.text ?? '').characters300}');
-  }
-}
-
-extension on String {
-  String get characters300 => length > 600 ? substring(0, 600) : this;
-}
+import 'package:sharoushi_news/services/news/news_fetcher.dart';
+import 'package:sharoushi_news/services/parser/watched_page_parser.dart';
 
 Future<void> main() async {
-  final out = StringBuffer('# MHLW diag ${DateTime.now().toIso8601String()}\n');
-  final parser = MhlwParser();
-  for (final t in const <ListingTarget>[]) {
-    out.writeln('\n## LISTING ${t.url}');
+  final out = StringBuffer('# watched pages diag ${DateTime.now().toIso8601String()}\n');
+  final parser = WatchedPageParser();
+  for (final page in watchedPages) {
+    out.writeln('\n## $page');
     try {
-      final html = await _get(t.url);
-      final cands = parser.parse(html, t.url);
-      out.writeln('parsed=${cands.length} containsNeedle=${html.contains(_needle)}');
-      _needleContext(out, html);
-      for (final c in cands) {
-        out.writeln('- ${c.publishedAt?.toIso8601String().substring(0, 10)} ${c.title} <${c.url}>');
-      }
-    } catch (e) {
-      out.writeln('ERROR $e');
-    }
-    await Future.delayed(const Duration(seconds: 1));
-  }
-  for (final url in _watchPages) {
-    out.writeln('\n## WATCH $url');
-    try {
-      final html = await _get(url);
-      final doc = html_parser.parse(html);
-      out.writeln('title=${_collapse(doc.querySelector('title')?.text ?? '')} containsNeedle=${html.contains(_needle)}');
-      _needleContext(out, html);
-      final main = doc.querySelector('main') ?? doc.querySelector('#content') ?? doc.body!;
-      final dateLabels = RegExp(r'(?:更新|掲載|公表)[^。]{0,4}(?:令和|20)\S{0,14}日|(?:令和|20)\S{0,12}日\s*(?:更新|掲載|公表)')
-          .allMatches(_collapse(main.text)).map((m) => m[0]).take(5).toList();
-      out.writeln('dateLabels=$dateLabels');
-      var n = 0;
-      for (final a in main.querySelectorAll('a')) {
-        final href = a.attributes['href'] ?? '';
-        if (!href.endsWith('.pdf') && !href.endsWith('.html')) continue;
-        var row = a.parent;
-        while (row != null && !{'tr', 'li', 'p', 'dd'}.contains(row.localName)) {
-          row = row.parent;
-        }
-        final rowText = row == null ? '' : _collapse(row.text);
-        out.writeln('  link: ${_collapse(a.text)} | row=${rowText.length > 120 ? rowText.substring(0, 120) : rowText} <$href>');
-        if (++n >= 25) break;
+      final r = await http.get(Uri.parse(page), headers: const {'User-Agent': NewsFetcher.userAgent});
+      final links = parser.parse(utf8.decode(r.bodyBytes, allowMalformed: true), page);
+      out.writeln('status=${r.statusCode} links=${links.length}');
+      for (final l in links.take(40)) {
+        out.writeln('- ${l.date?.toIso8601String().substring(0, 10) ?? '----------'} ${l.title.length > 90 ? l.title.substring(0, 90) : l.title} <${l.url}>');
       }
     } catch (e) {
       out.writeln('ERROR $e');

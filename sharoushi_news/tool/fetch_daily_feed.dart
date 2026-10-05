@@ -30,16 +30,20 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:sharoushi_news/core/constants/practice_keywords.dart';
 import 'package:sharoushi_news/core/constants/source_config.dart';
 import 'package:sharoushi_news/core/utils/text_sanitizer.dart';
 import 'package:sharoushi_news/models/article_candidate.dart';
 import 'package:sharoushi_news/models/article.dart';
 import 'package:sharoushi_news/services/ai/ai_summary_service.dart';
+import 'package:http/http.dart' as http;
 import 'package:sharoushi_news/services/feed/article_excerpt_service.dart';
+import 'package:sharoushi_news/services/feed/watched_page_tracker.dart';
 import 'package:sharoushi_news/services/news/news_fetcher.dart';
 import 'package:sharoushi_news/services/parser/mhlw_parser.dart';
 import 'package:sharoushi_news/services/parser/nenkin_parser.dart';
 import 'package:sharoushi_news/services/parser/roudoukyoku_parser.dart';
+import 'package:sharoushi_news/services/parser/watched_page_parser.dart';
 
 const _maxTotalArticles = 40;
 const _maxBureauArticles = 15;
@@ -53,7 +57,7 @@ const _genericTarget = '原文をご確認ください。';
 // タイトルが変わっていなくてもキャッシュを使わず再生成の対象とする。
 // これにより、一覧ページURL単位の粗い分類しかできなかった過去の記事も、
 // ロジック更新後は次回実行時に新しい判定へ自動的に置き換わる。
-const _schemaVersion = 5;
+const _schemaVersion = 6;
 
 // AIがcategoryとして返す、社労士実務と無関係な記事を示す特別な値。
 // NewsCategoryには存在しない値のため、この記事はフィードから除外する。
@@ -115,6 +119,9 @@ Future<void> main(List<String> args) async {
     for (final c in candidates.take(_maxTotalArticles)) c.candidate.url: c,
   };
   for (final c in await _fetchBureauSubsidyNews(seenUrls)) {
+    byUrl[c.candidate.url] = c;
+  }
+  for (final c in await _fetchWatchedPageNews(File(outputPath).parent, seenUrls)) {
     byUrl[c.candidate.url] = c;
   }
   for (final p in pinnedArticles) {
@@ -271,6 +278,13 @@ bool _isLowValueTitle(String title) => _lowValueTitlePattern.hasMatch(title);
 // タイトルの時点で除外する。AI側のirrelevant判定（_irrelevantCategory）
 // はこのパターンに当てはまらない記事を拾うための二重のチェックとなる。
 //
+// なお、省全体の新着一覧については、この除外語の列挙だけでは新しい分野の
+// 記事（実例:「ヒトゲノム編集胚等の取扱いの規制について」）を防げなかった
+// ため、社労士実務の分野の語を含むタイトルだけを通す方式
+// （isPracticeRelatedTitle、ListingTarget.ministryWide）を先に適用する。
+// この除外語は、分野の語を含んでしまう無関係な記事（「国民健康保険実態
+// 調査」等）や、分野別の一覧に載る記事向けの補助として残している。
+//
 // 追加分: 「ハタラクエール」（治療と仕事の両立支援の企業表彰）は法改正等
 // ではなく表彰制度の応募案内であるため除外。老人保健事業・国民健康保険は
 // 国と市区町村の間の補助金・報告の仕組みであり、社労士が扱う労働社会保険
@@ -310,8 +324,8 @@ bool _isOffTopicTitle(String title) => _offTopicPattern.hasMatch(title);
 
 // AIのirrelevant判定は便利だが完璧ではない（実例: 本文が十分に取得でき
 // なかった際に「業種別カスタマーハラスメント対策マニュアルについて」を
-// 無関係と誤判定した）。社労士実務の中核分野を示す強いキーワードを含む
-// 場合は、AIがirrelevantと判定してもフィードから除外しない安全策。
+// 無関係と誤判定した）。本文なし（タイトルのみ）で判定した場合に限り、
+// 社労士実務の中核分野を示す強いキーワードを含むなら除外しない安全策。
 final _alwaysRelevantPattern = RegExp(
   r'ハラスメント|労災保険|雇用保険|社会保険|厚生年金|国民年金|健康保険'
   r'|給与|賃金|最低賃金|労働基準|労働安全衛生|育児休業|介護休業'
@@ -334,6 +348,7 @@ Future<void> _fetchAll({
       var kept = 0;
       for (final c in candidates) {
         if (keep != null && !keep(c)) continue;
+        if (target.ministryWide && !isPracticeRelatedTitle(c.title)) continue;
         if (_isLowValueTitle(c.title) || _isOffTopicTitle(c.title)) continue;
         if (!seenUrls.add(c.url)) continue;
         out.add(_Candidate(c, target));
@@ -381,6 +396,56 @@ Future<List<_Candidate>> _fetchBureauSubsidyNews(Set<String> seenUrls) async {
 // 労働局長が使用者団体等へ周知を「要請」した旨の報道発表は、助成金に
 // 触れていても局の活動報告であり、事業主・社労士が使う情報ではないため除く。
 final _bureauExcludedPattern = RegExp(r'要請');
+
+/// 制度別ページ（watchedPages）に新しく追加された資料・ページを記事にする。
+/// 状態（既知のリンク・検出済みの記事）は[dir]/watched_pages.jsonに保存する
+/// （ワークフローがarticles.jsonと一緒にコミットする）。
+Future<List<_Candidate>> _fetchWatchedPageNews(Directory dir, Set<String> seenUrls) async {
+  final file = File('${dir.path}/watched_pages.json');
+  Map<String, dynamic>? saved;
+  try {
+    if (file.existsSync()) saved = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+  } catch (e) {
+    stderr.writeln('watched_pages.jsonの読み込みに失敗したため、監視を初期化します: $e');
+  }
+  final jst = DateTime.now().toUtc().add(const Duration(hours: 9));
+  final tracker = WatchedPageTracker.fromJson(saved, today: DateTime(jst.year, jst.month, jst.day));
+  final parser = WatchedPageParser();
+  final client = http.Client();
+
+  for (final page in watchedPages) {
+    stderr.writeln('Watching $page ...');
+    try {
+      final response = await client
+          .get(Uri.parse(page), headers: const {'User-Agent': NewsFetcher.userAgent})
+          .timeout(const Duration(seconds: 30));
+      // 404等のエラーページのリンクを記録すると、復旧時に既存の資料が
+      // 新着扱いになるため、正常に取得できた場合だけ比較する。
+      if (response.statusCode != 200) {
+        stderr.writeln('  -> HTTP ${response.statusCode}');
+        continue;
+      }
+      final links = parser.parse(utf8.decode(response.bodyBytes, allowMalformed: true), page);
+      final found = tracker.record(page, links);
+      stderr.writeln('  -> ${links.length} links (${found.length} new)');
+    } catch (e) {
+      stderr.writeln('  -> ERROR: $e');
+    }
+    await Future.delayed(const Duration(seconds: 1));
+  }
+  client.close();
+  file.parent.createSync(recursive: true);
+  file.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(tracker.toJson()));
+
+  return [
+    for (final d in tracker.recent)
+      if (!_isLowValueTitle(d.title) && !_isOffTopicTitle(d.title) && seenUrls.add(d.url))
+        _Candidate(
+          ArticleCandidate(title: d.title, url: d.url, publishedAt: d.publishedAt),
+          ListingTarget(source: mhlwSource, url: d.page, defaultCategory: NewsCategory.labor),
+        ),
+  ];
+}
 
 String _titleKey(String title) =>
     title.replaceAll(RegExp(r'[\s。．、，・「」『』（）()【】［］\[\]]'), '');
@@ -477,12 +542,15 @@ Future<_BuildResult> _buildEntry(
       );
       // pinnedArticles（人手で重要と判断した記事）でない限り、AIが
       // 社労士実務と無関係と判定した記事はフィードから除外する。ただし
-      // 明らかに社労士実務の中核に関わるキーワードを含む場合は、AIの
-      // irrelevant誤判定（実例:「業種別カスタマーハラスメント対策
-      // マニュアルについて」）を防ぐため除外しない。
+      // 本文を取得できずタイトルだけで判定した場合に限り、明らかに
+      // 社労士実務の中核に関わるキーワードを含むなら除外しない（実例:
+      // 本文なしで「業種別カスタマーハラスメント対策マニュアルについて」を
+      // 誤判定）。本文を読んだうえでの判定は覆さない（「労災保険柔道整復師
+      // 施術料金算定基準」のように、語は含んでも施術者向けの記事があるため）。
+      final judgedFromTitleOnly = bodyText == null || bodyText.trim().isEmpty;
       if (!item.isPinned &&
           ai.category == _irrelevantCategory &&
-          !_alwaysRelevantPattern.hasMatch(c.title)) {
+          !(judgedFromTitleOnly && _alwaysRelevantPattern.hasMatch(c.title))) {
         stderr.writeln('社労士実務と無関係と判定されたため除外します（${c.url}）: ${c.title}');
         return _BuildResult(
           null,
