@@ -35,6 +35,8 @@ class WatchedPageParser {
     r'\s*[［\[（(]\s*(?:PDF[^］\]）)]*?)?[0-9.,]+\s*[KMG]B\s*[］\]）)]',
     caseSensitive: false,
   );
+  // 「専門業務型裁量労働制 PDF 令和５年11月」のような、単独の「PDF」表記。
+  static final _pdfLabel = RegExp(r'(?<=^|\s)PDF(?=\s|$)');
   // 「開く」「こちら」等、リンク文字列だけでは内容が分からないもの。
   // この場合は同じ行（表の行等）の文字列をタイトルにする。
   static final _genericText = RegExp(
@@ -115,7 +117,8 @@ class WatchedPageParser {
     return _collapse(parts.join(' '));
   }
 
-  String _stripFileInfo(String s) => s.replaceAll(_fileInfo, '').trim();
+  String _stripFileInfo(String s) =>
+      _collapse(s.replaceAll(_fileInfo, '').replaceAll(_pdfLabel, ' '));
 
   String _collapse(String s) => s.replaceAll(RegExp(r'\s+'), ' ').trim();
 }

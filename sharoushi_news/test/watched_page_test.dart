@@ -15,6 +15,7 @@ const _shiftPage = '''
     </ul>
     <table>
       <tr><td>賃金</td><td>最低賃金制度のあらまし</td><td><a href="/content/11200000/001604439.pdf">開く［513KB］</a></td></tr>
+      <tr><td>専門業務型裁量労働制</td><td>PDF</td><td>令和５年11月</td><td><a href="/content/001164346.pdf">開く</a></td></tr>
       <tr><td>2026年9月28日掲載 <a href="/stf/newpage_70001.html">年次有給休暇の計画的付与について</a></td></tr>
       <tr><td>2026年12月1日施行 <a href="/stf/newpage_70002.html">新しい制度のご案内</a></td></tr>
     </table>
@@ -37,6 +38,10 @@ void main() {
   test('「開く」等のリンクは同じ行の文字列をタイトルにする', () {
     final l = links.firstWhere((l) => l.url.endsWith('001604439.pdf'));
     expect(l.title, '賃金 最低賃金制度のあらまし');
+    expect(
+      links.firstWhere((l) => l.url.endsWith('001164346.pdf')).title,
+      '専門業務型裁量労働制 令和５年11月',
+    );
   });
 
   test('同じ行の掲載日を使い、未来の日付（施行日等）は使わない', () {

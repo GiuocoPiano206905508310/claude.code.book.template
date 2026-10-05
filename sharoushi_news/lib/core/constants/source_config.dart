@@ -116,7 +116,6 @@ const watchedPages = [
   'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/koureisha/index.html', // 高年齢者雇用
   'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/shougaishakoyou/index.html', // 障害者雇用
   'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/index.html', // 雇用関係助成金
-  'https://www.mhlw.go.jp/tekiyoukakudai/', // 社会保険適用拡大
   'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/index.html', // 年金
 ];
 
@@ -294,6 +293,31 @@ class PinnedArticle {
 }
 
 const pinnedArticles = [
+  // 新着一覧に載らず、制度ページにリンクが追加されただけだったため、
+  // 監視（watchedPages）を始める前に追加された分としてここで指定する。
+  // 公表日はリーフレットに「R８．１０」とあるのみで日付が特定できない。
+  PinnedArticle(
+    title: '「シフト制」で働く場合の年次有給休暇について（使用者の方等向けリーフレット）',
+    url: 'https://www.mhlw.go.jp/content/11200000/001756191.pdf',
+    source: mhlwSource,
+    category: NewsCategory.labor,
+    summary:
+        'いわゆる「シフト制」で働く労働者の年次有給休暇について、都道府県労働局・労働基準監督署による使用者向けリーフレット'
+        '（令和8年10月）が公表されました。シフト制労働者にも、雇入れから6か月間継続勤務し全労働日の8割以上出勤すれば'
+        '年次有給休暇を付与する必要があること、所定労働日数を算出しがたい場合の付与日数の算定方法、シフトの調整を理由に'
+        '取得を拒めないこと、取得日の賃金の計算方法を、計算例を交えて解説しています。令和8年6月に改正された'
+        '「シフト制留意事項」の年次有給休暇に関する内容をまとめたものです。',
+    practicalImpact:
+        'シフト制労働者を雇用する顧問先では、労働契約で所定労働日数を定めていなくても年次有給休暇の付与が必要です。'
+        '所定労働日数を算出しがたい場合の算定方法に沿って付与日数を確認し、取得申請の扱いや取得日の賃金計算を見直す必要があります。',
+    importantPoints: [
+      '所定労働日数をあらかじめ定めていないことを理由に、年次有給休暇を付与しない取扱いは認められない',
+      '所定労働日数を算出しがたい場合、雇入れ6か月後は「6か月間の労働日数の実績×2」、1年6か月後以降は「前年の労働日数の実績」を1年間の所定労働日数とみなして付与日数を算出できる（「目安となる労働日数」による算出の方が多い場合はそれによることも可）',
+      '「シフトを調整して働く日を決めたのだから年休は使わせない」「代わりの人がいない」「忙しい」だけでは取得を拒めない（時季変更は事業の正常な運営を妨げる場合に限る）',
+      '取得日の賃金は、就業規則等に基づき「所定労働時間労働した場合に支払われる通常の賃金」（時給×シフト表で確定した所定労働時間等）または「平均賃金」で支払う',
+    ],
+    target: 'シフト制（勤務シフトの作成により労働日・労働時間が確定する働き方）で労働者を雇用する事業主',
+  ),
   PinnedArticle(
     title: '保険料調整制度（随時改定の特例）について',
     url: 'https://www.nenkin.go.jp/tokusetsu/hokenryochosei.html',
