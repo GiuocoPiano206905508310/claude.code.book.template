@@ -1,10 +1,12 @@
 name: Nenkin fetch preview (manual, diagnostic only)
 
+# TEMPORARY: 厚労省サイトの記事選定の診断に一時的に流用中。PR作成前に元に戻す。
+
 on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   fetch:
@@ -20,12 +22,26 @@ jobs:
         working-directory: sharoushi_news
         run: flutter pub get
 
-      - name: Run Nenkin fetch/parse preview
+      - name: Run MHLW diagnostic
         working-directory: sharoushi_news
-        run: dart run tool/fetch_nenkin_preview.dart
+        run: dart run tool/mhlw_diag.dart
 
-      - name: Upload result as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nenkin-fetch-preview-result
-          path: sharoushi_news/fetch-preview-result.json
+      - name: Inspect the shift-work PDF
+        working-directory: sharoushi_news
+        run: |
+          sudo apt-get install -y -q poppler-utils > /dev/null
+          curl -sSL -A 'SharoushiNewsApp-Prototype/0.1 (individual use; not for redistribution)' -o shift.pdf https://www.mhlw.go.jp/content/11200000/001756191.pdf
+          {
+            echo; echo '## PDF 001756191'; echo '```'
+            pdfinfo shift.pdf || true
+            pdftotext -l 2 shift.pdf - | head -80 || true
+            echo '```'
+          } >> diag/mhlw.md
+
+      - name: Commit diagnostic result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f sharoushi_news/diag/mhlw.md
+          git commit -m "diag: mhlw article selection (temporary)"
+          git push
