@@ -14,8 +14,26 @@ const _needle = '001756191';
 final _watchPages = [
   'https://www.mhlw.go.jp/stf/newpage_22954.html',
   'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000056460.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000130583.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/seisaku06/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000144972.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/roukikaitei/index.html',
+  'https://www.mhlw.go.jp/hatarakikata/overtime.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/koyouhoken/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/index.html',
+  'https://www.mhlw.go.jp/tekiyoukakudai/',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/minimumichiran/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/koureisha/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/shougaishakoyou/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/haken-shoukai/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/part_haken/index.html',
   'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/index.html',
-  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/roudouzikan/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/anzen/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/ryouritsu/index.html',
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/index.html',
 ];
 
 Future<String> _get(String url) async {
@@ -45,7 +63,7 @@ extension on String {
 Future<void> main() async {
   final out = StringBuffer('# MHLW diag ${DateTime.now().toIso8601String()}\n');
   final parser = MhlwParser();
-  for (final t in mhlwListingTargets) {
+  for (final t in const <ListingTarget>[]) {
     out.writeln('\n## LISTING ${t.url}');
     try {
       final html = await _get(t.url);
@@ -68,15 +86,20 @@ Future<void> main() async {
       out.writeln('title=${_collapse(doc.querySelector('title')?.text ?? '')} containsNeedle=${html.contains(_needle)}');
       _needleContext(out, html);
       final main = doc.querySelector('main') ?? doc.querySelector('#content') ?? doc.body!;
-      out.writeln('```');
-      out.writeln(_collapse(main.text).characters300);
-      out.writeln('```');
+      final dateLabels = RegExp(r'(?:更新|掲載|公表)[^。]{0,4}(?:令和|20)\S{0,14}日|(?:令和|20)\S{0,12}日\s*(?:更新|掲載|公表)')
+          .allMatches(_collapse(main.text)).map((m) => m[0]).take(5).toList();
+      out.writeln('dateLabels=$dateLabels');
       var n = 0;
       for (final a in main.querySelectorAll('a')) {
         final href = a.attributes['href'] ?? '';
         if (!href.endsWith('.pdf') && !href.endsWith('.html')) continue;
-        out.writeln('  link: ${_collapse(a.text)} <$href>');
-        if (++n >= 60) break;
+        var row = a.parent;
+        while (row != null && !{'tr', 'li', 'p', 'dd'}.contains(row.localName)) {
+          row = row.parent;
+        }
+        final rowText = row == null ? '' : _collapse(row.text);
+        out.writeln('  link: ${_collapse(a.text)} | row=${rowText.length > 120 ? rowText.substring(0, 120) : rowText} <$href>');
+        if (++n >= 25) break;
       }
     } catch (e) {
       out.writeln('ERROR $e');

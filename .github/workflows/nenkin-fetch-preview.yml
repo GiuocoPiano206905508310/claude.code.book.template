@@ -33,8 +33,16 @@ jobs:
           curl -sSL -A 'SharoushiNewsApp-Prototype/0.1 (individual use; not for redistribution)' -o shift.pdf https://www.mhlw.go.jp/content/11200000/001756191.pdf
           {
             echo; echo '## PDF 001756191'; echo '```'
-            pdfinfo shift.pdf || true
-            pdftotext -l 2 shift.pdf - | head -80 || true
+            pdfinfo -meta shift.pdf | grep -i -E 'date|xmp:|CreationDate|ModDate' || true
+            echo '--- wayback pdf'
+            curl -sS -m 60 'https://web.archive.org/cdx/search/cdx?url=mhlw.go.jp/content/11200000/001756191.pdf&output=txt&limit=5' || true
+            echo '--- wayback page 2026'
+            curl -sS -m 60 'https://web.archive.org/cdx/search/cdx?url=mhlw.go.jp/stf/newpage_22954.html&output=txt&from=202606&fl=timestamp,digest,length&collapse=digest' || true
+            echo '--- snapshots containing the leaflet'
+            for ts in $(curl -sS -m 60 'https://web.archive.org/cdx/search/cdx?url=mhlw.go.jp/stf/newpage_22954.html&from=202606&fl=timestamp&collapse=digest' || true); do
+              if curl -sS -m 60 "https://web.archive.org/web/${ts}id_/https://www.mhlw.go.jp/stf/newpage_22954.html" | grep -q 001756191; then echo "$ts has"; else echo "$ts lacks"; fi
+              sleep 2
+            done
             echo '```'
           } >> diag/mhlw.md
 
