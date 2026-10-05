@@ -22,6 +22,7 @@ class ListingTarget {
     required this.url,
     required this.defaultCategory,
     this.lockCategory = false,
+    this.ministryWide = false,
   });
 
   final SourceConfig source;
@@ -30,6 +31,10 @@ class ListingTarget {
 
   /// trueの場合、AIやPDF判定でカテゴリーを変えず[defaultCategory]に固定する。
   final bool lockCategory;
+
+  /// 医療・医薬品・福祉等を含む省全体の新着一覧の場合true。タイトルが
+  /// 社労士実務の分野の語（isPracticeRelatedTitle）を含む記事だけを取り込む。
+  final bool ministryWide;
 }
 
 const mhlwSource = SourceConfig(
@@ -39,18 +44,20 @@ const mhlwSource = SourceConfig(
 );
 
 /// ユーザーから提供された、実際にアクセス可能な一覧ページ。
-/// 「新着情報」はジャンル横断のため、暫定的に法改正カテゴリーへ寄せている
-/// （個別記事のカテゴリー分類はPhase 9のAI要約実装時に精緻化する想定）。
+/// 「新着情報」は省全体の一覧のため[ListingTarget.ministryWide]とし、
+/// 社労士実務の分野の記事だけを取り込む（カテゴリーはAIが判定する）。
 final List<ListingTarget> mhlwListingTargets = [
   const ListingTarget(
     source: mhlwSource,
     url: 'https://www.mhlw.go.jp/stf/new-info/',
     defaultCategory: NewsCategory.lawChange,
+    ministryWide: true,
   ),
   const ListingTarget(
     source: mhlwSource,
     url: 'https://www.mhlw.go.jp/stf/new-info/shingi.html',
     defaultCategory: NewsCategory.lawChange,
+    ministryWide: true,
   ),
   const ListingTarget(
     source: mhlwSource,
@@ -82,6 +89,34 @@ final List<ListingTarget> mhlwListingTargets = [
     url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/topics_150867_1154_170.html',
     defaultCategory: NewsCategory.pension,
   ),
+];
+
+/// 新しい資料が追加されても新着一覧には載らないことがある、厚生労働省の
+/// 制度別ページ。日次フィード生成時に前回からのリンクの増加を調べ、増えた
+/// リンクを記事として取り込む（WatchedPageTracker）。実例として「『シフト制』
+/// で働く場合の年次有給休暇について」のリーフレットは、新着一覧に載らず
+/// 「いわゆる『シフト制』について」のページにリンクが追加されただけだった。
+/// いずれもGitHub Actions上で実際に取得できることを確認済み。
+const watchedPages = [
+  'https://www.mhlw.go.jp/stf/newpage_22954.html', // シフト制
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000056460.html', // 労働基準関係リーフレット
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/index.html', // 労働基準
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/roukikaitei/index.html', // 労働基準法改正
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/index.html', // 事業主の方へ（労働基準）
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/anzen/index.html', // 安全・衛生
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/minimumichiran/index.html', // 最低賃金
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/index.html', // 雇用環境・均等
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/seisaku06/index.html', // ハラスメント
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/ryouritsu/index.html', // 仕事と介護の両立
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000130583.html', // 育児・介護休業法
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html', // 女性活躍推進法
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000144972.html', // 同一労働同一賃金
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/part_haken/index.html', // 有期・パート・派遣
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/haken-shoukai/index.html', // 派遣・職業紹介
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/koureisha/index.html', // 高年齢者雇用
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/shougaishakoyou/index.html', // 障害者雇用
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/index.html', // 雇用関係助成金
+  'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/index.html', // 年金
 ];
 
 const nenkinSource = SourceConfig(
@@ -258,6 +293,31 @@ class PinnedArticle {
 }
 
 const pinnedArticles = [
+  // 新着一覧に載らず、制度ページにリンクが追加されただけだったため、
+  // 監視（watchedPages）を始める前に追加された分としてここで指定する。
+  // 公表日はリーフレットに「R８．１０」とあるのみで日付が特定できない。
+  PinnedArticle(
+    title: '「シフト制」で働く場合の年次有給休暇について（使用者の方等向けリーフレット）',
+    url: 'https://www.mhlw.go.jp/content/11200000/001756191.pdf',
+    source: mhlwSource,
+    category: NewsCategory.labor,
+    summary:
+        'いわゆる「シフト制」で働く労働者の年次有給休暇について、都道府県労働局・労働基準監督署による使用者向けリーフレット'
+        '（令和8年10月）が公表されました。シフト制労働者にも、雇入れから6か月間継続勤務し全労働日の8割以上出勤すれば'
+        '年次有給休暇を付与する必要があること、所定労働日数を算出しがたい場合の付与日数の算定方法、シフトの調整を理由に'
+        '取得を拒めないこと、取得日の賃金の計算方法を、計算例を交えて解説しています。令和8年6月に改正された'
+        '「シフト制留意事項」の年次有給休暇に関する内容をまとめたものです。',
+    practicalImpact:
+        'シフト制労働者を雇用する顧問先では、労働契約で所定労働日数を定めていなくても年次有給休暇の付与が必要です。'
+        '所定労働日数を算出しがたい場合の算定方法に沿って付与日数を確認し、取得申請の扱いや取得日の賃金計算を見直す必要があります。',
+    importantPoints: [
+      '所定労働日数をあらかじめ定めていないことを理由に、年次有給休暇を付与しない取扱いは認められない',
+      '所定労働日数を算出しがたい場合、雇入れ6か月後は「6か月間の労働日数の実績×2」、1年6か月後以降は「前年の労働日数の実績」を1年間の所定労働日数とみなして付与日数を算出できる（「目安となる労働日数」による算出の方が多い場合はそれによることも可）',
+      '「シフトを調整して働く日を決めたのだから年休は使わせない」「代わりの人がいない」「忙しい」だけでは取得を拒めない（時季変更は事業の正常な運営を妨げる場合に限る）',
+      '取得日の賃金は、就業規則等に基づき「所定労働時間労働した場合に支払われる通常の賃金」（時給×シフト表で確定した所定労働時間等）または「平均賃金」で支払う',
+    ],
+    target: 'シフト制（勤務シフトの作成により労働日・労働時間が確定する働き方）で労働者を雇用する事業主',
+  ),
   PinnedArticle(
     title: '保険料調整制度（随時改定の特例）について',
     url: 'https://www.nenkin.go.jp/tokusetsu/hokenryochosei.html',
