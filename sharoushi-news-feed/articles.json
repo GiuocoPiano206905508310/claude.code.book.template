@@ -799,6 +799,23 @@
     "schemaVersion": 6
   },
   {
+    "id": "https://jsite.mhlw.go.jp/iwate-roudoukyoku/newpage_00850.html",
+    "title": "助成金申請支援をうたう不審な勧誘FAXにご注意ください。",
+    "sourceName": "岩手労働局",
+    "sourceUrl": "https://jsite.mhlw.go.jp/iwate-roudoukyoku/",
+    "canonicalUrl": "https://jsite.mhlw.go.jp/iwate-roudoukyoku/newpage_00850.html",
+    "publishedAt": "2026-10-07T00:00:00.000",
+    "fetchedAt": "2026-10-08T00:42:30.307400",
+    "category": "subsidy",
+    "summary": "厚生労働省から委託を受けたと装って、助成金の活用を勧誘する事業者が存在するとの情報が寄せられています。 厚生労働省や労働局が、特定の事業者に助成金の勧誘を委託することはありません。 これらの事業者は、手数料や報酬などを目的に本来受けることができない助成金について、申請を提案している可能性がありますので十分にご注意ください。",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
     "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/gaikokujin.html",
     "title": "令和8年10月1日より人材確保等支援助成金(外国人労働者就労環境整備助成コース)の支給要領の一部を改正しました。",
     "sourceName": "北海道労働局",
@@ -1105,29 +1122,6 @@
       "厚生労働省や労働局から委託を受けたと装う詐欺的勧誘業者が存在するため注意が必要"
     ],
     "target": "業務改善助成金の申請を検討する中小企業の事業主、及び彼らをサポートする社会保険労務士",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/pageL07_20200515.html",
-    "title": "【雇用を維持する事業主の方へ】雇用調整助成金のご案内",
-    "sourceName": "栃木労働局",
-    "sourceUrl": "https://jsite.mhlw.go.jp/tochigi-roudoukyoku/",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/pageL07_20200515.html",
-    "publishedAt": "2026-08-01T00:00:00.000",
-    "fetchedAt": "2026-10-06T09:56:09.879294",
-    "category": "subsidy",
-    "summary": "栃木労働局が雇用調整助成金の制度概要と受給要件をご案内しています。本助成金は、原材料の入手困難や価格高騰等により事業活動を縮小し休業等を余儀なくされた場合に、要件を満たせば支給対象となります。令和６年４月から制度が変わり、令和６年１月から支給額の算定方法も改められています。受給額は休業実施時の事業主負担休業手当額や教育訓練実施時の経費に基づき算定されます。受給要件の詳細な確認は栃木労働局の相談窓口で対応しており、各種様式は令和８年８月１日に更新されています。",
-    "practicalImpact": "社労士は顧問先企業の事業活動縮小時に本助成金の受給可能性を検討し、受給要件の確認・申請手続きをサポートする必要があります。制度変更（令和６年４月）と算定方法改正（令和６年１月）への対応が求められます。",
-    "importantPoints": [
-      "対象要件：原材料入手困難や価格高騰に伴う事業活動縮小により休業等を実施した場合",
-      "支給額算定：休業実施時は事業主負担休業手当額、教育訓練実施時は訓練経費に基づき算定",
-      "制度変更：令和６年４月から雇用調整助成金の制度が変更（詳細はリーフレット参照）",
-      "支給額算定方法改正：令和６年１月から算定方法を改正（詳細はリーフレット参照）",
-      "相談窓口：受給要件確認等は栃木労働局のお問い合わせ先一覧の相談窓口で対応"
-    ],
-    "target": "事業活動の縮小により休業等を実施する事業主",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 6
