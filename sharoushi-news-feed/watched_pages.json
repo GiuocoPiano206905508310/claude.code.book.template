@@ -122,6 +122,8 @@
       "https://www.mhlw.go.jp/stf/newpage_71937.html",
       "https://www.mhlw.go.jp/stf/newpage_75880.html",
       "https://www.mhlw.go.jp/stf/newpage_76236.html",
+      "https://www.mhlw.go.jp/stf/newpage_76555.html",
+      "https://www.mhlw.go.jp/stf/newpage_76625.html",
       "https://www.mhlw.go.jp/stf/roudoukijyunkantokusyo-chatbot.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000041788.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000053725.html",
@@ -777,5 +779,20 @@
       "https://www.mhlw.go.jp/stf/shingi/shingi-hosho_469789.html"
     ]
   },
-  "discovered": []
+  "discovered": [
+    {
+      "url": "https://www.mhlw.go.jp/stf/newpage_76555.html",
+      "title": "2026年10月9日掲載 令和８年度第９回「石綿に係る疾病の業務上外に関する検討会」を開催します NEW",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/index.html",
+      "publishedAt": "2026-10-09T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://www.mhlw.go.jp/stf/newpage_76625.html",
+      "title": "過労死等防止啓発月間",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/index.html",
+      "publishedAt": "2026-10-09T00:00:00.000",
+      "datedOnPage": false
+    }
+  ]
 }
