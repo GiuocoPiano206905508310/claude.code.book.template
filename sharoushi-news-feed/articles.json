@@ -1,5 +1,22 @@
 [
   {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1009.html",
+    "title": "令和8年分社会保険料（国民年金保険料）控除証明書の発行について",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1009.html",
+    "publishedAt": "2026-10-09T00:00:00.000",
+    "fetchedAt": "2026-10-09T00:57:49.011422",
+    "category": "pension",
+    "summary": "令和8年分社会保険料（国民年金保険料）控除証明書の発行について",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
     "id": "https://www.mhlw.go.jp/stf/newpage_76625.html",
     "title": "11月は「過労死等防止啓発月間」です",
     "sourceName": "厚生労働省",
@@ -78,28 +95,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1002.html",
-    "title": "令和8年10月の年金支払いにかかる年金振込通知書を送付しています",
-    "sourceName": "日本年金機構",
-    "sourceUrl": "https://www.nenkin.go.jp",
-    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1002.html",
-    "publishedAt": "2026-10-02T00:00:00.000",
-    "fetchedAt": "2026-10-06T01:41:08.413598",
-    "category": "pension",
-    "summary": "日本年金機構は、令和8年10月の年金支払いにかかる年金振込通知書を送付していることを案内しています。令和8年10月から介護保険料等の特別徴収額が変更となり、年金の振込額が変更となる受給者に対して通知書を送付しています。年金から特別徴収する保険料（税）額等の変更に関する詳細については、受給者が居住する市区町村への問い合わせが必要です。また、「ねんきんネット」を利用することで、年金振込通知書の内容をいつでも確認でき、PDFファイルでの保存・印刷が可能です。さらに、「ねんきんネット」から再交付申請も可能で、申請後は約1週間で発送される予定です。",
-    "practicalImpact": "社労士の実務への直接的な影響は限定的ですが、顧問先の従業員が年金受給者である場合、介護保険料等の特別徴収額変更に関する相談対応の参考情報となります。年金振込通知書の確認方法や再交付手続きについて、顧問先からの問い合わせに対応する際の基礎知識として活用できます。",
-    "importantPoints": [
-      "令和8年10月から介護保険料等の特別徴収額が変更され、年金振込額が変更となった受給者に年金振込通知書が送付されている",
-      "年金から特別徴収する保険料（税）額等の変更に関する問い合わせは市区町村へ対応する必要がある",
-      "「ねんきんネット」で年金振込通知書の内容確認が令和8年10月9日（金曜）から開始可能",
-      "「ねんきんネット」から再交付申請が可能で、発送までに約1週間要する"
-    ],
-    "target": "年金受給者、市区町村担当者",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.mhlw.go.jp/stf/newpage_76397.html",
     "title": "一般職業紹介状況(令和8年8月分)について",
     "sourceName": "厚生労働省",
@@ -117,6 +112,28 @@
       "新規求人は前年同月比3.4％減、産業別では製造業・情報通信業・サービス業で増加"
     ],
     "target": "労働市場の動向把握を必要とする事業主、人材採用を検討している企業",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1002.html",
+    "title": "令和8年10月の年金支払いにかかる年金振込通知書を送付しています",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1002.html",
+    "publishedAt": "2026-10-02T00:00:00.000",
+    "fetchedAt": "2026-10-06T01:41:08.413598",
+    "category": "pension",
+    "summary": "日本年金機構は、令和8年10月の年金支払いにかかる年金振込通知書を送付していることを案内しています。令和8年10月から介護保険料等の特別徴収額が変更となり、年金の振込額が変更となる受給者に対して通知書を送付しています。年金から特別徴収する保険料（税）額等の変更に関する詳細については、受給者が居住する市区町村への問い合わせが必要です。また、「ねんきんネット」を利用することで、年金振込通知書の内容をいつでも確認でき、PDFファイルでの保存・印刷が可能です。さらに、「ねんきんネット」から再交付申請も可能で、申請後は約1週間で発送される予定です。",
+    "practicalImpact": "社労士の実務への直接的な影響は限定的ですが、顧問先の従業員が年金受給者である場合、介護保険料等の特別徴収額変更に関する相談対応の参考情報となります。年金振込通知書の確認方法や再交付手続きについて、顧問先からの問い合わせに対応する際の基礎知識として活用できます。",
+    "importantPoints": [
+      "令和8年10月から介護保険料等の特別徴収額が変更され、年金振込額が変更となった受給者に年金振込通知書が送付されている",
+      "年金から特別徴収する保険料（税）額等の変更に関する問い合わせは市区町村へ対応する必要がある",
+      "「ねんきんネット」で年金振込通知書の内容確認が令和8年10月9日（金曜）から開始可能",
+      "「ねんきんネット」から再交付申請が可能で、発送までに約1週間要する"
+    ],
+    "target": "年金受給者、市区町村担当者",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 6
@@ -430,28 +447,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
-    "title": "日本国籍を有しない方のフリガナ氏名の取り扱いについて",
-    "sourceName": "日本年金機構",
-    "sourceUrl": "https://www.nenkin.go.jp",
-    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
-    "publishedAt": "2026-09-16T00:00:00.000",
-    "fetchedAt": "2026-10-05T18:07:42.309157",
-    "category": "socialInsurance",
-    "summary": "日本年金機構は2026年10月1日から、日本国籍を有しない方のフリガナ氏名の取り扱いを変更します。これまで資格取得届に記載されたフリガナ氏名が住民基本台帳上の情報と合致しないケースがあり、本人特定が困難でした。改正後は、入国後初めて厚生年金保険に加入する方には「厚生年金保険被保険者ローマ字氏名届」の提出を、転職等で再取得する方にはローマ字氏名が確認できる書類（在留カード、パスポート等）の提出を求めます。ローマ字氏名と住民基本台帳上の情報が合致した場合、資格取得届に記載されたフリガナ氏名を基に資格取得の決定を行います。",
-    "practicalImpact": "社労士は日本国籍を有しない従業員の資格取得届作成時に、新たにローマ字氏名確認書類の提出要件を理解し、顧問先事業主に対して適切な対応をアドバイスする必要があります。個人番号保有有無や入国・転職の状況により手続きが異なるため、実務上の留意が必要です。",
-    "importantPoints": [
-      "2026年10月1日から適用される変更点であり、日本国籍を有しない方の資格取得届・被扶養者異動届が対象",
-      "入国後初めて厚生年金保険に加入する場合（基礎年金番号なし）：「厚生年金保険被保険者ローマ字氏名届」の提出が必須",
-      "転職等で厚生年金保険を再取得する場合：ローマ字氏名が確認できる書類（在留カード、パスポート、個人番号記載なし住民票等）の提出を求められる可能性あり",
-      "本人特定はローマ字氏名と住民基本台帳情報の突合で行い、合致した場合は資格取得届のフリガナ氏名を基に決定される"
-    ],
-    "target": "日本国籍を有しない従業員を雇用する事業主及びその従業員",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.mhlw.go.jp/stf/newpage_76262.html",
     "title": "10月は年次有給休暇取得促進期間です。",
     "sourceName": "厚生労働省",
@@ -488,6 +483,28 @@
     "target": "原文をご確認ください。",
     "importance": 1,
     "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
+    "title": "日本国籍を有しない方のフリガナ氏名の取り扱いについて",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
+    "publishedAt": "2026-09-16T00:00:00.000",
+    "fetchedAt": "2026-10-05T18:07:42.309157",
+    "category": "socialInsurance",
+    "summary": "日本年金機構は2026年10月1日から、日本国籍を有しない方のフリガナ氏名の取り扱いを変更します。これまで資格取得届に記載されたフリガナ氏名が住民基本台帳上の情報と合致しないケースがあり、本人特定が困難でした。改正後は、入国後初めて厚生年金保険に加入する方には「厚生年金保険被保険者ローマ字氏名届」の提出を、転職等で再取得する方にはローマ字氏名が確認できる書類（在留カード、パスポート等）の提出を求めます。ローマ字氏名と住民基本台帳上の情報が合致した場合、資格取得届に記載されたフリガナ氏名を基に資格取得の決定を行います。",
+    "practicalImpact": "社労士は日本国籍を有しない従業員の資格取得届作成時に、新たにローマ字氏名確認書類の提出要件を理解し、顧問先事業主に対して適切な対応をアドバイスする必要があります。個人番号保有有無や入国・転職の状況により手続きが異なるため、実務上の留意が必要です。",
+    "importantPoints": [
+      "2026年10月1日から適用される変更点であり、日本国籍を有しない方の資格取得届・被扶養者異動届が対象",
+      "入国後初めて厚生年金保険に加入する場合（基礎年金番号なし）：「厚生年金保険被保険者ローマ字氏名届」の提出が必須",
+      "転職等で厚生年金保険を再取得する場合：ローマ字氏名が確認できる書類（在留カード、パスポート、個人番号記載なし住民票等）の提出を求められる可能性あり",
+      "本人特定はローマ字氏名と住民基本台帳情報の突合で行い、合致した場合は資格取得届のフリガナ氏名を基に決定される"
+    ],
+    "target": "日本国籍を有しない従業員を雇用する事業主及びその従業員",
+    "importance": 1,
+    "isAiGenerated": true,
     "schemaVersion": 6
   },
   {
@@ -577,6 +594,23 @@
     "schemaVersion": 6
   },
   {
+    "id": "https://www.mhlw.go.jp/stf/newpage_76067.html",
+    "title": "労働者派遣法違反に係る告発について",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76067.html",
+    "publishedAt": "2026-09-10T00:00:00.000",
+    "fetchedAt": "2026-10-06T12:39:50.807510",
+    "category": "lawChange",
+    "summary": "令和８年９月10日（木） 照会先 職業安定局需給調整事業課",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
     "id": "https://www.mhlw.go.jp/stf/newpage_76064.html",
     "title": "製品安全誓約（日本国）の対象に「労働安全衛生法」が加わります",
     "sourceName": "厚生労働省",
@@ -596,23 +630,6 @@
     "target": "労働安全衛生法の規制対象製品を製造・販売・流通させる事業主およびオンラインマーケットプレイス運営事業者",
     "importance": 1,
     "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://www.mhlw.go.jp/stf/newpage_76067.html",
-    "title": "労働者派遣法違反に係る告発について",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76067.html",
-    "publishedAt": "2026-09-10T00:00:00.000",
-    "fetchedAt": "2026-10-06T12:39:50.807510",
-    "category": "lawChange",
-    "summary": "令和８年９月10日（木） 照会先 職業安定局需給調整事業課",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false,
     "schemaVersion": 6
   },
   {
@@ -677,28 +694,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/shienjigyou/index.html",
-    "title": "各都道府県で実施する賃上げ支援策をまとめました",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/shienjigyou/index.html",
-    "publishedAt": "2026-09-03T00:00:00.000",
-    "fetchedAt": "2026-10-05T18:08:57.987132",
-    "category": "labor",
-    "summary": "厚生労働省は最低賃金の引上げに対応する中小企業・小規模事業者向けの支援策を提供しています。主な支援は以下の3つです：①専門家派遣・相談等支援事業で生産性向上や労働条件管理に関するワン・ストップ相談窓口を全国で整備、②業務改善助成金で設備投資などによる事業場内最低賃金の引上げを支援、③働き方改革推進支援助成金（団体推進コース）で業種別団体による賃金底上げを推進しています。これらの支援を通じて、最低賃金引上げによる経営上の負担を軽減し、中小企業の経営改善を促進する施策です。",
-    "practicalImpact": "社労士は顧問先の中小企業に対して、これらの支援制度の活用を提案・支援できます。特に業務改善助成金の申請要件や手続き、専門家派遣による生産性向上施策の相談窓口紹介など、実務的なアドバイスが求められます。",
-    "importantPoints": [
-      "専門家派遣・相談等支援事業：中小企業庁と連携したワン・ストップ相談窓口で労働条件管理や経営改善のご相談に対応",
-      "業務改善助成金：設備投資などにより事業場内最低賃金を一定額以上引き上げた中小企業・小規模事業者に経費の一部を助成",
-      "働き方改革推進支援助成金（団体推進コース）：業種別団体による賃金底上げの取組を支援",
-      "令和７年７月に各都道府県の賃金引上げ支援施策について更新済みであり、地域別の詳細情報の確認が可能"
-    ],
-    "target": "最低賃金引上げにより影響を受ける中小企業・小規模事業者",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.mhlw.go.jp/stf/newpage_75804.html",
     "title": "労働者派遣法及び職業安定法違反に係る告発について",
     "sourceName": "厚生労働省",
@@ -716,6 +711,28 @@
       "派遣事業運営時の法令遵守の重要性を示唆"
     ],
     "target": "派遣労働を利用・運営する事業主、派遣事業者、派遣労働者",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/shienjigyou/index.html",
+    "title": "各都道府県で実施する賃上げ支援策をまとめました",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/shienjigyou/index.html",
+    "publishedAt": "2026-09-03T00:00:00.000",
+    "fetchedAt": "2026-10-05T18:08:57.987132",
+    "category": "labor",
+    "summary": "厚生労働省は最低賃金の引上げに対応する中小企業・小規模事業者向けの支援策を提供しています。主な支援は以下の3つです：①専門家派遣・相談等支援事業で生産性向上や労働条件管理に関するワン・ストップ相談窓口を全国で整備、②業務改善助成金で設備投資などによる事業場内最低賃金の引上げを支援、③働き方改革推進支援助成金（団体推進コース）で業種別団体による賃金底上げを推進しています。これらの支援を通じて、最低賃金引上げによる経営上の負担を軽減し、中小企業の経営改善を促進する施策です。",
+    "practicalImpact": "社労士は顧問先の中小企業に対して、これらの支援制度の活用を提案・支援できます。特に業務改善助成金の申請要件や手続き、専門家派遣による生産性向上施策の相談窓口紹介など、実務的なアドバイスが求められます。",
+    "importantPoints": [
+      "専門家派遣・相談等支援事業：中小企業庁と連携したワン・ストップ相談窓口で労働条件管理や経営改善のご相談に対応",
+      "業務改善助成金：設備投資などにより事業場内最低賃金を一定額以上引き上げた中小企業・小規模事業者に経費の一部を助成",
+      "働き方改革推進支援助成金（団体推進コース）：業種別団体による賃金底上げの取組を支援",
+      "令和７年７月に各都道府県の賃金引上げ支援施策について更新済みであり、地域別の詳細情報の確認が可能"
+    ],
+    "target": "最低賃金引上げにより影響を受ける中小企業・小規模事業者",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 6
@@ -757,23 +774,6 @@
     "target": "基礎年金受給者で新たに年金生活者支援給付金を受け取ることができる者",
     "importance": 1,
     "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202608/0831.html",
-    "title": "「障害年金の認定状況について」ページを更新しました",
-    "sourceName": "日本年金機構",
-    "sourceUrl": "https://www.nenkin.go.jp",
-    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202608/0831.html",
-    "publishedAt": "2026-08-31T00:00:00.000",
-    "fetchedAt": "2026-10-08T10:11:58.692724",
-    "category": "pension",
-    "summary": "不支給等事案にかかる点検作業の進捗状況について、点検状況の速報値を更新しましたのでお知らせいたします。詳細は以下のページをご覧ください。",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false,
     "schemaVersion": 6
   },
   {
