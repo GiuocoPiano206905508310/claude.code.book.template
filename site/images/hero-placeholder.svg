@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" role="img" aria-label="写真(仮)">
+  <rect width="640" height="480" fill="#f4fafa"/>
+  <rect x="6" y="6" width="628" height="468" rx="8" fill="none" stroke="#7fc4c6" stroke-width="3" stroke-dasharray="12 8"/>
+  <g fill="none" stroke="#0b6e72" stroke-width="3" stroke-linejoin="round" transform="translate(290 184)">
+    <rect x="0" y="8" width="60" height="44" rx="6"/>
+    <circle cx="30" cy="30" r="12"/>
+    <path d="M18 8l5-8h14l5 8"/>
+  </g>
+  <text x="50%" y="272" text-anchor="middle" font-family="'Noto Sans JP', sans-serif" font-size="24" font-weight="700" fill="#1d3a3d">写真(仮)</text>
+  <text x="50%" y="302" text-anchor="middle" font-family="'Noto Sans JP', sans-serif" font-size="15" fill="#1d3a3d">メイン写真またはイラスト</text>
+</svg>
