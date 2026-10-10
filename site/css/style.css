@@ -7,7 +7,7 @@
    ================================================================== */
 :root {
   --color-primary: #0b6e72;       /* ボタン、リンク、見出しのアクセント */
-  --color-primary-dark: #08464a;  /* 見出し、お問い合わせ背景 */
+  --color-primary-dark: #08464a;  /* 見出し、お問合せ背景 */
   --color-primary-light: #7fc4c6; /* 番号、点線枠などの装飾 */
   --color-bg-tint: #eaf6f6;       /* ヒーロー背景 */
   --color-bg-soft: #f4fafa;       /* 交互セクションの背景 */
@@ -15,6 +15,9 @@
   --color-text: #1d3a3d;          /* 本文 */
   --color-white: #ffffff;         /* 背景、ボタン文字 */
   --color-gray: #7a8789;          /* 未選択の選択ボタン(回答方法など) */
+  --color-attention: #f2b950;     /* 入力漏れの目印(お問合せフォーム) */
+  --color-sunday: #b3261e;        /* 予約カレンダーの「日」 */
+  --color-saturday: #1f5fa8;      /* 予約カレンダーの「土」 */
 
   --font-base: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
   --font-size-base: 1rem;         /* 16px */
@@ -630,7 +633,7 @@ a:hover { color: var(--color-primary-dark); }
 }
 .faq-answer p { padding-top: 2px; }
 
-/* ---------- お問い合わせ ---------- */
+/* ---------- お問合せ／初回無料相談 ---------- */
 .section-contact {
   background: var(--color-primary-dark);
   color: var(--color-white);
@@ -703,7 +706,8 @@ a:hover { color: var(--color-primary-dark); }
   gap: 12px;
 }
 
-.choice {
+.form-row .choice {
+  margin: 0;
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -759,10 +763,10 @@ a:hover { color: var(--color-primary-dark); }
 }
 
 @media (max-width: 479px) {
-  .choice { flex: 1 1 0; min-width: 0; }
+  .form-row .choice { flex: 1 1 0; min-width: 0; }
 }
 
-.form-row input:not([type="radio"]),
+.form-row input:not([type="radio"]):not([type="hidden"]),
 .form-row textarea {
   display: block;
   width: 100%;
@@ -804,6 +808,287 @@ a:hover { color: var(--color-primary-dark); }
 .form-message.is-visible {
   padding: 12px 16px;
   border-radius: var(--radius);
+  background: var(--color-white);
+  color: var(--color-primary-dark);
+}
+
+
+/* 「お問合せ」「初回無料相談」の切り替えボタン */
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 480px;
+  margin: 0 auto 20px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, .45);
+  border-radius: 999px;
+}
+
+.mode-button {
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-white);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color .2s, color .2s;
+}
+.mode-button:hover { background: rgba(255, 255, 255, .12); }
+.mode-button[aria-pressed="true"] {
+  background: var(--color-white);
+  color: var(--color-primary-dark);
+}
+
+.mode-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.form-help {
+  margin: -2px 0 12px;
+  font-size: 0.875rem;
+}
+
+/* ご予約希望日時 */
+.slot-list {
+  display: grid;
+  gap: 14px;
+}
+
+.slot-label {
+  margin: 0 0 4px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.slot-head {
+  display: flex;
+  gap: 8px;
+}
+
+.slot-toggle {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 14px 10px 44px;
+  border: 2px solid var(--color-gray);
+  border-radius: var(--radius);
+  background: var(--color-white) no-repeat 14px center / 20px 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3.5' y='5' width='17' height='15' rx='2' fill='none' stroke='%230b6e72' stroke-width='1.8'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4' stroke='%230b6e72' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.slot-toggle:hover { border-color: var(--color-primary); }
+.slot-toggle[aria-expanded="true"] { border-color: var(--color-primary-light); }
+.slot-toggle.is-filled {
+  border-color: var(--color-primary-light);
+  background-color: var(--color-bg-tint);
+  color: var(--color-primary-dark);
+  font-weight: 700;
+}
+.slot.is-error .slot-toggle {
+  border-color: var(--color-attention);
+  box-shadow: 0 0 0 2px var(--color-attention);
+}
+
+.slot-clear {
+  flex-shrink: 0;
+  min-width: 64px;
+  min-height: 48px;
+  border: 1px solid rgba(255, 255, 255, .6);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-white);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.slot-clear:hover { background: rgba(255, 255, 255, .12); }
+
+.slot-panel {
+  display: grid;
+  gap: 16px;
+  margin-top: 8px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--color-white);
+  color: var(--color-text);
+}
+.slot-panel[hidden] { display: none; }
+
+@media (min-width: 600px) {
+  .slot-panel { grid-template-columns: 1fr 176px; padding: 18px; }
+}
+
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.cal-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-white);
+  color: var(--color-primary);
+  cursor: pointer;
+}
+.cal-nav svg { width: 20px; height: 20px; }
+.cal-nav:hover:not(:disabled) { background: var(--color-bg-tint); }
+.cal-nav:disabled { color: var(--color-border); cursor: default; }
+
+.cal-week,
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+
+.cal-week {
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.cal-week span:first-child { color: var(--color-sunday); }
+.cal-week span:last-child { color: var(--color-saturday); }
+
+.cal-day {
+  min-width: 0;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.cal-day:hover:not(:disabled) { background: var(--color-bg-tint); }
+.cal-day:disabled {
+  color: var(--color-gray);
+  opacity: .5;
+  cursor: default;
+}
+.cal-day.is-selected,
+.cal-day.is-selected:hover {
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-weight: 700;
+}
+
+.times-title {
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+/* 時間帯は上下にスクロールして選ぶ */
+.times-list {
+  display: grid;
+  gap: 6px;
+  max-height: 248px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-soft);
+}
+@media (min-width: 600px) {
+  .times-list { max-height: 300px; }
+}
+
+.time-option {
+  min-height: 44px;
+  padding: 8px;
+  border: 2px solid var(--color-gray);
+  border-radius: 6px;
+  background: var(--color-white);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.time-option:hover:not(:disabled) { border-color: var(--color-primary); }
+.time-option.is-selected,
+.time-option.is-selected:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-weight: 700;
+}
+.times-list.is-waiting .time-option {
+  opacity: .5;
+  cursor: default;
+}
+.times-hint {
+  margin: 0 0 6px;
+  font-size: 0.8125rem;
+}
+
+.slot-panel :focus-visible { outline-color: var(--color-primary); }
+
+/* ご面会方法(選択肢を縦に並べる) */
+.choice-list-stack {
+  flex-direction: column;
+}
+.choice-list-stack .choice {
+  width: 100%;
+  flex: none;
+}
+.choice-text small {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* 訪問先住所 */
+.visit-address {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px dashed rgba(255, 255, 255, .5);
+  border-radius: var(--radius);
+}
+.visit-address[hidden] { display: none; }
+
+.visit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-small {
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 1px solid var(--color-white);
+  background: transparent;
+  color: var(--color-white);
+  font-size: 0.9375rem;
+}
+.btn-small:hover {
   background: var(--color-white);
   color: var(--color-primary-dark);
 }
