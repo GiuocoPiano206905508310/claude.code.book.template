@@ -232,8 +232,8 @@ a:hover { color: var(--color-primary-dark); }
 }
 .nav-list a:not(.btn):hover { color: var(--color-primary); }
 
-/* スマホ:折りたたみメニュー */
-@media (max-width: 899px) {
+/* スマホ・タブレット:折りたたみメニュー(メニュー項目が横一列に収まらない幅) */
+@media (max-width: 1099px) {
   .global-nav {
     position: absolute;
     top: 100%;
@@ -256,13 +256,14 @@ a:hover { color: var(--color-primary-dark); }
 .no-js .global-nav { position: static; display: block; box-shadow: none; border: 0; }
 
 /* PC:横並びメニュー */
-@media (min-width: 900px) {
+@media (min-width: 1100px) {
   .menu-toggle { display: none; }
   .nav-list {
     display: flex;
     align-items: center;
-    gap: 28px;
+    gap: 24px;
   }
+  .nav-list a { white-space: nowrap; }
 }
 
 /* ---------- セクション共通 ---------- */
