@@ -14,6 +14,7 @@
   --color-border: #d6e8e8;        /* 罫線、カードの枠 */
   --color-text: #1d3a3d;          /* 本文 */
   --color-white: #ffffff;         /* 背景、ボタン文字 */
+  --color-gray: #7a8789;          /* 未選択の選択ボタン(回答方法など) */
 
   --font-base: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
   --font-size-base: 1rem;         /* 16px */
@@ -670,7 +671,98 @@ a:hover { color: var(--color-primary-dark); }
   line-height: 1.7;
 }
 
-.form-row input,
+.optional {
+  padding: 0 8px;
+  border: 1px solid var(--color-white);
+  border-radius: 4px;
+  color: var(--color-white);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+/* 回答方法の選択ボタン(未選択はグレー、選ぶとターコイズ) */
+.form-choice {
+  margin-inline: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.form-choice legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 0;
+  font-weight: 700;
+}
+
+.choice-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.choice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 140px;
+  min-height: 48px;
+  padding: 10px 20px 10px 14px;
+  border: 2px solid var(--color-gray);
+  border-radius: var(--radius);
+  background: var(--color-white);
+  color: var(--color-text);
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .2s, background-color .2s;
+}
+
+/* 本物のラジオボタンは見えなくして、キーボード操作・必須チェックだけに使う */
+.choice input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.choice-mark {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--color-gray);
+  border-radius: 50%;
+  background: var(--color-white);
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.choice:hover { border-color: var(--color-primary); }
+
+.choice:has(input:checked) {
+  border-color: var(--color-primary-light);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+  background: var(--color-bg-tint);
+  color: var(--color-primary-dark);
+}
+.choice input:checked + .choice-mark {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  box-shadow: inset 0 0 0 4px var(--color-white);
+}
+
+.choice input:focus-visible + .choice-mark {
+  outline: 3px solid var(--color-primary-light);
+  outline-offset: 3px;
+}
+
+@media (max-width: 479px) {
+  .choice { flex: 1 1 0; min-width: 0; }
+}
+
+.form-row input:not([type="radio"]),
 .form-row textarea {
   display: block;
   width: 100%;

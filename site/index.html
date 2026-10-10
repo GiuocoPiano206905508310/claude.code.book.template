@@ -284,18 +284,48 @@
              ・あわせて js/main.js の「お問い合わせフォーム(準備中)」の部分を削除します。
              ・現在は送信ボタンを押しても何も送られず、「現在は準備中です」と表示されるだけです。 -->
         <form class="contact-form" action="#" method="post" data-form-status="preparing">
+          <!-- 項目を増やすときは <div class="form-row"> 〜 </div> を1つコピーし、id・for・name を別の名前にします。
+               必須にしない項目は required を消し、「必須」を <span class="optional">任意</span> にします。 -->
+          <div class="form-row">
+            <label for="contact-company">会社名<span class="required">必須</span></label>
+            <input id="contact-company" name="company" type="text" autocomplete="organization" required>
+          </div>
           <div class="form-row">
             <label for="contact-name">お名前<span class="required">必須</span></label>
             <input id="contact-name" name="name" type="text" autocomplete="name" required>
+          </div>
+          <div class="form-row">
+            <label for="contact-tel">電話番号<span class="required">必須</span></label>
+            <input id="contact-tel" name="tel" type="tel" autocomplete="tel" inputmode="tel" required>
           </div>
           <div class="form-row">
             <label for="contact-email">メールアドレス<span class="required">必須</span></label>
             <input id="contact-email" name="email" type="email" autocomplete="email" inputmode="email" required>
           </div>
           <div class="form-row">
-            <label for="contact-message">ご相談内容<span class="required">必須</span></label>
+            <label for="contact-address">ご住所<span class="optional">任意</span></label>
+            <input id="contact-address" name="address" type="text" autocomplete="street-address">
+          </div>
+          <div class="form-row">
+            <label for="contact-message">お問い合わせ内容<span class="required">必須</span></label>
             <textarea id="contact-message" name="message" rows="6" required></textarea>
           </div>
+          <fieldset class="form-row form-choice">
+            <legend>回答方法<span class="required">必須</span></legend>
+            <!-- 選択肢を増やすときは <label class="choice"> 〜 </label> を1つコピーし、value と文字を書き換えます -->
+            <div class="choice-list">
+              <label class="choice">
+                <input type="radio" name="reply_method" value="電話" required>
+                <span class="choice-mark" aria-hidden="true"></span>
+                <span class="choice-text">電話</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="reply_method" value="メール">
+                <span class="choice-mark" aria-hidden="true"></span>
+                <span class="choice-text">メール</span>
+              </label>
+            </div>
+          </fieldset>
 
           <!-- 【後で追加】プライバシーポリシーのページを作ったら、ここに同意文とリンクを入れます。
                例:<p class="form-privacy"><a href="privacy.html">プライバシーポリシー</a>に同意のうえ送信してください。</p> -->
