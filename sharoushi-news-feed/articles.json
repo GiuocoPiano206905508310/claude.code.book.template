@@ -1,5 +1,22 @@
 [
   {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1013.html",
+    "title": "街角の年金相談センター草加（埼玉県草加市）の10月20日の閉所について",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1013.html",
+    "publishedAt": "2026-10-13T00:00:00.000",
+    "fetchedAt": "2026-10-13T02:22:50.369669",
+    "category": "socialInsurance",
+    "summary": "令和8年10月20日（火曜）、街角の年金相談センター草加（埼玉県草加市）については、入居施設が停電となるため、8時30分から14時までの間、閉所いたします。ご不便をおかけしますがご理解の程、お願い申し上げます。なお、お急ぎの場合はお近くの年金事務所をご利用いただくようにお願いいたします。",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1009.html",
     "title": "令和8年分社会保険料（国民年金保険料）控除証明書の発行について",
     "sourceName": "日本年金機構",
@@ -95,28 +112,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/newpage_76397.html",
-    "title": "一般職業紹介状況(令和8年8月分)について",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76397.html",
-    "publishedAt": "2026-10-02T00:00:00.000",
-    "fetchedAt": "2026-10-05T18:05:16.915245",
-    "category": "employmentInsurance",
-    "summary": "厚生労働省が令和8年8月の一般職業紹介状況を公表しました。有効求人倍率（季節調整値）は1.18倍で前月と同水準、新規求人倍率（季節調整値）は2.06倍で前月比0.04ポイント低下しています。正社員有効求人倍率は1.00倍で前月と同水準です。有効求人・有効求職者ともに前月比0.7％増となり、新規求人は前年同月比3.4％減となっています。産業別では製造業、情報通信業、サービス業で増加が見られています。",
-    "practicalImpact": "本統計は労働市場の動向を示す重要な指標であり、採用計画の策定やクライアント企業の人材採用戦略の助言の際の参考資料となります。雇用情勢の総体的な把握に役立つ情報です。",
-    "importantPoints": [
-      "有効求人倍率は1.18倍で前月と同水準を維持",
-      "新規求人倍率は2.06倍で前月比0.04ポイント低下",
-      "正社員有効求人倍率は1.00倍で前月と同水準",
-      "新規求人は前年同月比3.4％減、産業別では製造業・情報通信業・サービス業で増加"
-    ],
-    "target": "労働市場の動向把握を必要とする事業主、人材採用を検討している企業",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1002.html",
     "title": "令和8年10月の年金支払いにかかる年金振込通知書を送付しています",
     "sourceName": "日本年金機構",
@@ -134,6 +129,28 @@
       "「ねんきんネット」から再交付申請が可能で、発送までに約1週間要する"
     ],
     "target": "年金受給者、市区町村担当者",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.mhlw.go.jp/stf/newpage_76397.html",
+    "title": "一般職業紹介状況(令和8年8月分)について",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76397.html",
+    "publishedAt": "2026-10-02T00:00:00.000",
+    "fetchedAt": "2026-10-05T18:05:16.915245",
+    "category": "employmentInsurance",
+    "summary": "厚生労働省が令和8年8月の一般職業紹介状況を公表しました。有効求人倍率（季節調整値）は1.18倍で前月と同水準、新規求人倍率（季節調整値）は2.06倍で前月比0.04ポイント低下しています。正社員有効求人倍率は1.00倍で前月と同水準です。有効求人・有効求職者ともに前月比0.7％増となり、新規求人は前年同月比3.4％減となっています。産業別では製造業、情報通信業、サービス業で増加が見られています。",
+    "practicalImpact": "本統計は労働市場の動向を示す重要な指標であり、採用計画の策定やクライアント企業の人材採用戦略の助言の際の参考資料となります。雇用情勢の総体的な把握に役立つ情報です。",
+    "importantPoints": [
+      "有効求人倍率は1.18倍で前月と同水準を維持",
+      "新規求人倍率は2.06倍で前月比0.04ポイント低下",
+      "正社員有効求人倍率は1.00倍で前月と同水準",
+      "新規求人は前年同月比3.4％減、産業別では製造業・情報通信業・サービス業で増加"
+    ],
+    "target": "労働市場の動向把握を必要とする事業主、人材採用を検討している企業",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 6
@@ -190,23 +207,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/36163_00001.html",
-    "title": "地域ブロック別の職種別平均手数料及び離職率について",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/36163_00001.html",
-    "publishedAt": "2026-09-30T00:00:00.000",
-    "fetchedAt": "2026-10-06T12:39:32.215466",
-    "category": "employmentInsurance",
-    "summary": "厚生労働省職業安定局需給調整事業課職業紹介事業係 TEL：03-5253-1111（内線5746）",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0930.html",
     "title": "「障害年金の認定状況について」ページを更新しました",
     "sourceName": "日本年金機構",
@@ -226,6 +226,23 @@
     "target": "障害年金の申請・受給者、障害年金請求を支援する社労士",
     "importance": 1,
     "isAiGenerated": true,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/36163_00001.html",
+    "title": "地域ブロック別の職種別平均手数料及び離職率について",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/36163_00001.html",
+    "publishedAt": "2026-09-30T00:00:00.000",
+    "fetchedAt": "2026-10-06T12:39:32.215466",
+    "category": "employmentInsurance",
+    "summary": "厚生労働省職業安定局需給調整事業課職業紹介事業係 TEL：03-5253-1111（内線5746）",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
     "schemaVersion": 6
   },
   {
@@ -324,23 +341,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00014.html",
-    "title": "労災保険あん摩マッサージ指圧師、はり師及びきゅう師施術料金算定基準について（令和８年度）",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00014.html",
-    "publishedAt": "2026-09-18T00:00:00.000",
-    "fetchedAt": "2026-10-06T12:39:42.833454",
-    "category": "lawChange",
-    "summary": "労災保険あん摩マッサージ指圧師、はり師及びきゅう師施術料金算定基準（令和８年度）について紹介しています。",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00013.html",
     "title": "労災保険柔道整復師施術料金算定基準について（令和８年度）",
     "sourceName": "厚生労働省",
@@ -363,6 +363,45 @@
     "schemaVersion": 6
   },
   {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0918.html",
+    "title": "マイナポータルの計画停止に伴う「ねんきんネット」の一部機能制限のお知らせ",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0918.html",
+    "publishedAt": "2026-09-18T00:00:00.000",
+    "fetchedAt": "2026-10-05T18:06:59.466277",
+    "category": "socialInsurance",
+    "summary": "日本年金機構は、マイナポータルの計画停止に伴い、2026年9月20日（日曜）午前0時00分～午前3時30分の間、ねんきんネットの電子申請機能が一時的に利用できなくなることを通知しました。対象となる機能は、国民年金保険料口座振替納付（変更）申出書、年金請求書（老齢給付）、年金生活者支援給付金請求書、年金受取機関変更届、国民年金被保険者の資格取得届、付加保険料納付申出、免除・納付猶予申請、学生納付特例申請、産前産後免除該当届など複数の重要な届出・申請手続きです。メンテナンス期間中は、これらの電子申請が不可となるため、利用者は窓口申請等の代替手段を利用する必要があります。",
+    "practicalImpact": "社労士が年金関連手続きをオンラインで処理する場合、この時間帯は電子申請機能が利用できません。顧問先からの依頼がある場合は、メンテナンス期間を避けた手続きスケジュールの調整やあらかじめの準備が必要です。",
+    "importantPoints": [
+      "メンテナンス期間：2026年9月20日（日）午前0時00分～午前3時30分（予定）",
+      "利用不可となる電子申請機能：国民年金保険料口座振替納付（変更）申出書、年金請求書（老齢給付）、年金生活者支援給付金請求書、年金受取機関変更届、資格取得（種別変更）届、付加保険料納付（辞退）申出、免除・納付猶予申請、学生納付特例申請、産前産後免除該当届の計9種類",
+      "時間変更・延長の可能性があるため、マイナポータルTOPページで最新情報を確認する必要がある",
+      "メンテナンス期間中は窓口申請などの代替手段を利用する必要がある"
+    ],
+    "target": "ねんきんネットの電子申請機能を利用する個人（被保険者・年金受給者）および関連手続きを代行する社労士",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00014.html",
+    "title": "労災保険あん摩マッサージ指圧師、はり師及びきゅう師施術料金算定基準について（令和８年度）",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00014.html",
+    "publishedAt": "2026-09-18T00:00:00.000",
+    "fetchedAt": "2026-10-06T12:39:42.833454",
+    "category": "lawChange",
+    "summary": "労災保険あん摩マッサージ指圧師、はり師及びきゅう師施術料金算定基準（令和８年度）について紹介しています。",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
     "id": "https://www.mhlw.go.jp/stf/newpage_76152.html",
     "title": "毎年10月は中小企業退職金共済制度の「加入促進強化月間」です",
     "sourceName": "厚生労働省",
@@ -381,28 +420,6 @@
       "10月の加入促進強化月間中は個別相談・説明会が実施される"
     ],
     "target": "退職金制度を単独で備えることが難しい中小企業（従業員300人以下等）",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0918.html",
-    "title": "マイナポータルの計画停止に伴う「ねんきんネット」の一部機能制限のお知らせ",
-    "sourceName": "日本年金機構",
-    "sourceUrl": "https://www.nenkin.go.jp",
-    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0918.html",
-    "publishedAt": "2026-09-18T00:00:00.000",
-    "fetchedAt": "2026-10-05T18:06:59.466277",
-    "category": "socialInsurance",
-    "summary": "日本年金機構は、マイナポータルの計画停止に伴い、2026年9月20日（日曜）午前0時00分～午前3時30分の間、ねんきんネットの電子申請機能が一時的に利用できなくなることを通知しました。対象となる機能は、国民年金保険料口座振替納付（変更）申出書、年金請求書（老齢給付）、年金生活者支援給付金請求書、年金受取機関変更届、国民年金被保険者の資格取得届、付加保険料納付申出、免除・納付猶予申請、学生納付特例申請、産前産後免除該当届など複数の重要な届出・申請手続きです。メンテナンス期間中は、これらの電子申請が不可となるため、利用者は窓口申請等の代替手段を利用する必要があります。",
-    "practicalImpact": "社労士が年金関連手続きをオンラインで処理する場合、この時間帯は電子申請機能が利用できません。顧問先からの依頼がある場合は、メンテナンス期間を避けた手続きスケジュールの調整やあらかじめの準備が必要です。",
-    "importantPoints": [
-      "メンテナンス期間：2026年9月20日（日）午前0時00分～午前3時30分（予定）",
-      "利用不可となる電子申請機能：国民年金保険料口座振替納付（変更）申出書、年金請求書（老齢給付）、年金生活者支援給付金請求書、年金受取機関変更届、資格取得（種別変更）届、付加保険料納付（辞退）申出、免除・納付猶予申請、学生納付特例申請、産前産後免除該当届の計9種類",
-      "時間変更・延長の可能性があるため、マイナポータルTOPページで最新情報を確認する必要がある",
-      "メンテナンス期間中は窓口申請などの代替手段を利用する必要がある"
-    ],
-    "target": "ねんきんネットの電子申請機能を利用する個人（被保険者・年金受給者）および関連手続きを代行する社労士",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 6
@@ -447,6 +464,28 @@
     "schemaVersion": 6
   },
   {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
+    "title": "日本国籍を有しない方のフリガナ氏名の取り扱いについて",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
+    "publishedAt": "2026-09-16T00:00:00.000",
+    "fetchedAt": "2026-10-05T18:07:42.309157",
+    "category": "socialInsurance",
+    "summary": "日本年金機構は2026年10月1日から、日本国籍を有しない方のフリガナ氏名の取り扱いを変更します。これまで資格取得届に記載されたフリガナ氏名が住民基本台帳上の情報と合致しないケースがあり、本人特定が困難でした。改正後は、入国後初めて厚生年金保険に加入する方には「厚生年金保険被保険者ローマ字氏名届」の提出を、転職等で再取得する方にはローマ字氏名が確認できる書類（在留カード、パスポート等）の提出を求めます。ローマ字氏名と住民基本台帳上の情報が合致した場合、資格取得届に記載されたフリガナ氏名を基に資格取得の決定を行います。",
+    "practicalImpact": "社労士は日本国籍を有しない従業員の資格取得届作成時に、新たにローマ字氏名確認書類の提出要件を理解し、顧問先事業主に対して適切な対応をアドバイスする必要があります。個人番号保有有無や入国・転職の状況により手続きが異なるため、実務上の留意が必要です。",
+    "importantPoints": [
+      "2026年10月1日から適用される変更点であり、日本国籍を有しない方の資格取得届・被扶養者異動届が対象",
+      "入国後初めて厚生年金保険に加入する場合（基礎年金番号なし）：「厚生年金保険被保険者ローマ字氏名届」の提出が必須",
+      "転職等で厚生年金保険を再取得する場合：ローマ字氏名が確認できる書類（在留カード、パスポート、個人番号記載なし住民票等）の提出を求められる可能性あり",
+      "本人特定はローマ字氏名と住民基本台帳情報の突合で行い、合致した場合は資格取得届のフリガナ氏名を基に決定される"
+    ],
+    "target": "日本国籍を有しない従業員を雇用する事業主及びその従業員",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 6
+  },
+  {
     "id": "https://www.mhlw.go.jp/stf/newpage_76262.html",
     "title": "10月は年次有給休暇取得促進期間です。",
     "sourceName": "厚生労働省",
@@ -483,28 +522,6 @@
     "target": "原文をご確認ください。",
     "importance": 1,
     "isAiGenerated": false,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
-    "title": "日本国籍を有しない方のフリガナ氏名の取り扱いについて",
-    "sourceName": "日本年金機構",
-    "sourceUrl": "https://www.nenkin.go.jp",
-    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
-    "publishedAt": "2026-09-16T00:00:00.000",
-    "fetchedAt": "2026-10-05T18:07:42.309157",
-    "category": "socialInsurance",
-    "summary": "日本年金機構は2026年10月1日から、日本国籍を有しない方のフリガナ氏名の取り扱いを変更します。これまで資格取得届に記載されたフリガナ氏名が住民基本台帳上の情報と合致しないケースがあり、本人特定が困難でした。改正後は、入国後初めて厚生年金保険に加入する方には「厚生年金保険被保険者ローマ字氏名届」の提出を、転職等で再取得する方にはローマ字氏名が確認できる書類（在留カード、パスポート等）の提出を求めます。ローマ字氏名と住民基本台帳上の情報が合致した場合、資格取得届に記載されたフリガナ氏名を基に資格取得の決定を行います。",
-    "practicalImpact": "社労士は日本国籍を有しない従業員の資格取得届作成時に、新たにローマ字氏名確認書類の提出要件を理解し、顧問先事業主に対して適切な対応をアドバイスする必要があります。個人番号保有有無や入国・転職の状況により手続きが異なるため、実務上の留意が必要です。",
-    "importantPoints": [
-      "2026年10月1日から適用される変更点であり、日本国籍を有しない方の資格取得届・被扶養者異動届が対象",
-      "入国後初めて厚生年金保険に加入する場合（基礎年金番号なし）：「厚生年金保険被保険者ローマ字氏名届」の提出が必須",
-      "転職等で厚生年金保険を再取得する場合：ローマ字氏名が確認できる書類（在留カード、パスポート、個人番号記載なし住民票等）の提出を求められる可能性あり",
-      "本人特定はローマ字氏名と住民基本台帳情報の突合で行い、合致した場合は資格取得届のフリガナ氏名を基に決定される"
-    ],
-    "target": "日本国籍を有しない従業員を雇用する事業主及びその従業員",
-    "importance": 1,
-    "isAiGenerated": true,
     "schemaVersion": 6
   },
   {
@@ -594,23 +611,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/newpage_76067.html",
-    "title": "労働者派遣法違反に係る告発について",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76067.html",
-    "publishedAt": "2026-09-10T00:00:00.000",
-    "fetchedAt": "2026-10-06T12:39:50.807510",
-    "category": "lawChange",
-    "summary": "令和８年９月10日（木） 照会先 職業安定局需給調整事業課",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.mhlw.go.jp/stf/newpage_76064.html",
     "title": "製品安全誓約（日本国）の対象に「労働安全衛生法」が加わります",
     "sourceName": "厚生労働省",
@@ -630,6 +630,23 @@
     "target": "労働安全衛生法の規制対象製品を製造・販売・流通させる事業主およびオンラインマーケットプレイス運営事業者",
     "importance": 1,
     "isAiGenerated": true,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.mhlw.go.jp/stf/newpage_76067.html",
+    "title": "労働者派遣法違反に係る告発について",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76067.html",
+    "publishedAt": "2026-09-10T00:00:00.000",
+    "fetchedAt": "2026-10-06T12:39:50.807510",
+    "category": "lawChange",
+    "summary": "令和８年９月10日（木） 照会先 職業安定局需給調整事業課",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
     "schemaVersion": 6
   },
   {
@@ -672,28 +689,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/newpage_75950.html",
-    "title": "全ての都道府県で地域別最低賃金の答申がなされました",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_75950.html",
-    "publishedAt": "2026-09-03T00:00:00.000",
-    "fetchedAt": "2026-10-05T18:09:06.359933",
-    "category": "salaryCalculation",
-    "summary": "厚生労働省は令和8年度の地域別最低賃金の改定額が全都道府県で答申されたことを公表しました。全国加重平均額は昨年度から56円引き上げられ1,177円となります。改定額は中央最低賃金審議会の目安を参考に各地方最低賃金審議会で調査・審議された結果です。今後、都道府県労働局での関係労使からの異議申出手続を経た上で、都道府県労働局長の決定により令和8年10月1日から12月2日までの間に順次発効される予定です。",
-    "practicalImpact": "社労士は顧問先企業の最低賃金要件の確認と給与計算の見直しが必要になります。発効予定日までに各地域の改定額を確認し、給与体系が最低賃金を下回らないよう対応することが重要です。",
-    "importantPoints": [
-      "全国加重平均額は1,177円（昨年度比56円引上げ）",
-      "改定額の発効時期は令和8年10月1日から12月2日までの間で都道府県ごとに異なる",
-      "異議申出手続を経た上で都道府県労働局長が決定し発効される",
-      "各都道府県の具体的な決定金額は都道府県労働局賃金課・室に問い合わせが必要"
-    ],
-    "target": "全事業主（特に最低賃金に近い水準で従業員を雇用している企業）",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.mhlw.go.jp/stf/newpage_75804.html",
     "title": "労働者派遣法及び職業安定法違反に係る告発について",
     "sourceName": "厚生労働省",
@@ -711,6 +706,28 @@
       "派遣事業運営時の法令遵守の重要性を示唆"
     ],
     "target": "派遣労働を利用・運営する事業主、派遣事業者、派遣労働者",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.mhlw.go.jp/stf/newpage_75950.html",
+    "title": "全ての都道府県で地域別最低賃金の答申がなされました",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_75950.html",
+    "publishedAt": "2026-09-03T00:00:00.000",
+    "fetchedAt": "2026-10-05T18:09:06.359933",
+    "category": "salaryCalculation",
+    "summary": "厚生労働省は令和8年度の地域別最低賃金の改定額が全都道府県で答申されたことを公表しました。全国加重平均額は昨年度から56円引き上げられ1,177円となります。改定額は中央最低賃金審議会の目安を参考に各地方最低賃金審議会で調査・審議された結果です。今後、都道府県労働局での関係労使からの異議申出手続を経た上で、都道府県労働局長の決定により令和8年10月1日から12月2日までの間に順次発効される予定です。",
+    "practicalImpact": "社労士は顧問先企業の最低賃金要件の確認と給与計算の見直しが必要になります。発効予定日までに各地域の改定額を確認し、給与体系が最低賃金を下回らないよう対応することが重要です。",
+    "importantPoints": [
+      "全国加重平均額は1,177円（昨年度比56円引上げ）",
+      "改定額の発効時期は令和8年10月1日から12月2日までの間で都道府県ごとに異なる",
+      "異議申出手続を経た上で都道府県労働局長が決定し発効される",
+      "各都道府県の具体的な決定金額は都道府県労働局賃金課・室に問い合わせが必要"
+    ],
+    "target": "全事業主（特に最低賃金に近い水準で従業員を雇用している企業）",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 6
@@ -772,28 +789,6 @@
       "詳細情報は日本年金機構の個人向け電子申請ページで確認できる"
     ],
     "target": "基礎年金受給者で新たに年金生活者支援給付金を受け取ることができる者",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://www.mhlw.go.jp/stf/newpage_75722.html",
-    "title": "「令和７年外国人雇用実態調査」の結果を公表します",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_75722.html",
-    "publishedAt": "2026-08-31T00:00:00.000",
-    "fetchedAt": "2026-10-06T01:43:11.420841",
-    "category": "labor",
-    "summary": "厚生労働省が令和7年外国人雇用実態調査の結果を公表しました。本調査は令和5年から実施され、雇用保険被保険者5人以上で外国人労働者を1人以上雇用している全国の事業所を対象としています。今回は9,016事業所のうち3,919事業所（14,248人）から有効回答を得て集計。外国人労働者数は約204万人（前年約182万人）となっており、産業別・在留資格別等の詳細なデータを明らかにすることで、事業所における外国人労働者の雇用形態、賃金等の雇用管理状況を把握できます。",
-    "practicalImpact": "社労士が外国人労働者を雇用する顧問先事業所に対し、雇用実態データに基づいた雇用管理や労務管理の相談・助言を行う際の参考資料となります。外国人労働者の雇用保険・社会保険手続きや労働条件設定の実務に活用できます。",
-    "importantPoints": [
-      "調査対象は雇用保険被保険者5人以上で、かつ外国人労働者を1人以上雇用する全国の事業所",
-      "令和5年から実施されている継続的な実態調査",
-      "外国人労働者数は約204万人（前年約182万人）に増加",
-      "産業別・在留資格別等の詳細なデータが明らかになり、雇用形態・賃金等の雇用管理状況を把握可能"
-    ],
-    "target": "外国人労働者を雇用している事業所（特に従業員5人以上の事業所）、及びこれら事業所の人事労務管理を担当する部門",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 6
