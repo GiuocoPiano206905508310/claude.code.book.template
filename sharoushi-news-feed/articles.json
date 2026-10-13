@@ -17,6 +17,40 @@
     "schemaVersion": 6
   },
   {
+    "id": "https://www.mhlw.go.jp/stf/newpage_14408.html",
+    "title": "「不妊治療と仕事との両立支援担当者等向けオンデマンド研修会・個別相談会」の受付を開始しています！",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_14408.html",
+    "publishedAt": "2026-10-13T00:00:00.000",
+    "fetchedAt": "2026-10-13T10:16:03.136804",
+    "category": "labor",
+    "summary": "不妊治療と仕事との両立について紹介しています。",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.mhlw.go.jp/stf/newpage_76363.html",
+    "title": "家政婦(夫)サービスの求人情報の概要を発信する「家政婦(夫)ネット」の運用（モデル事業）を開始しました",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76363.html",
+    "publishedAt": "2026-10-13T00:00:00.000",
+    "fetchedAt": "2026-10-13T10:16:05.983469",
+    "category": "lawChange",
+    "summary": "職業安定局雇用政策課 民間人材サービス推進室",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1009.html",
     "title": "令和8年分社会保険料（国民年金保険料）控除証明書の発行について",
     "sourceName": "日本年金機構",
@@ -48,28 +82,6 @@
     "target": "原文をご確認ください。",
     "importance": 1,
     "isAiGenerated": false,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://www.mhlw.go.jp/stf/newpage_14408.html",
-    "title": "令和８年８月末時点でプラチナくるみんプラス１件が認定されました。",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_14408.html",
-    "publishedAt": "2026-10-06T00:00:00.000",
-    "fetchedAt": "2026-10-06T03:34:35.594208",
-    "category": "labor",
-    "summary": "厚生労働省は令和８年８月末時点でプラチナくるみんプラス認定が1件認定されたことを公表しました。プラチナくるみんプラス認定は、次世代育成支援対策推進法に基づく認定制度で、不妊治療と仕事の両立支援に積極的に取り組む企業を認定するものです。本認定は令和４年４月から開始された制度で、一定の要件を満たす企業が対象となります。この認定により、企業のブランド価値向上や人材確保が期待されます。",
-    "practicalImpact": "社労士が顧問先企業に対し、プラチナくるみんプラス認定の取得を視野に入れた不妊治療両立支援施策の相談・支援を行う際の参考となります。認定企業の実例が増えることで、具体的な制度設計や運用方法の助言がより現実的になります。",
-    "importantPoints": [
-      "プラチナくるみんプラス認定は不妊治療と仕事の両立支援に取り組む企業を認定する制度",
-      "令和４年４月から認定が開始された比較的新しい認定制度",
-      "認定により企業のブランド価値向上と人材確保につながる可能性",
-      "厚生労働省が推進する次世代育成支援対策推進法に基づく施策の一環"
-    ],
-    "target": "不妊治療と仕事の両立支援に取り組む企業・事業主",
-    "importance": 1,
-    "isAiGenerated": true,
     "schemaVersion": 6
   },
   {
@@ -207,6 +219,23 @@
     "schemaVersion": 6
   },
   {
+    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/36163_00001.html",
+    "title": "地域ブロック別の職種別平均手数料及び離職率について",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/36163_00001.html",
+    "publishedAt": "2026-09-30T00:00:00.000",
+    "fetchedAt": "2026-10-06T12:39:32.215466",
+    "category": "employmentInsurance",
+    "summary": "厚生労働省職業安定局需給調整事業課職業紹介事業係 TEL：03-5253-1111（内線5746）",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0930.html",
     "title": "「障害年金の認定状況について」ページを更新しました",
     "sourceName": "日本年金機構",
@@ -226,23 +255,6 @@
     "target": "障害年金の申請・受給者、障害年金請求を支援する社労士",
     "importance": 1,
     "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/36163_00001.html",
-    "title": "地域ブロック別の職種別平均手数料及び離職率について",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/36163_00001.html",
-    "publishedAt": "2026-09-30T00:00:00.000",
-    "fetchedAt": "2026-10-06T12:39:32.215466",
-    "category": "employmentInsurance",
-    "summary": "厚生労働省職業安定局需給調整事業課職業紹介事業係 TEL：03-5253-1111（内線5746）",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false,
     "schemaVersion": 6
   },
   {
@@ -341,28 +353,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00013.html",
-    "title": "労災保険柔道整復師施術料金算定基準について（令和８年度）",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00013.html",
-    "publishedAt": "2026-09-18T00:00:00.000",
-    "fetchedAt": "2026-10-06T01:42:14.860825",
-    "category": "salaryCalculation",
-    "summary": "労災保険の柔道整復師施術料金算定基準が令和8年9月17日に改定されました。本改定は令和8年10月1日以降の施術分に適用されます。厚生労働省は基発0917第1号通達により、改定内容を明示しており、詳細な算定基準は別紙資料に記載されています。この改定により、労災保険給付対象となる柔道整復師の施術料金の計算方法が変更されるため、関係機関や事業主は新基準への対応が必要になります。",
-    "practicalImpact": "社労士が労災保険の給付手続きを行う際、柔道整復師施術に関する給付額算定が本改定基準により変わります。顧問先で労災発生時に施術を受けた従業員がいる場合、新基準での請求対応が必要となる可能性があります。",
-    "importantPoints": [
-      "改定日：令和8年9月17日（基発0917第1号）",
-      "適用開始日：令和8年10月1日以降の施術分から適用",
-      "詳細な算定基準は別紙資料（令和8年度労災保険柔道整復師施術料金算定基準）に記載",
-      "労災保険給付手続きにおける柔道整復師施術料金の計算方法が変更"
-    ],
-    "target": "労災保険の給付手続きを扱う社労士、労災事故の従業員を抱える事業主、柔道整復師施術を受けた労災保険給付対象者",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0918.html",
     "title": "マイナポータルの計画停止に伴う「ねんきんネット」の一部機能制限のお知らせ",
     "sourceName": "日本年金機構",
@@ -399,6 +389,28 @@
     "target": "原文をご確認ください。",
     "importance": 1,
     "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00013.html",
+    "title": "労災保険柔道整復師施術料金算定基準について（令和８年度）",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/rousai_shinryouhi/kaitei0604_00013.html",
+    "publishedAt": "2026-09-18T00:00:00.000",
+    "fetchedAt": "2026-10-06T01:42:14.860825",
+    "category": "salaryCalculation",
+    "summary": "労災保険の柔道整復師施術料金算定基準が令和8年9月17日に改定されました。本改定は令和8年10月1日以降の施術分に適用されます。厚生労働省は基発0917第1号通達により、改定内容を明示しており、詳細な算定基準は別紙資料に記載されています。この改定により、労災保険給付対象となる柔道整復師の施術料金の計算方法が変更されるため、関係機関や事業主は新基準への対応が必要になります。",
+    "practicalImpact": "社労士が労災保険の給付手続きを行う際、柔道整復師施術に関する給付額算定が本改定基準により変わります。顧問先で労災発生時に施術を受けた従業員がいる場合、新基準での請求対応が必要となる可能性があります。",
+    "importantPoints": [
+      "改定日：令和8年9月17日（基発0917第1号）",
+      "適用開始日：令和8年10月1日以降の施術分から適用",
+      "詳細な算定基準は別紙資料（令和8年度労災保険柔道整復師施術料金算定基準）に記載",
+      "労災保険給付手続きにおける柔道整復師施術料金の計算方法が変更"
+    ],
+    "target": "労災保険の給付手続きを扱う社労士、労災事故の従業員を抱える事業主、柔道整復師施術を受けた労災保険給付対象者",
+    "importance": 1,
+    "isAiGenerated": true,
     "schemaVersion": 6
   },
   {
@@ -464,28 +476,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
-    "title": "日本国籍を有しない方のフリガナ氏名の取り扱いについて",
-    "sourceName": "日本年金機構",
-    "sourceUrl": "https://www.nenkin.go.jp",
-    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
-    "publishedAt": "2026-09-16T00:00:00.000",
-    "fetchedAt": "2026-10-05T18:07:42.309157",
-    "category": "socialInsurance",
-    "summary": "日本年金機構は2026年10月1日から、日本国籍を有しない方のフリガナ氏名の取り扱いを変更します。これまで資格取得届に記載されたフリガナ氏名が住民基本台帳上の情報と合致しないケースがあり、本人特定が困難でした。改正後は、入国後初めて厚生年金保険に加入する方には「厚生年金保険被保険者ローマ字氏名届」の提出を、転職等で再取得する方にはローマ字氏名が確認できる書類（在留カード、パスポート等）の提出を求めます。ローマ字氏名と住民基本台帳上の情報が合致した場合、資格取得届に記載されたフリガナ氏名を基に資格取得の決定を行います。",
-    "practicalImpact": "社労士は日本国籍を有しない従業員の資格取得届作成時に、新たにローマ字氏名確認書類の提出要件を理解し、顧問先事業主に対して適切な対応をアドバイスする必要があります。個人番号保有有無や入国・転職の状況により手続きが異なるため、実務上の留意が必要です。",
-    "importantPoints": [
-      "2026年10月1日から適用される変更点であり、日本国籍を有しない方の資格取得届・被扶養者異動届が対象",
-      "入国後初めて厚生年金保険に加入する場合（基礎年金番号なし）：「厚生年金保険被保険者ローマ字氏名届」の提出が必須",
-      "転職等で厚生年金保険を再取得する場合：ローマ字氏名が確認できる書類（在留カード、パスポート、個人番号記載なし住民票等）の提出を求められる可能性あり",
-      "本人特定はローマ字氏名と住民基本台帳情報の突合で行い、合致した場合は資格取得届のフリガナ氏名を基に決定される"
-    ],
-    "target": "日本国籍を有しない従業員を雇用する事業主及びその従業員",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.mhlw.go.jp/stf/newpage_76262.html",
     "title": "10月は年次有給休暇取得促進期間です。",
     "sourceName": "厚生労働省",
@@ -522,6 +512,28 @@
     "target": "原文をご確認ください。",
     "importance": 1,
     "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
+    "title": "日本国籍を有しない方のフリガナ氏名の取り扱いについて",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202609/0916.html",
+    "publishedAt": "2026-09-16T00:00:00.000",
+    "fetchedAt": "2026-10-05T18:07:42.309157",
+    "category": "socialInsurance",
+    "summary": "日本年金機構は2026年10月1日から、日本国籍を有しない方のフリガナ氏名の取り扱いを変更します。これまで資格取得届に記載されたフリガナ氏名が住民基本台帳上の情報と合致しないケースがあり、本人特定が困難でした。改正後は、入国後初めて厚生年金保険に加入する方には「厚生年金保険被保険者ローマ字氏名届」の提出を、転職等で再取得する方にはローマ字氏名が確認できる書類（在留カード、パスポート等）の提出を求めます。ローマ字氏名と住民基本台帳上の情報が合致した場合、資格取得届に記載されたフリガナ氏名を基に資格取得の決定を行います。",
+    "practicalImpact": "社労士は日本国籍を有しない従業員の資格取得届作成時に、新たにローマ字氏名確認書類の提出要件を理解し、顧問先事業主に対して適切な対応をアドバイスする必要があります。個人番号保有有無や入国・転職の状況により手続きが異なるため、実務上の留意が必要です。",
+    "importantPoints": [
+      "2026年10月1日から適用される変更点であり、日本国籍を有しない方の資格取得届・被扶養者異動届が対象",
+      "入国後初めて厚生年金保険に加入する場合（基礎年金番号なし）：「厚生年金保険被保険者ローマ字氏名届」の提出が必須",
+      "転職等で厚生年金保険を再取得する場合：ローマ字氏名が確認できる書類（在留カード、パスポート、個人番号記載なし住民票等）の提出を求められる可能性あり",
+      "本人特定はローマ字氏名と住民基本台帳情報の突合で行い、合致した場合は資格取得届のフリガナ氏名を基に決定される"
+    ],
+    "target": "日本国籍を有しない従業員を雇用する事業主及びその従業員",
+    "importance": 1,
+    "isAiGenerated": true,
     "schemaVersion": 6
   },
   {
@@ -689,23 +701,23 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/newpage_75804.html",
-    "title": "労働者派遣法及び職業安定法違反に係る告発について",
+    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/shienjigyou/index.html",
+    "title": "各都道府県で実施する賃上げ支援策をまとめました",
     "sourceName": "厚生労働省",
     "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_75804.html",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/shienjigyou/index.html",
     "publishedAt": "2026-09-03T00:00:00.000",
-    "fetchedAt": "2026-10-06T01:42:58.938817",
+    "fetchedAt": "2026-10-05T18:08:57.987132",
     "category": "labor",
-    "summary": "本記事は、厚生労働省が労働者派遣法及び職業安定法の違反事件について告発したことを公表するものです。具体的な違反内容、対象事業者、告発日時などの詳細については、別紙の報道発表資料（PDF形式、321KB）に記載されています。社労士実務に関連する派遣労働の法令遵守に関する重要な情報であり、派遣事業の運営に携わる事業主及び派遣労働に関与する企業にとって参考となる事例です。",
-    "practicalImpact": "派遣労働を利用する事業主に対して、労働者派遣法及び職業安定法の違反事例を示すことで、法令遵守の重要性を啓発する機会となります。詳細な違反内容は別紙資料に記載されているため、該当する可能性のある事業主は内容確認が必要です。",
+    "summary": "厚生労働省は最低賃金の引上げに対応する中小企業・小規模事業者向けの支援策を提供しています。主な支援は以下の3つです：①専門家派遣・相談等支援事業で生産性向上や労働条件管理に関するワン・ストップ相談窓口を全国で整備、②業務改善助成金で設備投資などによる事業場内最低賃金の引上げを支援、③働き方改革推進支援助成金（団体推進コース）で業種別団体による賃金底上げを推進しています。これらの支援を通じて、最低賃金引上げによる経営上の負担を軽減し、中小企業の経営改善を促進する施策です。",
+    "practicalImpact": "社労士は顧問先の中小企業に対して、これらの支援制度の活用を提案・支援できます。特に業務改善助成金の申請要件や手続き、専門家派遣による生産性向上施策の相談窓口紹介など、実務的なアドバイスが求められます。",
     "importantPoints": [
-      "厚生労働省職業安定局が労働者派遣法違反事件を告発",
-      "職業安定法違反事件についても同時に告発",
-      "詳細な違反内容は別紙報道発表資料（PDF）に掲載",
-      "派遣事業運営時の法令遵守の重要性を示唆"
+      "専門家派遣・相談等支援事業：中小企業庁と連携したワン・ストップ相談窓口で労働条件管理や経営改善のご相談に対応",
+      "業務改善助成金：設備投資などにより事業場内最低賃金を一定額以上引き上げた中小企業・小規模事業者に経費の一部を助成",
+      "働き方改革推進支援助成金（団体推進コース）：業種別団体による賃金底上げの取組を支援",
+      "令和７年７月に各都道府県の賃金引上げ支援施策について更新済みであり、地域別の詳細情報の確認が可能"
     ],
-    "target": "派遣労働を利用・運営する事業主、派遣事業者、派遣労働者",
+    "target": "最低賃金引上げにより影響を受ける中小企業・小規模事業者",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 6
@@ -733,23 +745,23 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/shienjigyou/index.html",
-    "title": "各都道府県で実施する賃上げ支援策をまとめました",
+    "id": "https://www.mhlw.go.jp/stf/newpage_75804.html",
+    "title": "労働者派遣法及び職業安定法違反に係る告発について",
     "sourceName": "厚生労働省",
     "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/zigyonushi/shienjigyou/index.html",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_75804.html",
     "publishedAt": "2026-09-03T00:00:00.000",
-    "fetchedAt": "2026-10-05T18:08:57.987132",
+    "fetchedAt": "2026-10-06T01:42:58.938817",
     "category": "labor",
-    "summary": "厚生労働省は最低賃金の引上げに対応する中小企業・小規模事業者向けの支援策を提供しています。主な支援は以下の3つです：①専門家派遣・相談等支援事業で生産性向上や労働条件管理に関するワン・ストップ相談窓口を全国で整備、②業務改善助成金で設備投資などによる事業場内最低賃金の引上げを支援、③働き方改革推進支援助成金（団体推進コース）で業種別団体による賃金底上げを推進しています。これらの支援を通じて、最低賃金引上げによる経営上の負担を軽減し、中小企業の経営改善を促進する施策です。",
-    "practicalImpact": "社労士は顧問先の中小企業に対して、これらの支援制度の活用を提案・支援できます。特に業務改善助成金の申請要件や手続き、専門家派遣による生産性向上施策の相談窓口紹介など、実務的なアドバイスが求められます。",
+    "summary": "本記事は、厚生労働省が労働者派遣法及び職業安定法の違反事件について告発したことを公表するものです。具体的な違反内容、対象事業者、告発日時などの詳細については、別紙の報道発表資料（PDF形式、321KB）に記載されています。社労士実務に関連する派遣労働の法令遵守に関する重要な情報であり、派遣事業の運営に携わる事業主及び派遣労働に関与する企業にとって参考となる事例です。",
+    "practicalImpact": "派遣労働を利用する事業主に対して、労働者派遣法及び職業安定法の違反事例を示すことで、法令遵守の重要性を啓発する機会となります。詳細な違反内容は別紙資料に記載されているため、該当する可能性のある事業主は内容確認が必要です。",
     "importantPoints": [
-      "専門家派遣・相談等支援事業：中小企業庁と連携したワン・ストップ相談窓口で労働条件管理や経営改善のご相談に対応",
-      "業務改善助成金：設備投資などにより事業場内最低賃金を一定額以上引き上げた中小企業・小規模事業者に経費の一部を助成",
-      "働き方改革推進支援助成金（団体推進コース）：業種別団体による賃金底上げの取組を支援",
-      "令和７年７月に各都道府県の賃金引上げ支援施策について更新済みであり、地域別の詳細情報の確認が可能"
+      "厚生労働省職業安定局が労働者派遣法違反事件を告発",
+      "職業安定法違反事件についても同時に告発",
+      "詳細な違反内容は別紙報道発表資料（PDF）に掲載",
+      "派遣事業運営時の法令遵守の重要性を示唆"
     ],
-    "target": "最低賃金引上げにより影響を受ける中小企業・小規模事業者",
+    "target": "派遣労働を利用・運営する事業主、派遣事業者、派遣労働者",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 6
@@ -769,28 +781,6 @@
     "target": "原文をご確認ください。",
     "importance": 1,
     "isAiGenerated": false,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0901.html",
-    "title": "令和8年度の年金生活者支援給付金請求書（はがき型）の送付について",
-    "sourceName": "日本年金機構",
-    "sourceUrl": "https://www.nenkin.go.jp",
-    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202609/0901.html",
-    "publishedAt": "2026-09-01T00:00:00.000",
-    "fetchedAt": "2026-10-05T18:09:26.673199",
-    "category": "pension",
-    "summary": "日本年金機構は令和8年9月1日から、基礎年金を受給している方で新たに年金生活者支援給付金を受け取ることができる方へ、年金生活者支援給付金請求書（はがき型）を順次送付します。受け取った方は電子申請により提出することが可能です。支給要件に該当するか確認できない方には、年金生活者支援給付金請求書（A4型）および所得情報等を確認するための所得状況届も送付される予定です。",
-    "practicalImpact": "年金生活者支援給付金の請求手続きが簡素化されることで、社労士が顧問先の従業員（特に高齢従業員や退職従業員）の年金受給に関する相談対応時に、新たな請求方法や電子申請の活用について説明する機会が増加する可能性があります。",
-    "importantPoints": [
-      "令和8年9月1日から年金生活者支援給付金請求書（はがき型）を順次送付開始",
-      "受け取った請求書は電子申請により提出可能",
-      "支給要件確認が必要な場合はA4型請求書および所得状況届を送付",
-      "詳細情報は日本年金機構の個人向け電子申請ページで確認できる"
-    ],
-    "target": "基礎年金受給者で新たに年金生活者支援給付金を受け取ることができる者",
-    "importance": 1,
-    "isAiGenerated": true,
     "schemaVersion": 6
   },
   {
