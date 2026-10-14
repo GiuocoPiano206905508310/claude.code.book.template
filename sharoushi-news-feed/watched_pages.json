@@ -307,6 +307,7 @@
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000113598.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000129028.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000130583.html",
+      "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000144972.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000167772.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/bunya/freelance_00006.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kodomo/shokuba_kosodate/jigyou_ryouritsu/index.html",
@@ -698,6 +699,7 @@
       "https://www.mhlw.go.jp/stf/newpage_75814.html",
       "https://www.mhlw.go.jp/stf/newpage_75947.html",
       "https://www.mhlw.go.jp/stf/newpage_76367.html",
+      "https://www.mhlw.go.jp/stf/newpage_76632.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000077386_00019.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000079194_00005.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000079194_00006.html",
@@ -792,6 +794,20 @@
       "title": "過労死等防止啓発月間",
       "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/index.html",
       "publishedAt": "2026-10-09T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000144972.html",
+      "title": "「同一労働同一賃金」に関する省令・告示が改正されました（令和８年４月28日）",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/index.html",
+      "publishedAt": "2026-10-14T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://www.mhlw.go.jp/stf/newpage_76632.html",
+      "title": "2026年10月14日掲載 「第144回労働政策審議会障害者雇用分科会」を開催します（開催案内） NEW",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/shougaishakoyou/index.html",
+      "publishedAt": "2026-10-14T00:00:00.000",
       "datedOnPage": false
     }
   ]
