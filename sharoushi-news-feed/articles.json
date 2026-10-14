@@ -880,6 +880,23 @@
     "schemaVersion": 6
   },
   {
+    "id": "https://jsite.mhlw.go.jp/saitama-roudoukyoku/hourei_seido_tetsuzuki/kakushu_joseikin/gyoumu-kaizen.html",
+    "title": "業務改善助成金申請締切日について",
+    "sourceName": "埼玉労働局",
+    "sourceUrl": "https://jsite.mhlw.go.jp/saitama-roudoukyoku/",
+    "canonicalUrl": "https://jsite.mhlw.go.jp/saitama-roudoukyoku/hourei_seido_tetsuzuki/kakushu_joseikin/gyoumu-kaizen.html",
+    "publishedAt": "2026-09-24T00:00:00.000",
+    "fetchedAt": "2026-10-14T23:38:26.017055",
+    "category": "subsidy",
+    "summary": "皆様からのご意見を募集しています 労働局へのご意見",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
     "id": "https://jsite.mhlw.go.jp/saga-roudoukyoku/newpage_03434.html",
     "title": "【申請期間のお知らせ】R8年度業務改善助成金の申請受付を開始しました。",
     "sourceName": "佐賀労働局",
@@ -1077,23 +1094,6 @@
     "target": "中小企業経営者",
     "importance": 1,
     "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://jsite.mhlw.go.jp/ishikawa-roudoukyoku/news_topics/houdou/chingin_saiteichingin_toshin_r8.html",
-    "title": "令和8年度石川県最低賃金の改正答申について（業務改善助成金・キャリアアップ助成金などの活用を）",
-    "sourceName": "石川労働局",
-    "sourceUrl": "https://jsite.mhlw.go.jp/ishikawa-roudoukyoku/",
-    "canonicalUrl": "https://jsite.mhlw.go.jp/ishikawa-roudoukyoku/news_topics/houdou/chingin_saiteichingin_toshin_r8.html",
-    "publishedAt": "2026-08-07T00:00:00.000",
-    "fetchedAt": "2026-10-06T12:40:04.005516",
-    "category": "subsidy",
-    "summary": "皆様からのご意見を募集しています 労働局へのご意見",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false,
     "schemaVersion": 6
   },
   {
