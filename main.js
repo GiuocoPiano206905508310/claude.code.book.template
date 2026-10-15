@@ -22,6 +22,41 @@ const EMPLOYMENT_RATES_BY_INDUSTRY = {
   '建設の事業': 0.6,
 };
 
+// 健康保険・厚生年金保険の標準報酬月額表（協会けんぽ保険料額表の等級1〜50）
+// [その等級の報酬月額の下限, 標準報酬月額]。報酬月額が下限以上・次の等級の下限未満ならその等級になる。
+// 毎月の保険料は実際の報酬月額ではなく、この標準報酬月額に保険料率を掛けて計算する。
+const STANDARD_MONTHLY_GRADES = [
+  [0, 58000], [63000, 68000], [73000, 78000], [83000, 88000], [93000, 98000],
+  [101000, 104000], [107000, 110000], [114000, 118000], [122000, 126000], [130000, 134000],
+  [138000, 142000], [146000, 150000], [155000, 160000], [165000, 170000], [175000, 180000],
+  [185000, 190000], [195000, 200000], [210000, 220000], [230000, 240000], [250000, 260000],
+  [270000, 280000], [290000, 300000], [310000, 320000], [330000, 340000], [350000, 360000],
+  [370000, 380000], [395000, 410000], [425000, 440000], [455000, 470000], [485000, 500000],
+  [515000, 530000], [545000, 560000], [575000, 590000], [605000, 620000], [635000, 650000],
+  [665000, 680000], [695000, 710000], [730000, 750000], [770000, 790000], [810000, 830000],
+  [855000, 880000], [905000, 930000], [955000, 980000], [1005000, 1030000], [1055000, 1090000],
+  [1115000, 1150000], [1175000, 1210000], [1235000, 1270000], [1295000, 1330000], [1355000, 1390000],
+];
+// 厚生年金保険の標準報酬月額の下限・上限（報酬月額93,000円未満は88,000円、635,000円以上は650,000円）
+const PENSION_STANDARD_MIN = 88000;
+const PENSION_STANDARD_MAX = 650000;
+
+// 報酬月額（通勤手当を含む）から健康保険の標準報酬月額を求める
+function getHealthStandardMonthly(monthlyPay) {
+  let standard = STANDARD_MONTHLY_GRADES[0][1];
+  for (const [lowerBound, gradeStandard] of STANDARD_MONTHLY_GRADES) {
+    if (monthlyPay < lowerBound) break;
+    standard = gradeStandard;
+  }
+  return standard;
+}
+
+// 厚生年金保険の標準報酬月額。等級の幅は健康保険と同じだが、上下限のみ異なる
+function getPensionStandardMonthly(monthlyPay) {
+  const standard = getHealthStandardMonthly(monthlyPay);
+  return Math.min(Math.max(standard, PENSION_STANDARD_MIN), PENSION_STANDARD_MAX);
+}
+
 function populatePrefectureSelect(selectId, healthId, careId, childLevyId) {
   const select = document.getElementById(selectId);
   for (const name of Object.keys(PREFECTURE_HEALTH_RATES)) {
@@ -579,7 +614,7 @@ function calculateBonus() {
   const healthInsurance = hasHealth ? roundInsuranceShare(healthStandardBonus * healthRate / 2) : 0;
   const careInsurance = hasCare ? roundInsuranceShare(healthStandardBonus * careRate / 2) : 0;
   const pensionInsurance = hasPension ? roundInsuranceShare(pensionStandardBonus * pensionRate / 2) : 0;
-  const employmentInsurance = subjectEmploymentInsurance ? bonusAmount * employmentRate : 0;
+  const employmentInsurance = subjectEmploymentInsurance ? roundInsuranceShare(bonusAmount * employmentRate) : 0;
   const childSupportLevy = hasHealth ? roundInsuranceShare(healthStandardBonus * childLevyRate / 2) : 0;
   const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
 
@@ -679,14 +714,17 @@ function calculate() {
 
   const grossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
 
-  // 社会保険算定基礎額（通勤手当も含む）
+  // 報酬月額（通勤手当も含む）から標準報酬月額を求め、それに保険料率を掛けて保険料を計算する
+  // 雇用保険料のみ、標準報酬月額ではなく実際の賃金総額が対象
   const socialInsuranceBase = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
+  const healthStandardMonthly = getHealthStandardMonthly(socialInsuranceBase);
+  const pensionStandardMonthly = getPensionStandardMonthly(socialInsuranceBase);
 
-  const healthInsurance = hasHealth ? roundInsuranceShare(socialInsuranceBase * healthRate / 2) : 0;
-  const careInsurance = hasCare ? roundInsuranceShare(socialInsuranceBase * careRate / 2) : 0;
-  const pensionInsurance = hasPension ? roundInsuranceShare(socialInsuranceBase * pensionRate / 2) : 0;
-  const employmentInsurance = subjectEmploymentInsurance ? grossPay * employmentRate : 0;
-  const childSupportLevy = hasHealth ? roundInsuranceShare(socialInsuranceBase * childLevyRate / 2) : 0;
+  const healthInsurance = hasHealth ? roundInsuranceShare(healthStandardMonthly * healthRate / 2) : 0;
+  const careInsurance = hasCare ? roundInsuranceShare(healthStandardMonthly * careRate / 2) : 0;
+  const pensionInsurance = hasPension ? roundInsuranceShare(pensionStandardMonthly * pensionRate / 2) : 0;
+  const employmentInsurance = subjectEmploymentInsurance ? roundInsuranceShare(grossPay * employmentRate) : 0;
+  const childSupportLevy = hasHealth ? roundInsuranceShare(healthStandardMonthly * childLevyRate / 2) : 0;
 
   const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
 
