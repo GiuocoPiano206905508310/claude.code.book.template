@@ -1,5 +1,39 @@
 [
   {
+    "id": "https://www.mhlw.go.jp/stf/newpage_33437.html",
+    "title": "厚生労働省本省係長級職員（一般職相当）採用選考 - 令和８年度第３期・第４期",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_33437.html",
+    "publishedAt": "2026-10-15T00:00:00.000",
+    "fetchedAt": "2026-10-15T02:06:34.247554",
+    "category": "lawChange",
+    "summary": "厚生労働省本省係長級職員（一般職相当）採用選考についてご案内しています。",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.mhlw.go.jp/stf/newpage_76363.html",
+    "title": "家政婦(夫)サービスの求人情報の概要を発信する「家政婦(夫)ネット」の運用（モデル事業）を開始しました",
+    "sourceName": "厚生労働省",
+    "sourceUrl": "https://www.mhlw.go.jp",
+    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76363.html",
+    "publishedAt": "2026-10-13T00:00:00.000",
+    "fetchedAt": "2026-10-13T10:16:05.983469",
+    "category": "lawChange",
+    "summary": "職業安定局雇用政策課 民間人材サービス推進室",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
+    "schemaVersion": 6
+  },
+  {
     "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1013.html",
     "title": "街角の年金相談センター草加（埼玉県草加市）の10月20日の閉所について",
     "sourceName": "日本年金機構",
@@ -26,23 +60,6 @@
     "fetchedAt": "2026-10-13T10:16:03.136804",
     "category": "labor",
     "summary": "不妊治療と仕事との両立について紹介しています。",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://www.mhlw.go.jp/stf/newpage_76363.html",
-    "title": "家政婦(夫)サービスの求人情報の概要を発信する「家政婦(夫)ネット」の運用（モデル事業）を開始しました",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_76363.html",
-    "publishedAt": "2026-10-13T00:00:00.000",
-    "fetchedAt": "2026-10-13T10:16:05.983469",
-    "category": "lawChange",
-    "summary": "職業安定局雇用政策課 民間人材サービス推進室",
     "practicalImpact": "実務への影響は原文をご確認ください。",
     "importantPoints": [],
     "target": "原文をご確認ください。",
@@ -124,28 +141,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1002.html",
-    "title": "令和8年10月の年金支払いにかかる年金振込通知書を送付しています",
-    "sourceName": "日本年金機構",
-    "sourceUrl": "https://www.nenkin.go.jp",
-    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1002.html",
-    "publishedAt": "2026-10-02T00:00:00.000",
-    "fetchedAt": "2026-10-06T01:41:08.413598",
-    "category": "pension",
-    "summary": "日本年金機構は、令和8年10月の年金支払いにかかる年金振込通知書を送付していることを案内しています。令和8年10月から介護保険料等の特別徴収額が変更となり、年金の振込額が変更となる受給者に対して通知書を送付しています。年金から特別徴収する保険料（税）額等の変更に関する詳細については、受給者が居住する市区町村への問い合わせが必要です。また、「ねんきんネット」を利用することで、年金振込通知書の内容をいつでも確認でき、PDFファイルでの保存・印刷が可能です。さらに、「ねんきんネット」から再交付申請も可能で、申請後は約1週間で発送される予定です。",
-    "practicalImpact": "社労士の実務への直接的な影響は限定的ですが、顧問先の従業員が年金受給者である場合、介護保険料等の特別徴収額変更に関する相談対応の参考情報となります。年金振込通知書の確認方法や再交付手続きについて、顧問先からの問い合わせに対応する際の基礎知識として活用できます。",
-    "importantPoints": [
-      "令和8年10月から介護保険料等の特別徴収額が変更され、年金振込額が変更となった受給者に年金振込通知書が送付されている",
-      "年金から特別徴収する保険料（税）額等の変更に関する問い合わせは市区町村へ対応する必要がある",
-      "「ねんきんネット」で年金振込通知書の内容確認が令和8年10月9日（金曜）から開始可能",
-      "「ねんきんネット」から再交付申請が可能で、発送までに約1週間要する"
-    ],
-    "target": "年金受給者、市区町村担当者",
-    "importance": 1,
-    "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://www.mhlw.go.jp/stf/newpage_76397.html",
     "title": "一般職業紹介状況(令和8年8月分)について",
     "sourceName": "厚生労働省",
@@ -163,6 +158,28 @@
       "新規求人は前年同月比3.4％減、産業別では製造業・情報通信業・サービス業で増加"
     ],
     "target": "労働市場の動向把握を必要とする事業主、人材採用を検討している企業",
+    "importance": 1,
+    "isAiGenerated": true,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1002.html",
+    "title": "令和8年10月の年金支払いにかかる年金振込通知書を送付しています",
+    "sourceName": "日本年金機構",
+    "sourceUrl": "https://www.nenkin.go.jp",
+    "canonicalUrl": "https://www.nenkin.go.jp/oshirase/taisetu/kojin/2026/202610/1002.html",
+    "publishedAt": "2026-10-02T00:00:00.000",
+    "fetchedAt": "2026-10-06T01:41:08.413598",
+    "category": "pension",
+    "summary": "日本年金機構は、令和8年10月の年金支払いにかかる年金振込通知書を送付していることを案内しています。令和8年10月から介護保険料等の特別徴収額が変更となり、年金の振込額が変更となる受給者に対して通知書を送付しています。年金から特別徴収する保険料（税）額等の変更に関する詳細については、受給者が居住する市区町村への問い合わせが必要です。また、「ねんきんネット」を利用することで、年金振込通知書の内容をいつでも確認でき、PDFファイルでの保存・印刷が可能です。さらに、「ねんきんネット」から再交付申請も可能で、申請後は約1週間で発送される予定です。",
+    "practicalImpact": "社労士の実務への直接的な影響は限定的ですが、顧問先の従業員が年金受給者である場合、介護保険料等の特別徴収額変更に関する相談対応の参考情報となります。年金振込通知書の確認方法や再交付手続きについて、顧問先からの問い合わせに対応する際の基礎知識として活用できます。",
+    "importantPoints": [
+      "令和8年10月から介護保険料等の特別徴収額が変更され、年金振込額が変更となった受給者に年金振込通知書が送付されている",
+      "年金から特別徴収する保険料（税）額等の変更に関する問い合わせは市区町村へ対応する必要がある",
+      "「ねんきんネット」で年金振込通知書の内容確認が令和8年10月9日（金曜）から開始可能",
+      "「ねんきんネット」から再交付申請が可能で、発送までに約1週間要する"
+    ],
+    "target": "年金受給者、市区町村担当者",
     "importance": 1,
     "isAiGenerated": true,
     "schemaVersion": 6
@@ -762,23 +779,6 @@
     "schemaVersion": 6
   },
   {
-    "id": "https://www.mhlw.go.jp/stf/newpage_75831.html",
-    "title": "人事労務マガジン 定例第191号",
-    "sourceName": "厚生労働省",
-    "sourceUrl": "https://www.mhlw.go.jp",
-    "canonicalUrl": "https://www.mhlw.go.jp/stf/newpage_75831.html",
-    "publishedAt": "2026-09-02T00:00:00.000",
-    "fetchedAt": "2026-10-06T12:39:56.194481",
-    "category": "lawChange",
-    "summary": "人事労務マガジンに関するお問い合わせ先 国民の皆様の声にリンクします",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false,
-    "schemaVersion": 6
-  },
-  {
     "id": "https://jsite.mhlw.go.jp/yamanashi-roudoukyoku/hourei_seido_tetsuzuki/kakushu_joseikin/gyoumukaizenR81014.html",
     "title": "令和8年度業務改善助成金の申請締切について",
     "sourceName": "山梨労働局",
@@ -877,23 +877,6 @@
     "target": "生産性向上と賃金引上げを検討している宮城県内の事業主",
     "importance": 1,
     "isAiGenerated": true,
-    "schemaVersion": 6
-  },
-  {
-    "id": "https://jsite.mhlw.go.jp/saitama-roudoukyoku/hourei_seido_tetsuzuki/kakushu_joseikin/gyoumu-kaizen.html",
-    "title": "業務改善助成金申請締切日について",
-    "sourceName": "埼玉労働局",
-    "sourceUrl": "https://jsite.mhlw.go.jp/saitama-roudoukyoku/",
-    "canonicalUrl": "https://jsite.mhlw.go.jp/saitama-roudoukyoku/hourei_seido_tetsuzuki/kakushu_joseikin/gyoumu-kaizen.html",
-    "publishedAt": "2026-09-24T00:00:00.000",
-    "fetchedAt": "2026-10-14T23:38:26.017055",
-    "category": "subsidy",
-    "summary": "皆様からのご意見を募集しています 労働局へのご意見",
-    "practicalImpact": "実務への影響は原文をご確認ください。",
-    "importantPoints": [],
-    "target": "原文をご確認ください。",
-    "importance": 1,
-    "isAiGenerated": false,
     "schemaVersion": 6
   },
   {
@@ -1094,6 +1077,23 @@
     "target": "中小企業経営者",
     "importance": 1,
     "isAiGenerated": true,
+    "schemaVersion": 6
+  },
+  {
+    "id": "https://jsite.mhlw.go.jp/ishikawa-roudoukyoku/news_topics/houdou/chingin_saiteichingin_toshin_r8.html",
+    "title": "令和8年度石川県最低賃金の改正答申について（業務改善助成金・キャリアアップ助成金などの活用を）",
+    "sourceName": "石川労働局",
+    "sourceUrl": "https://jsite.mhlw.go.jp/ishikawa-roudoukyoku/",
+    "canonicalUrl": "https://jsite.mhlw.go.jp/ishikawa-roudoukyoku/news_topics/houdou/chingin_saiteichingin_toshin_r8.html",
+    "publishedAt": "2026-08-07T00:00:00.000",
+    "fetchedAt": "2026-10-15T02:06:37.020557",
+    "category": "subsidy",
+    "summary": "皆様からのご意見を募集しています 労働局へのご意見",
+    "practicalImpact": "実務への影響は原文をご確認ください。",
+    "importantPoints": [],
+    "target": "原文をご確認ください。",
+    "importance": 1,
+    "isAiGenerated": false,
     "schemaVersion": 6
   },
   {
