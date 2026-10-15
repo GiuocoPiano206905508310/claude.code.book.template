@@ -150,11 +150,25 @@ function getNumValue(id) {
   return Number(raw) || 0;
 }
 
-// 被保険者負担額の1円未満の端数処理（健康保険法・厚生年金保険法等）：50銭以下は切り捨て、50銭を超える端数は切り上げ
-// 通常の四捨五入（Math.round）とはちょうど50銭のときの扱いが逆になるため、専用の丸め処理を行う
-function roundInsuranceShare(x) {
-  const floor = Math.floor(x);
-  return x - floor > 0.5 ? floor + 1 : floor;
+// 保険料（被保険者負担額）を計算する。
+// 金額 × 料率(%) ÷ divisor（労使折半なら2、雇用保険など折半しないものは1）を求め、
+// 1円未満の端数は健康保険法・厚生年金保険法等の定めどおり「50銭以下は切り捨て、50銭を超えるときは切り上げ」で処理する。
+//
+// 小数のまま計算すると、ちょうど50銭になるはずの額が浮動小数点誤差で50銭をわずかに超え（例：
+// 110,000円 × 9.21% ÷ 2 が 5065.500000000001 になる）、本来切り捨てるところを切り上げて
+// 公式の保険料額表より1円多くなってしまう。そのため、料率を整数化してすべて整数で計算する。
+function calcPremium(amount, ratePercent, divisor) {
+  const scaledRate = Math.round(ratePercent * 10000); // 9.21(%) → 92100
+  const numerator = Math.round(amount * scaledRate);
+  const denominator = 1000000 * divisor; // 料率のスケール(10000)と百分率(100)を戻し、必要なら折半する
+  const whole = Math.floor(numerator / denominator);
+  const remainder = numerator - whole * denominator;
+  return remainder * 2 > denominator ? whole + 1 : whole;
+}
+
+// 労使折半の保険料（健康保険・介護保険・厚生年金・子ども子育て支援金）
+function calcHalfPremium(amount, ratePercent) {
+  return calcPremium(amount, ratePercent, 2);
 }
 
 // 年齢区分ごとの社会保険加入ルール
@@ -585,11 +599,12 @@ function calculateBonus() {
   const calcMethod = document.getElementById('bonusCalcMethod').value;
   const dependents = Number(document.getElementById('bonusDependents').value) || 0;
 
-  const healthRate = Number(document.getElementById('bonusHealthRate').value) / 100;
-  const careRate = Number(document.getElementById('bonusCareRate').value) / 100;
-  const childLevyRate = Number(document.getElementById('bonusChildLevyRate').value) / 100;
-  const pensionRate = Number(document.getElementById('bonusPensionRate').value) / 100;
-  const employmentRate = Number(document.getElementById('bonusEmploymentRate').value) / 100;
+  // 料率は%のまま保持する（保険料は calcPremium 内で整数演算する）
+  const healthRate = Number(document.getElementById('bonusHealthRate').value);
+  const careRate = Number(document.getElementById('bonusCareRate').value);
+  const childLevyRate = Number(document.getElementById('bonusChildLevyRate').value);
+  const pensionRate = Number(document.getElementById('bonusPensionRate').value);
+  const employmentRate = Number(document.getElementById('bonusEmploymentRate').value);
 
   const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
   const subjectEmploymentInsurance = employmentType !== '役員' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
@@ -611,11 +626,11 @@ function calculateBonus() {
   // 厚生年金：同月内の累計150万円が上限
   const pensionStandardBonus = Math.max(0, Math.min(standardBonus, BONUS_PENSION_MONTHLY_CAP - pensionCumulative));
 
-  const healthInsurance = hasHealth ? roundInsuranceShare(healthStandardBonus * healthRate / 2) : 0;
-  const careInsurance = hasCare ? roundInsuranceShare(healthStandardBonus * careRate / 2) : 0;
-  const pensionInsurance = hasPension ? roundInsuranceShare(pensionStandardBonus * pensionRate / 2) : 0;
-  const employmentInsurance = subjectEmploymentInsurance ? roundInsuranceShare(bonusAmount * employmentRate) : 0;
-  const childSupportLevy = hasHealth ? roundInsuranceShare(healthStandardBonus * childLevyRate / 2) : 0;
+  const healthInsurance = hasHealth ? calcHalfPremium(healthStandardBonus, healthRate) : 0;
+  const careInsurance = hasCare ? calcHalfPremium(healthStandardBonus, careRate) : 0;
+  const pensionInsurance = hasPension ? calcHalfPremium(pensionStandardBonus, pensionRate) : 0;
+  const employmentInsurance = subjectEmploymentInsurance ? calcPremium(bonusAmount, employmentRate, 1) : 0;
+  const childSupportLevy = hasHealth ? calcHalfPremium(healthStandardBonus, childLevyRate) : 0;
   const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
 
   const bonusBase = Math.max(0, bonusAmount - socialInsuranceTotal);
@@ -697,11 +712,12 @@ function calculate() {
   const dependents = Number(document.getElementById('dependents').value) || 0;
   const residentTax = getNumValue('residentTax');
 
-  const healthRate = Number(document.getElementById('healthRate').value) / 100;
-  const careRate = Number(document.getElementById('careRate').value) / 100;
-  const childLevyRate = Number(document.getElementById('childLevyRate').value) / 100;
-  const pensionRate = Number(document.getElementById('pensionRate').value) / 100;
-  const employmentRate = Number(document.getElementById('employmentRate').value) / 100;
+  // 料率は%のまま保持する（保険料は calcPremium 内で整数演算する）
+  const healthRate = Number(document.getElementById('healthRate').value);
+  const careRate = Number(document.getElementById('careRate').value);
+  const childLevyRate = Number(document.getElementById('childLevyRate').value);
+  const pensionRate = Number(document.getElementById('pensionRate').value);
+  const employmentRate = Number(document.getElementById('employmentRate').value);
 
   // 雇用形態による加入区分（役員=社会保険のみ、アルバイト・パート=雇用保険のみ、アルバイト・パート（雇用保険対象外）=いずれも対象外）
   const subjectSocialInsurance = employmentType !== 'アルバイト・パート' && employmentType !== 'アルバイト・パート（雇用保険対象外）';
@@ -714,17 +730,19 @@ function calculate() {
 
   const grossPay = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
 
-  // 報酬月額（通勤手当も含む）から標準報酬月額を求め、それに保険料率を掛けて保険料を計算する
-  // 雇用保険料のみ、標準報酬月額ではなく実際の賃金総額が対象
-  const socialInsuranceBase = baseSalary + overtimePay + taxableAllowance + commuteAllowance;
-  const healthStandardMonthly = getHealthStandardMonthly(socialInsuranceBase);
-  const pensionStandardMonthly = getPensionStandardMonthly(socialInsuranceBase);
+  // 等級の判定に使う報酬月額は、毎月変動する残業手当を除いた
+  // 基本給＋その他手当（課税）＋通勤手当（非課税）の合計とする
+  const gradeBase = baseSalary + taxableAllowance + commuteAllowance;
+  const healthStandardMonthly = getHealthStandardMonthly(gradeBase);
+  const pensionStandardMonthly = getPensionStandardMonthly(gradeBase);
+  // 健康保険・介護保険・厚生年金・子ども子育て支援金は標準報酬月額に料率を掛けて計算する
+  // 雇用保険料のみ、標準報酬月額ではなく実際の賃金総額（残業手当を含む）が対象
 
-  const healthInsurance = hasHealth ? roundInsuranceShare(healthStandardMonthly * healthRate / 2) : 0;
-  const careInsurance = hasCare ? roundInsuranceShare(healthStandardMonthly * careRate / 2) : 0;
-  const pensionInsurance = hasPension ? roundInsuranceShare(pensionStandardMonthly * pensionRate / 2) : 0;
-  const employmentInsurance = subjectEmploymentInsurance ? roundInsuranceShare(grossPay * employmentRate) : 0;
-  const childSupportLevy = hasHealth ? roundInsuranceShare(healthStandardMonthly * childLevyRate / 2) : 0;
+  const healthInsurance = hasHealth ? calcHalfPremium(healthStandardMonthly, healthRate) : 0;
+  const careInsurance = hasCare ? calcHalfPremium(healthStandardMonthly, careRate) : 0;
+  const pensionInsurance = hasPension ? calcHalfPremium(pensionStandardMonthly, pensionRate) : 0;
+  const employmentInsurance = subjectEmploymentInsurance ? calcPremium(grossPay, employmentRate, 1) : 0;
+  const childSupportLevy = hasHealth ? calcHalfPremium(healthStandardMonthly, childLevyRate) : 0;
 
   const socialInsuranceTotal = healthInsurance + careInsurance + pensionInsurance + employmentInsurance + childSupportLevy;
 
