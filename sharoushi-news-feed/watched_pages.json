@@ -508,6 +508,9 @@
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/ryouritsu/model.html"
     ],
     "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html": [
+      "https://joseikatsuyaku.mhlw.go.jp/wp-content/themes/joseikatsuyaku/pdf/career-design/career_planning_guidebook.pdf",
+      "https://joseikatsuyaku.mhlw.go.jp/wp-content/themes/joseikatsuyaku/pdf/women-advancement-consulting.pdf",
+      "https://joseikatsuyaku.mhlw.go.jp/wp-content/themes/joseikatsuyaku/pdf/women-advancement.pdf",
       "https://positive-ryouritsu.mhlw.go.jp/file/plan_tool_manual.pdf",
       "https://www.mhlw.go.jp/content/11900000/000947934.pdf",
       "https://www.mhlw.go.jp/content/11900000/000962287.pdf",
@@ -550,9 +553,11 @@
       "https://www.mhlw.go.jp/content/11900000/001732259.pdf",
       "https://www.mhlw.go.jp/content/11900000/001732262.pdf",
       "https://www.mhlw.go.jp/content/11900000/001732263.pdf",
+      "https://www.mhlw.go.jp/content/11900000/001755864.pdf",
       "https://www.mhlw.go.jp/file/06-Seisakujouhou-11900000-Koyoukintoujidoukateikyoku/0000106213.pdf",
       "https://www.mhlw.go.jp/sinsei/chotatu/ichiran.html",
       "https://www.mhlw.go.jp/stf/houdou/0000114100.html",
+      "https://www.mhlw.go.jp/stf/newpage_39997.html",
       "https://www.mhlw.go.jp/stf/newpage_40278.html",
       "https://www.mhlw.go.jp/stf/newpage_70383.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025_00016.html",
@@ -808,6 +813,41 @@
       "title": "2026年10月14日掲載 「第144回労働政策審議会障害者雇用分科会」を開催します（開催案内） NEW",
       "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/shougaishakoyou/index.html",
       "publishedAt": "2026-10-14T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://joseikatsuyaku.mhlw.go.jp/wp-content/themes/joseikatsuyaku/pdf/women-advancement.pdf",
+      "title": "女性活躍推進に取り組む企業を支援します！",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html",
+      "publishedAt": "2026-10-15T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://joseikatsuyaku.mhlw.go.jp/wp-content/themes/joseikatsuyaku/pdf/women-advancement-consulting.pdf",
+      "title": "女性活躍推進に向けた専門家によるコンサルティングのご案内",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html",
+      "publishedAt": "2026-10-15T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://www.mhlw.go.jp/content/11900000/001755864.pdf",
+      "title": "女性管理職登用・育成のためのリーフレット",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html",
+      "publishedAt": "2026-10-15T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://joseikatsuyaku.mhlw.go.jp/wp-content/themes/joseikatsuyaku/pdf/career-design/career_planning_guidebook.pdf",
+      "title": "未来の自分を描く 働くことの意義とキャリア形成",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html",
+      "publishedAt": "2026-10-15T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://www.mhlw.go.jp/stf/newpage_39997.html",
+      "title": "女性の職業生活における活躍推進プロジェクトチーム",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html",
+      "publishedAt": "2026-10-15T00:00:00.000",
       "datedOnPage": false
     }
   ]
