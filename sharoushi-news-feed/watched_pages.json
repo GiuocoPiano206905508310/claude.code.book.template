@@ -705,6 +705,7 @@
       "https://www.mhlw.go.jp/stf/newpage_75947.html",
       "https://www.mhlw.go.jp/stf/newpage_76367.html",
       "https://www.mhlw.go.jp/stf/newpage_76632.html",
+      "https://www.mhlw.go.jp/stf/newpage_76724.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000077386_00019.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000079194_00005.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000079194_00006.html",
@@ -848,6 +849,13 @@
       "title": "女性の職業生活における活躍推進プロジェクトチーム",
       "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000091025.html",
       "publishedAt": "2026-10-15T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://www.mhlw.go.jp/stf/newpage_76724.html",
+      "title": "2026年10月14日掲載 「第７回障害者就労に係る雇用福祉横断検討会」を開催します（開催案内） NEW",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/shougaishakoyou/index.html",
+      "publishedAt": "2026-10-20T00:00:00.000",
       "datedOnPage": false
     }
   ]
