@@ -42,7 +42,10 @@ const PENSION_STANDARD_MIN = 88000;
 const PENSION_STANDARD_MAX = 650000;
 
 // 報酬月額（通勤手当を含む）から健康保険の標準報酬月額を求める
+// 報酬が0円（未入力）のときは標準報酬月額も0とし、保険料が発生しないようにする
+// （等級1の58,000円を当ててしまうと、何も入力していない状態で保険料が引かれてしまう）
 function getHealthStandardMonthly(monthlyPay) {
+  if (monthlyPay <= 0) return 0;
   let standard = STANDARD_MONTHLY_GRADES[0][1];
   for (const [lowerBound, gradeStandard] of STANDARD_MONTHLY_GRADES) {
     if (monthlyPay < lowerBound) break;
@@ -53,6 +56,7 @@ function getHealthStandardMonthly(monthlyPay) {
 
 // 厚生年金保険の標準報酬月額。等級の幅は健康保険と同じだが、上下限のみ異なる
 function getPensionStandardMonthly(monthlyPay) {
+  if (monthlyPay <= 0) return 0;
   const standard = getHealthStandardMonthly(monthlyPay);
   return Math.min(Math.max(standard, PENSION_STANDARD_MIN), PENSION_STANDARD_MAX);
 }
