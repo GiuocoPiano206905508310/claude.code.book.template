@@ -685,6 +685,8 @@
       "https://www.mhlw.go.jp/stf/newpage_55142.html",
       "https://www.mhlw.go.jp/stf/newpage_73046.html",
       "https://www.mhlw.go.jp/stf/newpage_76126.html",
+      "https://www.mhlw.go.jp/stf/newpage_77053.html",
+      "https://www.mhlw.go.jp/stf/newpage_77054.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000137096.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/jigyounushi/page09_00001.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/koureisha/index_00001.html",
@@ -751,6 +753,7 @@
       "https://www.mhlw.go.jp/stf/houdou/newpage_00239.html",
       "https://www.mhlw.go.jp/stf/houdou/newpage_00240.html",
       "https://www.mhlw.go.jp/stf/houdou/newpage_00241.html",
+      "https://www.mhlw.go.jp/stf/houdou/newpage_00242.html",
       "https://www.mhlw.go.jp/stf/houdou/newpage_75927.html",
       "https://www.mhlw.go.jp/stf/nenkin_shikumi.html",
       "https://www.mhlw.go.jp/stf/newpage_08355.html",
@@ -928,6 +931,27 @@
       "title": "フリーランスとして業務を行う方・フリーランスの方に業務を委託する事業者の方等へ",
       "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyoukintou/seisaku06/index.html",
       "publishedAt": "2026-10-21T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://www.mhlw.go.jp/stf/newpage_77054.html",
+      "title": "2026年10月30日掲載 令和８年度生涯現役地域づくり環境整備事業情報交換会を開催します NEW",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/koureisha/index.html",
+      "publishedAt": "2026-10-30T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://www.mhlw.go.jp/stf/newpage_77053.html",
+      "title": "2026年10月30日掲載 高年齢者がいきいきと働くことのできる創意工夫の事例を募集します～令和９年度「高年齢者活躍企業コンテスト」を実施～ NEW",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/koureisha/index.html",
+      "publishedAt": "2026-10-30T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://www.mhlw.go.jp/stf/houdou/newpage_00242.html",
+      "title": "2026年10月30日掲載 国民年金保険料の月次納付率について（令和８年８月末現在） NEW",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/index.html",
+      "publishedAt": "2026-10-30T00:00:00.000",
       "datedOnPage": false
     }
   ]
