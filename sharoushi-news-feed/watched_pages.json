@@ -124,6 +124,7 @@
       "https://www.mhlw.go.jp/stf/newpage_76236.html",
       "https://www.mhlw.go.jp/stf/newpage_76555.html",
       "https://www.mhlw.go.jp/stf/newpage_76625.html",
+      "https://www.mhlw.go.jp/stf/newpage_76800.html",
       "https://www.mhlw.go.jp/stf/roudoukijyunkantokusyo-chatbot.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000041788.html",
       "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000053725.html",
@@ -968,6 +969,13 @@
       "title": "2026年10月28日掲載 「第145回労働政策審議会障害者雇用分科会」を開催します（開催案内） NEW",
       "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/shougaishakoyou/index.html",
       "publishedAt": "2026-11-04T00:00:00.000",
+      "datedOnPage": false
+    },
+    {
+      "url": "https://www.mhlw.go.jp/stf/newpage_76800.html",
+      "title": "2026年11月6日掲載 令和８年度第10回「石綿に係る疾病の業務上外に関する検討会」を開催します NEW",
+      "page": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/index.html",
+      "publishedAt": "2026-11-06T00:00:00.000",
       "datedOnPage": false
     }
   ]
